@@ -12,6 +12,7 @@ interface ModalProps {
   children: React.ReactNode;
   showCloseButton?: boolean;
   size?: ModalSize;
+  title?: string;
 }
 
 const sizeClasses: Record<ModalSize, string> = {
@@ -30,6 +31,7 @@ export const Modal: React.FC<ModalProps> = ({
   className,
   showCloseButton = true,
   size = "md",
+  title,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -103,7 +105,12 @@ export const Modal: React.FC<ModalProps> = ({
             </svg>
           </button>
         )}
-        <div className={showCloseButton ? "pt-14 sm:pt-16" : ""}>{children}</div>
+        {title && (
+          <div className={showCloseButton ? "px-6 pt-14 sm:px-8 sm:pt-16" : "px-6 pt-6 sm:px-8 sm:pt-8"}>
+            <h3 className="text-xl font-semibold text-text-primary">{title}</h3>
+          </div>
+        )}
+        <div className={showCloseButton && !title ? "pt-14 sm:pt-16" : ""}>{children}</div>
       </div>
     </div>
   );

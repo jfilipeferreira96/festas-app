@@ -384,7 +384,7 @@ export default function FestasTabela() {
 
       {/* View Modal */}
       {viewingReserva && (
-        <Modal isOpen={!!viewingReserva} onClose={() => setViewingReserva(null)} size="lg">
+        <Modal isOpen={!!viewingReserva} onClose={() => setViewingReserva(null)} size="lg" title="Detalhes da Festa">
           <div className="p-6 max-h-[85vh] overflow-y-auto">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -576,11 +576,8 @@ export default function FestasTabela() {
             )}
 
             {/* Quick Actions in Detail View */}
-            <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
-              <Button variant="outline" onClick={() => setViewingReserva(null)} className="flex-1 rounded-[10px] px-5 py-3">
-                Fechar
-              </Button>
-              <div className="flex gap-2 flex-1 justify-end">
+            <div className="pt-4 mt-4 flex items-center gap-3 justify-end">
+              <div className="flex gap-2">
                 {(viewingReserva.estado === "RESERVA" || viewingReserva.estado === "CONFIRMADO") && (
                   <button
                     onClick={async () => {
