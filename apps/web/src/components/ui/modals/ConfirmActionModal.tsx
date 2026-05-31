@@ -127,25 +127,15 @@ export default function ConfirmActionModal({
             {message}
           </p>
 
-          <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
+          <div className="flex items-center justify-center w-full gap-3 mt-7">
             <button
               type="button"
-              onClick={onClose}
+              onClick={onConfirm}
               disabled={isConfirming}
-              className="flex-1 inline-flex items-center justify-center font-medium rounded-[10px] transition-all duration-200 px-5 py-3 text-sm bg-white text-gray-700 border border-gray-300 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50"
+              className={`flex justify-center w-full px-4 py-3 text-sm font-medium text-white rounded-lg shadow-theme-xs disabled:opacity-50 sm:w-auto ${config.buttonClass}`}
             >
-              {cancelText ?? t("common.cancel", { defaultValue: "Cancelar" })}
+              {isConfirming ? t("common.loading", { defaultValue: "A carregar..." }) : confirmText}
             </button>
-            <div className="flex gap-2 flex-1 justify-end">
-              <button
-                type="button"
-                onClick={onConfirm}
-                disabled={isConfirming}
-                className={`inline-flex items-center justify-center font-medium rounded-[10px] transition-all duration-200 px-5 py-3 text-sm text-white shadow-theme-xs disabled:opacity-50 ${config.buttonClass}`}
-              >
-                {isConfirming ? t("common.loading", { defaultValue: "A carregar..." }) : confirmText}
-              </button>
-            </div>
           </div>
         </div>
       </div>
