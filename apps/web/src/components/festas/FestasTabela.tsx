@@ -223,15 +223,27 @@ export default function FestasTabela() {
               const participantes = r.participantes;
               const total = participantes?.length ?? 0;
               const presentes = participantes?.filter((p) => p.presente).length ?? 0;
+              const pct = total > 0 ? Math.round((presentes / total) * 100) : 0;
               return (
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{previstos}</p>
+                <div className="min-w-[100px]">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-semibold text-text-primary">
+                      {presentes}<span className="text-text-muted font-normal">/{total || previstos}</span>
+                    </span>
+                    <Users size={13} className="text-text-muted" />
+                  </div>
+                  <div className="w-full h-1.5 rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div
+                      className={`h-1.5 rounded-full transition-all duration-500 ${pct === 100 ? "bg-accent-green-500" : pct > 0 ? "bg-primary-400" : ""}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                   {total > 0 ? (
-                    <p className="text-xs text-text-muted">
-                      <span className="text-accent-green-500 font-medium">{presentes}</span>/{total} check-in
+                    <p className="text-[11px] text-text-muted mt-1">
+                      {pct === 100 ? "Todos presentes" : `${pct}% check-in`}
                     </p>
                   ) : (
-                    <p className="text-xs text-text-muted">previstos</p>
+                    <p className="text-[11px] text-text-muted mt-1">{previstos} previstos</p>
                   )}
                 </div>
               );
