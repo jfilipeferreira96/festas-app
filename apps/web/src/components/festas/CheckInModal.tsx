@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import { UserCheck, UserX, Check, X, Plus, Trash2 } from "lucide-react";
+import { UserCheck, UserX, Check, X, Plus, Trash2, Loader2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { useParticipantes, useAdicionarParticipante, useConfirmarPresenca, useRemoverParticipante } from "@/hooks/use-participantes";
+import { useParticipantes, useAdicionarParticipante, useConfirmarPresenca, useMarcarTodosPresenca, useRemoverParticipante } from "@/hooks/use-participantes";
 import type { Reserva } from "@/lib/api/reservas";
 
 interface CheckInModalProps {
@@ -13,15 +13,17 @@ interface CheckInModalProps {
 
 export default React.memo(function CheckInModal({ reserva, onClose }: CheckInModalProps) {
   const { data: participantes, isLoading } = useParticipantes(reserva.id);
-  const adicionarParticipante = useAdicionarParticipante();
-  const confirmarPresenca = useConfirmarPresenca();
-  const removerParticipante = useRemoverParticipante();
+  const adicionarParticipante = useAdicionarParticipante(reserva.id);
+  const confirmarPresenca = useConfirmarPresenca(reserva.id);
+  const marcarTodos = useMarcarTodosPresenca(reserva.id);
+  const removerParticipante = useRemoverParticipante(reserva.id);
 
   const [novoNome, setNovoNome] = useState("");
 
   const presentes = participantes?.filter((p) => p.presente).length ?? 0;
   const total = participantes?.length ?? 0;
   const previstos = reserva.numCriancas ?? reserva.previsaoCriancas ?? 0;
+  const isBatchLoading = marcarTodos.isPending;
 
   const handleToggle = useCallback(
     (participanteId: string, currentState: boolean) => {
@@ -31,31 +33,21 @@ export default React.memo(function CheckInModal({ reserva, onClose }: CheckInMod
   );
 
   const handleMarcarTodos = useCallback(() => {
-    if (!participantes) return;
-    participantes.forEach((p) => {
-      if (!p.presente) {
-        confirmarPresenca.mutate({ participanteId: p.id, presenca: true });
-      }
-    });
-  }, [participantes, confirmarPresenca]);
+    marcarTodos.mutate(true);
+  }, [marcarTodos]);
 
   const handleDesmarcarTodos = useCallback(() => {
-    if (!participantes) return;
-    participantes.forEach((p) => {
-      if (p.presente) {
-        confirmarPresenca.mutate({ participanteId: p.id, presenca: false });
-      }
-    });
-  }, [participantes, confirmarPresenca]);
+    marcarTodos.mutate(false);
+  }, [marcarTodos]);
 
   const handleAdicionar = useCallback(() => {
     const nome = novoNome.trim();
     if (!nome) return;
     adicionarParticipante.mutate(
-      { reservaId: reserva.id, payload: { nome } },
+      { nome },
       { onSuccess: () => setNovoNome("") }
     );
-  }, [novoNome, reserva.id, adicionarParticipante]);
+  }, [novoNome, adicionarParticipante]);
 
   const handleRemover = useCallback(
     (participanteId: string) => {
@@ -126,7 +118,11 @@ export default React.memo(function CheckInModal({ reserva, onClose }: CheckInMod
             disabled={!novoNome.trim() || adicionarParticipante.isPending}
             className="flex items-center gap-1 px-3 py-2.5 text-xs font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Plus size={14} />
+            {adicionarParticipante.isPending ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Plus size={14} />
+            )}
             Adicionar
           </button>
         </div>
@@ -135,16 +131,18 @@ export default React.memo(function CheckInModal({ reserva, onClose }: CheckInMod
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={handleMarcarTodos}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-accent-green-600 bg-accent-green-50 hover:bg-accent-green-100 rounded-lg transition-colors"
+            disabled={isBatchLoading || total === 0}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-accent-green-600 bg-accent-green-50 hover:bg-accent-green-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check size={12} />
+            {isBatchLoading ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
             Marcar todos
           </button>
           <button
             onClick={handleDesmarcarTodos}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-accent-red bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+            disabled={isBatchLoading || total === 0}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-accent-red bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <X size={12} />
+            {isBatchLoading ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
             Desmarcar todos
           </button>
         </div>
@@ -175,7 +173,8 @@ export default React.memo(function CheckInModal({ reserva, onClose }: CheckInMod
               >
                 <button
                   onClick={() => handleToggle(p.id, p.presente)}
-                  className="flex items-center gap-3 flex-1 text-left"
+                  disabled={confirmarPresenca.isPending}
+                  className="flex items-center gap-3 flex-1 text-left disabled:cursor-wait"
                 >
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
@@ -208,7 +207,8 @@ export default React.memo(function CheckInModal({ reserva, onClose }: CheckInMod
                       e.stopPropagation();
                       handleRemover(p.id);
                     }}
-                    className="p-1 text-text-muted hover:text-accent-red transition-colors"
+                    disabled={removerParticipante.isPending}
+                    className="p-1 text-text-muted hover:text-accent-red transition-colors disabled:opacity-50"
                     title="Remover participante"
                   >
                     <Trash2 size={13} />

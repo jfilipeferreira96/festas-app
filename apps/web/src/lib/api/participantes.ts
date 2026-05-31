@@ -29,6 +29,12 @@ export const participantesApi = {
       body: JSON.stringify({ presenca }),
     }),
 
+  marcarTodos: (reservaId: string, presenca: boolean) =>
+    api<{ data: ParticipanteAPI[]; message: string }>(`/api/participantes/presenca/em-lote`, {
+      method: "PATCH",
+      body: JSON.stringify({ reservaId, presenca }),
+    }),
+
   remover: (participanteId: string) =>
     api<{ message: string }>(`/api/participantes/${participanteId}`, {
       method: "DELETE",

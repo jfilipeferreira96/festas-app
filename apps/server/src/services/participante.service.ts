@@ -83,6 +83,45 @@ export const participanteService = {
     });
   },
 
+  async marcarTodosPresenca(reservaId: string, presenca: boolean) {
+    const reserva = await prisma.reserva.findUnique({ where: { id: reservaId } });
+    if (!reserva) throw new Error("RESERVA_NOT_FOUND");
+
+    const participantes = await prisma.participante.findMany({
+      where: { reservaId },
+      include: { cacifo: true },
+    });
+
+    if (participantes.length === 0) return [];
+
+    await prisma.$transaction(async (tx) => {
+      // Update all participantes
+      await tx.participante.updateMany({
+        where: { reservaId },
+        data: { presente: presenca },
+      });
+
+      // Update cacifos estado
+      const cacifoIds = participantes
+        .filter((p) => p.cacifoId)
+        .map((p) => p.cacifoId!);
+
+      if (cacifoIds.length > 0) {
+        await tx.cacifo.updateMany({
+          where: { id: { in: cacifoIds } },
+          data: { estado: presenca ? "OCUPADO" : "RESERVADO" },
+        });
+      }
+    });
+
+    // Return updated list
+    return prisma.participante.findMany({
+      where: { reservaId },
+      include: { cacifo: true },
+      orderBy: { createdAt: "asc" },
+    });
+  },
+
   async removerParticipante(participanteId: string) {
     const participante = await prisma.participante.findUnique({
       where: { id: participanteId },

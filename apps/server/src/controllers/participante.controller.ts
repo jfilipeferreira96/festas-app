@@ -62,6 +62,21 @@ export const confirmarPresenca = async (req: Request, res: Response) => {
   }
 };
 
+export const marcarTodosPresenca = async (req: Request, res: Response) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: req.t("auth.unauthorized") });
+
+    const { reservaId, presenca } = req.body as { reservaId: string; presenca: boolean };
+    if (!reservaId) return res.status(400).json({ error: "reservaId é obrigatório" });
+
+    const participantes = await participanteService.marcarTodosPresenca(reservaId, presenca ?? true);
+    res.status(200).json({ message: req.t("participante.confirmed"), data: participantes });
+  } catch (error) {
+    handleError(error, req, res);
+  }
+};
+
 export const removerParticipante = async (req: Request, res: Response) => {
   try {
     const user = req.user;
