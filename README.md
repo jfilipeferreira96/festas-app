@@ -1,4 +1,4 @@
-# 🎉 Gestão de Festas Infantis
+# Gestão de Festas Infantis
 
 Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, festas em curso, cacifos, menus/lanches, monitores, locais/salas, utilizadores e campanhas de marketing (newsletter e SMS).
 
