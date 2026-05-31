@@ -1,0 +1,53 @@
+{
+  "name": "@saas/shared-types",
+  "version": "1.0.0",
+  "description": "Shared types for SaaS monorepo",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./industries": {
+      "types": "./dist/industries.d.ts",
+      "import": "./dist/industries.mjs",
+      "require": "./dist/industries.js"
+    },
+    "./currencies": {
+      "types": "./dist/data/currencies.d.ts",
+      "import": "./dist/data/currencies.mjs",
+      "require": "./dist/data/currencies.js"
+    },
+    "./timezones": {
+      "types": "./dist/data/timezones.d.ts",
+      "import": "./dist/data/timezones.mjs",
+      "require": "./dist/data/timezones.js"
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jfilipeferreira96/saas.git",
+    "directory": "packages/shared/shared-types"
+  },
+  "keywords": [
+    "typescript",
+    "types",
+    "saas",
+    "monorepo"
+  ],
+  "author": "Filipe Ferreira",
+  "license": "MIT"
+}

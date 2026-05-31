@@ -1,0 +1,40 @@
+{
+  "name": "festas",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/shared/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "dev:web": "turbo -F web dev",
+    "dev:server": "turbo -F server dev",
+    "build": "turbo build",
+    "build:shared": "turbo --filter @saas/shared-types --filter @saas/shared-defaults build",
+    "db:generate": "turbo -F @festas/db db:generate",
+    "db:push": "turbo -F @festas/db db:push",
+    "db:migrate": "turbo -F @festas/db db:migrate",
+    "db:studio": "turbo -F @festas/db db:studio",
+    "db:clean": "turbo -F @festas/db db:clean",
+    "db:reset": "turbo -F @festas/db db:reset",
+    "db:seed:dev": "turbo -F @festas/db db:seed:dev"
+  },
+  "dependencies": {
+    "@types/leaflet": "^1.9.21",
+    "dotenv": "^17.2.2",
+    "i18next": "^25.7.1",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "leaflet": "^1.9.4",
+    "react-i18next": "^16.4.0",
+    "react-leaflet": "^5.0.0",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.11",
+    "tsdown": "^0.15.5",
+    "turbo": "^2.9.7"
+  },
+  "packageManager": "npm@9.6.4"
+}

@@ -1,0 +1,80 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { cacifosApi } from "@/lib/api/cacifos";
+import type { EstadoCacifo } from "@saas/shared-types";
+
+export function useCacifos(filtros?: { estado?: EstadoCacifo; reservaId?: string }) {
+  return useQuery({
+    queryKey: ["cacifos", filtros],
+    queryFn: () => cacifosApi.list(filtros),
+  });
+}
+
+export function useCacifo(id: string) {
+  return useQuery({
+    queryKey: ["cacifos", id],
+    queryFn: () => cacifosApi.getById(id),
+    enabled: !!id,
+  });
+}
+
+export function useCacifosDisponiveis() {
+  return useQuery({
+    queryKey: ["cacifos", "disponiveis"],
+    queryFn: cacifosApi.getDisponiveis,
+  });
+}
+
+export function useCacifoContadores() {
+  return useQuery({
+    queryKey: ["cacifos", "contadores"],
+    queryFn: cacifosApi.getContadores,
+  });
+}
+
+export function useLibertar() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cacifosApi.libertar(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useMarcarOcupado() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reservaId, notas, criancas }: { id: string; reservaId: string; notas?: string; criancas?: string }) =>
+      cacifosApi.marcarOcupado(id, reservaId, { notas, criancas }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+    },
+  });
+}
+
+export function useAtribuirCacifos() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reservaId, cacifos }: { reservaId: string; cacifos: { id: string; notas?: string; criancas?: string }[] }) =>
+      cacifosApi.atribuir(reservaId, cacifos),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+    },
+  });
+}
+
+export function useActualizarCacifo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, notas, criancas }: { id: string; notas?: string; criancas?: string }) =>
+      cacifosApi.actualizar(id, { notas, criancas }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+    },
+  });
+}

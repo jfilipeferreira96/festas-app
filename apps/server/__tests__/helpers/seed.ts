@@ -1,0 +1,310 @@
+import testPrisma from "./test-prisma";
+
+/**
+ * Centralised test IDs for consistent referencing across test files.
+ */
+export const TEST_IDS = {
+  // Users
+  USER_ADMIN: "test-user-admin-001",
+  USER_RECECAO: "test-user-rececao-001",
+
+  // Locais
+  LOCAL_1: "test-local-001",
+  LOCAL_2: "test-local-002",
+
+  // Configuração Cacifos
+  CONFIG_CACIFO: "test-config-cacifo-001",
+
+  // Extras
+  EXTRA_1: "test-extra-001",
+  EXTRA_2: "test-extra-002",
+  EXTRA_LANCHE_1: "test-extra-lanche-001",
+  EXTRA_LANCHE_2: "test-extra-lanche-002",
+  EXTRA_LANCHE_3: "test-extra-lanche-003",
+
+  // Cacifos (created by number, not ID)
+  CACIFO_1: 1,
+  CACIFO_2: 2,
+
+  // Monitores
+  MONITOR_1: "test-monitor-001",
+  MONITOR_2: "test-monitor-002",
+
+  // Clientes
+  CLIENTE_1: "test-cliente-001",
+  CLIENTE_2: "test-cliente-002",
+
+  // Aniversariantes
+  ANIV_1: "test-aniv-001",
+  ANIV_2: "test-aniv-002",
+
+  // Reservas
+  RESERVA_CONFIRMADA: "test-reserva-001",
+  RESERVA_PENDENTE: "test-reserva-002",
+  RESERVA_EM_CURSO: "test-reserva-003",
+
+  // Segmentos
+  SEGMENTO_1: "test-segmento-001",
+
+  // Campanhas
+  CAMPANHA_1: "test-campanha-001",
+} as const;
+
+/**
+ * Seeds the test database with baseline data required by most test suites.
+ */
+export async function seedTestData(): Promise<void> {
+  // ── Users ───────────────────────────────────────────────────
+  await testPrisma.user.upsert({
+    where: { id: TEST_IDS.USER_ADMIN },
+    update: {},
+    create: { id: TEST_IDS.USER_ADMIN, name: "Admin Teste", email: "admin-teste@festas.pt", funcao: "ADMINISTRADOR", activo: true, emailVerified: true },
+  });
+  await testPrisma.user.upsert({
+    where: { id: TEST_IDS.USER_RECECAO },
+    update: {},
+    create: { id: TEST_IDS.USER_RECECAO, name: "Receção Teste", email: "rececao-teste@festas.pt", funcao: "RECECAO", activo: true, emailVerified: true },
+  });
+
+  // ── Locais ──────────────────────────────────────────────────
+  await testPrisma.local.upsert({
+    where: { id: TEST_IDS.LOCAL_1 },
+    update: {},
+    create: { id: TEST_IDS.LOCAL_1, nome: "Sala Teste Azul", capacidade: 25 },
+  });
+  await testPrisma.local.upsert({
+    where: { id: TEST_IDS.LOCAL_2 },
+    update: {},
+    create: { id: TEST_IDS.LOCAL_2, nome: "Sala Teste Verde", capacidade: 30 },
+  });
+
+  // ── Extras (EXTRA category) ──────────────────────────────────
+  await testPrisma.extra.upsert({
+    where: { id: TEST_IDS.EXTRA_1 },
+    update: {},
+    create: { id: TEST_IDS.EXTRA_1, nome: "Turbo Slide Teste", precoUnitario: 50.0, icone: "slide", categoria: "EXTRA" },
+  });
+  await testPrisma.extra.upsert({
+    where: { id: TEST_IDS.EXTRA_2 },
+    update: {},
+    create: { id: TEST_IDS.EXTRA_2, nome: "Pinturas Faciais Teste", precoUnitario: 30.0, icone: "palette", categoria: "EXTRA" },
+  });
+
+  // ── Extras (LANCHE category) ────────────────────────────────
+  await testPrisma.extra.upsert({
+    where: { id: TEST_IDS.EXTRA_LANCHE_1 },
+    update: {},
+    create: { id: TEST_IDS.EXTRA_LANCHE_1, nome: "Bolo de Aniversário", precoUnitario: 15.0, icone: "birthday-cake", categoria: "LANCHE" },
+  });
+  await testPrisma.extra.upsert({
+    where: { id: TEST_IDS.EXTRA_LANCHE_2 },
+    update: {},
+    create: { id: TEST_IDS.EXTRA_LANCHE_2, nome: "Pipocas", precoUnitario: 5.0, icone: "popcorn", categoria: "LANCHE" },
+  });
+  await testPrisma.extra.upsert({
+    where: { id: TEST_IDS.EXTRA_LANCHE_3 },
+    update: {},
+    create: { id: TEST_IDS.EXTRA_LANCHE_3, nome: "Sumo Natural", precoUnitario: 3.5, icone: "juice-bottle", categoria: "LANCHE" },
+  });
+
+  // ── Extra-Local associations ────────────────────────────────
+  await testPrisma.extraLocal.upsert({
+    where: { extraId_localId: { extraId: TEST_IDS.EXTRA_1, localId: TEST_IDS.LOCAL_1 } },
+    update: {},
+    create: { extraId: TEST_IDS.EXTRA_1, localId: TEST_IDS.LOCAL_1 },
+  });
+
+  // ── Configuração Cacifos ────────────────────────────────────
+  await testPrisma.configuracaoCacifo.upsert({
+    where: { id: TEST_IDS.CONFIG_CACIFO },
+    update: {},
+    create: { id: TEST_IDS.CONFIG_CACIFO, totalCacifos: 10 },
+  });
+
+  // ── Cacifos ─────────────────────────────────────────────────
+  for (let i = 1; i <= 10; i++) {
+    await testPrisma.cacifo.upsert({
+      where: { numero: i },
+      update: {},
+      create: { numero: i, estado: "LIVRE", configuracaoId: TEST_IDS.CONFIG_CACIFO },
+    });
+  }
+
+  // ── Monitores ───────────────────────────────────────────────
+  await testPrisma.monitor.upsert({
+    where: { id: TEST_IDS.MONITOR_1 },
+    update: {},
+    create: { id: TEST_IDS.MONITOR_1, nome: "Monitor Teste 1", contacto: "910000001" },
+  });
+  await testPrisma.monitor.upsert({
+    where: { id: TEST_IDS.MONITOR_2 },
+    update: {},
+    create: { id: TEST_IDS.MONITOR_2, nome: "Monitor Teste 2", contacto: "920000002" },
+  });
+  for (let i = 3; i <= 8; i++) {
+    await testPrisma.monitor.upsert({
+      where: { id: `test-monitor-00${i}` },
+      update: {},
+      create: { id: `test-monitor-00${i}`, nome: `Monitor Teste ${i}`, contacto: `90000000${i}`, activo: i <= 6 },
+    });
+  }
+
+  // ── Clientes ────────────────────────────────────────────────
+  await testPrisma.cliente.upsert({
+    where: { id: TEST_IDS.CLIENTE_1 },
+    update: {},
+    create: { id: TEST_IDS.CLIENTE_1, nome: "Cliente Teste 1", email: "teste1@email.pt", telefone: "911111111" },
+  });
+  await testPrisma.cliente.upsert({
+    where: { id: TEST_IDS.CLIENTE_2 },
+    update: {},
+    create: { id: TEST_IDS.CLIENTE_2, nome: "Cliente Teste 2", email: "teste2@email.pt", telefone: "922222222" },
+  });
+  for (let i = 3; i <= 12; i++) {
+    await testPrisma.cliente.upsert({
+      where: { id: `test-cliente-00${i}` },
+      update: {},
+      create: {
+        id: `test-cliente-00${i}`,
+        nome: `Cliente Pesquisa ${i}`,
+        email: `pesquisa${i}@email.pt`,
+        telefone: `93333330${i}`,
+      },
+    });
+  }
+
+  // ── Aniversariantes ─────────────────────────────────────────
+  await testPrisma.aniversariante.upsert({
+    where: { id: TEST_IDS.ANIV_1 },
+    update: {},
+    create: { id: TEST_IDS.ANIV_1, nome: "Criança Teste 1", dataNascimento: new Date("2018-03-15"), clienteId: TEST_IDS.CLIENTE_1 },
+  });
+  await testPrisma.aniversariante.upsert({
+    where: { id: TEST_IDS.ANIV_2 },
+    update: {},
+    create: { id: TEST_IDS.ANIV_2, nome: "Criança Teste 2", dataNascimento: new Date("2019-07-20"), clienteId: TEST_IDS.CLIENTE_2 },
+  });
+
+  // ── Reservas ────────────────────────────────────────────────
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Reserva confirmada (today, 10:00)
+  await testPrisma.reserva.upsert({
+    where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+    update: {},
+    create: {
+      id: TEST_IDS.RESERVA_CONFIRMADA,
+      data: today,
+      horario: "10:00",
+      duracaoMinutos: 150,
+      numCriancas: 18,
+      notas: "Reserva de teste confirmada",
+      estado: "CONFIRMADO",
+      clienteId: TEST_IDS.CLIENTE_1,
+      localId: TEST_IDS.LOCAL_1,
+    },
+  });
+  // Link aniversariante via pivot
+  await testPrisma.reservaAniversariante.upsert({
+    where: { id: `${TEST_IDS.RESERVA_CONFIRMADA}-${TEST_IDS.ANIV_1}` },
+    update: {},
+    create: { id: `${TEST_IDS.RESERVA_CONFIRMADA}-${TEST_IDS.ANIV_1}`, reservaId: TEST_IDS.RESERVA_CONFIRMADA, aniversarianteId: TEST_IDS.ANIV_1 },
+  });
+
+  // Reserva pendente (tomorrow, 14:00)
+  await testPrisma.reserva.upsert({
+    where: { id: TEST_IDS.RESERVA_PENDENTE },
+    update: {},
+    create: {
+      id: TEST_IDS.RESERVA_PENDENTE,
+      data: tomorrow,
+      horario: "14:00",
+      duracaoMinutos: 120,
+      numCriancas: 12,
+      notas: "Reserva pendente de teste",
+      estado: "RESERVA",
+      clienteId: TEST_IDS.CLIENTE_2,
+      localId: TEST_IDS.LOCAL_2,
+    },
+  });
+  await testPrisma.reservaAniversariante.upsert({
+    where: { id: `${TEST_IDS.RESERVA_PENDENTE}-${TEST_IDS.ANIV_2}` },
+    update: {},
+    create: { id: `${TEST_IDS.RESERVA_PENDENTE}-${TEST_IDS.ANIV_2}`, reservaId: TEST_IDS.RESERVA_PENDENTE, aniversarianteId: TEST_IDS.ANIV_2 },
+  });
+
+  // Reserva em curso (today, 10:00)
+  const inicio = new Date(today);
+  inicio.setHours(10, 0, 0, 0);
+  const fim = new Date(inicio);
+  fim.setMinutes(fim.getMinutes() + 150);
+
+  await testPrisma.reserva.upsert({
+    where: { id: TEST_IDS.RESERVA_EM_CURSO },
+    update: {},
+    create: {
+      id: TEST_IDS.RESERVA_EM_CURSO,
+      data: today,
+      horario: "10:00",
+      duracaoMinutos: 150,
+      numCriancas: 20,
+      estado: "EM_CURSO",
+      inicioEm: inicio,
+      fimPrevisto: fim,
+      clienteId: TEST_IDS.CLIENTE_1,
+      localId: TEST_IDS.LOCAL_2,
+    },
+  });
+  await testPrisma.reservaAniversariante.upsert({
+    where: { id: `${TEST_IDS.RESERVA_EM_CURSO}-${TEST_IDS.ANIV_1}` },
+    update: {},
+    create: { id: `${TEST_IDS.RESERVA_EM_CURSO}-${TEST_IDS.ANIV_1}`, reservaId: TEST_IDS.RESERVA_EM_CURSO, aniversarianteId: TEST_IDS.ANIV_1 },
+  });
+
+  // ── Segmento ────────────────────────────────────────────────
+  await testPrisma.segmento.upsert({
+    where: { id: TEST_IDS.SEGMENTO_1 },
+    update: {},
+    create: { id: TEST_IDS.SEGMENTO_1, nome: "Segmento Teste", descricao: "Para testes" },
+  });
+}
+
+/**
+ * Cleans all test data from the test schema.
+ */
+export async function cleanTestData(): Promise<void> {
+  await testPrisma.envioCampanha.deleteMany().catch(() => {});
+  await testPrisma.campanha.deleteMany().catch(() => {});
+  await testPrisma.contactoSegmento.deleteMany().catch(() => {});
+  await testPrisma.newsletterContacto.deleteMany().catch(() => {});
+  await testPrisma.segmento.deleteMany().catch(() => {});
+
+  await testPrisma.participante.deleteMany().catch(() => {});
+  await testPrisma.menu.deleteMany().catch(() => {});
+
+  await testPrisma.reservaEtapa.deleteMany().catch(() => {});
+  await testPrisma.reservaMonitor.deleteMany().catch(() => {});
+  await testPrisma.reservaAniversariante.deleteMany().catch(() => {});
+  await testPrisma.reservaExtra.deleteMany().catch(() => {});
+  await testPrisma.cacifo.deleteMany().catch(() => {});
+  await testPrisma.reserva.deleteMany().catch(() => {});
+
+  await testPrisma.configuracaoCacifo.deleteMany().catch(() => {});
+
+  await testPrisma.aniversariante.deleteMany().catch(() => {});
+  await testPrisma.cliente.deleteMany().catch(() => {});
+
+  await testPrisma.etapaFesta.deleteMany().catch(() => {});
+  await testPrisma.monitorLocal.deleteMany().catch(() => {});
+  await testPrisma.monitor.deleteMany().catch(() => {});
+
+  await testPrisma.extraLocal.deleteMany().catch(() => {});
+  await testPrisma.extra.deleteMany().catch(() => {});
+
+  await testPrisma.funcaoPermissao.deleteMany().catch(() => {});
+  await testPrisma.local.deleteMany().catch(() => {});
+
+  await testPrisma.user.deleteMany().catch(() => {});
+}

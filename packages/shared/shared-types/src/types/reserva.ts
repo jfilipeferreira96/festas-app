@@ -1,0 +1,134 @@
+// ===================================
+// Reserva — Types for reservation/party management
+// ===================================
+
+export type EstadoReserva = "RESERVA" | "CONFIRMADO" | "EM_CURSO" | "CONCLUIDA" | "CANCELADA";
+
+export type MetodoPagamento = "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO";
+
+export type EstadoCaucao = "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA";
+
+export interface Reserva {
+  id: string;
+  data: string;
+  horario: string;
+  duracaoMinutos: number;
+  numCriancas: number;
+  notas?: string;
+  estado: EstadoReserva;
+  clienteId: string;
+  localId: string;
+
+  // Runtime fields (filled when estado = EM_CURSO)
+  inicioEm?: string;
+  fimPrevisto?: string;
+  fimReal?: string;
+  cacifosHistorico?: CacifoHistoricoEntry[];
+
+  // Festa fields
+  tema?: string;
+  previsaoCriancas?: number;
+  cor?: string;
+  bolo?: string;
+  boloQuantidade?: number;
+
+  // Observações
+  observacoesGerais?: string;
+  observacoesLesoes?: string;
+  observacoesBrindes?: string;
+  outrosExtras?: string;
+
+  // Pagamento
+  metodoPagamento?: MetodoPagamento;
+  valorPago?: number;
+  pago: boolean;
+  referenciaPagamento?: string;
+
+  // Caução
+  caucao: EstadoCaucao;
+  valorCaucao?: number;
+
+  // Desconto
+  descontoPercentagem?: number;
+  descontoMotivo?: string;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CacifoHistoricoEntry {
+  numero: number;
+  estado: string;
+  notas?: string;
+  criancas?: string;
+}
+
+export interface ReservaExtra {
+  id: string;
+  reservaId: string;
+  extraId: string;
+  quantidade: number;
+  textoPersonalizado?: string;
+}
+
+export interface ReservaMonitor {
+  id: string;
+  reservaId: string;
+  monitorId: string;
+}
+
+export interface ReservaEtapa {
+  id: string;
+  reservaId: string;
+  etapaId: string;
+  concluida: boolean;
+  concluidaEm?: string;
+}
+
+export interface ReservaAniversariante {
+  id: string;
+  reservaId: string;
+  aniversarianteId: string;
+}
+
+export interface CriarReservaDTO {
+  data: string;
+  horario: string;
+  duracaoMinutos: number;
+  numCriancas?: number;
+  notas?: string;
+  clienteId: string;
+  localId: string;
+
+  // Festa fields
+  tema?: string;
+  previsaoCriancas?: number;
+  cor?: string;
+  bolo?: string;
+  boloQuantidade?: number;
+
+  // Observações
+  observacoesGerais?: string;
+  observacoesLesoes?: string;
+  observacoesBrindes?: string;
+  outrosExtras?: string;
+
+  // Pagamento
+  metodoPagamento?: MetodoPagamento;
+  valorPago?: number;
+  pago?: boolean;
+  referenciaPagamento?: string;
+
+  // Caução
+  caucao?: EstadoCaucao;
+  valorCaucao?: number;
+
+  // Desconto
+  descontoPercentagem?: number;
+  descontoMotivo?: string;
+
+  // Related data
+  extras?: { extraId: string; quantidade: number; textoPersonalizado?: string }[];
+  aniversariantes?: { aniversarianteId: string }[];
+  participantes?: { nome: string }[];
+}

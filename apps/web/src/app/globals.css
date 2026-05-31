@@ -1,0 +1,643 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* ── Fonts ─────────────────────────────────────────────── */
+  --font-*: initial;
+  --font-poppins: "Poppins", sans-serif;
+  --font-inter: "Inter", sans-serif;
+  --font-nunito: "Nunito", sans-serif;
+
+  /* ── Breakpoints ───────────────────────────────────────── */
+  --breakpoint-*: initial;
+  --breakpoint-2xsm: 375px;
+  --breakpoint-xsm: 425px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  --breakpoint-3xl: 2000px;
+
+  /* ── Text sizes ────────────────────────────────────────── */
+  --text-title-2xl: 72px;
+  --text-title-2xl--line-height: 90px;
+  --text-title-xl: 60px;
+  --text-title-xl--line-height: 72px;
+  --text-title-lg: 48px;
+  --text-title-lg--line-height: 60px;
+  --text-title-md: 36px;
+  --text-title-md--line-height: 44px;
+  --text-title-sm: 30px;
+  --text-title-sm--line-height: 38px;
+  --text-theme-xl: 20px;
+  --text-theme-xl--line-height: 30px;
+  --text-theme-sm: 14px;
+  --text-theme-sm--line-height: 20px;
+  --text-theme-xs: 12px;
+  --text-theme-xs--line-height: 18px;
+
+  /* ── Base colours ──────────────────────────────────────── */
+  --color-current: currentColor;
+  --color-transparent: transparent;
+  --color-white: #ffffff;
+  --color-black: #101828;
+
+  /* ── Primary (Blue) — main actions, buttons, active nav ── */
+  --color-primary-25: #f0f5ff;
+  --color-primary-50: #eef4ff;
+  --color-primary-100: #dde8ff;
+  --color-primary-200: #b3cfff;
+  --color-primary-300: #80adff;
+  --color-primary-400: #4f8ef7;
+  --color-primary-500: #3a7be0;
+  --color-primary-600: #2e66c4;
+  --color-primary-700: #2450a3;
+  --color-primary-800: #1f4185;
+  --color-primary-900: #1a3668;
+  --color-primary-950: #112346;
+
+  /* ── Brand (Primary Blue) — main actions, buttons, active nav ── */
+  --color-brand-50: #ecf3ff;
+  --color-brand-100: #dde9ff;
+  --color-brand-200: #c2d6ff;
+  --color-brand-300: #9cb9ff;
+  --color-brand-400: #7592ff;
+  --color-brand-500: #465fff;
+  --color-brand-600: #3641f5;
+  --color-brand-700: #2a31d8;
+  --color-brand-800: #252dae;
+  --color-brand-950: #161950;
+
+  /* ── Secondary (Orange) — icons, secondary highlights ──── */
+  --color-secondary-25: #fff8f2;
+  --color-secondary-50: #fff3e8;
+  --color-secondary-100: #ffe5cc;
+  --color-secondary-200: #ffd1a3;
+  --color-secondary-300: #ffb870;
+  --color-secondary-400: #ff8c42;
+  --color-secondary-500: #e67a30;
+  --color-secondary-600: #c4661f;
+  --color-secondary-700: #a35216;
+  --color-secondary-800: #834110;
+  --color-secondary-900: #6b340d;
+  --color-secondary-950: #3d1c07;
+
+  /* ── Accent Green — "Em curso", success badges ─────────── */
+  --color-accent-green-25: #f0fdf5;
+  --color-accent-green-50: #e6faed;
+  --color-accent-green-100: #c5f0d4;
+  --color-accent-green-200: #93e2b0;
+  --color-accent-green-300: #5ecc85;
+  --color-accent-green-400: #3dc47e;
+  --color-accent-green-500: #2da868;
+  --color-accent-green-600: #238953;
+  --color-accent-green-700: #1d6e43;
+  --color-accent-green-800: #185836;
+  --color-accent-green-900: #13482c;
+  --color-accent-green-950: #0a2918;
+
+  /* ── Accent Orange — warnings, "A começar" ─────────────── */
+  --color-accent-orange-25: #fffaf5;
+  --color-accent-orange-50: #fff5eb;
+  --color-accent-orange-100: #ffe8cc;
+  --color-accent-orange-200: #ffd699;
+  --color-accent-orange-300: #ffbe5c;
+  --color-accent-orange-400: #ff9f43;
+  --color-accent-orange-500: #e88a2d;
+  --color-accent-orange-600: #c47320;
+  --color-accent-orange-700: #a35d18;
+  --color-accent-orange-800: #834b14;
+  --color-accent-orange-900: #6b3d11;
+  --color-accent-orange-950: #3d220a;
+
+  /* ── Accent Purple — paid lockers, "Concluída" ─────────── */
+  --color-accent-purple-25: #faf5ff;
+  --color-accent-purple-50: #f5edff;
+  --color-accent-purple-100: #e6d5ff;
+  --color-accent-purple-200: #cfb0ff;
+  --color-accent-purple-300: #b384f0;
+  --color-accent-purple-400: #9b59b6;
+  --color-accent-purple-500: #8648a0;
+  --color-accent-purple-600: #6e3984;
+  --color-accent-purple-700: #5a2d6c;
+  --color-accent-purple-800: #482457;
+  --color-accent-purple-900: #3a1c47;
+  --color-accent-purple-950: #22102a;
+
+  /* ── Accent Red — alerts, errors, notifications ────────── */
+  --color-accent-red-25: #fff5f5;
+  --color-accent-red-50: #feecec;
+  --color-accent-red-100: #fcd4d4;
+  --color-accent-red-200: #f9a8a8;
+  --color-accent-red-300: #f47272;
+  --color-accent-red-400: #e74c3c;
+  --color-accent-red-500: #d43a2a;
+  --color-accent-red-600: #b12d1f;
+  --color-accent-red-700: #912318;
+  --color-accent-red-800: #741c14;
+  --color-accent-red-900: #5e1711;
+  --color-accent-red-950: #350d0a;
+
+  /* ── Accent Teal — parties, party icon colour ──────────── */
+  --color-accent-teal-25: #f0fdfb;
+  --color-accent-teal-50: #e6faf7;
+  --color-accent-teal-100: #c5f2ec;
+  --color-accent-teal-200: #93e4d9;
+  --color-accent-teal-300: #5ecfc2;
+  --color-accent-teal-400: #1abc9c;
+  --color-accent-teal-500: #149f84;
+  --color-accent-teal-600: #0f816b;
+  --color-accent-teal-700: #0c6756;
+  --color-accent-teal-800: #095043;
+  --color-accent-teal-900: #074236;
+  --color-accent-teal-950: #04261f;
+
+  /* ── Text colours ──────────────────────────────────────── */
+  --color-text-primary: #1a1d2e;
+  --color-text-secondary: #6b7280;
+  --color-text-muted: #9ca3af;
+
+  /* ── Background & Surface ──────────────────────────────── */
+  --color-background: #f5f7ff;
+  --color-surface: #ffffff;
+
+  /* ── Error / Form validation ───────────────────────────── */
+  --color-error-50: #fff5f5;
+  --color-error-100: #fcd4d4;
+  --color-error-200: #f9a8a8;
+  --color-error-300: #f47272;
+  --color-error-400: #e74c3c;
+  --color-error-500: #d43a2a;
+  --color-error-600: #b12d1f;
+  --color-error-700: #912318;
+  --color-error-800: #741c14;
+  --color-error-900: #5e1711;
+
+  /* ── Success / Form validation ─────────────────────────── */
+  --color-success-50: #f0fdf5;
+  --color-success-100: #c5f0d4;
+  --color-success-200: #93e2b0;
+  --color-success-300: #5ecc85;
+  --color-success-400: #3dc47e;
+  --color-success-500: #2da868;
+  --color-success-600: #238953;
+  --color-success-700: #1d6e43;
+  --color-success-800: #185836;
+  --color-success-900: #13482c;
+
+  /* ── Border ────────────────────────────────────────────── */
+  --color-border: #e5e7eb;
+
+  /* ── Sidebar ───────────────────────────────────────────── */
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-active: #4f8ef7;
+  --color-sidebar-active-bg: #eef4ff;
+
+  /* ── Gray scale (utility) ──────────────────────────────── */
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #0c111d;
+  --color-gray-dark: #1a2231;
+
+  /* ── Shadows ───────────────────────────────────────────── */
+  --shadow-card: 0 2px 12px rgba(79, 142, 247, 0.08);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-button: 0 4px 14px rgba(79, 142, 247, 0.3);
+  --shadow-theme-xs: 0px 1px 2px 0px rgba(16, 24, 40, 0.05);
+  --shadow-theme-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.1),
+    0px 1px 2px 0px rgba(16, 24, 40, 0.06);
+  --shadow-theme-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.1),
+    0px 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-theme-lg: 0px 12px 16px -4px rgba(16, 24, 40, 0.08),
+    0px 4px 6px -2px rgba(16, 24, 40, 0.03);
+  --shadow-theme-xl: 0px 20px 24px -4px rgba(16, 24, 40, 0.08),
+    0px 8px 8px -4px rgba(16, 24, 40, 0.03);
+  --shadow-focus-ring: 0px 0px 0px 4px rgba(79, 142, 247, 0.15);
+
+  /* ── Z-index ───────────────────────────────────────────── */
+  --z-index-1: 1;
+  --z-index-9: 9;
+  --z-index-99: 99;
+  --z-index-999: 999;
+  --z-index-9999: 9999;
+  --z-index-99999: 99999;
+  --z-index-999999: 999999;
+}
+
+/*
+  Tailwind CSS v4 default border color compatibility.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border, currentColor);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  body {
+    @apply relative font-normal font-inter z-1;
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+  }
+}
+
+/* ── Menu / Sidebar utilities ──────────────────────────────── */
+
+@utility menu-item {
+  @apply relative flex items-center w-full gap-3 px-3 py-2 font-medium rounded-[10px] text-theme-sm;
+}
+
+@utility menu-item-active {
+  background-color: var(--color-brand-500);
+  color: white;
+}
+
+@utility menu-item-soft-active {
+  background-color: color-mix(in srgb, var(--color-brand-500) 10%, transparent);
+  color: var(--color-brand-600);
+}
+
+@utility menu-item-inactive {
+  @apply text-text-secondary hover:bg-brand-500/5 hover:text-text-primary;
+}
+
+@utility menu-item-icon {
+  @apply text-gray-500;
+}
+
+@utility menu-item-icon-active {
+  color: white;
+}
+
+@utility menu-item-icon-soft-active {
+  color: var(--color-brand-600);
+}
+
+@utility menu-item-icon-inactive {
+  @apply text-text-secondary;
+}
+
+@utility menu-item-arrow {
+  @apply relative;
+}
+
+@utility menu-item-arrow-active {
+  color: white;
+  @apply rotate-180;
+}
+
+@utility menu-item-arrow-soft-active {
+  color: var(--color-brand-600);
+  @apply rotate-180;
+}
+
+@utility menu-item-arrow-inactive {
+  @apply text-text-secondary;
+}
+
+@utility menu-item-text {
+  @apply flex-1;
+}
+
+@utility menu-dropdown-item {
+  @apply relative text-sm flex items-center gap-3 rounded-[10px] px-3 py-2.5 font-medium;
+}
+
+@utility menu-dropdown-item-active {
+  background-color: var(--color-brand-500);
+  color: white;
+}
+
+@utility menu-dropdown-item-inactive {
+  @apply text-text-muted hover:text-text-primary hover:bg-brand-500/5;
+}
+
+@utility menu-dropdown-badge {
+  @apply block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase;
+  color: var(--color-accent-green-600);
+}
+
+@utility menu-dropdown-badge-active {
+  background-color: var(--color-accent-green-100);
+}
+
+@utility menu-dropdown-badge-inactive {
+  background-color: var(--color-accent-green-50);
+}
+
+@utility menu-dropdown-badge-novo {
+  @apply block rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase;
+  color: var(--color-brand-500);
+  background-color: var(--color-brand-50);
+}
+
+/* ── Scrollbar utilities ───────────────────────────────────── */
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    @apply size-1.5;
+  }
+  &::-webkit-scrollbar-track {
+    @apply rounded-full;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 rounded-full;
+  }
+}
+
+@utility filter-scrollbar {
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-300);
+    border-radius: 9999px;
+  }
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+
+/* ── Remove native date/time icons ─────────────────────────── */
+
+@layer utilities {
+  input[type="date"]::-webkit-inner-spin-button,
+  input[type="time"]::-webkit-inner-spin-button,
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+}
+
+/* ── FullCalendar overrides ────────────────────────────────── */
+
+.fc .fc-view-harness {
+  @apply max-w-full overflow-x-auto custom-scrollbar;
+}
+
+.fc-dayGridMonth-view.fc-view.fc-daygrid {
+  @apply min-w-[718px];
+}
+
+.fc .fc-scrollgrid-section > * {
+  border-right-width: 0;
+  border-bottom-width: 0;
+}
+
+.fc .fc-scrollgrid {
+  border-left-width: 0;
+}
+
+.fc .fc-toolbar.fc-header-toolbar {
+  @apply flex-col gap-4 px-6 pt-6 sm:flex-row;
+}
+
+.fc-button-group {
+  @apply gap-2;
+}
+
+.fc-button-group .fc-button {
+  @apply flex h-10 w-10 items-center justify-center rounded-lg border bg-transparent hover:bg-gray-50;
+  border-color: var(--color-border);
+}
+
+.fc-button-group .fc-button.fc-prev-button:before {
+  @apply inline-block mt-1;
+  content: url("data:image/svg+xml,%3Csvg width='25' height='24' viewBox='0 0 25 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M16.0068 6L9.75684 12.25L16.0068 18.5' stroke='%23374151' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E%0A");
+}
+
+.fc-button-group .fc-button.fc-next-button:before {
+  @apply inline-block mt-1;
+  content: url("data:image/svg+xml,%3Csvg width='25' height='24' viewBox='0 0 25 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.50684 19L15.7568 12.75L9.50684 6.5' stroke='%23374151' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E%0A");
+}
+
+.fc-button-group .fc-button .fc-icon {
+  @apply hidden;
+}
+
+.fc-addEventButton-button {
+  @apply !rounded-[10px] !border-0 !px-4 py-2.5! text-sm! font-medium! focus:shadow-none!;
+  background-color: var(--color-brand-500) !important;
+}
+
+.fc-addEventButton-button:hover {
+  background-color: var(--color-primary-500) !important;
+}
+
+.fc-toolbar-title {
+  @apply text-lg! font-medium! text-gray-800;
+}
+
+.fc-header-toolbar.fc-toolbar .fc-toolbar-chunk:last-child {
+  @apply rounded-[10px] bg-gray-100 p-0.5;
+}
+
+.fc-header-toolbar.fc-toolbar .fc-toolbar-chunk:last-child .fc-button {
+  @apply h-auto! w-auto! rounded-[6px] border-0! bg-transparent px-5! py-2! text-sm font-medium text-gray-500 hover:text-gray-700 focus:shadow-none!;
+}
+
+.fc-header-toolbar.fc-toolbar
+  .fc-toolbar-chunk:last-child
+  .fc-button.fc-button-active {
+  @apply text-gray-900 bg-white;
+}
+
+.fc-theme-standard th {
+  @apply border-x-0! border-t bg-gray-50 !text-left;
+  border-color: var(--color-border) !important;
+}
+
+.fc-theme-standard td,
+.fc-theme-standard .fc-scrollgrid {
+  border-color: var(--color-border) !important;
+}
+
+.fc .fc-col-header-cell-cushion {
+  @apply !px-5 !py-4 text-sm font-medium uppercase text-gray-400;
+}
+
+.fc .fc-daygrid-day.fc-day-today {
+  @apply bg-transparent;
+}
+
+.fc .fc-daygrid-day {
+  @apply p-2;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-scrollgrid-sync-inner {
+  @apply rounded-sm bg-gray-100;
+}
+
+.fc .fc-daygrid-day-number {
+  @apply !p-3 text-sm font-medium text-gray-700;
+}
+
+.fc .fc-daygrid-day-top {
+  @apply flex-row!;
+}
+
+.fc .fc-day-other .fc-daygrid-day-top {
+  opacity: 1;
+}
+
+.fc .fc-day-other .fc-daygrid-day-top .fc-daygrid-day-number {
+  @apply text-gray-400;
+}
+
+.event-fc-color {
+  @apply rounded-[10px] py-2.5 pl-4 pr-3;
+}
+
+.event-fc-color .fc-event-title {
+  @apply p-0 text-sm font-normal text-gray-700;
+}
+
+.fc-daygrid-event-dot {
+  @apply w-1 h-5 ml-0 mr-3 border-none rounded-sm;
+}
+
+.fc-event {
+  @apply focus:shadow-none;
+}
+
+.fc-daygrid-event.fc-event-start {
+  @apply !ml-3;
+}
+
+.event-fc-color.fc-bg-success {
+  border-color: var(--color-accent-green-50);
+  background-color: var(--color-accent-green-50);
+}
+
+.event-fc-color.fc-bg-danger {
+  border-color: var(--color-accent-red-50);
+  background-color: var(--color-accent-red-50);
+}
+
+.event-fc-color.fc-bg-primary {
+  border-color: var(--color-primary-50);
+  background-color: var(--color-primary-50);
+}
+
+.event-fc-color.fc-bg-warning {
+  border-color: var(--color-accent-orange-50);
+  background-color: var(--color-accent-orange-50);
+}
+
+.event-fc-color.fc-bg-success .fc-daygrid-event-dot {
+  background-color: var(--color-accent-green-400);
+}
+
+.event-fc-color.fc-bg-danger .fc-daygrid-event-dot {
+  background-color: var(--color-accent-red-400);
+}
+
+.event-fc-color.fc-bg-primary .fc-daygrid-event-dot {
+  background-color: var(--color-brand-500);
+}
+
+.event-fc-color.fc-bg-warning .fc-daygrid-event-dot {
+  background-color: var(--color-accent-orange-400);
+}
+
+.fc-direction-ltr .fc-timegrid-slot-label-frame {
+  @apply px-3 py-1.5 text-left text-sm font-medium text-gray-500;
+}
+
+.fc .fc-timegrid-axis-cushion {
+  @apply text-sm font-medium text-gray-500;
+}
+
+.custom-calendar .fc-h-event {
+  background-color: transparent;
+  border: none;
+  color: black;
+}
+
+.fc.fc-media-screen {
+  @apply min-h-screen;
+}
+
+.input-date-icon::-webkit-inner-spin-button,
+.input-date-icon::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  -webkit-appearance: none;
+}
+
+/* ── Simplebar overrides ───────────────────────────────────── */
+
+.simplebar-scrollbar:before {
+  @apply !bg-gray-200 !rounded-full !opacity-100;
+}
+
+.simplebar-scrollbar.simplebar-visible:before {
+  @apply opacity-100;
+}
+
+/* ── Animations ────────────────────────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes progress-bar {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s ease-out forwards;
+}
+
+.animate-progress-bar {
+  animation: progress-bar 1.2s ease-in-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}

@@ -1,0 +1,61 @@
+{
+  "name": "@saas/shared-defaults",
+  "version": "1.0.0",
+  "description": "Shared defaults for SaaS monorepo",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./working-hours": {
+      "types": "./dist/working-hours.d.ts",
+      "import": "./dist/working-hours.mjs",
+      "require": "./dist/working-hours.js"
+    },
+    "./services": {
+      "types": "./dist/services.d.ts",
+      "import": "./dist/services.mjs",
+      "require": "./dist/services.js"
+    },
+    "./team-members": {
+      "types": "./dist/team-members.d.ts",
+      "import": "./dist/team-members.mjs",
+      "require": "./dist/team-members.js"
+    },
+    "./landing-page": {
+      "types": "./dist/landing-page.d.ts",
+      "import": "./dist/landing-page.mjs",
+      "require": "./dist/landing-page.js"
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@saas/shared-types": "*"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.1",
+    "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jfilipeferreira96/saas.git",
+    "directory": "packages/shared/shared-defaults"
+  },
+  "keywords": [
+    "typescript",
+    "defaults",
+    "saas",
+    "monorepo"
+  ],
+  "author": "Filipe Ferreira",
+  "license": "MIT"
+}

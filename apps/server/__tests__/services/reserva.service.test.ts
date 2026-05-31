@@ -1,0 +1,535 @@
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import testPrisma from "../helpers/test-prisma";
+import { seedTestData, cleanTestData, TEST_IDS } from "../helpers/seed";
+
+vi.mock("@festas/db", () => ({
+  default: testPrisma,
+}));
+
+vi.mock("@/lib/logger", () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    http: vi.fn(),
+  },
+}));
+
+import { reservaService } from "@/services/reserva.service";
+
+const today = new Date();
+const todayStr = today.toISOString().split("T")[0]!;
+const tomorrow = new Date(today);
+tomorrow.setDate(tomorrow.getDate() + 2);
+const tomorrowStr = tomorrow.toISOString().split("T")[0]!;
+
+const TEST_ANIVERSARIANTE = {
+  nome: "Criança Teste Create",
+  encarregadoNome: "Enc Teste",
+  encarregadoEmail: "enc-teste-create@test.com",
+  encarregadoTelefone: "919999999",
+};
+
+describe("Reserva Service", () => {
+  beforeAll(async () => {
+    await seedTestData();
+  }, 60000);
+
+  afterAll(async () => {
+    await cleanTestData();
+    await testPrisma.$disconnect();
+  });
+
+  // ── create ────────────────────────────────────────────────────
+  describe("create()", () => {
+    it("should create a new reserva with aniversariante", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "16:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        aniversariantes: [TEST_ANIVERSARIANTE],
+        numCriancas: 15,
+        notas: "Teste de criação",
+      });
+
+      expect(reserva).toBeDefined();
+      expect(reserva.aniversariantes.length).toBeGreaterThan(0);
+      expect(reserva.estado).toBe("RESERVA");
+      expect(reserva.local.id).toBe(TEST_IDS.LOCAL_1);
+
+      // Cleanup
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should create a reserva with clienteId directly", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "15:30",
+        duracaoMinutos: 90,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      expect(reserva).toBeDefined();
+      expect(reserva.clienteId).toBe(TEST_IDS.CLIENTE_1);
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should throw DATA_REQUIRED if missing", async () => {
+      await expect(
+        reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: "",
+          horario: "16:00",
+          duracaoMinutos: 120,
+          localId: TEST_IDS.LOCAL_1,
+        })
+      ).rejects.toThrow("DATA_REQUIRED");
+    });
+
+    it("should throw HORARIO_REQUIRED if missing", async () => {
+      await expect(
+        reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: tomorrowStr,
+          horario: "",
+          duracaoMinutos: 120,
+          localId: TEST_IDS.LOCAL_1,
+        })
+      ).rejects.toThrow("HORARIO_REQUIRED");
+    });
+
+    it("should throw LOCAL_REQUIRED if missing", async () => {
+      await expect(
+        reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: tomorrowStr,
+          horario: "16:00",
+          duracaoMinutos: 120,
+          localId: "",
+        })
+      ).rejects.toThrow("LOCAL_REQUIRED");
+    });
+
+    it("should throw LOCAL_NOT_FOUND for non-existent local", async () => {
+      await expect(
+        reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: tomorrowStr,
+          horario: "16:00",
+          duracaoMinutos: 120,
+          localId: "non-existent-local",
+        })
+      ).rejects.toThrow("LOCAL_NOT_FOUND");
+    });
+
+    it("should throw LOCAL_NOT_AVAILABLE for time conflict", async () => {
+      await expect(
+        reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: todayStr,
+          horario: "10:00",
+          duracaoMinutos: 120,
+          localId: TEST_IDS.LOCAL_1,
+        })
+      ).rejects.toThrow("LOCAL_NOT_AVAILABLE");
+    });
+
+    it("should create reserva with extras", async () => {
+      const reserva = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "17:00",
+        duracaoMinutos: 90,
+        localId: TEST_IDS.LOCAL_1,
+        extrasIds: [TEST_IDS.EXTRA_1],
+      });
+
+      expect(reserva.extras.length).toBeGreaterThan(0);
+      expect(reserva.extras[0]?.extraId).toBe(TEST_IDS.EXTRA_1);
+
+      await testPrisma.reservaExtra.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+  });
+
+  // ── list ──────────────────────────────────────────────────────
+  describe("list()", () => {
+    it("should return all reservas (paginated)", async () => {
+      const result = await reservaService.list();
+      expect(result.items.length).toBeGreaterThanOrEqual(3);
+      expect(result.total).toBeGreaterThanOrEqual(3);
+    });
+
+    it("should filter by estado", async () => {
+      const result = await reservaService.list({ estado: "CONFIRMADO" });
+      expect(result.items.length).toBeGreaterThanOrEqual(1);
+      expect(result.items.every((r: { estado: string }) => r.estado === "CONFIRMADO")).toBe(true);
+    });
+
+    it("should filter by localId", async () => {
+      const result = await reservaService.list({ localId: TEST_IDS.LOCAL_1 });
+      expect(result.items.every((r: { localId: string }) => r.localId === TEST_IDS.LOCAL_1)).toBe(true);
+    });
+  });
+
+  // ── getById ───────────────────────────────────────────────────
+  describe("getById()", () => {
+    it("should return a reserva with relations", async () => {
+      const reserva = await reservaService.getById(TEST_IDS.RESERVA_CONFIRMADA);
+      expect(reserva).toBeDefined();
+      expect(reserva.id).toBe(TEST_IDS.RESERVA_CONFIRMADA);
+      expect(reserva.local).toBeDefined();
+      expect(reserva.cliente).toBeDefined();
+    });
+
+    it("should throw NOT_FOUND for non-existent ID", async () => {
+      await expect(reservaService.getById("non-existent")).rejects.toThrow("NOT_FOUND");
+    });
+  });
+
+  // ── updateStatus ──────────────────────────────────────────────
+  describe("updateStatus()", () => {
+    it("should transition RESERVA → CONFIRMADO", async () => {
+      const updated = await reservaService.updateStatus(TEST_IDS.RESERVA_PENDENTE, "CONFIRMADO");
+      expect(updated.estado).toBe("CONFIRMADO");
+    });
+
+    it("should throw INVALID_STATUS for invalid transition", async () => {
+      await expect(
+        reservaService.updateStatus(TEST_IDS.RESERVA_CONFIRMADA, "RESERVA")
+      ).rejects.toThrow("INVALID_STATUS");
+    });
+
+    it("should throw INVALID_STATUS for CONCLUIDA → anything", async () => {
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(todayStr),
+          horario: "08:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "CONCLUIDA",
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      await expect(
+        reservaService.updateStatus(reserva.id, "RESERVA")
+      ).rejects.toThrow("INVALID_STATUS");
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+  });
+
+  // ── delete ────────────────────────────────────────────────────
+  describe("delete()", () => {
+    it("should delete a reserva in RESERVA state", async () => {
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(tomorrowStr),
+          horario: "09:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "RESERVA",
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      await reservaService.delete(reserva.id);
+
+      const found = await testPrisma.reserva.findUnique({ where: { id: reserva.id } });
+      expect(found).toBeNull();
+    });
+
+    it("should throw CANNOT_DELETE_IN_PROGRESS for EM_CURSO reserva", async () => {
+      await expect(
+        reservaService.delete(TEST_IDS.RESERVA_EM_CURSO)
+      ).rejects.toThrow("CANNOT_DELETE_IN_PROGRESS");
+    });
+  });
+
+  // ── iniciar ───────────────────────────────────────────────────
+  describe("iniciar()", () => {
+    it("should start a reserva from CONFIRMADO state", async () => {
+      const reserva = await reservaService.iniciar(TEST_IDS.RESERVA_CONFIRMADA);
+      expect(reserva).toBeDefined();
+      expect(reserva.estado).toBe("EM_CURSO");
+      expect(reserva.inicioEm).toBeDefined();
+      expect(reserva.fimPrevisto).toBeDefined();
+
+      // Cleanup
+      await testPrisma.reservaEtapa.deleteMany({ where: { reservaId: TEST_IDS.RESERVA_CONFIRMADA } }).catch(() => {});
+      await testPrisma.reserva.update({
+        where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+        data: { estado: "CONFIRMADO", inicioEm: null, fimPrevisto: null },
+      });
+    });
+
+    it("should throw NOT_FOUND for non-existent reserva", async () => {
+      await expect(reservaService.iniciar("non-existent")).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should throw RESERVA_NOT_CONFIRMED if reserva is not confirmed", async () => {
+      // RESERVA_PENDENTE is in RESERVA state, not CONFIRMADO
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(tomorrowStr),
+          horario: "13:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "RESERVA",
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      await expect(reservaService.iniciar(reserva.id)).rejects.toThrow("RESERVA_NOT_CONFIRMED");
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should throw ALREADY_IN_PROGRESS if already started", async () => {
+      // Create a CONFIRMADO reserva with inicioEm already set
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(),
+          horario: "12:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "CONFIRMADO",
+          inicioEm: new Date(),
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      await expect(reservaService.iniciar(reserva.id)).rejects.toThrow("ALREADY_IN_PROGRESS");
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+  });
+
+  // ── finalizar ─────────────────────────────────────────────────
+  describe("finalizar()", () => {
+    it("should finalize an EM_CURSO reserva and release cacifos", async () => {
+      const inicio = new Date();
+      inicio.setHours(8, 0, 0, 0);
+      const fim = new Date(inicio);
+      fim.setMinutes(fim.getMinutes() + 60);
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(),
+          horario: "08:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "EM_CURSO",
+          inicioEm: inicio,
+          fimPrevisto: fim,
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      // Occupy a cacifo
+      await testPrisma.cacifo.update({
+        where: { numero: 1 },
+        data: { estado: "OCUPADO", reservaId: reserva.id },
+      });
+
+      const finalized = await reservaService.finalizar(reserva.id);
+      expect(finalized.estado).toBe("CONCLUIDA");
+      expect(finalized.fimReal).toBeDefined();
+
+      // Verify cacifo was released
+      const cacifo = await testPrisma.cacifo.findUnique({ where: { numero: 1 } });
+      expect(cacifo?.estado).toBe("LIVRE");
+      expect(cacifo?.reservaId).toBeNull();
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+    });
+
+    it("should throw NOT_FOUND for non-existent reserva", async () => {
+      await expect(reservaService.finalizar("non-existent")).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should throw NOT_IN_PROGRESS if reserva is not EM_CURSO", async () => {
+      await expect(reservaService.finalizar(TEST_IDS.RESERVA_CONFIRMADA)).rejects.toThrow(
+        "NOT_IN_PROGRESS"
+      );
+    });
+  });
+
+  // ── alocarMonitor / removerMonitor ────────────────────────────
+  describe("alocarMonitor() / removerMonitor()", () => {
+    it("should allocate a monitor to a reserva", async () => {
+      const rm = await reservaService.alocarMonitor(TEST_IDS.RESERVA_EM_CURSO, TEST_IDS.MONITOR_1);
+      expect(rm).toBeDefined();
+      expect(rm.reservaId).toBe(TEST_IDS.RESERVA_EM_CURSO);
+      expect(rm.monitorId).toBe(TEST_IDS.MONITOR_1);
+
+      await reservaService.removerMonitor(TEST_IDS.RESERVA_EM_CURSO, TEST_IDS.MONITOR_1);
+    });
+
+    it("should throw MONITOR_NOT_FOUND for non-existent monitor", async () => {
+      await expect(
+        reservaService.alocarMonitor(TEST_IDS.RESERVA_EM_CURSO, "non-existent")
+      ).rejects.toThrow("MONITOR_NOT_FOUND");
+    });
+  });
+
+  // ── toggleEtapa ───────────────────────────────────────────────
+  describe("toggleEtapa()", () => {
+    it("should toggle an etapa for a reserva", async () => {
+      const etapa = await testPrisma.etapaFesta.create({
+        data: { nome: "Etapa Teste", ordem: 1, activo: true },
+      });
+
+      const reservaEtapa = await testPrisma.reservaEtapa.create({
+        data: {
+          reservaId: TEST_IDS.RESERVA_EM_CURSO,
+          etapaId: etapa.id,
+          concluida: false,
+        },
+      });
+
+      const toggled = await reservaService.toggleEtapa(TEST_IDS.RESERVA_EM_CURSO, etapa.id);
+      expect(toggled.concluida).toBe(true);
+      expect(toggled.concluidaEm).toBeDefined();
+
+      const toggledBack = await reservaService.toggleEtapa(TEST_IDS.RESERVA_EM_CURSO, etapa.id);
+      expect(toggledBack.concluida).toBe(false);
+
+      await testPrisma.reservaEtapa.delete({ where: { id: reservaEtapa.id } });
+      await testPrisma.etapaFesta.delete({ where: { id: etapa.id } });
+    });
+
+    it("should throw ETAPA_NOT_FOUND for non-existent etapa", async () => {
+      await expect(
+        reservaService.toggleEtapa(TEST_IDS.RESERVA_EM_CURSO, "non-existent")
+      ).rejects.toThrow("ETAPA_NOT_FOUND");
+    });
+  });
+
+  // ── create with monitoresIds and etapasIds ─────────────────────
+  describe("create() with monitoresIds and etapasIds", () => {
+    it("should create a reserva with monitores and etapas", async () => {
+      const etapa1 = await testPrisma.etapaFesta.create({
+        data: { nome: "Etapa Create 1", ordem: 1, activo: true },
+      });
+      const etapa2 = await testPrisma.etapaFesta.create({
+        data: { nome: "Etapa Create 2", ordem: 2, activo: true },
+      });
+
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "18:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_2,
+        clienteId: TEST_IDS.CLIENTE_2,
+        numCriancas: 10,
+        monitoresIds: [TEST_IDS.MONITOR_1, TEST_IDS.MONITOR_2],
+        etapasIds: [etapa1.id, etapa2.id],
+      });
+
+      expect(reserva).toBeDefined();
+      expect(reserva.monitores.length).toBe(2);
+      expect(reserva.etapas.length).toBe(2);
+
+      await testPrisma.reservaEtapa.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reservaMonitor.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+      await testPrisma.etapaFesta.delete({ where: { id: etapa1.id } });
+      await testPrisma.etapaFesta.delete({ where: { id: etapa2.id } });
+    });
+  });
+
+  // ── removerEtapa ──────────────────────────────────────────────
+  describe("removerEtapa()", () => {
+    it("should remove an etapa from a reserva", async () => {
+      const etapa = await testPrisma.etapaFesta.create({
+        data: { nome: "Etapa Remover", ordem: 1, activo: true },
+      });
+
+      await testPrisma.reservaEtapa.create({
+        data: {
+          reservaId: TEST_IDS.RESERVA_EM_CURSO,
+          etapaId: etapa.id,
+          concluida: false,
+        },
+      });
+
+      await reservaService.removerEtapa(TEST_IDS.RESERVA_EM_CURSO, etapa.id);
+
+      const remaining = await testPrisma.reservaEtapa.findMany({
+        where: { reservaId: TEST_IDS.RESERVA_EM_CURSO, etapaId: etapa.id },
+      });
+      expect(remaining.length).toBe(0);
+
+      await testPrisma.etapaFesta.delete({ where: { id: etapa.id } });
+    });
+
+    it("should throw ETAPA_NOT_FOUND for non-existent etapa association", async () => {
+      await expect(
+        reservaService.removerEtapa(TEST_IDS.RESERVA_EM_CURSO, "non-existent"),
+      ).rejects.toThrow("ETAPA_NOT_FOUND");
+    });
+  });
+
+  // ── marcarEtapasConcluidas ────────────────────────────────────
+  describe("marcarEtapasConcluidas()", () => {
+    it("should mark all etapas as concluida for a reserva", async () => {
+      const etapa1 = await testPrisma.etapaFesta.create({
+        data: { nome: "Etapa Concluir 1", ordem: 1, activo: true },
+      });
+      const etapa2 = await testPrisma.etapaFesta.create({
+        data: { nome: "Etapa Concluir 2", ordem: 2, activo: true },
+      });
+
+      await testPrisma.reservaEtapa.create({
+        data: { reservaId: TEST_IDS.RESERVA_EM_CURSO, etapaId: etapa1.id, concluida: false },
+      });
+      await testPrisma.reservaEtapa.create({
+        data: { reservaId: TEST_IDS.RESERVA_EM_CURSO, etapaId: etapa2.id, concluida: false },
+      });
+
+      const etapasResult = await reservaService.marcarEtapasConcluidas(TEST_IDS.RESERVA_EM_CURSO);
+      expect(etapasResult.length).toBeGreaterThanOrEqual(2);
+
+      // Verify all are concluida
+      const etapas = await testPrisma.reservaEtapa.findMany({
+        where: { reservaId: TEST_IDS.RESERVA_EM_CURSO, etapaId: { in: [etapa1.id, etapa2.id] } },
+      });
+      expect(etapas.every((e) => e.concluida === true)).toBe(true);
+      expect(etapas.every((e) => e.concluidaEm !== null)).toBe(true);
+
+      await testPrisma.reservaEtapa.deleteMany({
+        where: { reservaId: TEST_IDS.RESERVA_EM_CURSO, etapaId: { in: [etapa1.id, etapa2.id] } },
+      });
+      await testPrisma.etapaFesta.delete({ where: { id: etapa1.id } });
+      await testPrisma.etapaFesta.delete({ where: { id: etapa2.id } });
+    });
+
+    it("should throw NOT_FOUND for non-existent reserva", async () => {
+      await expect(
+        reservaService.marcarEtapasConcluidas("non-existent"),
+      ).rejects.toThrow("NOT_FOUND");
+    });
+  });
+
+  // ── getActive ─────────────────────────────────────────────────
+  describe("getActive()", () => {
+    it("should return only active reservas (EM_CURSO)", async () => {
+      const active = await reservaService.getActive();
+      expect(active.length).toBeGreaterThanOrEqual(1);
+      expect(active.every((r: { estado: string }) => r.estado === "EM_CURSO")).toBe(true);
+    });
+  });
+});

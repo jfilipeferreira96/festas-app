@@ -1,0 +1,529 @@
+"use client";
+
+import { useState, useMemo, useCallback } from "react";
+import { useUtilizadores } from "@/hooks/use-utilizadores";
+import { useUser } from "@/contexts/AuthContext";
+import type { FuncaoUtilizador, Utilizador } from "@saas/shared-types";
+import Button from "@/components/ui/button/Button";
+import { BaseModal } from "@/components/ui/BaseModal";
+import InputField from "@/components/form/input/InputField";
+import Select from "@/components/form/Select";
+import { Plus, Trash2, Shield, UserCheck, UserX } from "lucide-react";
+import DataTable from "@/components/ui/table/DataTable";
+import type { Column } from "@/components/ui/table/DataTable";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
+import ProfilePhotoUpload from "@/components/ui/ProfilePhotoUpload";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555";
+
+// --- Zod Schemas ---
+const createUserSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+  password: z.string().min(8, "Mínimo 8 caracteres"),
+  funcao: z.string().min(1, "Seleccione uma função"),
+});
+
+const editUserSchema = z.object({
+  funcao: z.string().min(1, "Seleccione uma função"),
+});
+
+type CreateUserFormData = z.infer<typeof createUserSchema>;
+type EditUserFormData = z.infer<typeof editUserSchema>;
+
+// --- Constants ---
+const roleColors: Record<FuncaoUtilizador, string> = {
+  ADMINISTRADOR: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
+  GESTOR: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  RECECAO: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  MARKETING: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+};
+
+const roleLabels: Record<FuncaoUtilizador, string> = {
+  ADMINISTRADOR: "Administrador",
+  GESTOR: "Gestor",
+  RECECAO: "Receção",
+  MARKETING: "Marketing",
+};
+
+const roleOptions = Object.entries(roleLabels).map(([value, label]) => ({ value, label }));
+
+interface UtilizadoresContentProps {
+  isCreateModalOpen?: boolean;
+  setIsCreateModalOpen?: (open: boolean) => void;
+}
+
+export default function UtilizadoresContent({
+  isCreateModalOpen: externalIsCreateModalOpen,
+  setIsCreateModalOpen: externalSetIsCreateModalOpen,
+}: UtilizadoresContentProps = {}) {
+  const {
+    utilizadores,
+    isLoading,
+    createUtilizador,
+    isCreating,
+    updateFuncao,
+    isUpdatingFuncao,
+    updateActivo,
+    isUpdatingActivo,
+    deleteUtilizador,
+    isDeleting,
+  } = useUtilizadores();
+
+  const { user: currentUser } = useUser();
+
+  const [internalIsCreateModalOpen, setInternalIsCreateModalOpen] = useState(false);
+  const isCreateModalOpen = externalIsCreateModalOpen ?? internalIsCreateModalOpen;
+  const setIsCreateModalOpen = externalSetIsCreateModalOpen ?? setInternalIsCreateModalOpen;
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; userId: string; userName: string }>({
+    isOpen: false,
+    userId: "",
+    userName: "",
+  });
+  const [editUser, setEditUser] = useState<Utilizador | null>(null);
+
+  // Pending photo file for create flow
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
+
+  // --- Create Form ---
+  const {
+    register: registerCreate,
+    handleSubmit: handleCreateSubmit,
+    setValue: setCreateValue,
+    reset: resetCreateForm,
+    formState: { errors: createErrors, isSubmitting: isCreateSubmitting },
+  } = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      funcao: "",
+    },
+  });
+
+  // --- Edit Form ---
+  const {
+    setValue: setEditValue,
+    watch: watchEdit,
+    reset: resetEditForm,
+    formState: { errors: editErrors },
+  } = useForm<EditUserFormData>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      funcao: "",
+    },
+  });
+
+  const editFuncao = watchEdit("funcao");
+
+  const canEditUser = useCallback(
+    (user: Utilizador) => user.id !== currentUser?.id,
+    [currentUser?.id]
+  );
+
+  /** Upload a pending photo file after entity creation */
+  const uploadPendingPhoto = useCallback(async (entityId: string, file: File, endpoint: string) => {
+    const formData = new FormData();
+    formData.append("photo", file);
+    try {
+      await fetch(`${SERVER_URL}${endpoint.replace(":id", entityId)}`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+    } catch {
+      // Silently fail — photo is optional, entity was already created
+    }
+  }, []);
+
+  const handleCreateUser = useCallback(
+    async (data: CreateUserFormData) => {
+      const newUser = await createUtilizador({ ...data, funcao: data.funcao as FuncaoUtilizador });
+
+      // Upload pending photo if one was selected
+      if (pendingPhotoFile && newUser?.id) {
+        await uploadPendingPhoto(newUser.id, pendingPhotoFile, "/api/upload/user/:id");
+      }
+
+      setIsCreateModalOpen(false);
+      resetCreateForm();
+      setPendingPhotoFile(null);
+    },
+    [createUtilizador, setIsCreateModalOpen, resetCreateForm, pendingPhotoFile, uploadPendingPhoto]
+  );
+
+  const handleRoleChange = useCallback(
+    async (userId: string, funcao: FuncaoUtilizador) => {
+      await updateFuncao({ id: userId, funcao });
+    },
+    [updateFuncao]
+  );
+
+  const handleToggleActive = useCallback(
+    async (userId: string, activo: boolean) => {
+      await updateActivo({ id: userId, activo });
+    },
+    [updateActivo]
+  );
+
+  const handleDeleteClick = useCallback(
+    (user: Utilizador) => {
+      if (!canEditUser(user)) return;
+      setDeleteModal({ isOpen: true, userId: user.id, userName: user.name });
+    },
+    [canEditUser]
+  );
+
+  const handleDeleteUser = useCallback(async () => {
+    await deleteUtilizador(deleteModal.userId);
+    setDeleteModal({ isOpen: false, userId: "", userName: "" });
+  }, [deleteUtilizador, deleteModal.userId]);
+
+  const handleOpenEdit = useCallback(
+    (user: Utilizador) => {
+      setEditUser(user);
+      resetEditForm({ funcao: user.funcao });
+    },
+    [resetEditForm]
+  );
+
+  const handleOpenCreate = useCallback(() => {
+    resetCreateForm({ name: "", email: "", password: "", funcao: "" });
+    setPendingPhotoFile(null);
+    setIsCreateModalOpen(true);
+  }, [resetCreateForm, setIsCreateModalOpen]);
+
+  const columns: Column<Utilizador>[] = useMemo(
+    () => [
+      {
+        key: "name",
+        label: "Utilizador",
+        sortable: true,
+        render: (_value, user) => (
+          <div className="flex items-center">
+            {user.image ? (
+              <img
+                src={`${process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555"}${user.image}`}
+                alt={user.name}
+                className="h-10 w-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-medium text-sm">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="ml-4">
+              <div className="text-sm font-medium text-text-primary">{user.name}</div>
+              <div className="text-sm text-text-muted">{user.email}</div>
+              {user.id === currentUser?.id && (
+                <span className="inline-flex items-center text-xs text-brand-500 mt-1">
+                  <Shield className="w-3 h-3 mr-1" />
+                  Você
+                </span>
+              )}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: "funcao",
+        label: "Função",
+        sortable: true,
+        render: (_value, user) =>
+          canEditUser(user) ? (
+            <Select
+              options={roleOptions}
+              value={user.funcao}
+              onChange={(value) => handleRoleChange(user.id, value as FuncaoUtilizador)}
+              className="h-9 text-sm"
+            />
+          ) : (
+            <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${roleColors[user.funcao]}`}>
+              {roleLabels[user.funcao]}
+            </span>
+          ),
+      },
+      {
+        key: "activo",
+        label: "Estado",
+        sortable: true,
+        render: (_value, user) =>
+          canEditUser(user) ? (
+            <button
+              onClick={() => handleToggleActive(user.id, !user.activo)}
+              disabled={isUpdatingActivo}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full transition-colors ${
+                user.activo
+                  ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+              }`}
+            >
+              {user.activo ? (
+                <>
+                  <UserCheck className="w-3 h-3" /> Activo
+                </>
+              ) : (
+                <>
+                  <UserX className="w-3 h-3" /> Inactivo
+                </>
+              )}
+            </button>
+          ) : (
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                user.activo
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+              }`}
+            >
+              {user.activo ? (
+                <>
+                  <UserCheck className="w-3 h-3" /> Activo
+                </>
+              ) : (
+                <>
+                  <UserX className="w-3 h-3" /> Inactivo
+                </>
+              )}
+            </span>
+          ),
+      },
+      {
+        key: "createdAt",
+        label: "Criado em",
+        sortable: true,
+        render: (value) => (
+          <span className="text-sm text-text-muted">
+            {format(new Date(value as string), "dd MMM yyyy", { locale: pt })}
+          </span>
+        ),
+      },
+    ],
+    [currentUser?.id, canEditUser, isUpdatingActivo]
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        {!externalSetIsCreateModalOpen && (
+          <Button onClick={handleOpenCreate} startIcon={<Plus className="w-4 h-4" />}>
+            Novo Utilizador
+          </Button>
+        )}
+      </div>
+
+      {/* DataTable */}
+      <DataTable<Utilizador>
+        data={utilizadores || []}
+        columns={columns}
+        loading={isLoading}
+        searchable
+        searchPlaceholder="Pesquisar por nome, email ou função..."
+        searchableFields={["name", "email"]}
+        itemLabel="utilizadores"
+        pagination
+        pageSize={10}
+        onEdit={handleOpenEdit}
+        onDelete={handleDeleteClick}
+        canManage={true}
+        emptyState={{
+          title: "Nenhum utilizador encontrado",
+          description: "Comece por criar o primeiro utilizador.",
+          action: (
+            <Button onClick={handleOpenCreate} className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Criar utilizador
+            </Button>
+          ),
+        }}
+      />
+
+      {/* Edit User Modal */}
+      <BaseModal isOpen={!!editUser} onClose={() => setEditUser(null)} className="max-w-md">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-text-primary mb-6">Editar Utilizador</h2>
+          {editUser && (
+            <div className="space-y-4">
+              {/* Profile Photo Section */}
+              <div>
+                <h4 className="mb-4 text-sm font-medium text-text-primary">Alterar Foto de Perfil</h4>
+                <div className="mb-4 flex max-w-sm items-center gap-5">
+                  <ProfilePhotoUpload
+                    currentPhotoUrl={editUser.image}
+                    name={editUser.name}
+                    uploadEndpoint={`/api/upload/user/${editUser.id}`}
+                    size={80}
+                    onUploadSuccess={(imageUrl) => {
+                      setEditUser({ ...editUser, image: imageUrl });
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5">Nome</label>
+                <p className="text-sm text-text-primary">{editUser.name}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5">Email</label>
+                <p className="text-sm text-text-primary">{editUser.email}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5">Função</label>
+                <Select
+                  options={roleOptions}
+                  value={editFuncao}
+                  onChange={(value) => {
+                    setEditValue("funcao", value);
+                    handleRoleChange(editUser.id, value as FuncaoUtilizador);
+                    setEditUser({ ...editUser, funcao: value as FuncaoUtilizador });
+                  }}
+                  placeholder="Seleccione uma função"
+                />
+                {editErrors.funcao && (
+                  <p className="mt-1 text-xs text-accent-red">{editErrors.funcao.message}</p>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-text-primary">Estado</label>
+                <button
+                  onClick={() => {
+                    handleToggleActive(editUser.id, !editUser.activo);
+                    setEditUser({ ...editUser, activo: !editUser.activo });
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full transition-colors ${
+                    editUser.activo
+                      ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                  }`}
+                >
+                  {editUser.activo ? (
+                    <><UserCheck className="w-3 h-3" /> Activo</>
+                  ) : (
+                    <><UserX className="w-3 h-3" /> Inactivo</>
+                  )}
+                </button>
+              </div>
+              <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
+                <Button variant="outline" onClick={() => setEditUser(null)} className="flex-1 rounded-[10px] px-5 py-3">
+                  Fechar
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </BaseModal>
+
+      {/* Create User Modal */}
+      <BaseModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-md">
+        <div className="p-6">
+          <h2 className="text-lg font-semibold text-text-primary mb-6">Novo Utilizador</h2>
+          <form onSubmit={handleCreateSubmit(handleCreateUser)} className="space-y-4">
+            {/* Profile Photo Section */}
+            <div>
+              <h4 className="mb-4 text-sm font-medium text-text-primary">Foto de Perfil</h4>
+              <div className="mb-4 flex max-w-sm items-center gap-5">
+                <ProfilePhotoUpload
+                  name={registerCreate("name").name ? "U" : "U"}
+                  size={80}
+                  onFileSelect={(file) => setPendingPhotoFile(file)}
+                  pendingFile={pendingPhotoFile}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Nome</label>
+              <InputField
+                type="text"
+                {...registerCreate("name")}
+                placeholder="Nome do utilizador"
+                error={!!createErrors.name}
+                hint={createErrors.name?.message}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Email</label>
+              <InputField
+                type="email"
+                {...registerCreate("email")}
+                placeholder="email@exemplo.com"
+                error={!!createErrors.email}
+                hint={createErrors.email?.message}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Palavra-passe</label>
+              <InputField
+                type="password"
+                {...registerCreate("password")}
+                placeholder="Mínimo 8 caracteres"
+                error={!!createErrors.password}
+                hint={createErrors.password?.message}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Função</label>
+              <Select
+                options={roleOptions}
+                placeholder="Seleccione uma função"
+                onChange={(value) => setCreateValue("funcao", value)}
+              />
+              {createErrors.funcao && (
+                <p className="mt-1 text-xs text-accent-red">{createErrors.funcao.message}</p>
+              )}
+            </div>
+            <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
+              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)} className="flex-1 rounded-[10px] px-5 py-3">
+                Cancelar
+              </Button>
+              <div className="flex gap-2 flex-1 justify-end">
+                <Button type="submit" disabled={isCreateSubmitting} className="rounded-[10px] px-5 py-3">
+                  {isCreateSubmitting ? "A criar..." : "Criar Utilizador"}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </BaseModal>
+
+      {/* Delete Confirmation Modal */}
+      <BaseModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, userId: "", userName: "" })} className="max-w-md">
+        <div className="p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-accent-red-100 flex items-center justify-center">
+              <Trash2 className="w-6 h-6 text-accent-red-400" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-text-primary">Eliminar Utilizador</h2>
+              <p className="text-sm text-text-muted">Esta ação não pode ser revertida</p>
+            </div>
+          </div>
+          <p className="text-sm text-text-primary mb-6">
+            Tem a certeza que deseja eliminar o utilizador <strong>{deleteModal.userName}</strong>?
+          </p>
+          <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteModal({ isOpen: false, userId: "", userName: "" })}
+              className="flex-1 rounded-[10px] px-5 py-3"
+            >
+              Cancelar
+            </Button>
+            <div className="flex gap-2 flex-1 justify-end">
+              <Button variant="danger" onClick={handleDeleteUser} disabled={isDeleting} className="rounded-[10px] px-5 py-3">
+                {isDeleting ? "A eliminar..." : "Eliminar"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </BaseModal>
+    </div>
+  );
+}

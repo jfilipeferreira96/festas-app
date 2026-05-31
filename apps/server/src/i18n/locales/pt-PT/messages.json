@@ -1,0 +1,183 @@
+{
+  "auth": {
+    "unauthorized": "Não autorizado",
+    "userNotFound": "Utilizador não encontrado",
+    "accessDenied": "Acesso negado",
+    "insufficientPermissions": "Permissões insuficientes para realizar esta ação",
+    "invalidCredentials": "Credenciais inválidas",
+    "emailAlreadyExists": "Este email já está registado",
+    "passwordTooShort": "A palavra-passe deve ter pelo menos 8 caracteres",
+    "nameRequired": "Nome é obrigatório",
+    "emailRequired": "Email é obrigatório",
+    "accountCreated": "Conta criada com sucesso",
+    "passwordResetSent": "Email de recuperação enviado",
+    "passwordResetSuccess": "Palavra-passe alterada com sucesso",
+    "verificationSent": "Email de verificação enviado",
+    "verificationSuccess": "Email verificado com sucesso"
+  },
+  "reserva": {
+    "notFound": "Reserva não encontrada",
+    "createdSuccessfully": "Reserva criada com sucesso",
+    "updatedSuccessfully": "Reserva atualizada com sucesso",
+    "deleted": "Reserva eliminada com sucesso",
+    "deletedSuccessfully": "Reserva eliminada com sucesso",
+    "statusUpdated": "Estado da reserva atualizado com sucesso",
+    "startedSuccessfully": "Festa iniciada com sucesso",
+    "endedSuccessfully": "Festa concluída com sucesso",
+    "idRequired": "ID da reserva é obrigatório",
+    "aniversarianteRequired": "Nome do aniversariante é obrigatório",
+    "dataRequired": "Data da reserva é obrigatória",
+    "horarioRequired": "Horário da reserva é obrigatório",
+    "localRequired": "Local é obrigatório",
+    "localNotAvailable": "O local selecionado não está disponível neste horário",
+    "localInactive": "O local selecionado está inactivo",
+    "clienteRequired": "Cliente é obrigatório",
+    "capacityExceeded": "O número de crianças excede a capacidade da sala",
+    "cannotDeleteInProgress": "Não é possível eliminar uma reserva em curso",
+    "cannotModifyInProgress": "Não é possível modificar uma reserva em curso",
+    "invalidStatus": "Estado de reserva inválido",
+    "cannotTransitionStatus": "Não é possível alterar de {{from}} para {{to}}",
+    "notConfirmed": "A reserva não está confirmada",
+    "alreadyInProgress": "A reserva já está em curso",
+    "notInProgress": "A reserva não está em curso",
+    "etapaNotFound": "Etapa não encontrada para esta reserva"
+  },
+  "cacifo": {
+    "notFound": "Cacifo não encontrado",
+    "updatedSuccessfully": "Cacifo atualizado com sucesso",
+    "alreadyOccupied": "Cacifo já está ocupado",
+    "released": "Cacifo libertado com sucesso",
+    "invalidState": "Estado de cacifo inválido",
+    "cannotReleaseFree": "Não é possível libertar um cacifo livre"
+  },
+  "configuracaoCacifo": {
+    "alreadyExists": "A configuração de cacifos já existe",
+    "cannotReduceOccupied": "Não é possível reduzir o número de cacifos porque existem cacifos ocupados",
+    "initialized": "Configuração de cacifos inicializada com sucesso",
+    "updated": "Configuração de cacifos atualizada com sucesso"
+  },
+  "participante": {
+    "notFound": "Participante não encontrado",
+    "maxParticipantes": "Número máximo de participantes por festa atingido (20)",
+    "reservaNotFound": "Reserva não encontrada",
+    "added": "Participante adicionado com sucesso",
+    "confirmed": "Presença confirmada com sucesso",
+    "removed": "Participante removido com sucesso"
+  },
+  "menu": {
+    "notFound": "Menu não encontrado",
+    "savedSuccessfully": "Menu guardado com sucesso",
+    "updatedSuccessfully": "Menu atualizado com sucesso",
+    "alreadyExists": "Já existe um menu para esta reserva",
+    "reservaNotFound": "Reserva não encontrada",
+    "reservaInProgress": "Não é possível editar o menu de uma reserva em curso"
+  },
+  "local": {
+    "notFound": "Local não encontrado",
+    "createdSuccessfully": "Local criado com sucesso",
+    "updatedSuccessfully": "Local atualizado com sucesso",
+    "nameRequired": "Nome do local é obrigatório",
+    "capacityRequired": "Capacidade é obrigatória",
+    "cannotDeleteWithReservas": "Não é possível eliminar um local com reservas futuras",
+    "hasActiveReservas": "Existem reservas activas neste local",
+    "inactive": "O local selecionado está inactivo"
+  },
+  "monitor": {
+    "notFound": "Monitor não encontrado",
+    "createdSuccessfully": "Monitor criado com sucesso",
+    "updatedSuccessfully": "Monitor atualizado com sucesso",
+    "nameRequired": "Nome do monitor é obrigatório",
+    "contactoRequired": "Contacto é obrigatório",
+    "inactive": "O monitor selecionado está inactivo",
+    "inactiveNotAvailable": "Monitores inactivos não estão disponíveis para alocação",
+    "insufficientMonitors": "Monitores insuficientes para o número de crianças"
+  },
+  "extra": {
+    "notFound": "Extra não encontrado",
+    "createdSuccessfully": "Extra criado com sucesso",
+    "updatedSuccessfully": "Extra atualizado com sucesso",
+    "nameRequired": "Nome do extra é obrigatório",
+    "priceRequired": "Preço é obrigatório"
+  },
+  "cliente": {
+    "notFound": "Cliente não encontrado",
+    "createdSuccessfully": "Cliente criado com sucesso",
+    "updatedSuccessfully": "Cliente atualizado com sucesso",
+    "deleted": "Cliente eliminado com sucesso",
+    "emailExists": "Já existe um cliente com este email",
+    "emailAlreadyExists": "Já existe um cliente com este email",
+    "telefoneExists": "Já existe um cliente com este telefone",
+    "contactoAlreadyExists": "Já existe um cliente com este contacto",
+    "nomeRequired": "Nome é obrigatório",
+    "emailRequired": "Email é obrigatório",
+    "telefoneRequired": "Telefone é obrigatório"
+  },
+  "campanha": {
+    "notFound": "Campanha não encontrada",
+    "createdSuccessfully": "Campanha criada com sucesso",
+    "updatedSuccessfully": "Campanha atualizada com sucesso",
+    "sentSuccessfully": "Campanha enviada com sucesso",
+    "draftSaved": "Rascunho guardado com sucesso",
+    "subjectRequired": "Assunto é obrigatório",
+    "messageRequired": "Mensagem é obrigatória",
+    "segmentRequired": "Segmento é obrigatório",
+    "cannotModifySent": "Não é possível modificar uma campanha já enviada",
+    "optOutFiltered": "Contactos com opt-out foram filtrados automaticamente"
+  },
+  "utilizador": {
+    "notFound": "Utilizador não encontrado",
+    "createdSuccessfully": "Utilizador criado com sucesso",
+    "updatedSuccessfully": "Utilizador atualizado com sucesso",
+    "funcaoUpdated": "Função atualizada com sucesso",
+    "deletedSuccessfully": "Utilizador eliminado com sucesso",
+    "funcaoRequired": "Função é obrigatória",
+    "creationFailed": "Falha ao criar utilizador",
+    "cannotChangeOwnFuncao": "Não pode alterar a sua própria função",
+    "cannotChangeOwnActivo": "Não pode alterar o seu próprio estado",
+    "cannotDeleteSelf": "Não pode eliminar a sua própria conta",
+    "mustHaveAdmin": "Deve existir pelo menos um utilizador administrador",
+    "inviteSent": "Convite enviado com sucesso",
+    "inviteExpired": "Convite expirado",
+    "deactivated": "Utilizador desactivado com sucesso",
+    "reactivated": "Utilizador reactivado com sucesso"
+  },
+  "audit": {
+    "logCreated": "Registo de auditoria criado",
+    "cannotModify": "Registos de auditoria não podem ser alterados"
+  },
+  "newsletter": {
+    "contactAdded": "Contacto adicionado com sucesso",
+    "contactRemoved": "Contacto removido com sucesso",
+    "segmentCreated": "Segmento criado com sucesso",
+    "segmentUpdated": "Segmento atualizado com sucesso",
+    "segmentNotFound": "Segmento não encontrado"
+  },
+  "upload": {
+    "success": "Foto carregada com sucesso",
+    "error": "Erro ao carregar ficheiro",
+    "userNotFound": "Utilizador não encontrado",
+    "notFound": "Recurso não encontrado",
+    "invalidFileType": "Tipo de ficheiro inválido. Apenas JPEG e PNG são aceites",
+    "fileTooLarge": "Ficheiro demasiado grande. Máximo 500KB",
+    "noFile": "Nenhum ficheiro selecionado"
+  },
+  "permissao": {
+    "notFound": "Permissão não encontrada",
+    "invalidModulo": "Módulo inválido",
+    "invalidNivel": "Nível de acesso inválido",
+    "adminImmutable": "As permissões do Administrador não podem ser alteradas",
+    "updatedSuccessfully": "Permissões atualizadas com sucesso",
+    "restoredDefaults": "Permissões restauradas para os valores padrão"
+  },
+  "general": {
+    "success": "Operação realizada com sucesso",
+    "error": "Ocorreu um erro inesperado",
+    "notFound": "Recurso não encontrado",
+    "validationError": "Dados inválidos",
+    "serverError": "Erro interno do servidor",
+    "forbidden": "Acesso proibido",
+    "badRequest": "Pedido inválido",
+    "conflict": "Conflito — recurso já existe",
+    "tooManyRequests": "Demasiados pedidos. Tente novamente mais tarde."
+  }
+}

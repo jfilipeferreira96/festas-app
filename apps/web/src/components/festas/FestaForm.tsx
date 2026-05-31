@@ -1,0 +1,1040 @@
+"use client";
+
+import React, { useCallback, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Plus,
+  Trash2,
+  CreditCard,
+  AlertTriangle,
+  User,
+  Cake,
+  MapPin,
+  Clock,
+  Package,
+  Users,
+  Check,
+  FileText,
+  MessageSquare,
+} from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { pt } from "date-fns/locale";
+import { Button } from "@/components/ui";
+import InputField from "@/components/form/input/InputField";
+import TextArea from "@/components/form/input/TextArea";
+import Select from "@/components/form/Select";
+import Switch from "@/components/form/switch/Switch";
+import MultiSelect from "@/components/form/MultiSelect";
+import Checkbox from "@/components/form/input/Checkbox";
+import { FormStepper } from "@/components/ui/stepper/FormStepper";
+import {
+  useCreateReserva,
+  useUpdateReserva,
+} from "@/hooks/use-reservas";
+import { useLocaisAtivos } from "@/hooks/use-locais";
+import { useExtras } from "@/hooks/use-extras";
+import { useMonitores } from "@/hooks/use-monitores";
+import { useEtapasFesta } from "@/hooks/use-etapasFesta";
+import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
+import type { Reserva, MetodoPagamento } from "@/lib/api/reservas";
+
+// ── Types ──────────────────────────────────────────────────────
+interface AniversarianteInput {
+  nome: string;
+  dataNascimento: string;
+}
+
+interface CriancaInput {
+  nome: string;
+  cacifoId: string;
+}
+
+interface EncarregadoInput {
+  nome: string;
+  contacto: string;
+  email: string;
+}
+
+// ── 20 Cores pré-definidas ─────────────────────────────────────
+const CORES_PREDEFINIDAS = [
+  { value: "#E74C3C", label: "Vermelho" },
+  { value: "#E91E63", label: "Rosa" },
+  { value: "#9B59B6", label: "Roxo" },
+  { value: "#673AB7", label: "Violeta" },
+  { value: "#3F51B5", label: "Índigo" },
+  { value: "#2196F3", label: "Azul" },
+  { value: "#03A9F4", label: "Azul Claro" },
+  { value: "#00BCD4", label: "Ciano" },
+  { value: "#009688", label: "Teal" },
+  { value: "#4CAF50", label: "Verde" },
+  { value: "#8BC34A", label: "Verde Claro" },
+  { value: "#CDDC39", label: "Lima" },
+  { value: "#FFEB3B", label: "Amarelo" },
+  { value: "#FFC107", label: "Âmbar" },
+  { value: "#FF9800", label: "Laranja" },
+  { value: "#FF5722", label: "Laranja Escuro" },
+  { value: "#795548", label: "Castanho" },
+  { value: "#9E9E9E", label: "Cinza" },
+  { value: "#607D8B", label: "Azul Cinzento" },
+  { value: "#F48FB1", label: "Rosa Pastel" },
+];
+
+// ── Zod Schema ─────────────────────────────────────────────────
+const reservaSchema = z.object({
+  // Step 1
+  tema: z.string().optional(),
+  data: z.string().min(1, "Data é obrigatória"),
+  horario: z.string().min(1, "Horário é obrigatório"),
+  duracaoMinutos: z.number().min(30, "Duração mínima é 30 minutos"),
+  localId: z.string().min(1, "Seleccione uma sala"),
+  encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
+  encarregadoContacto: z.string().min(9, "Contacto inválido"),
+  encarregadoEmail: z.string().min(1, "Email é obrigatório").email("Email inválido"),
+  adicionarCliente: z.boolean().optional(),
+  monitoresIds: z.array(z.string()).optional(),
+  etapasIds: z.array(z.string()).optional(),
+  cor: z.string().optional(),
+  menuId: z.string().optional(),
+  // Step 2
+  previsaoCriancas: z.number().min(1, "Mínimo 1 criança").max(100),
+  // Step 4
+  metodoPagamento: z.string().optional(),
+  valorPago: z.number().min(0).optional(),
+  pago: z.boolean().optional(),
+  observacoesGerais: z.string().optional(),
+  observacoesLesoes: z.string().optional(),
+  observacoesBrindes: z.string().optional(),
+  outrosExtras: z.string().optional(),
+  caucao: z.string().optional(),
+  referenciaPagamento: z.string().optional(),
+});
+
+type ReservaFormData = z.infer<typeof reservaSchema>;
+
+interface ReservaFormProps {
+  reserva?: Reserva | null;
+  onClose: () => void;
+}
+
+const DURACAO_OPTIONS = [
+  { value: "60", label: "1h" },
+  { value: "90", label: "1h30" },
+  { value: "120", label: "2h" },
+  { value: "150", label: "2h30" },
+  { value: "180", label: "3h" },
+];
+
+const STEPS = [
+  { key: "geral", label: "Configuração Geral", icon: <Cake size={14} /> },
+  { key: "criancas", label: "Crianças", icon: <Users size={14} /> },
+  { key: "cacifos", label: "Cacifos", icon: <Package size={14} /> },
+  { key: "resumo", label: "Resumo & Pagamento", icon: <CreditCard size={14} /> },
+];
+
+function formatEuro(value: number): string {
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
+}
+
+function calcIdade(dataNascimento: string, dataFesta: string): number {
+  if (!dataNascimento || !dataFesta) return 0;
+  const nasc = new Date(dataNascimento);
+  const festa = new Date(dataFesta);
+  let idade = festa.getFullYear() - nasc.getFullYear();
+  const m = festa.getMonth() - nasc.getMonth();
+  if (m < 0 || (m === 0 && festa.getDate() < nasc.getDate())) idade--;
+  return Math.max(0, idade);
+}
+
+// ── Main Component ─────────────────────────────────────────────
+export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
+  const [currentStep, setCurrentStep] = useState(0);
+  const createReserva = useCreateReserva();
+  const updateReserva = useUpdateReserva();
+
+  const { data: locais } = useLocaisAtivos();
+  const { data: extras } = useExtras();
+  const { data: monitores } = useMonitores();
+  const { data: etapas } = useEtapasFesta();
+  const { data: cacifosDisponiveis } = useCacifosDisponiveis();
+
+  const extraItems = useMemo(
+    () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo),
+    [extras]
+  );
+
+  const salaOptions = useMemo(
+    () => (locais ?? []).map((l) => ({ value: l.id, label: `${l.nome} (${l.capacidade} crianças)` })),
+    [locais]
+  );
+
+  const monitorOptions = useMemo(
+    () => (monitores ?? []).filter((m) => m.activo).map((m) => ({ value: m.id, text: m.nome, selected: false })),
+    [monitores]
+  );
+
+  const etapaOptions = useMemo(
+    () => (etapas ?? []).filter((e) => e.activo).map((e) => ({ value: e.id, text: e.nome, selected: false })),
+    [etapas]
+  );
+
+  // Menu options (from extras LANCHE category, as menus)
+  const menuOptions = useMemo(
+    () => [
+      { value: "", label: "Sem menu" },
+      ...(extras ?? [])
+        .filter((e) => e.categoria === "MENU" && e.activo)
+        .map((e) => ({ value: e.id, label: e.nome })),
+    ],
+    [extras]
+  );
+
+  // ── Extra state ─────────────────────────────────────────────
+  const [aniversariantes, setAniversariantes] = useState<AniversarianteInput[]>(() => {
+    if (reserva?.aniversariantes?.length) {
+      return reserva.aniversariantes.map((a) => ({
+        nome: a.aniversariante.nome,
+        dataNascimento: a.aniversariante.dataNascimento ?? "",
+      }));
+    }
+    return [{ nome: "", dataNascimento: "" }];
+  });
+
+  const [selectedExtrasIds, setSelectedExtrasIds] = useState<string[]>(
+    () => reserva?.extras?.map((e) => e.extra.id) ?? []
+  );
+
+  const [encarregadosAdicionais, setEncarregadosAdicionais] = useState<EncarregadoInput[]>([]);
+
+  const [criancas, setCriancas] = useState<CriancaInput[]>([]);
+  const [cacifoAssignments, setCacifoAssignments] = useState<Record<string, string>>({});
+
+  // ── Default values ───────────────────────────────────────────
+  const defaultValues = useMemo<ReservaFormData>(
+    () => ({
+      tema: reserva?.tema ?? "",
+      data: reserva?.data ?? "",
+      horario: reserva?.horario ?? "",
+      duracaoMinutos: reserva?.duracaoMinutos ?? 120,
+      localId: reserva?.localId ?? "",
+      encarregadoNome: reserva?.cliente?.nome ?? "",
+      encarregadoContacto: reserva?.cliente?.telefone ?? "",
+      encarregadoEmail: reserva?.cliente?.email ?? "",
+      adicionarCliente: true,
+      monitoresIds: reserva?.monitores?.map((m) => m.monitor.id) ?? [],
+      etapasIds: reserva?.etapas?.map((e) => e.etapa.id) ?? [],
+      cor: reserva?.cor ?? "",
+      menuId: "",
+      previsaoCriancas: reserva?.numCriancas ?? reserva?.previsaoCriancas ?? 10,
+      metodoPagamento: reserva?.metodoPagamento ?? "",
+      valorPago: reserva?.valorPago ?? 0,
+      pago: reserva?.pago ?? false,
+      observacoesGerais: reserva?.observacoesGerais ?? "",
+      observacoesLesoes: reserva?.observacoesLesoes ?? "",
+      observacoesBrindes: reserva?.observacoesBrindes ?? "",
+      outrosExtras: reserva?.outrosExtras ?? "",
+      caucao: reserva?.caucao ?? "",
+      referenciaPagamento: reserva?.referenciaPagamento ?? "",
+    }),
+    [reserva]
+  );
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    trigger,
+    formState: { errors, isSubmitting },
+  } = useForm<ReservaFormData>({
+    resolver: zodResolver(reservaSchema),
+    defaultValues,
+  });
+
+  const watchedData = watch("data");
+  const pago = watch("pago") ?? false;
+  const currentMonitoresIds = watch("monitoresIds") ?? [];
+  const currentEtapasIds = watch("etapasIds") ?? [];
+  const previsaoCriancas = watch("previsaoCriancas");
+
+  // ── Auto-generate criancas (with aniversariante pre-fill) ───
+  React.useEffect(() => {
+    const count = previsaoCriancas ?? 0;
+    const anivNames = aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome);
+    setCriancas((prev) => {
+      if (prev.length >= count) {
+        // Still ensure first slots have aniversariante names if empty
+        const updated = prev.slice(0, count).map((c, i) => {
+          if (!c.nome.trim() && anivNames[i]) return { ...c, nome: anivNames[i] };
+          return c;
+        });
+        return updated;
+      }
+      const next = [...prev];
+      for (let i = prev.length; i < count; i++) {
+        const autoName = anivNames[i] ?? "";
+        next.push({ nome: autoName, cacifoId: "" });
+      }
+      return next;
+    });
+  }, [previsaoCriancas, aniversariantes]);
+
+  // ── Auto-assign cacifos ─────────────────────────────────────
+  React.useEffect(() => {
+    if (currentStep !== 2 || !cacifosDisponiveis) return;
+    setCacifoAssignments((prev) => {
+      const next = { ...prev };
+      const available = cacifosDisponiveis.filter((c) => c.estado === "LIVRE");
+      let idx = 0;
+      for (const c of criancas) {
+        if (!next[c.nome] && available[idx]) {
+          next[c.nome] = available[idx].id;
+          idx++;
+        }
+      }
+      return next;
+    });
+  }, [currentStep, cacifosDisponiveis, criancas]);
+
+  // ── Total estimado (extras only) ────────────────────────────
+  const totalEstimado = useMemo(() => {
+    let total = 0;
+    for (const extraId of selectedExtrasIds) {
+      const extra = extraItems.find((e) => e.id === extraId);
+      if (extra) total += Number(extra.precoUnitario);
+    }
+    return total;
+  }, [selectedExtrasIds, extraItems]);
+
+  // ── Handlers ────────────────────────────────────────────────
+  const handleExtrasChange = useCallback((selected: string[]) => setSelectedExtrasIds(selected), []);
+  const handleMonitoresChange = useCallback((selected: string[]) => setValue("monitoresIds", selected), [setValue]);
+  const handleEtapasChange = useCallback((selected: string[]) => setValue("etapasIds", selected), [setValue]);
+
+  const addAniversariante = useCallback(() => setAniversariantes((p) => [...p, { nome: "", dataNascimento: "" }]), []);
+  const removeAniversariante = useCallback((i: number) => setAniversariantes((p) => p.filter((_, idx) => idx !== i)), []);
+  const updateAniversariante = useCallback((i: number, field: keyof AniversarianteInput, value: string) => {
+    setAniversariantes((p) => { const n = [...p]; n[i] = { ...n[i], [field]: value }; return n; });
+  }, []);
+
+  const addEncarregadoAdicional = useCallback(() => setEncarregadosAdicionais((p) => [...p, { nome: "", contacto: "", email: "" }]), []);
+  const removeEncarregadoAdicional = useCallback((i: number) => setEncarregadosAdicionais((p) => p.filter((_, idx) => idx !== i)), []);
+  const updateEncarregadoAdicional = useCallback((i: number, field: keyof EncarregadoInput, value: string) => {
+    setEncarregadosAdicionais((p) => { const n = [...p]; n[i] = { ...n[i], [field]: value }; return n; });
+  }, []);
+
+  const updateCrianca = useCallback((i: number, nome: string) => {
+    setCriancas((p) => { const n = [...p]; n[i] = { ...n[i], nome }; return n; });
+  }, []);
+  const addCrianca = useCallback(() => {
+    setCriancas((p) => [...p, { nome: "", cacifoId: "" }]);
+    setValue("previsaoCriancas", (previsaoCriancas ?? 0) + 1);
+  }, [previsaoCriancas, setValue]);
+  const removeCrianca = useCallback((i: number) => {
+    setCriancas((p) => p.filter((_, idx) => idx !== i));
+    setValue("previsaoCriancas", Math.max(0, (previsaoCriancas ?? 1) - 1));
+  }, [previsaoCriancas, setValue]);
+
+  // ── Step validation ──────────────────────────────────────────
+  const validateStep = useCallback(async (): Promise<boolean> => {
+    if (currentStep === 0) {
+      const valid = await trigger(["data", "horario", "duracaoMinutos", "localId", "encarregadoNome", "encarregadoContacto", "encarregadoEmail"]);
+      return valid && aniversariantes.some((a) => a.nome.trim().length > 0);
+    }
+    if (currentStep === 1) return (await trigger(["previsaoCriancas"]));
+    return true;
+  }, [currentStep, trigger, aniversariantes]);
+
+  const handleNext = useCallback(async () => {
+    if ((await validateStep()) && currentStep < STEPS.length - 1) setCurrentStep((s) => s + 1);
+  }, [currentStep, validateStep]);
+
+  const handlePrev = useCallback(() => { if (currentStep > 0) setCurrentStep((s) => s - 1); }, [currentStep]);
+
+  // ── Submit ───────────────────────────────────────────────────
+  const onSubmit = useCallback(
+    async (data: ReservaFormData) => {
+      const primeiroAniv = aniversariantes[0];
+      const idade = calcIdade(primeiroAniv?.dataNascimento ?? "", data.data || new Date().toISOString().split("T")[0]);
+
+      // Build additional encarregados text for notes
+      const adicionaisText = encarregadosAdicionais
+        .filter((e) => e.nome.trim())
+        .map((e, i) => {
+          const parts = [`Encarregado ${i + 2}: ${e.nome}`];
+          if (e.contacto) parts.push(e.contacto);
+          if (e.email) parts.push(e.email);
+          return parts.join(" · ");
+        })
+        .join("\n");
+
+      const obsGerais = [data.observacoesGerais, adicionaisText].filter(Boolean).join("\n\n");
+
+      const payload = {
+        aniversarianteNome: primeiroAniv?.nome ?? "",
+        clienteNome: data.encarregadoNome,
+        clienteContacto: data.encarregadoContacto,
+        clienteEmail: data.encarregadoEmail,
+        adicionarCliente: data.adicionarCliente ?? true,
+        idadeAnos: idade,
+        tema: data.tema || undefined,
+        data: data.data,
+        horario: data.horario,
+        duracaoMinutos: data.duracaoMinutos,
+        localId: data.localId,
+        numCriancas: data.previsaoCriancas,
+        extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
+        monitoresIds: data.monitoresIds,
+        etapasIds: data.etapasIds,
+        cor: data.cor || undefined,
+        menuId: data.menuId || undefined,
+        metodoPagamento: (data.metodoPagamento || undefined) as MetodoPagamento | undefined,
+        valorPago: data.valorPago || undefined,
+        pago: data.pago,
+        notas: obsGerais,
+        observacoesGerais: data.observacoesGerais || undefined,
+        observacoesLesoes: data.observacoesLesoes || undefined,
+        observacoesBrindes: data.observacoesBrindes || undefined,
+        outrosExtras: data.outrosExtras || undefined,
+        caucao: data.caucao || undefined,
+        referenciaPagamento: data.referenciaPagamento || undefined,
+        participantes: criancas.filter((c) => c.nome.trim()).map((c) => ({ nome: c.nome, cacifoId: cacifoAssignments[c.nome] || undefined })),
+        aniversariantes: aniversariantes.filter((a) => a.nome.trim()).map((a) => ({ nome: a.nome, dataNascimento: a.dataNascimento || undefined })),
+      };
+      if (reserva) await updateReserva.mutateAsync({ id: reserva.id, data: payload });
+      else await createReserva.mutateAsync(payload);
+      onClose();
+    },
+    [reserva, aniversariantes, encarregadosAdicionais, criancas, cacifoAssignments, selectedExtrasIds, updateReserva, createReserva, onClose]
+  );
+
+  const cacifoOptions = useMemo(() => {
+    const available = cacifosDisponiveis?.filter((c) => c.estado === "LIVRE") ?? [];
+    return available.map((c) => ({ value: c.id, label: `#${c.numero}${c.nome ? ` — ${c.nome}` : ""}` }));
+  }, [cacifosDisponiveis]);
+
+  const corOptions = useMemo(() => [
+    { value: "", label: "Sem cor" },
+    ...CORES_PREDEFINIDAS.map((c) => ({ value: c.value, label: c.label })),
+  ], []);
+
+  // ── Render ───────────────────────────────────────────────────
+  return (
+    <div className="flex flex-col max-h-[70vh]">
+      <div className="mb-6 shrink-0">
+        <FormStepper steps={STEPS} currentStep={currentStep} onStepChange={setCurrentStep} />
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden overflow-y-auto">
+          {currentStep === 0 && (
+            <Step1Geral
+              register={register} errors={errors} setValue={setValue} watch={watch}
+              defaultValues={defaultValues}
+              aniversariantes={aniversariantes} addAniversariante={addAniversariante}
+              removeAniversariante={removeAniversariante} updateAniversariante={updateAniversariante}
+              encarregadosAdicionais={encarregadosAdicionais}
+              addEncarregadoAdicional={addEncarregadoAdicional}
+              removeEncarregadoAdicional={removeEncarregadoAdicional}
+              updateEncarregadoAdicional={updateEncarregadoAdicional}
+              salaOptions={salaOptions} monitorOptions={monitorOptions} currentMonitoresIds={currentMonitoresIds}
+              handleMonitoresChange={handleMonitoresChange} etapaOptions={etapaOptions}
+              currentEtapasIds={currentEtapasIds} handleEtapasChange={handleEtapasChange}
+              extraItems={extraItems} selectedExtrasIds={selectedExtrasIds} handleExtrasChange={handleExtrasChange}
+              totalEstimado={totalEstimado} watchedData={watchedData}
+              corOptions={corOptions} menuOptions={menuOptions}
+            />
+          )}
+          {currentStep === 1 && (
+            <Step2Criancas register={register} errors={errors} watch={watch}
+              criancas={criancas} updateCrianca={updateCrianca}
+              addCrianca={addCrianca} removeCrianca={removeCrianca} aniversariantes={aniversariantes}
+            />
+          )}
+          {currentStep === 2 && (
+            <Step3Cacifos criancas={criancas} cacifoAssignments={cacifoAssignments}
+              setCacifoAssignments={setCacifoAssignments} cacifoOptions={cacifoOptions}
+              cacifosDisponiveis={cacifosDisponiveis}
+            />
+          )}
+          {currentStep === 3 && (
+            <Step4Resumo register={register} errors={errors} setValue={setValue} watch={watch}
+              defaultValues={defaultValues} aniversariantes={aniversariantes} criancas={criancas}
+              cacifoAssignments={cacifoAssignments} cacifosDisponiveis={cacifosDisponiveis}
+              totalEstimado={totalEstimado} pago={pago} salaOptions={salaOptions}
+              encarregadosAdicionais={encarregadosAdicionais}
+            />
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-border pt-4 mt-4 flex items-center gap-3 shrink-0">
+          <Button variant="outline" onClick={onClose} type="button" className="flex-1">Cancelar</Button>
+          <div className="flex gap-2 flex-1 justify-end">
+            {currentStep > 0 && <Button variant="outline" onClick={handlePrev} type="button">← Anterior</Button>}
+            {currentStep < STEPS.length - 1
+              ? <Button onClick={handleNext} type="button">Próximo →</Button>
+              : <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "A guardar..." : reserva ? "Guardar Alterações" : "Criar Reserva"}</Button>
+            }
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// STEP 1 — Configurações Gerais
+// ════════════════════════════════════════════════════════════════
+interface Step1Props {
+  register: ReturnType<typeof useForm<ReservaFormData>>["register"];
+  errors: ReturnType<typeof useForm<ReservaFormData>>["formState"]["errors"];
+  setValue: ReturnType<typeof useForm<ReservaFormData>>["setValue"];
+  watch: ReturnType<typeof useForm<ReservaFormData>>["watch"];
+  defaultValues: ReservaFormData;
+  aniversariantes: AniversarianteInput[];
+  addAniversariante: () => void;
+  removeAniversariante: (index: number) => void;
+  updateAniversariante: (index: number, field: keyof AniversarianteInput, value: string) => void;
+  encarregadosAdicionais: EncarregadoInput[];
+  addEncarregadoAdicional: () => void;
+  removeEncarregadoAdicional: (index: number) => void;
+  updateEncarregadoAdicional: (index: number, field: keyof EncarregadoInput, value: string) => void;
+  salaOptions: { value: string; label: string }[];
+  monitorOptions: { value: string; text: string; selected: boolean }[];
+  currentMonitoresIds: string[];
+  handleMonitoresChange: (selected: string[]) => void;
+  etapaOptions: { value: string; text: string; selected: boolean }[];
+  currentEtapasIds: string[];
+  handleEtapasChange: (selected: string[]) => void;
+  extraItems: { id: string; nome: string; precoUnitario: number; icone?: string }[];
+  selectedExtrasIds: string[];
+  handleExtrasChange: (selected: string[]) => void;
+  totalEstimado: number;
+  watchedData: string;
+  corOptions: { value: string; label: string }[];
+  menuOptions: { value: string; label: string }[];
+}
+
+function Step1Geral({
+  register, errors, setValue, defaultValues, aniversariantes,
+  addAniversariante, removeAniversariante, updateAniversariante,
+  encarregadosAdicionais, addEncarregadoAdicional, removeEncarregadoAdicional, updateEncarregadoAdicional,
+  salaOptions, monitorOptions, currentMonitoresIds, handleMonitoresChange,
+  etapaOptions, currentEtapasIds, handleEtapasChange,
+  extraItems, selectedExtrasIds, handleExtrasChange,
+  totalEstimado, watchedData, corOptions, menuOptions,
+}: Step1Props) {
+  const currentCor = defaultValues.cor || "";
+
+  return (
+    <div className="space-y-5">
+      {/* ── Aniversariante(s) ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Cake size={14} className="text-brand-500" /> Aniversariante(s) *
+          </label>
+          <button type="button" onClick={addAniversariante}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
+            <Plus size={13} /> Adicionar
+          </button>
+        </div>
+        {aniversariantes.map((aniv, i) => (
+          <div key={i} className="flex items-end gap-3">
+            <div className="flex-1 min-w-0">
+              <InputField value={aniv.nome}
+                onChange={(e) => updateAniversariante(i, "nome", e.target.value)}
+                placeholder="Nome da criança"
+              />
+            </div>
+            <div className="w-44">
+              <InputField type="date" value={aniv.dataNascimento}
+                onChange={(e) => updateAniversariante(i, "dataNascimento", e.target.value)}
+              />
+            </div>
+            {aniv.dataNascimento ? (
+              <span className="text-sm font-bold text-brand-500 whitespace-nowrap py-3">
+                {calcIdade(aniv.dataNascimento, watchedData || new Date().toISOString().split("T")[0])} anos
+              </span>
+            ) : null}
+            {aniversariantes.length > 1 && (
+              <button type="button" onClick={() => removeAniversariante(i)}
+                className="p-2 text-text-muted hover:text-accent-red transition-colors"><Trash2 size={14} /></button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* ── Encarregado Principal ── */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <User size={14} className="text-brand-500" /> Encarregado de Educação *
+          </label>
+          <button type="button" onClick={addEncarregadoAdicional}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
+            <Plus size={13} /> Adicionar encarregado
+          </button>
+        </div>
+        <InputField {...register("encarregadoNome")} placeholder="Nome do responsável" required
+          error={!!errors.encarregadoNome} hint={errors.encarregadoNome?.message} />
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <InputField type="tel" {...register("encarregadoContacto")} placeholder="Telefone" required
+              error={!!errors.encarregadoContacto} hint={errors.encarregadoContacto?.message} />
+          </div>
+          <div className="flex-1">
+            <InputField type="email" {...register("encarregadoEmail")} placeholder="Email" required
+              error={!!errors.encarregadoEmail} hint={errors.encarregadoEmail?.message} />
+          </div>
+          <div className="flex items-center shrink-0 pb-0.5">
+            <Checkbox label="Adicionar aos clientes" checked={true} onChange={() => {}} />
+          </div>
+        </div>
+
+        {/* ── Encarregados Adicionais ── */}
+        {encarregadosAdicionais.map((enc, i) => (
+          <div key={i} className="p-3 bg-gray-50 rounded-lg border border-border space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-text-secondary">Encarregado {i + 2}</span>
+              <button type="button" onClick={() => removeEncarregadoAdicional(i)}
+                className="p-1 text-text-muted hover:text-accent-red transition-colors">
+                <Trash2 size={13} />
+              </button>
+            </div>
+            <InputField value={enc.nome}
+              onChange={(e) => updateEncarregadoAdicional(i, "nome", e.target.value)}
+              placeholder="Nome do encarregado" />
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <InputField type="tel" value={enc.contacto}
+                  onChange={(e) => updateEncarregadoAdicional(i, "contacto", e.target.value)}
+                  placeholder="Telefone" />
+              </div>
+              <div className="flex-1">
+                <InputField type="email" value={enc.email}
+                  onChange={(e) => updateEncarregadoAdicional(i, "email", e.target.value)}
+                  placeholder="Email" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Data · Hora · Duração · Sala ── */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Data *</label>
+          <InputField type="date" {...register("data")} error={!!errors.data} hint={errors.data?.message} />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Horário *</label>
+          <InputField type="time" {...register("horario")} error={!!errors.horario} hint={errors.horario?.message} />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Duração *</label>
+          <Select options={DURACAO_OPTIONS} placeholder="Seleccionar"
+            defaultValue={String(defaultValues.duracaoMinutos)}
+            onChange={(val) => setValue("duracaoMinutos", Number(val))} />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1">
+            <MapPin size={12} /> Sala *
+          </label>
+          <Select options={salaOptions} placeholder="Seleccionar"
+            defaultValue={defaultValues.localId}
+            onChange={(val) => setValue("localId", val)} />
+          {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
+        </div>
+      </div>
+
+      {/* ── Tema · Cor · Menu ── */}
+      <div className="flex gap-3">
+        <div className="flex-[2]">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Tema da Festa</label>
+          <InputField {...register("tema")} placeholder="Ex: Princesas, Super-Heróis..." />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Cor</label>
+          <div className="relative">
+            <Select options={corOptions} placeholder="Escolher cor"
+              defaultValue={currentCor}
+              onChange={(val) => setValue("cor", val || "")}
+            />
+            {currentCor && (
+              <div className="absolute right-10 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-gray-300"
+                style={{ backgroundColor: currentCor }} />
+            )}
+          </div>
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
+          <Select options={menuOptions} placeholder="Seleccionar menu"
+            defaultValue={defaultValues.menuId ?? ""}
+            onChange={(val) => setValue("menuId", val || undefined)} />
+        </div>
+      </div>
+
+      {/* ── Monitores · Etapas ── */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Monitores</label>
+          <MultiSelect label="Monitores" options={monitorOptions} defaultSelected={currentMonitoresIds}
+            onChange={handleMonitoresChange} placeholder="Seleccionar..." />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Etapas de Festa</label>
+          <MultiSelect label="Etapas" options={etapaOptions} defaultSelected={currentEtapasIds}
+            onChange={handleEtapasChange} placeholder="Seleccionar..." />
+        </div>
+      </div>
+
+      {/* ── Extras ── */}
+      {extraItems.length > 0 && (
+        <div>
+          <label className="text-xs font-semibold text-text-primary mb-2 block">✨ Extras</label>
+          <div className="flex flex-wrap gap-3">
+            {extraItems.map((item) => {
+              const isSelected = selectedExtrasIds.includes(item.id);
+              return (
+                <button key={item.id} type="button"
+                  onClick={() => handleExtrasChange(
+                    isSelected ? selectedExtrasIds.filter((id) => id !== item.id) : [...selectedExtrasIds, item.id]
+                  )}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors cursor-pointer ${
+                    isSelected ? "border-primary-300 bg-primary-50/50" : "border-border hover:border-gray-300"
+                  }`}>
+                  <span className="text-sm text-text-primary">{item.nome}</span>
+                  <span className="text-xs font-medium text-text-secondary">+{formatEuro(Number(item.precoUnitario) / 100)}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {totalEstimado > 0 && (
+        <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
+          <span className="text-sm font-medium text-text-secondary">Total Extras</span>
+          <span className="text-lg font-bold text-primary-500">{formatEuro(totalEstimado / 100)}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// STEP 2 — Crianças Participantes
+// ════════════════════════════════════════════════════════════════
+interface Step2Props {
+  register: ReturnType<typeof useForm<ReservaFormData>>["register"];
+  errors: ReturnType<typeof useForm<ReservaFormData>>["formState"]["errors"];
+  watch: ReturnType<typeof useForm<ReservaFormData>>["watch"];
+  criancas: CriancaInput[];
+  updateCrianca: (index: number, nome: string) => void;
+  addCrianca: () => void;
+  removeCrianca: (index: number) => void;
+  aniversariantes: AniversarianteInput[];
+}
+
+function Step2Criancas({ register, errors, watch, criancas, updateCrianca, addCrianca, removeCrianca, aniversariantes }: Step2Props) {
+  return (
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
+      <div className="flex items-center justify-between shrink-0">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+            <Users size={16} className="text-brand-500" /> Crianças Participantes
+          </h3>
+          <p className="text-xs text-text-muted mt-0.5">Defina o número previsto e preencha os nomes.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-text-secondary">Nº previsto:</label>
+          <div className="w-20">
+            <InputField type="number" {...register("previsaoCriancas", { valueAsNumber: true })}
+              min={1} max={100} error={!!errors.previsaoCriancas} hint={errors.previsaoCriancas?.message} />
+          </div>
+        </div>
+      </div>
+
+      {aniversariantes.filter((a) => a.nome.trim()).length > 0 && (
+        <div className="p-2.5 rounded-lg bg-brand-50 border border-brand-200 flex items-center gap-2 shrink-0">
+          <Cake size={14} className="text-brand-500 shrink-0" />
+          <p className="text-xs text-brand-700">
+            Aniversariante(s): <strong>{aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome).join(", ")}</strong>
+            {" "}— incluídos automaticamente.
+          </p>
+        </div>
+      )}
+
+      <div className="max-h-[35vh] space-y-2 overflow-y-auto pr-1">
+        {criancas.map((c, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="w-6 text-xs font-medium text-text-muted text-center">{i + 1}</span>
+            <div className="flex-1">
+              <InputField value={c.nome} onChange={(e) => updateCrianca(i, e.target.value)}
+                placeholder={`Nome da criança ${i + 1}`}
+              />
+            </div>
+            {criancas.length > 1 && (
+              <button type="button" onClick={() => removeCrianca(i)}
+                className="p-2 text-text-muted hover:text-accent-red transition-colors"><Trash2 size={14} /></button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={addCrianca}
+        className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-brand-500 hover:bg-brand-50 rounded-lg transition-colors shrink-0">
+        <Plus size={14} /> Adicionar criança
+      </button>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// STEP 3 — Atribuição de Cacifos
+// ════════════════════════════════════════════════════════════════
+interface Step3Props {
+  criancas: CriancaInput[];
+  cacifoAssignments: Record<string, string>;
+  setCacifoAssignments: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  cacifoOptions: { value: string; label: string }[];
+  cacifosDisponiveis: { id: string; numero: number; nome?: string | null; estado: string }[] | undefined;
+}
+
+function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacifoOptions, cacifosDisponiveis }: Step3Props) {
+  const named = criancas.filter((c) => c.nome.trim());
+  const avail = cacifosDisponiveis?.filter((c) => c.estado === "LIVRE").length ?? 0;
+
+  return (
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
+      <div className="shrink-0">
+        <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+          <Package size={16} className="text-brand-500" /> Atribuição de Cacifos
+        </h3>
+        <p className="text-xs text-text-muted mt-0.5">Cacifos atribuídos automaticamente. Pode alterar manualmente.</p>
+      </div>
+
+      {named.length > avail && (
+        <div className="p-2.5 rounded-lg bg-accent-orange-50 border border-accent-orange-200 flex items-center gap-2 shrink-0">
+          <AlertTriangle size={14} className="text-accent-orange shrink-0" />
+          <p className="text-xs text-accent-orange-700">
+            <strong>{named.length}</strong> crianças mas apenas <strong>{avail}</strong> cacifos disponíveis.
+          </p>
+        </div>
+      )}
+
+      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
+        {named.length > 0 ? named.map((c, i) => {
+          const assignedId = cacifoAssignments[c.nome] ?? "";
+          const cacifo = cacifosDisponiveis?.find((cf) => cf.id === assignedId);
+          return (
+            <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface border border-border">
+              <span className="w-6 text-xs font-medium text-text-muted text-center">{i + 1}</span>
+              <div className="flex-1"><p className="text-sm font-medium text-text-primary">{c.nome}</p></div>
+              <div className="w-44">
+                <Select options={cacifoOptions} placeholder="Atribuir cacifo" defaultValue={assignedId}
+                  onChange={(val) => setCacifoAssignments((prev) => ({ ...prev, [c.nome]: val }))} />
+              </div>
+              {cacifo && (
+                <span className="text-xs font-medium text-accent-green-600 flex items-center gap-1">
+                  <Check size={12} /> #{cacifo.numero}
+                </span>
+              )}
+            </div>
+          );
+        }) : (
+          <div className="text-center py-8">
+            <Users size={32} className="mx-auto text-text-muted mb-2" />
+            <p className="text-sm text-text-muted">Nenhuma criança com nome preenchido. Volte ao passo anterior.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-4 text-xs text-text-muted shrink-0">
+        <span>Disponíveis: <strong>{avail}</strong></span>
+        <span>Crianças: <strong>{named.length}</strong></span>
+        <span>Atribuídos: <strong>{Object.values(cacifoAssignments).filter(Boolean).length}</strong></span>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// STEP 4 — Resumo, Observações e Pagamento
+// ════════════════════════════════════════════════════════════════
+interface Step4Props {
+  register: ReturnType<typeof useForm<ReservaFormData>>["register"];
+  errors: ReturnType<typeof useForm<ReservaFormData>>["formState"]["errors"];
+  setValue: ReturnType<typeof useForm<ReservaFormData>>["setValue"];
+  watch: ReturnType<typeof useForm<ReservaFormData>>["watch"];
+  defaultValues: ReservaFormData;
+  aniversariantes: AniversarianteInput[];
+  criancas: CriancaInput[];
+  cacifoAssignments: Record<string, string>;
+  cacifosDisponiveis: { id: string; numero: number; nome?: string | null; estado: string }[] | undefined;
+  totalEstimado: number;
+  pago: boolean;
+  salaOptions: { value: string; label: string }[];
+  encarregadosAdicionais: EncarregadoInput[];
+}
+
+function Step4Resumo({ register, errors, setValue, watch, defaultValues, aniversariantes, criancas, cacifoAssignments, cacifosDisponiveis, totalEstimado, pago, salaOptions, encarregadosAdicionais }: Step4Props) {
+  const namedCriancas = criancas.filter((c) => c.nome.trim());
+  const sala = salaOptions.find((s) => s.value === watch("localId"));
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Resumo */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5"><FileText size={14} className="text-brand-500" /> Resumo</h3>
+        <div className="p-4 rounded-lg bg-surface border border-border space-y-2">
+          <div className="flex items-start gap-2">
+            <Cake size={14} className="text-brand-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider">Aniversariante(s)</p>
+              <p className="text-sm font-medium text-text-primary">{aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome).join(", ") || "—"}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <User size={14} className="text-brand-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider">Encarregado Principal</p>
+              <p className="text-sm text-text-primary">{watch("encarregadoNome") || "—"}</p>
+              <p className="text-xs text-text-muted">{watch("encarregadoContacto")} · {watch("encarregadoEmail")}</p>
+            </div>
+          </div>
+          {encarregadosAdicionais.filter((e) => e.nome.trim()).length > 0 && (
+            <div className="flex items-start gap-2">
+              <Users size={14} className="text-primary-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[10px] text-text-muted uppercase tracking-wider">Outros Encarregados</p>
+                {encarregadosAdicionais.filter((e) => e.nome.trim()).map((enc, i) => (
+                  <div key={i}>
+                    <p className="text-sm text-text-primary">{enc.nome}</p>
+                    <p className="text-xs text-text-muted">{[enc.contacto, enc.email].filter(Boolean).join(" · ")}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex items-start gap-2">
+            <Clock size={14} className="text-brand-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider">Data & Hora</p>
+              <p className="text-sm text-text-primary">
+                {watch("data") ? format(parseISO(watch("data")), "d 'de' MMMM 'de' yyyy", { locale: pt }) : "—"} às {watch("horario") || "—"} ({watch("duracaoMinutos")} min)
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <MapPin size={14} className="text-brand-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider">Sala</p>
+              <p className="text-sm text-text-primary">{sala?.label ?? "—"}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Users size={14} className="text-brand-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider">Crianças</p>
+              <p className="text-sm text-text-primary">
+                {namedCriancas.length > 0
+                  ? `${namedCriancas.length} — ${namedCriancas.slice(0, 5).map((c) => c.nome).join(", ")}${namedCriancas.length > 5 ? "..." : ""}`
+                  : `${watch("previsaoCriancas")} previstas`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Package size={14} className="text-brand-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[10px] text-text-muted uppercase tracking-wider">Cacifos</p>
+              <p className="text-sm text-text-primary">
+                {Object.values(cacifoAssignments).filter(Boolean).length > 0
+                  ? cacifosDisponiveis?.filter((c) => Object.values(cacifoAssignments).includes(c.id)).map((c) => `#${c.numero}`).join(", ") ?? "Nenhum"
+                  : "Nenhum"}
+              </p>
+            </div>
+          </div>
+        </div>
+        {(watch("tema") || watch("cor")) && (
+          <div className="p-3 rounded-lg bg-surface border border-border flex items-center gap-3">
+            {watch("cor") && <div className="w-6 h-6 rounded-full border border-border" style={{ backgroundColor: watch("cor") }} />}
+            <span className="text-sm text-text-primary">Tema: {watch("tema") || "—"}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Observações + Pagamento */}
+      <div className="space-y-4">
+        <div className="p-4 rounded-lg bg-surface border border-border space-y-3">
+          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5"><MessageSquare size={14} className="text-brand-500" /> Observações</h3>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Observações gerais</label>
+            <TextArea placeholder="Notas gerais..." value={watch("observacoesGerais") ?? ""} onChange={(v) => setValue("observacoesGerais", v)} rows={2} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Lesões / Alergias</label>
+              <TextArea placeholder="Alergias..." value={watch("observacoesLesoes") ?? ""} onChange={(v) => setValue("observacoesLesoes", v)} rows={2} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Brindes</label>
+              <TextArea placeholder="Brindes..." value={watch("observacoesBrindes") ?? ""} onChange={(v) => setValue("observacoesBrindes", v)} rows={2} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Outros extras</label>
+            <TextArea placeholder="Outros itens..." value={watch("outrosExtras") ?? ""} onChange={(v) => setValue("outrosExtras", v)} rows={2} />
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg bg-surface border border-border space-y-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-text-primary"><CreditCard size={14} /> Pagamento</div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Método</label>
+              <Select options={[
+                { value: "", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" },
+                { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" },
+                { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" },
+                { value: "OUTRO", label: "Outro" },
+              ]} placeholder="Método" defaultValue={defaultValues.metodoPagamento ?? ""}
+                onChange={(val) => setValue("metodoPagamento", val || undefined)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Valor Total (€)</label>
+              <InputField type="number" step={0.01} min={0}
+                {...register("valorPago", { valueAsNumber: true })} placeholder="0,00" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Caução</label>
+              <Select options={[
+                { value: "", label: "Não definido" }, { value: "NAO_PAGA", label: "Não paga" },
+                { value: "PAGA", label: "Paga" }, { value: "PAGA_NO_DIA", label: "Paga no dia" },
+              ]} placeholder="Caução" defaultValue={defaultValues.caucao ?? ""}
+                onChange={(val) => setValue("caucao", val || undefined)} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Ref. Pagamento</label>
+              <InputField {...register("referenciaPagamento")} placeholder="Referência" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-text-secondary">Pago</label>
+            <Switch checked={pago} onChange={(checked) => setValue("pago", checked)} label={pago ? "Sim" : "Não"} />
+          </div>
+          {totalEstimado > 0 && (
+            <div className="flex items-center justify-between pt-2 border-t border-border">
+              <span className="text-xs text-text-muted">Total Extras</span>
+              <span className="text-sm font-bold text-primary-500">{formatEuro(totalEstimado / 100)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

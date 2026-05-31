@@ -1,0 +1,592 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTH — Better Auth core tables
+// ============================================
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Party management specific fields
+  funcao        FuncaoUtilizador @default(RECECAO)
+  activo        Boolean          @default(true)
+
+  sessions      Session[]
+  accounts      Account[]
+  monitor       Monitor?
+  auditLogs     AuditLog[]
+  notasRapidas  NotaRapida[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum FuncaoUtilizador {
+  ADMINISTRADOR
+  GESTOR
+  RECECAO
+  MARKETING
+}
+
+enum EstadoReserva {
+  RESERVA
+  CONFIRMADO
+  EM_CURSO
+  CONCLUIDA
+  CANCELADA
+}
+
+enum EstadoCacifo {
+  LIVRE
+  OCUPADO
+  RESERVADO
+}
+
+enum MetodoPagamento {
+  DINHEIRO
+  MULTIBANCO
+  MBWAY
+  TRANSFERENCIA
+  CARTAO
+  OUTRO
+}
+
+enum EstadoCaucao {
+  PAGA
+  NAO_PAGA
+  PAGA_NO_DIA
+}
+
+enum CategoriaItem {
+  MENU
+  EXTRA
+}
+
+enum TipoCampanha {
+  EMAIL
+  SMS
+}
+
+enum EstadoCampanha {
+  RASCUNHO
+  AGENDADA
+  ENVIADA
+  CANCELADA
+}
+
+// ============================================
+// CLIENTES & ANIVERSARIANTES
+// ============================================
+
+model Cliente {
+  id             String   @id @default(cuid())
+  nome           String
+  contribuinte   String?
+  email          String?  @unique
+  telefone       String
+  codigoPostal   String?
+  observacao     String?  @db.Text
+  optOut         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  aniversariantes     Aniversariante[]
+  reservas            Reserva[]
+  newsletterContacto  NewsletterContacto?
+
+  @@map("cliente")
+}
+
+model Aniversariante {
+  id             String   @id @default(cuid())
+  nome           String
+  dataNascimento DateTime?
+  observacoes    String?  @db.Text
+  clienteId      String
+  cliente        Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  reservas       ReservaAniversariante[]
+
+  @@map("aniversariante")
+}
+
+// ============================================
+// LOCAIS (Salas / Espaços)
+// ============================================
+
+model Local {
+  id         String   @id @default(cuid())
+  nome       String
+  capacidade Int      // Nº máximo de crianças
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  reservas      Reserva[]
+  monitores     MonitorLocal[]
+  extras        ExtraLocal[]
+
+  @@map("local")
+}
+
+// ============================================
+// EXTRAS
+// ============================================
+
+model Extra {
+  id            String        @id @default(cuid())
+  nome          String
+  descricao     String?       @db.Text
+  precoUnitario Decimal       @db.Decimal(10, 2)
+  icone         String?
+  categoria     CategoriaItem @default(EXTRA)
+  subcategoria  String?       // Ex: "Diversão", "Premium" — para agrupar extras no formulário
+  requerTexto   Boolean       @default(false) // Se true, mostra input de texto ao selecionar
+  activo        Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  reservas      ReservaExtra[]
+  locais        ExtraLocal[]
+
+  @@map("extra")
+}
+
+model ExtraLocal {
+  id       String @id @default(cuid())
+  extraId  String
+  localId  String
+  extra    Extra  @relation(fields: [extraId], references: [id], onDelete: Cascade)
+  local    Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+
+  @@unique([extraId, localId])
+  @@map("extra_local")
+}
+
+// ============================================
+// MONITORES
+// ============================================
+
+model Monitor {
+  id        String   @id @default(cuid())
+  nome      String
+  contacto  String
+  fotoUrl   String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Optional link to a system user
+  userId    String?  @unique
+  user      User?    @relation(fields: [userId], references: [id])
+
+  reservas  ReservaMonitor[]
+  locais    MonitorLocal[]
+
+  @@map("monitor")
+}
+
+model MonitorLocal {
+  id        String  @id @default(cuid())
+  monitorId String
+  localId   String
+  monitor   Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  local     Local   @relation(fields: [localId], references: [id], onDelete: Cascade)
+
+  @@unique([monitorId, localId])
+  @@map("monitor_local")
+}
+
+// ============================================
+// CONFIGURAÇÃO DE CACIFOS
+// ============================================
+
+model ConfiguracaoCacifo {
+  id           String   @id @default(cuid())
+  totalCacifos Int      @default(200)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cacifos      Cacifo[]
+
+  @@map("configuracao_cacifo")
+}
+
+// ============================================
+// RESERVAS (unificado com Festa)
+// ============================================
+
+model Reserva {
+  id              String        @id @default(cuid())
+  data            DateTime
+  horario         String        // HH:MM
+  duracaoMinutos  Int
+  numCriancas     Int           @default(0)
+  notas           String?       @db.Text
+  estado          EstadoReserva @default(RESERVA)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Runtime fields (preenchidos quando estado passa a EM_CURSO)
+  inicioEm        DateTime?
+  fimPrevisto     DateTime?
+  fimReal         DateTime?
+  cacifosHistorico Json?
+
+  // ── Novos campos da festa ────────────────
+  tema              String?
+  previsaoCriancas  Int?
+  cor               String?
+  bolo              String?
+  boloQuantidade    Int?
+
+  // Observações
+  observacoesGerais  String?  @db.Text
+  observacoesLesoes  String?  @db.Text
+  observacoesBrindes String?  @db.Text
+  outrosExtras       String?  @db.Text
+
+  // Pagamento
+  metodoPagamento     MetodoPagamento?
+  valorPago           Decimal?          @db.Decimal(10, 2)
+  pago                Boolean           @default(false)
+  referenciaPagamento String?
+
+  // Caução
+  caucao              EstadoCaucao      @default(NAO_PAGA)
+  valorCaucao         Decimal?          @db.Decimal(10, 2)
+
+  // Desconto
+  descontoPercentagem Int?
+  descontoMotivo      String?
+
+  // ── Relações ──────────────────────────
+  clienteId       String
+  cliente         Cliente       @relation(fields: [clienteId], references: [id])
+
+  localId         String
+  local           Local         @relation(fields: [localId], references: [id])
+
+  // Relations
+  menu            Menu?
+  extras          ReservaExtra[]
+  cacifos         Cacifo[]
+  monitores       ReservaMonitor[]
+  etapas          ReservaEtapa[]
+  participantes   Participante[]
+  aniversariantes ReservaAniversariante[]
+
+  @@index([data, localId])
+  @@index([estado])
+  @@map("reserva")
+}
+
+model ReservaExtra {
+  id                String  @id @default(cuid())
+  reservaId         String
+  extraId           String
+  quantidade        Int     @default(1)
+  textoPersonalizado String? // Texto livre quando extra.requerTexto = true
+  reserva           Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  extra             Extra   @relation(fields: [extraId], references: [id], onDelete: Cascade)
+
+  @@unique([reservaId, extraId])
+  @@map("reserva_extra")
+}
+
+model ReservaMonitor {
+  id        String  @id @default(cuid())
+  reservaId String
+  monitorId String
+  reserva   Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  monitor   Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+
+  @@unique([reservaId, monitorId])
+  @@map("reserva_monitor")
+}
+
+// Pivot M:N — Reserva ↔ Aniversariante (múltiplos aniversariantes por festa)
+model ReservaAniversariante {
+  id              String        @id @default(cuid())
+  reservaId       String
+  aniversarianteId String
+  reserva         Reserva       @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  aniversariante  Aniversariante @relation(fields: [aniversarianteId], references: [id], onDelete: Cascade)
+
+  @@unique([reservaId, aniversarianteId])
+  @@map("reserva_aniversariante")
+}
+
+// ============================================
+// ETAPAS DE FESTA (configuráveis)
+// ============================================
+
+model EtapaFesta {
+  id          String    @id @default(cuid())
+  nome        String
+  descricao   String?   @db.Text
+  ordem       Int       @default(0)
+  icone       String?
+  activo      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  reservas    ReservaEtapa[]
+
+  @@map("etapa_festa")
+}
+
+model ReservaEtapa {
+  id          String    @id @default(cuid())
+  reservaId   String
+  etapaId     String
+  concluida   Boolean   @default(false)
+  concluidaEm DateTime?
+
+  reserva     Reserva     @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  etapa       EtapaFesta @relation(fields: [etapaId], references: [id], onDelete: Cascade)
+
+  @@unique([reservaId, etapaId])
+  @@map("reserva_etapa")
+}
+
+// ============================================
+// PARTICIPANTES (crianças na festa)
+// ============================================
+
+model Participante {
+  id        String   @id @default(cuid())
+  nome      String
+  presente  Boolean  @default(false)
+  cacifoId  String?  @unique
+  reservaId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reserva   Reserva  @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+  cacifo    Cacifo?  @relation(fields: [cacifoId], references: [id])
+
+  @@map("participante")
+}
+
+// ============================================
+// CACIFOS
+// ============================================
+
+model Cacifo {
+  id              String            @id @default(cuid())
+  numero          Int               @unique
+  nome            String?
+  estado          EstadoCacifo      @default(LIVRE)
+  notas           String?           @db.Text
+  criancas        String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  configuracaoId  String
+  configuracao    ConfiguracaoCacifo @relation(fields: [configuracaoId], references: [id])
+
+  reservaId       String?
+  reserva         Reserva?          @relation(fields: [reservaId], references: [id])
+
+  participante    Participante?
+
+  @@index([estado])
+  @@map("cacifo")
+}
+
+// ============================================
+// MENUS (simplificado — nome + preço)
+// ============================================
+
+model Menu {
+  id        String   @id @default(cuid())
+  nome      String
+  preco     Decimal  @db.Decimal(10, 2) @default(0)
+  notas     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservaId String   @unique
+  reserva   Reserva  @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+
+  @@map("menu")
+}
+
+// ============================================
+// MARKETING — Campanhas & Newsletter
+// ============================================
+
+model Segmento {
+  id        String   @id @default(cuid())
+  nome      String
+  descricao String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contactos ContactoSegmento[]
+  campanhas Campanha[]
+
+  @@map("segmento")
+}
+
+model NewsletterContacto {
+  id        String   @id @default(cuid())
+  optOut    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clienteId String  @unique
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  segmentos ContactoSegmento[]
+
+  @@map("newsletter_contacto")
+}
+
+model ContactoSegmento {
+  id         String             @id @default(cuid())
+  contactoId String
+  segmentoId String
+  contacto   NewsletterContacto @relation(fields: [contactoId], references: [id], onDelete: Cascade)
+  segmento   Segmento           @relation(fields: [segmentoId], references: [id], onDelete: Cascade)
+
+  @@unique([contactoId, segmentoId])
+  @@map("contacto_segmento")
+}
+
+model Campanha {
+  id           String          @id @default(cuid())
+  tipo         TipoCampanha
+  estado       EstadoCampanha  @default(RASCUNHO)
+  assunto      String?
+  mensagem     String          @db.Text
+  segmentoId   String?
+  segmento     Segmento?       @relation(fields: [segmentoId], references: [id])
+  agendadaPara DateTime?
+  enviadaEm    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  envios       EnvioCampanha[]
+
+  @@index([estado])
+  @@map("campanha")
+}
+
+model EnvioCampanha {
+  id           String    @id @default(cuid())
+  campanhaId   String
+  campanha     Campanha  @relation(fields: [campanhaId], references: [id], onDelete: Cascade)
+  contactoId   String
+  enviadoEm    DateTime  @default(now())
+  aberto       Boolean   @default(false)
+  abertoEm     DateTime?
+
+  @@index([campanhaId])
+  @@map("envio_campanha")
+}
+
+// ============================================
+// SISTEMA — Audit Log & Notas Rápidas
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  accao     String
+  detalhes  Json?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model NotaRapida {
+  id        String   @id @default(cuid())
+  conteudo  String   @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("nota_rapida")
+}
+
+// ============================================
+// RBAC — Funções & Permissões
+// ============================================
+
+model FuncaoPermissao {
+  id          String   @id @default(cuid())
+  funcao      FuncaoUtilizador
+  modulo      String   // e.g., "reservas", "cacifos", "menus", "relatorios", "divulgacoes", "configuracoes"
+  nivelAcesso String   // "leitura", "escrita", "administracao"
+
+  @@unique([funcao, modulo])
+  @@map("funcao_permissao")
+}
