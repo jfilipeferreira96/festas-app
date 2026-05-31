@@ -1,6 +1,6 @@
 # SKILL — Estados e Badges
 
-Padrão para representar estados de reservas, festas, cacifos, monitores e campanhas.
+Padrão para representar estados de reservas, cacifos, monitores e campanhas.
 Nunca criar cores ou labels de estado fora deste ficheiro.
 
 > **Importante:** Os valores dos enums são `UPPER_SNAKE_CASE` (definidos no schema Prisma). As labels PT-PT são para apresentação na UI.
@@ -20,17 +20,7 @@ type EstadoReserva = 'RESERVA' | 'CONFIRMADO' | 'EM_CURSO' | 'CONCLUIDA' | 'CANC
 | `CONCLUIDA` | Concluída | `purple` |
 | `CANCELADA` | Cancelada | `red` |
 
-## Estados de Festa
-
-```ts
-// Valores do enum no Prisma: EstadoFesta
-type EstadoFesta = 'EM_CURSO' | 'CONCLUIDA'
-```
-
-| Estado (Prisma) | Label PT-PT | Variante badge |
-|---|---|---|
-| `EM_CURSO` | Em curso | `green` |
-| `CONCLUIDA` | Concluída | `gray` |
+> **Nota:** O estado da festa é o `EstadoReserva` da reserva. Não existe enum `EstadoFesta` separado. Quando uma reserva está em `EM_CURSO`, os campos de runtime (`inicioEm`, `fimPrevisto`) são preenchidos.
 
 > **Nota:** O estado `A começar` é calculado na UI (baseado no tempo até ao início), não é um valor do enum.
 
@@ -38,7 +28,7 @@ type EstadoFesta = 'EM_CURSO' | 'CONCLUIDA'
 
 ```ts
 // Valores do enum no Prisma: EstadoCacifo
-type EstadoCacifo = 'LIVRE' | 'OCUPADO' | 'RESERVADO' | 'PAGO'
+type EstadoCacifo = 'LIVRE' | 'OCUPADO' | 'RESERVADO'
 ```
 
 | Estado (Prisma) | Label PT-PT | Variante badge |
@@ -46,7 +36,21 @@ type EstadoCacifo = 'LIVRE' | 'OCUPADO' | 'RESERVADO' | 'PAGO'
 | `LIVRE` | Livre | `green` |
 | `OCUPADO` | Ocupado | `red` |
 | `RESERVADO` | Reservado | `blue` |
-| `PAGO` | Pago | `orange` |
+
+> **Nota:** `EstadoCacifo` tem 3 valores. Não existe `PAGO` — o estado de pagamento da caução é gerido pelo enum `EstadoCaucao` na reserva.
+
+## Estado de Caução
+
+```ts
+// Valores do enum no Prisma: EstadoCaucao
+type EstadoCaucao = 'PAGA' | 'NAO_PAGA' | 'PAGA_NO_DIA'
+```
+
+| Estado (Prisma) | Label PT-PT | Variante badge |
+|---|---|---|
+| `PAGA` | Paga | `green` |
+| `NAO_PAGA` | Não paga | `red` |
+| `PAGA_NO_DIA` | Paga no dia | `orange` |
 
 ## Estados de Campanha
 
@@ -102,7 +106,6 @@ const CONFIG = {
     LIVRE:     { label: 'Livre',     variant: 'green'  },
     OCUPADO:   { label: 'Ocupado',   variant: 'red'    },
     RESERVADO: { label: 'Reservado', variant: 'blue'   },
-    PAGO:      { label: 'Pago',      variant: 'orange' },
   },
   campanha: {
     RASCUNHO:  { label: 'Rascunho', variant: 'gray'  },
@@ -127,9 +130,10 @@ const CONFIG = {
 - O estado só avança — nunca recua automaticamente
 - Fluxo: `RESERVA` → `CONFIRMADO` → `EM_CURSO` → `CONCLUIDA`
 - `CANCELADA` pode ser definido a partir de qualquer estado (excepto `CONCLUIDA`)
-- Excepção: Administradora pode corrigir estado com confirmação explícita
+- Excepção: Administrador pode corrigir estado com confirmação explícita
 - Transição para `EM_CURSO` só é possível se a data/hora da festa já chegou
-- Transição para `CONCLUIDA` regista `fimReal` no registo da festa
+- Transição para `EM_CURSO` preenche `inicioEm` e calcula `fimPrevisto` na reserva
+- Transição para `CONCLUIDA` regista `fimReal` na reserva
 
 ## Aviso de monitores insuficientes
 

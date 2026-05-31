@@ -1,6 +1,6 @@
 # SKILL — Tabelas com Filtros e Paginação
 
-Padrão para todas as listagens da aplicação: reservas, monitores, utilizadores, locais, extras, etapas de festa, campanhas.
+Padrão para todas as listagens da aplicação: reservas, monitores, utilizadores, locais, extras, etapas de festa, campanhas, clientes.
 
 ## Componente base
 
@@ -12,7 +12,7 @@ import { DataTable } from '@/components/ui/table/DataTable'
 <DataTable
   data={reservas}
   columns={colunasReservas}
-  searchableFields={['aniversariante.nome', 'cliente.nome']}
+  searchableFields={['cliente.nome', 'aniversariantes.aniversariante.nome']}
   itemLabel="reserva"
   renderActions={(row) => (
     // botões de acção por linha
@@ -42,10 +42,10 @@ import { DataTable } from '@/components/ui/table/DataTable'
 const colunasReservas = [
   {
     key: 'aniversariante',
-    label: 'Aniversariante',
+    label: 'Aniversariante(s)',
     render: (row: Reserva) => (
       <div>
-        <p className="font-medium">{row.aniversariante?.nome}</p>
+        <p className="font-medium">{row.aniversariantes?.map(ra => ra.aniversariante?.nome).join(', ')}</p>
         <p className="text-xs text-muted">{row.numCriancas} crianças</p>
       </div>
     ),
@@ -174,6 +174,7 @@ Estado da ordenação fica na URL: `?ordenarPor=data&ordem=desc`.
 | Página | Route | itemLabel |
 |---|---|---|
 | Reservas | `/reservas` | "reserva" |
+| Clientes | `/clientes` | "cliente" |
 | Utilizadores | `/configuracoes/utilizadores` | "utilizador" |
 | Monitores | `/configuracoes/monitores` | "monitor" |
 | Locais | `/configuracoes/locais` | "local" |

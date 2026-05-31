@@ -88,10 +88,12 @@ formatarTelefone('912345678')  // → "912 345 678"
 | Ficheiro | Arquivo |
 | Pesquisar | Buscar |
 | A carregar... | Carregando... / Loading... |
-| Cacifo | Armário / Armário |
-| Lanche | Lanche (igual) |
+| Cacifo | Armário |
 | Monitor | Monitor (igual) |
 | Duração | Duração (igual) |
+| Caução | Caução (igual) |
+| Registar | Registrar |
+| Configuração | Configuração (igual) |
 
 ## Mensagens de UI — padrões
 
@@ -154,6 +156,7 @@ O backend usa `i18next` com locale `pt-PT` apenas. As traduções ficam em:
 
 Usar `req.t("key")` para todas as mensagens ao utilizador:
 
+```ts
 // No controller
 res.status(404).json({ error: req.t("reserva.notFound") })
 ```
@@ -165,15 +168,4 @@ O frontend usa `i18next` + `react-i18next`. Configuração em:
 - `apps/web/src/lib/i18n-init.ts`
 - Traduções em `apps/web/src/locales/`
 
-Hooks disponíveis: `useTranslation`, `useLanguage````ts
-// No controller
-res.status(404).json({ error: req.t("reserva.notFound") })
-```
-
-## i18n no Frontend
-
-O frontend usa `i18next` + `react-i18next`. Configuração em:
-- `apps/web/src/lib/i18n.ts`
-- `apps/web/src/lib/i18n-init.ts`
-- Traduções em `apps/web/src/locales/`
-
+Hooks disponíveis: `useTranslation`, `useLanguage`

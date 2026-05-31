@@ -14,8 +14,8 @@ Padrão para queries, migrações, relações e convenções da base de dados.
 
 | Elemento | Convenção | Exemplo |
 |---|---|---|
-| Tabelas (DB) | `snake_case` via `@@map` | `@@map("reserva")`, `@@map("item_menu")` |
-| Modelos (Prisma) | `PascalCase` | `Reserva`, `ItemMenu`, `FestaMonitor` |
+| Tabelas (DB) | `snake_case` via `@@map` | `@@map("reserva")`, `@@map("reserva_extra")` |
+| Modelos (Prisma) | `PascalCase` | `Reserva`, `ReservaMonitor`, `EtapaFesta` |
 | Colunas (Prisma) | `camelCase` | `horaInicio`, `criadoEm` → mapeado para `hora_inicio`, `criado_em` no DB |
 | Chaves primárias | `id` (CUID ou Better Auth ID) | `@id @default(cuid())` ou `@id` (User) |
 | Chaves estrangeiras | `camelCase` + `Id` | `reservaId`, `localId`, `clienteId` |
@@ -52,20 +52,29 @@ enum EstadoReserva {
   CANCELADA
 }
 
-enum EstadoFesta {
-  EM_CURSO
-  CONCLUIDA
-}
-
 enum EstadoCacifo {
   LIVRE
   OCUPADO
   RESERVADO
-  PAGO
+}
+
+enum MetodoPagamento {
+  DINHEIRO
+  MULTIBANCO
+  MBWAY
+  TRANSFERENCIA
+  CARTAO
+  OUTRO
+}
+
+enum EstadoCaucao {
+  PAGA
+  NAO_PAGA
+  PAGA_NO_DIA
 }
 
 enum CategoriaItem {
-  LANCHE
+  MENU
   EXTRA
 }
 
@@ -82,7 +91,11 @@ enum EstadoCampanha {
 }
 ```
 
+> **Importante:** Não existe `EstadoFesta` separado. O estado da festa é o `EstadoReserva` da reserva associada. `CategoriaItem` tem `MENU` e `EXTRA` (não `LANCHE`). `EstadoCacifo` tem 3 valores (sem `PAGO`).
+
 ## Modelos e relações principais
+
+> **Conceito chave:** `Reserva` é unificada com `Festa` — não existe modelo `Festa` separado. Quando uma reserva passa a `EM_CURSO`, os campos de runtime (`inicioEm`, `fimPrevisto`, `fimReal`) são preenchidos na própria reserva. O antigo modelo `ItemMenu` foi removido; `Menu` é simplificado para `nome` + `preco`.
 
 ### Autenticação (Better Auth)
 
@@ -112,11 +125,14 @@ model Verification { ... }  // Better Auth
 
 ```prisma
 model Cliente {
-  id        String   @id @default(cuid())
-  nome      String
-  email     String?  @unique
-  contacto  String
-  optOut    Boolean  @default(false)
+  id             String   @id @default(cuid())
+  nome           String
+  contribuinte   String?
+  email          String?  @unique
+  telefone       String
+  codigoPostal   String?
+  observacao     String?  @db.Text
+  optOut         Boolean  @default(false)
 
   aniversariantes     Aniversariante[]
   reservas            Reserva[]
@@ -124,14 +140,14 @@ model Cliente {
 }
 
 model Aniversariante {
-  id        String   @id @default(cuid())
-  nome      String
-  dataNasc  DateTime?
-  observacoes String? @db.Text
-  clienteId String
+  id             String    @id @default(cuid())
+  nome           String
+  dataNascimento DateTime?
+  observacoes    String?   @db.Text
+  clienteId      String
 
-  cliente   Cliente  @relation(...)
-  reservas  Reserva[]
+  cliente        Cliente   @relation(...)
+  reservas       ReservaAniversariante[]
 }
 ```
 
@@ -141,11 +157,10 @@ model Aniversariante {
 model Local {
   id         String   @id @default(cuid())
   nome       String
-  capacidade Int
+  capacidade Int      // Nº máximo de crianças
   activo     Boolean  @default(true)
 
   reservas      Reserva[]
-  festas        Festa[]
   monitores     MonitorLocal[]
   extras        ExtraLocal[]
 }
@@ -155,20 +170,22 @@ model Local {
 
 ```prisma
 model Extra {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   nome          String
-  descricao     String?  @db.Text
-  precoUnitario Decimal  @db.Decimal(10, 2)  // Guardar em euros com 2 casas decimais
+  descricao     String?       @db.Text
+  precoUnitario Decimal       @db.Decimal(10, 2)
   icone         String?
-  activo        Boolean  @default(true)
+  categoria     CategoriaItem @default(EXTRA)
+  subcategoria  String?       // Ex: "Diversão", "Premium"
+  requerTexto   Boolean       @default(false)
+  activo        Boolean       @default(true)
 
   reservas      ReservaExtra[]
   locais        ExtraLocal[]
-  itensMenu     ItemMenu[]
 }
 
 model ExtraLocal {
-  // Pivot M:M entre Extra e Local (disponibilidade de extras por sala)
+  // Pivot M:N entre Extra e Local (disponibilidade de extras por sala)
   extraId  String
   localId  String
   @@unique([extraId, localId])
@@ -182,25 +199,36 @@ model Monitor {
   id        String   @id @default(cuid())
   nome      String
   contacto  String
-  fotoUrl   String?           // Foto de perfil (upload local)
+  fotoUrl   String?
   activo    Boolean  @default(true)
 
   userId    String?  @unique  // Ligação opcional a User
   user      User?
 
-  festas    FestaMonitor[]
+  reservas  ReservaMonitor[]  // Alocação por reserva
   locais    MonitorLocal[]
 }
 
 model MonitorLocal {
-  // Pivot M:M entre Monitor e Local (alocação por sala)
+  // Pivot M:N entre Monitor e Local (alocação por sala)
   monitorId String
   localId   String
   @@unique([monitorId, localId])
 }
 ```
 
-### Reservas
+### Configuração de Cacifos
+
+```prisma
+model ConfiguracaoCacifo {
+  id           String   @id @default(cuid())
+  totalCacifos Int      @default(200)
+
+  cacifos      Cacifo[]
+}
+```
+
+### Reservas (unificado com Festa)
 
 ```prisma
 model Reserva {
@@ -209,61 +237,79 @@ model Reserva {
   horario         String        // HH:MM
   duracaoMinutos  Int
   numCriancas     Int           @default(0)
-  cacifosPagos    Boolean       @default(false)
   notas           String?       @db.Text
   estado          EstadoReserva @default(RESERVA)
 
-  clienteId       String
-  aniversarianteId String
-  localId         String
+  // Runtime fields (preenchidos quando estado = EM_CURSO)
+  inicioEm        DateTime?
+  fimPrevisto     DateTime?
+  fimReal         DateTime?
+  cacifosHistorico Json?
 
-  festa           Festa?
+  // Campos da festa
+  tema              String?
+  previsaoCriancas  Int?
+  cor               String?
+  bolo              String?
+  boloQuantidade    Int?
+
+  // Observações
+  observacoesGerais  String?  @db.Text
+  observacoesLesoes  String?  @db.Text
+  observacoesBrindes String?  @db.Text
+  outrosExtras       String?  @db.Text
+
+  // Pagamento
+  metodoPagamento     MetodoPagamento?
+  valorPago           Decimal?          @db.Decimal(10, 2)
+  pago                Boolean           @default(false)
+  referenciaPagamento String?
+
+  // Caução
+  caucao              EstadoCaucao      @default(NAO_PAGA)
+  valorCaucao         Decimal?          @db.Decimal(10, 2)
+
+  // Desconto
+  descontoPercentagem Int?
+  descontoMotivo      String?
+
+  // Relações
+  clienteId       String
+  cliente         Cliente       @relation(...)
+
+  localId         String
+  local           Local         @relation(...)
+
   menu            Menu?
   extras          ReservaExtra[]
   cacifos         Cacifo[]
+  monitores       ReservaMonitor[]
+  etapas          ReservaEtapa[]
+  participantes   Participante[]
+  aniversariantes ReservaAniversariante[]
 
   @@index([data, localId])
   @@index([estado])
 }
 
 model ReservaExtra {
-  // Pivot M:M entre Reserva e Extra com quantidade
-  reservaId  String
-  extraId    String
-  quantidade Int     @default(1)
+  reservaId          String
+  extraId            String
+  quantidade         Int     @default(1)
+  textoPersonalizado String?
   @@unique([reservaId, extraId])
 }
-```
 
-### Festas
-
-```prisma
-model Festa {
-  id             String      @id @default(cuid())
-  inicioEm       DateTime
-  fimPrevisto    DateTime
-  fimReal        DateTime?
-  lancheServido  Boolean     @default(false)
-  estado         EstadoFesta @default(EM_CURSO)
-
-  reservaId      String      @unique
-  localId        String
-
-  reserva        Reserva     @relation(...)
-  local          Local       @relation(...)
-  monitores      FestaMonitor[]
-  cacifos        Cacifo[]
-  etapas         FestaEtapa[]
-
-  @@index([estado])
-  @@index([inicioEm])
+model ReservaMonitor {
+  reservaId String
+  monitorId String
+  @@unique([reservaId, monitorId])
 }
 
-model FestaMonitor {
-  // Pivot M:M entre Festa e Monitor
-  festaId   String
-  monitorId String
-  @@unique([festaId, monitorId])
+model ReservaAniversariante {
+  reservaId       String
+  aniversarianteId String
+  @@unique([reservaId, aniversarianteId])
 }
 ```
 
@@ -278,16 +324,30 @@ model EtapaFesta {
   icone       String?
   activo      Boolean   @default(true)
 
-  festas      FestaEtapa[]
+  reservas    ReservaEtapa[]
 }
 
-model FestaEtapa {
-  // Pivot M:M entre Festa e EtapaFesta com estado
-  festaId     String
+model ReservaEtapa {
+  reservaId   String
   etapaId     String
   concluida   Boolean   @default(false)
   concluidaEm DateTime?
-  @@unique([festaId, etapaId])
+  @@unique([reservaId, etapaId])
+}
+```
+
+### Participantes (crianças na festa)
+
+```prisma
+model Participante {
+  id        String   @id @default(cuid())
+  nome      String
+  presente  Boolean  @default(false)
+  cacifoId  String?  @unique  // Cacifo atribuído no check-in
+  reservaId String
+
+  reserva   Reserva  @relation(...)
+  cacifo    Cacifo?  @relation(...)
 }
 ```
 
@@ -295,44 +355,40 @@ model FestaEtapa {
 
 ```prisma
 model Cacifo {
-  id        String       @id @default(cuid())
-  numero    Int          @unique
-  estado    EstadoCacifo @default(LIVRE)
+  id              String            @id @default(cuid())
+  numero          Int               @unique
+  nome            String?
+  estado          EstadoCacifo      @default(LIVRE)
+  notas           String?           @db.Text
+  criancas        String?
 
-  reservaId String?      // Ligação opcional à reserva
-  festaId   String?      // Ligação opcional à festa
+  configuracaoId  String
+  configuracao    ConfiguracaoCacifo @relation(...)
+
+  reservaId       String?
+  reserva         Reserva?          @relation(...)
+
+  participante    Participante?     // 1:1 com participante (check-in)
 
   @@index([estado])
 }
 ```
 
-### Menus
+### Menus (simplificado)
 
 ```prisma
 model Menu {
   id        String   @id @default(cuid())
+  nome      String
+  preco     Decimal  @db.Decimal(10, 2) @default(0)
   notas     String?  @db.Text
+
   reservaId String   @unique
-
   reserva   Reserva  @relation(...)
-  itens     ItemMenu[]
-}
-
-model ItemMenu {
-  id            String       @id @default(cuid())
-  nome          String
-  categoria     CategoriaItem
-  quantidade    Int          @default(1)
-  precoUnitario Decimal      @db.Decimal(10, 2)
-  icone         String?
-
-  menuId    String
-  extraId   String?   // Ligação opcional a Extra
-
-  menu      Menu      @relation(...)
-  extra     Extra?    @relation(...)
 }
 ```
+
+> **Nota:** O modelo `ItemMenu` foi removido. O `Menu` agora tem apenas `nome` e `preco`.
 
 ### Marketing — Campanhas & Newsletter
 
@@ -354,7 +410,6 @@ model NewsletterContacto {
 }
 
 model ContactoSegmento {
-  // Pivot M:M entre NewsletterContacto e Segmento
   contactoId String
   segmentoId String
   @@unique([contactoId, segmentoId])
@@ -407,7 +462,7 @@ model NotaRapida {
 ```prisma
 model FuncaoPermissao {
   funcao      FuncaoUtilizador
-  modulo      String   // "reservas", "festas", "cacifos", "menus", "relatorios", "divulgacoes", "configuracoes"
+  modulo      String   // "reservas", "cacifos", "menus", "relatorios", "divulgacoes", "configuracoes"
   nivelAcesso String   // "leitura", "escrita", "administracao"
 
   @@unique([funcao, modulo])
@@ -421,22 +476,22 @@ model FuncaoPermissao {
 - Verificar se o número de crianças não excede a capacidade do local (aviso, não erro)
 
 ### Ao transitar para `EM_CURSO`
-- Criar automaticamente o registo em `Festa` se ainda não existir
-- Registar `inicioEm` com a hora actual
+- Registar `inicioEm` e calcular `fimPrevisto` na própria reserva
+- A reserva passa a funcionar como "festa" — os campos de runtime são preenchidos
 
 ### Ao transitar para `CONCLUIDA`
-- Registar `fimReal` em `Festa`
-- Actualizar todos os `Cacifo` da festa para estado `LIVRE`
+- Registar `fimReal` na reserva
+- Actualizar todos os `Cacifo` da reserva para estado `LIVRE`
 
 ### Ao transitar para `CANCELADA`
 - Reserva cancelada não pode ser eliminada, apenas mudança de estado
-- Se existir `Festa` associada, deve ser tratada (concluída ou cancelada)
+- Cacifos reservados devem ser libertados
 
 ## Audit log
 
 Registar no `AuditLog` sempre que:
 - Uma reserva é criada, editada ou eliminada
-- O estado de uma reserva ou festa é alterado
+- O estado de uma reserva é alterado
 - Um utilizador acede ao sistema
 - Permissões são alteradas
 
@@ -453,14 +508,17 @@ await prisma.auditLog.create({
 ## Queries comuns
 
 ```typescript
-// Festas activas para o dashboard
-const festasActivas = await prisma.festa.findMany({
+// Reservas em estado EM_CURSO (festas activas) para o dashboard
+const festasActivas = await prisma.reserva.findMany({
   where: { estado: 'EM_CURSO' },
   include: {
-    reserva: { include: { aniversariante: true, cliente: true } },
+    cliente: true,
+    aniversariantes: { include: { aniversariante: true } },
     local: true,
     monitores: { include: { monitor: true } },
     cacifos: true,
+    participantes: true,
+    etapas: { include: { etapa: true } },
   },
   orderBy: { inicioEm: 'asc' },
 })
@@ -477,7 +535,11 @@ const reservas = await prisma.reserva.findMany({
       }
     }),
   },
-  include: { aniversariante: true, local: true },
+  include: {
+    cliente: true,
+    aniversariantes: { include: { aniversariante: true } },
+    local: true,
+  },
   orderBy: { data: 'asc' },
   skip: (pagina - 1) * porPagina,
   take: porPagina,
@@ -489,4 +551,16 @@ const reservas = await prisma.reserva.findMany({
 - **Test schema:** `test` (isolado, via `?schema=testfestas`)
 - **Test helpers:** `apps/server/__tests__/helpers/seed.ts`
 - **Test client:** `apps/server/__tests__/helpers/test-prisma.ts`
-- **Padrão:** Mock `@prisma/db-client` → `testPrisma` com schema `test`
+- **Padrão:** Mock `@festas/db` → `testPrisma` com schema `test`
+
+```typescript
+vi.mock("@festas/db", () => ({
+  PrismaClient: vi.fn(() => testPrisma),
+}));
+```
+
+## Database scripts
+
+- `packages/db/scripts/db.js` — Operações: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev
+- `packages/db/scripts/fix-enum.sql` — SQL para limpar stale enum types (`_old` suffix) antes do `db push`
+- Os comandos `clean` e `reset` limpam automaticamente stale enums para evitar erros PostgreSQL

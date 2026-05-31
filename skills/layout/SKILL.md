@@ -6,32 +6,36 @@ Padrão obrigatório ao criar qualquer nova página ou secção.
 
 ```
 RootLayout (app/layout.tsx)
-└── (guest)/           # Login, registo, recuperar palavra-passe
-    └── layout.tsx      # GuestPageContainer
-└── (protected)/        # Área autenticada
-    └── layout.tsx      # AppLayout (sidebar + header)
-        ├── AppSidebar  (fixo à esquerda, 220px)
-        ├── Main
-        │   ├── AppHeader (fixo no topo, com foto de perfil)
-        │   └── PageContent (scroll vertical)
-        │       └── [conteúdo da página]
-        └── ModalProvider (portais para modais)
+├── (guest)/               # Login, registo, recuperar palavra-passe
+│   └── layout.tsx          # GuestPageContainer
+├── (protected)/            # Área autenticada
+│   └── layout.tsx          # AppLayout (sidebar + header)
+│       ├── AppSidebar      (fixo à esquerda, 220px)
+│       ├── Main
+│       │   ├── AppHeader   (fixo no topo, com foto de perfil)
+│       │   └── PageContent (scroll vertical)
+│       │       └── [conteúdo da página]
+│       └── Backdrop        (overlay mobile)
 ```
 
 ## Layout protegido
 
 ```tsx
 // app/(protected)/layout.tsx
-export default function ProtectedLayout({ children }) {
+export default async function ProtectedLayout({ children }) {
+  const session = await requireAuth()
+  if (!session?.user) redirect("/entrar")
+
   return (
     <ProtectedProviders>
-      <div className="flex h-screen overflow-hidden bg-background">
-        <AppSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
-          <AppHeader />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <div className="flex min-h-screen">
+        <AppSidebar user={session.user} />
+        <div className="flex-1 flex flex-col lg:ml-[220px] transition-all duration-300">
+          <AppHeader user={session.user} />
+          <main className="flex-1 p-4 md:p-6 bg-background">
             {children}
           </main>
+          <Backdrop />
         </div>
       </div>
     </ProtectedProviders>
@@ -54,14 +58,15 @@ Componente em `@/layout/AppSidebar.tsx`. Navegação fixa à esquerda.
 
 | Ordem | Label (PT-PT) | Rota | Ícone (Lucide) |
 |---|---|---|---|
-| 1 | Dashboard | `/` | `LayoutDashboard` |
+| 1 | Dashboard | `/dashboard` | `LayoutDashboard` |
 | 2 | Reservas | `/reservas` | `CalendarCheck` |
 | 3 | Calendário | `/calendario` | `Calendar` |
 | 4 | Festas | `/festas` | `PartyPopper` |
 | 5 | Cacifos | `/cacifos` | `Package` |
 | 6 | Menus | `/menus` | `UtensilsCrossed` |
-| 7 | Relatórios | `/relatorios` | `BarChart2` |
-| 8 | Divulgações | `/divulgacoes` | `Megaphone` |
+| 7 | Clientes | `/clientes` | `Users` |
+| 8 | Relatórios | `/relatorios` | `BarChart2` |
+| 9 | Divulgações | `/divulgacoes` | `Megaphone` |
 
 ### Secção Configurações (fundo da sidebar)
 
@@ -73,6 +78,7 @@ Componente em `@/layout/AppSidebar.tsx`. Navegação fixa à esquerda.
 | Locais | `/configuracoes/locais` | `MapPin` |
 | Extras | `/configuracoes/extras` | `Sparkles` |
 | Etapas de Festa | `/configuracoes/etapas-festa` | `ListChecks` |
+| Config. Cacifos | `/configuracoes/cacifos` | `Box` |
 | Newsletter | `/configuracoes/newsletter` | `Mail` |
 
 ### Comportamento da Sidebar
@@ -197,6 +203,7 @@ export const metadata = createPageMetadata('reservas')
 | Reservas | `reservas/metadata.ts` |
 | Calendário | `calendario/metadata.ts` |
 | Festas | `festas/metadata.ts` |
+| Festas a decorrer | `festas/a-decorrer/metadata.ts` |
 | Cacifos | `cacifos/metadata.ts` |
 | Menus | `menus/metadata.ts` |
 | Relatórios | `relatorios/metadata.ts` |

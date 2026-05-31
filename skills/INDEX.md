@@ -8,7 +8,7 @@ Antes de criar qualquer componente, página ou função, consulta as skills rele
 | Situação | Skill a consultar |
 |---|---|
 | Criar ou editar um formulário | `form/SKILL.md` |
-| Mostrar estado de reserva, festa, cacifo, campanha | `estado/SKILL.md` |
+| Mostrar estado de reserva, cacifo, campanha | `estado/SKILL.md` |
 | Qualquer coisa que actualiza em tempo real | `realtime/SKILL.md` |
 | Tabelas com filtros, paginação ou ordenação | `tabela/SKILL.md` |
 | Criar uma nova página ou layout | `layout/SKILL.md` |
@@ -19,7 +19,7 @@ Antes de criar qualquer componente, página ou função, consulta as skills rele
 
 ### `form/SKILL.md`
 - React Hook Form + Zod
-- Componentes disponíveis: Input, Select, MultiSelect, Switch, DatePicker, PhoneInput
+- Componentes disponíveis: InputField, Select, MultiSelect, Switch, DatePicker, TextArea, Checkbox
 - Validações PT-PT obrigatórias
 - Nunca mensagens de erro em inglês
 
@@ -28,30 +28,32 @@ Antes de criar qualquer componente, página ou função, consulta as skills rele
 - Labels PT-PT para cada estado
 - Componente Badge para apresentação
 - Stepper de estado da reserva
+- Nota: Não existe `EstadoFesta` separado — usa `EstadoReserva`
 
 ### `realtime/SKILL.md`
 - Timer de festa com `useTimer`
-- Polling com `usePolling`
+- Polling com `refetchInterval` do TanStack Query
 - CountdownTimer para UI
-- Fluxo de finalizar festa
+- Fluxo de finalizar festa (via PATCH `/api/reservas/:id`)
 
 ### `tabela/SKILL.md`
 - DataTable genérico com paginação, filtros, pesquisa, ordenação
 - `searchableFields` com dot notation
 - `itemLabel` para labels de contagem
-- 7 páginas usam DataTable
+- 8 páginas usam DataTable
 
 ### `layout/SKILL.md`
-- Layout protegido: AppSidebar + AppHeader
+- Layout protegido: AppSidebar + AppHeader + Backdrop
 - Sidebar com menu principal + configurações
-- 15 páginas com metadata
+- 16 páginas com metadata
 - Modais com BaseModal / CreateModal / EditModal
 
 ### `db/SKILL.md`
-- Enums: EstadoReserva, EstadoFesta, EstadoCacifo, EstadoCampanha, FuncaoUtilizador, etc.
-- Modelos: User, Cliente, Aniversariante, Local, Extra, Monitor, Reserva, Festa, EtapaFesta, Cacifo, Menu, Campanha, etc.
+- Enums: EstadoReserva, EstadoCacifo (3 valores), MetodoPagamento, EstadoCaucao, CategoriaItem (MENU/EXTRA), TipoCampanha, EstadoCampanha
+- Reserva unificada com Festa — não existe modelo Festa separado
+- Menu simplificado (nome + preco) — ItemMenu foi removido
 - Convenções: camelCase no Prisma, @@map para snake_case no DB
-- Testes com schema `test` isolado
+- Testes com schema `test` isolado, mock `@festas/db`
 
 ### `ptpt/SKILL.md`
 - date-fns com locale `pt`

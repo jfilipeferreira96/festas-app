@@ -17,7 +17,7 @@ de performance com múltiplos utilizadores simultâneos.
 
 ## Timer de festa — implementação
 
-O timer é calculado no cliente a partir da `inicioEm` guardada na base de dados.
+O timer é calculado no cliente a partir da `inicioEm` guardada na reserva (unificada com festa).
 Nunca confiar num contador incrementado localmente — pode desfasar.
 
 ### Componente CountdownTimer
@@ -29,8 +29,8 @@ para todos os countdowns da aplicação.
 import { CountdownTimer } from '@/components/ui/countdown-timer/CountdownTimer'
 
 <CountdownTimer
-  inicioEm={festa.inicioEm}
-  fimPrevisto={festa.fimPrevisto}
+  inicioEm={reserva.inicioEm}
+  fimPrevisto={reserva.fimPrevisto}
   emAtraso={emAtraso}
 />
 ```
@@ -81,13 +81,13 @@ function formatarDuracao(ms: number): string {
 Usar `refetchInterval` do TanStack Query para polling automático:
 
 ```tsx
-// hooks/use-festas.ts
+// hooks/use-reservas.ts
 import { useQuery } from '@tanstack/react-query'
 
 export function useFestasActivas() {
   return useQuery({
-    queryKey: ['festas', 'activas'],
-    queryFn: () => api.festas.activas(),
+    queryKey: ['reservas', 'em_curso'],
+    queryFn: () => api.reservas.list({ estado: 'EM_CURSO' }),
     refetchInterval: 30_000,  // 30 segundos
   })
 }
@@ -122,10 +122,11 @@ Quando `emAtraso === true` (tempo restante negativo), o card da festa deve:
 ## Finalizar festa — fluxo
 
 1. Utilizador clica "Finalizar Festa"
+2. Modal de confirmação: "Tens a certeza que queres finalizar a Festa do Tomás?"
 3. Ao confirmar:
-   - PATCH `/api/festas/:id` com `{ estado: 'CONCLUIDA', fimReal: new Date() }`
-   - Todos os cacifos associados à festa ficam com estado `LIVRE` automaticamente (lógica no backend)
-   - Festa desaparece da página de Festas em Curso
+   - PATCH `/api/reservas/:id` com `{ estado: 'CONCLUIDA', fimReal: new Date().toISOString() }`
+   - Todos os cacifos associados à reserva ficam com estado `LIVRE` automaticamente (lógica no backend)
+   - Reserva desaparece da página de Festas em Curso
    - Toast de sucesso: "Festa concluída com sucesso"
 
 ## WebSocket (fase futura)
@@ -135,28 +136,9 @@ Eventos a emitir pelo servidor:
 
 ```ts
 // Servidor emite:
-socket.emit('festa:actualizada', { festaId, estado, fimReal })
+socket.emit('reserva:actualizada', { reservaId, estado, fimReal })
 socket.emit('cacifo:actualizado', { cacifosActualizados: Cacifo[] })
-socket.emit('festa:em_atraso', { festaId, minutosAtraso })
+socket.emit('reserva:em_atraso', { reservaId, minutosAtraso })
 ```
 
-O cliente subscreve por sala para não receber eventos de outros espaços.2. Modal de confirmação: "Tens a certeza que queres finalizar a Festa do Tomás?"
-3. Ao confirmar:
-   - PATCH `/api/festas/:id` com `{ estado: 'CONCLUIDA', fimReal: new Date() }`
-   - Todos os cacifos associados à festa ficam com estado `LIVRE` automaticamente (lógica no backend)
-   - Festa desaparece da página de Festas em Curso
-   - Toast de sucesso: "Festa concluída com sucesso"
-
-## WebSocket (fase futura)
-
-Se implementado, usar a biblioteca `socket.io` no servidor Node.js.
-Eventos a emitir pelo servidor:
-
-```ts
-// Servidor emite:
-socket.emit('festa:actualizada', { festaId, estado, fimReal })
-socket.emit('cacifo:actualizado', { cacifosActualizados: Cacifo[] })
-socket.emit('festa:em_atraso', { festaId, minutosAtraso })
-```
-
-
+O cliente subscreve por sala para não receber eventos de outros espaços.
