@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import flatpickr from "flatpickr";
+import { Portuguese } from "flatpickr/dist/l10n/pt";
 import "flatpickr/dist/flatpickr.css";
 import Label from "./Label";
 import { CalenderIcon } from "../../icons";
@@ -15,6 +16,7 @@ type PropsType = {
   defaultDate?: DateOption;
   label?: string;
   placeholder?: string;
+  className?: string;
 };
 
 export default function DatePicker({
@@ -24,6 +26,7 @@ export default function DatePicker({
   label,
   defaultDate,
   placeholder,
+  className,
 }: PropsType) {
   useEffect(() => {
     const flatPickr = flatpickr(`#${id}`, {
@@ -33,6 +36,7 @@ export default function DatePicker({
       dateFormat: "Y-m-d",
       defaultDate,
       onChange,
+      locale: Portuguese,
     });
 
     return () => {
@@ -43,7 +47,7 @@ export default function DatePicker({
   }, [mode, onChange, id, defaultDate]);
 
   return (
-    <div>
+    <div className={className}>
       {label && <Label htmlFor={id}>{label}</Label>}
 
       <div className="relative">

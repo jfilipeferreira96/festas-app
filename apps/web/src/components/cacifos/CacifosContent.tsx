@@ -1,24 +1,37 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Package, Download, Calendar } from "lucide-react";
+import { Package, Download, LockKeyhole } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
-import FormSelect from "@/components/form/Select";
+import { Select } from "@/components/ui/select";
+import DatePicker from "@/components/form/date-picker";
 import {
   useCacifos,
   useCacifoContadores,
   useLibertar,
 } from "@/hooks/use-cacifos";
-import { useReservas } from "@/hooks/use-reservas";
+import { useReservas, useReservasAtivas } from "@/hooks/use-reservas";
 import type { Cacifo, EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 import { formatDate } from "@/utils/date";
 
-const ESTADO_COLORS: Record<string, string> = {
-  LIVRE: "bg-accent-green-400 hover:bg-accent-green-500 text-white",
-  OCUPADO: "bg-accent-red-400 hover:bg-accent-red-500 text-white",
-  RESERVADO: "bg-brand-500 hover:bg-brand-600 text-white",
+const ESTADO_STYLES: Record<string, { base: string; hover: string; icon: string }> = {
+  LIVRE: {
+    base: "bg-accent-green-50 border-accent-green-200 text-accent-green-700",
+    hover: "hover:bg-accent-green-100 hover:border-accent-green-300 hover:shadow-md hover:scale-[1.04]",
+    icon: "text-accent-green-500",
+  },
+  OCUPADO: {
+    base: "bg-accent-red-50 border-accent-red-200 text-accent-red-700",
+    hover: "hover:bg-accent-red-100 hover:border-accent-red-300 hover:shadow-md hover:scale-[1.04]",
+    icon: "text-accent-red-500",
+  },
+  RESERVADO: {
+    base: "bg-brand-50 border-brand-200 text-brand-700",
+    hover: "hover:bg-brand-100 hover:border-brand-300 hover:shadow-md hover:scale-[1.04]",
+    icon: "text-brand-500",
+  },
 };
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -40,9 +53,12 @@ export default function CacifosContent() {
   const [filtroFesta, setFiltroFesta] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
 
-  // Fetch festas for the selected date
+  // Fetch festas for the selected date (for summary bar)
   const { data: reservasData } = useReservas({ data: selectedDate, pageSize: 100 });
   const festas = useMemo(() => reservasData?.items ?? [], [reservasData]);
+
+  // Fetch all active festas (for festa filter dropdown)
+  const { data: festasAtivas } = useReservasAtivas();
 
   const { data: cacifos, isLoading } = useCacifos(
     filtro || filtroFesta
@@ -83,111 +99,117 @@ export default function CacifosContent() {
     link.click();
   }, [cacifos, selectedDate]);
 
-  // Build festa filter options from the selected date's festas
-  const festaOptions = useMemo(() => [
-    { value: "", label: "Todas as festas" },
-    ...festas.map((r) => ({
+  // Build festa filter options from active festas
+  const festaFilterOptions = useMemo(() => [
+    { value: "", label: "Todos os cacifos" },
+    ...(festasAtivas ?? []).map((r) => ({
       value: r.id,
       label: r.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || r.cliente?.nome || "Festa",
     })),
-  ], [festas]);
+  ], [festasAtivas]);
 
   const formattedDate = formatDate(selectedDate);
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Cacifos"
         subtitle={`Vista geral dos cacifos — ${formattedDate}`}
       />
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mt-4 mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-accent-green-400" />
-          <span className="text-xs text-text-secondary">
-            Livres ({contadores?.livres ?? "—"})
-          </span>
+      {/* Stats + Legend Card */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-green-50">
+            <Package size={20} className="text-accent-green-500" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Livres</p>
+            <p className="text-lg font-bold text-accent-green-600">{contadores?.livres ?? "—"}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-accent-red-400" />
-          <span className="text-xs text-text-secondary">
-            Ocupados ({contadores?.ocupados ?? "—"})
-          </span>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-red-50">
+            <LockKeyhole size={20} className="text-accent-red-500" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Ocupados</p>
+            <p className="text-lg font-bold text-accent-red-600">{contadores?.ocupados ?? "—"}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-brand-500" />
-          <span className="text-xs text-text-secondary">
-            Reservados ({contadores?.reservados ?? "—"})
-          </span>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-50">
+            <Package size={20} className="text-brand-500" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Reservados</p>
+            <p className="text-lg font-bold text-brand-600">{contadores?.reservados ?? "—"}</p>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Date Picker */}
-          <div className="flex items-center gap-2 rounded-lg border border-border bg-white px-3 h-11 shadow-theme-xs">
-            <Calendar size={15} className="text-text-muted shrink-0" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value);
+      {/* Filters Card */}
+      <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Date Picker */}
+            <DatePicker
+              id="cacifos-date-picker"
+              defaultDate={new Date(selectedDate)}
+              onChange={([date]: Date[]) => {
+                const iso = date.toISOString().split("T")[0];
+                setSelectedDate(iso);
                 setFiltroFesta("");
               }}
-              className="h-full bg-transparent text-sm text-text-primary focus:outline-none cursor-pointer"
+              className="w-44"
             />
+
+            {/* Estado filter */}
+            <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-1">
+              {FILTER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFiltro(opt.value)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+                    filtro === opt.value
+                      ? "bg-white text-brand-600 shadow-theme-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-white/60"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Festa filter */}
+            <div className="w-55">
+              <Select
+                options={festaFilterOptions}
+                value={filtroFesta}
+                onChange={setFiltroFesta}
+                placeholder="Filtrar por festa"
+              />
+            </div>
           </div>
 
-          {/* Estado filter */}
-          <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto filter-scrollbar max-w-full">
-            {FILTER_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setFiltro(opt.value)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
-                  filtro === opt.value
-                    ? "bg-brand-500 text-white shadow-theme-sm"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Festa filter */}
-          <div className="flex items-center gap-2">
-            <FormSelect
-              options={festaOptions}
-              value={filtroFesta}
-              onChange={setFiltroFesta}
-              placeholder="Filtrar por festa"
-              className="w-55"
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs">
           <button
             onClick={() => handleExportCSV()}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
           >
             <Download size={16} />
-            <span>CSV</span>
+            <span>Exportar CSV</span>
           </button>
         </div>
       </div>
 
       {/* Festas summary for selected date */}
       {festas.length > 0 && (
-        <div className="mb-5 p-4 rounded-xl bg-white border border-border shadow-theme-xs">
+        <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-text-primary uppercase tracking-wider">
               Festas do dia — {formattedDate}
             </p>
-            <span className="text-xs text-text-muted bg-gray-50 px-2 py-0.5 rounded-full">
+            <span className="text-xs text-text-muted bg-gray-50 px-2.5 py-1 rounded-full font-medium">
               {festas.length} {festas.length === 1 ? "festa" : "festas"}
             </span>
           </div>
@@ -223,45 +245,55 @@ export default function CacifosContent() {
 
       {/* Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
           {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
-              className="aspect-square rounded-[10px] bg-gray-100 animate-pulse"
+              className="aspect-square rounded-xl bg-gray-100 animate-pulse"
             />
           ))}
         </div>
       ) : cacifos && cacifos.length > 0 ? (
-        <div className="grid grid-cols-5 md:grid-cols-8 lg:grid-cols-10 gap-3">
-          {cacifos.map((cacifo) => (
-            <button
-              key={cacifo.id}
-              onClick={() => setSelectedCacifo(cacifo)}
-              className={`aspect-square rounded-[10px] flex flex-col items-center justify-center transition-all shadow-sm relative ${
-                ESTADO_COLORS[cacifo.estado] ?? "bg-gray-200 text-gray-500"
-              }`}
-              title={cacifo.criancas || `Cacifo ${cacifo.numero}`}
-            >
-              <Package size={18} />
-              <span className="text-[10px] font-bold mt-0.5">{cacifo.numero}</span>
-              {cacifo.estado === "OCUPADO" && cacifo.criancas && (
-                <span className="text-[7px] leading-tight text-center mt-0.5 max-w-[90%] truncate">
-                  {cacifo.criancas}
-                </span>
-              )}
-              {cacifo.reserva && (
-                <span className="text-[6px] leading-tight text-center mt-0.5 max-w-[90%] truncate opacity-80">
-                  {cacifo.reserva.cliente?.nome ?? ""}
-                </span>
-              )}
-            </button>
-          ))}
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
+          {cacifos.map((cacifo) => {
+            const style = ESTADO_STYLES[cacifo.estado] ?? {
+              base: "bg-gray-50 border-gray-200 text-gray-500",
+              hover: "hover:bg-gray-100 hover:shadow-md hover:scale-[1.04]",
+              icon: "text-gray-400",
+            };
+            return (
+              <button
+                key={cacifo.id}
+                onClick={() => setSelectedCacifo(cacifo)}
+                className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 border relative cursor-pointer active:scale-95 ${style.base} ${style.hover}`}
+                title={cacifo.criancas || `Cacifo ${cacifo.numero}`}
+              >
+                <Package size={14} className={style.icon} />
+                <span className="text-xs font-bold mt-0.5">{cacifo.numero}</span>
+                {cacifo.estado === "OCUPADO" && cacifo.criancas && (
+                  <span className="text-[11px] leading-tight text-center mt-0.5 max-w-[95%] truncate font-medium">
+                    {cacifo.criancas}
+                  </span>
+                )}
+                {cacifo.reserva && (
+                  <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
+                    {cacifo.reserva.cliente?.nome ?? ""}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       ) : (
-        <div className="bg-surface rounded-[14px] p-8 shadow-card border border-border text-center">
-          <Package size={48} className="mx-auto text-text-muted mb-3" />
-          <p className="text-sm text-text-muted">
-            Nenhum cacifo encontrado.
+        <div className="rounded-xl p-12 shadow-theme-xs border border-border text-center bg-white">
+          <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-50 mx-auto mb-4">
+            <Package size={32} className="text-text-muted" />
+          </div>
+          <p className="text-sm font-medium text-text-primary mb-1">
+            Nenhum cacifo encontrado
+          </p>
+          <p className="text-xs text-text-muted">
+            Tente alterar os filtros ou a data selecionada.
           </p>
         </div>
       )}
@@ -273,17 +305,38 @@ export default function CacifosContent() {
           onClose={() => setSelectedCacifo(null)}
         >
           <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-text-primary">
-                Cacifo #{selectedCacifo.numero}
-                {selectedCacifo.nome && ` — ${selectedCacifo.nome}`}
-              </h2>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className={`flex items-center justify-center w-10 h-10 rounded-xl ${
+                  selectedCacifo.estado === "LIVRE"
+                    ? "bg-accent-green-50"
+                    : selectedCacifo.estado === "OCUPADO"
+                    ? "bg-accent-red-50"
+                    : "bg-brand-50"
+                }`}>
+                  <Package size={20} className={
+                    selectedCacifo.estado === "LIVRE"
+                      ? "text-accent-green-500"
+                      : selectedCacifo.estado === "OCUPADO"
+                      ? "text-accent-red-500"
+                      : "text-brand-500"
+                  } />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-text-primary">
+                    Cacifo #{selectedCacifo.numero}
+                  </h2>
+                  {selectedCacifo.nome && (
+                    <p className="text-xs text-text-muted">{selectedCacifo.nome}</p>
+                  )}
+                </div>
+              </div>
               <StatusBadge status={selectedCacifo.estado as StatusType}>
                 {ESTADO_LABELS[selectedCacifo.estado] ?? selectedCacifo.estado}
               </StatusBadge>
             </div>
 
-            <div className="space-y-3 mb-4">
+            <div className="space-y-2 mb-5">
               {selectedCacifo.reserva && (
                 <>
                   <DetailRow label="Festa" value={selectedCacifo.reserva.cliente?.nome ?? "—"} />
@@ -298,22 +351,26 @@ export default function CacifosContent() {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              {(selectedCacifo.estado === "OCUPADO" || selectedCacifo.estado === "RESERVADO") && (
-                <Button
-                  onClick={() => handleLibertar(selectedCacifo.id)}
-                  disabled={libertar.isPending}
-                  className="bg-accent-green-500 hover:bg-accent-green-600"
-                >
-                  {libertar.isPending ? "A libertar..." : "Libertar"}
-                </Button>
-              )}
-              <button
+            <div className="border-t border-border pt-4 flex items-center gap-3">
+              <Button
+                variant="outline"
                 onClick={() => setSelectedCacifo(null)}
-                className="px-5 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:bg-gray-50 hover:text-text-primary transition-colors"
+                className="flex-1 rounded-[10px] px-5 py-3"
               >
                 Fechar
-              </button>
+              </Button>
+              <div className="flex gap-2 flex-1 justify-end">
+                {(selectedCacifo.estado === "OCUPADO" || selectedCacifo.estado === "RESERVADO") && (
+                  <Button
+                    onClick={() => handleLibertar(selectedCacifo.id)}
+                    disabled={libertar.isPending}
+                    loading={libertar.isPending}
+                    className="bg-accent-green-500 hover:bg-accent-green-600 rounded-[10px] px-5 py-3"
+                  >
+                    Libertar
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </Modal>
@@ -324,9 +381,9 @@ export default function CacifosContent() {
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-text-muted w-24 shrink-0">{label}:</span>
-      <span className="text-sm text-text-primary">{value}</span>
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50">
+      <span className="text-xs font-medium text-text-muted w-20 shrink-0">{label}</span>
+      <span className="text-sm text-text-primary font-medium">{value}</span>
     </div>
   );
 }
