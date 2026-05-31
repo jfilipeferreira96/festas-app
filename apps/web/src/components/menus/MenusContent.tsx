@@ -5,6 +5,7 @@ import { UtensilsCrossed, Plus, Trash2, Edit, Package } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import Select from "@/components/form/Select";
+import Switch from "@/components/form/switch/Switch";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import { useExtras, useCreateExtra, useUpdateExtra, useDeleteExtra } from "@/hooks/use-extras";
 import type { Extra } from "@/lib/api/extras";
@@ -22,17 +23,29 @@ export default function MenusContent() {
   // Form state
   const [formNome, setFormNome] = useState("");
   const [formPreco, setFormPreco] = useState("");
-  const [formIcone, setFormIcone] = useState("");
   const [formCategoria, setFormCategoria] = useState<"MENU" | "EXTRA">("MENU");
+  const [formSubcategoria, setFormSubcategoria] = useState("");
+  const [formRequerTexto, setFormRequerTexto] = useState(false);
 
   const menuItems = useMemo(
     () => (extras ?? []).filter((e) => e.categoria === "MENU" && e.activo),
     [extras]
   );
-  const extraItems = useMemo(
-    () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo),
-    [extras]
-  );
+  const extraItems = useMemo(() => {
+    const items = (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo);
+    const grouped: Record<string, typeof items> = {};
+    const ungrouped: typeof items = [];
+    for (const item of items) {
+      const sub = item.subcategoria?.trim();
+      if (sub) {
+        if (!grouped[sub]) grouped[sub] = [];
+        grouped[sub].push(item);
+      } else {
+        ungrouped.push(item);
+      }
+    }
+    return { grouped, ungrouped, all: items };
+  }, [extras]);
 
   const formatCurrency = useCallback(
     (value: number) =>
@@ -44,8 +57,9 @@ export default function MenusContent() {
     setEditingExtra(null);
     setFormNome("");
     setFormPreco("");
-    setFormIcone("");
     setFormCategoria("MENU");
+    setFormSubcategoria("");
+    setFormRequerTexto(false);
     setShowForm(true);
   }, []);
 
@@ -53,8 +67,9 @@ export default function MenusContent() {
     setEditingExtra(extra);
     setFormNome(extra.nome);
     setFormPreco(String(Number(extra.precoUnitario) / 100));
-    setFormIcone(extra.icone ?? "");
     setFormCategoria(extra.categoria as "MENU" | "EXTRA");
+    setFormSubcategoria(extra.subcategoria ?? "");
+    setFormRequerTexto(extra.requerTexto ?? false);
     setShowForm(true);
   }, []);
 
@@ -63,27 +78,21 @@ export default function MenusContent() {
       e.preventDefault();
       const precoCentavos = Math.round(parseFloat(formPreco.replace(",", ".")) * 100) || 0;
 
+      const commonData = {
+        nome: formNome,
+        precoUnitario: precoCentavos,
+        categoria: formCategoria,
+        subcategoria: formSubcategoria.trim() || undefined,
+        requerTexto: formRequerTexto,
+      };
       if (editingExtra) {
-        await updateExtra.mutateAsync({
-          id: editingExtra.id,
-          data: {
-            nome: formNome,
-            precoUnitario: precoCentavos,
-            icone: formIcone || undefined,
-            categoria: formCategoria,
-          },
-        });
+        await updateExtra.mutateAsync({ id: editingExtra.id, data: commonData });
       } else {
-        await createExtra.mutateAsync({
-          nome: formNome,
-          precoUnitario: precoCentavos,
-          icone: formIcone || undefined,
-          categoria: formCategoria,
-        });
+        await createExtra.mutateAsync(commonData);
       }
       setShowForm(false);
     },
-    [editingExtra, formNome, formPreco, formIcone, formCategoria, createExtra, updateExtra]
+    [editingExtra, formNome, formPreco, formCategoria, formSubcategoria, formRequerTexto, createExtra, updateExtra]
   );
 
   const confirmDelete = useCallback(async () => {
@@ -140,21 +149,36 @@ export default function MenusContent() {
           <section>
             <h2 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
               <Package size={16} className="text-accent-purple-500" />
-              Extras ({extraItems.length} itens)
+              Extras ({extraItems.all.length} itens)
             </h2>
-            {extraItems.length === 0 ? (
+            {extraItems.all.length === 0 ? (
               <p className="text-sm text-text-muted py-4">Nenhum extra configurado.</p>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {extraItems.map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    formatCurrency={formatCurrency}
-                    onEdit={() => handleEdit(item)}
-                    onDelete={() => setDeleteTarget(item)}
-                  />
+              <div className="space-y-4">
+                {Object.entries(extraItems.grouped).map(([sub, items]) => (
+                  <div key={sub}>
+                    <p className="text-xs font-medium text-text-muted mb-2 uppercase tracking-wider">{sub}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {items.map((item) => (
+                        <ItemCard key={item.id} item={item} formatCurrency={formatCurrency}
+                          onEdit={() => handleEdit(item)} onDelete={() => setDeleteTarget(item)} />
+                      ))}
+                    </div>
+                  </div>
                 ))}
+                {extraItems.ungrouped.length > 0 && (
+                  <div>
+                    {Object.keys(extraItems.grouped).length > 0 && (
+                      <p className="text-xs font-medium text-text-muted mb-2 uppercase tracking-wider">Outros</p>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {extraItems.ungrouped.map((item) => (
+                        <ItemCard key={item.id} item={item} formatCurrency={formatCurrency}
+                          onEdit={() => handleEdit(item)} onDelete={() => setDeleteTarget(item)} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </section>
@@ -207,15 +231,21 @@ export default function MenusContent() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1">Ícone (opcional)</label>
-                <input
-                  type="text"
-                  value={formIcone}
-                  onChange={(e) => setFormIcone(e.target.value)}
-                  placeholder="Ex: sandwich, cake, pizza"
-                  className="w-full h-10 px-3 text-sm rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Subcategoria</label>
+                  <input
+                    type="text"
+                    value={formSubcategoria}
+                    onChange={(e) => setFormSubcategoria(e.target.value)}
+                    placeholder="Ex: Diversão, Premium"
+                    className="w-full h-10 px-3 text-sm rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div className="flex items-center gap-3 pt-5">
+                  <Switch checked={formRequerTexto} onChange={setFormRequerTexto} />
+                  <label className="text-xs font-medium text-text-secondary">Permitir texto personalizado</label>
+                </div>
               </div>
               <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
                 <Button variant="outline" onClick={() => setShowForm(false)}>
@@ -258,23 +288,24 @@ function ItemCard({
 }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl bg-surface border border-border hover:border-gray-300 transition-colors">
-      {item.icone ? (
-        <img
-          src={`/images/food-icons/icons8-${item.icone}-100.png`}
-          alt={item.nome}
-          className="w-10 h-10 object-contain shrink-0"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
+      <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
+        {item.categoria === "MENU" ? (
           <UtensilsCrossed size={16} className="text-primary-500" />
-        </div>
-      )}
+        ) : (
+          <Package size={16} className="text-accent-purple-500" />
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary truncate">{item.nome}</p>
-        <p className="text-xs text-text-secondary">{formatCurrency(Number(item.precoUnitario))}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-text-secondary">{formatCurrency(Number(item.precoUnitario))}</p>
+          {item.requerTexto && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-100 text-primary-600 font-medium">Texto</span>
+          )}
+          {item.subcategoria && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-text-muted font-medium">{item.subcategoria}</span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-1">
         <button

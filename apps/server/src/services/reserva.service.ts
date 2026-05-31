@@ -35,14 +35,25 @@ interface CreateReservaData {
   pago?: boolean;
   referenciaPagamento?: string;
   caucao?: string;
+  valorCaucao?: number;
+  descontoPercentagem?: number;
+  descontoMotivo?: string;
+  boloQuantidade?: number;
   // Related
   extrasIds?: string[];
+  extrasTexto?: Record<string, string>;
   monitoresIds?: string[];
   etapasIds?: string[];
   // Aniversariantes (multiple)
   aniversariantes?: AniversarianteInput[];
   // Participantes
-  participantes?: string[];
+  participantes?: { nome: string; cacifoId?: string }[];
+  // Cliente
+  clienteNome?: string;
+  clienteContacto?: string;
+  clienteEmail?: string;
+  clienteCodigoPostal?: string;
+  adicionarCliente?: boolean;
 }
 
 interface UpdateReservaData {
@@ -57,6 +68,7 @@ interface UpdateReservaData {
   previsaoCriancas?: number;
   cor?: string;
   bolo?: string;
+  boloQuantidade?: number;
   observacoesGerais?: string;
   observacoesLesoes?: string;
   observacoesBrindes?: string;
@@ -66,11 +78,19 @@ interface UpdateReservaData {
   pago?: boolean;
   referenciaPagamento?: string;
   caucao?: string;
+  valorCaucao?: number;
+  descontoPercentagem?: number;
+  descontoMotivo?: string;
   extrasIds?: string[];
+  extrasTexto?: Record<string, string>;
   monitoresIds?: string[];
   etapasIds?: string[];
   aniversariantes?: AniversarianteInput[];
-  participantes?: string[];
+  participantes?: { nome: string; cacifoId?: string }[];
+  clienteNome?: string;
+  clienteContacto?: string;
+  clienteEmail?: string;
+  clienteCodigoPostal?: string;
 }
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -244,9 +264,13 @@ export const reservaService = {
         pago: data.pago ?? false,
         referenciaPagamento: data.referenciaPagamento,
         caucao: (data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA") ?? "NAO_PAGA",
+        valorCaucao: data.valorCaucao,
+        descontoPercentagem: data.descontoPercentagem,
+        descontoMotivo: data.descontoMotivo,
+        boloQuantidade: data.boloQuantidade,
         estado: "RESERVA",
         extras: data.extrasIds
-          ? { create: data.extrasIds.map((extraId) => ({ extraId })) }
+          ? { create: data.extrasIds.map((extraId) => ({ extraId, textoPersonalizado: data.extrasTexto?.[extraId] })) }
           : undefined,
         monitores: data.monitoresIds
           ? { create: data.monitoresIds.map((monitorId) => ({ monitorId })) }
@@ -258,7 +282,7 @@ export const reservaService = {
           ? { create: aniversarianteIds.map((aniversarianteId) => ({ aniversarianteId })) }
           : undefined,
         participantes: data.participantes
-          ? { create: data.participantes.map((nome) => ({ nome })) }
+          ? { create: data.participantes.map((p) => ({ nome: p.nome, cacifoId: p.cacifoId })) }
           : undefined,
       },
       include: {
@@ -350,8 +374,12 @@ export const reservaService = {
         pago: data.pago,
         referenciaPagamento: data.referenciaPagamento,
         caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+        valorCaucao: data.valorCaucao,
+        descontoPercentagem: data.descontoPercentagem,
+        descontoMotivo: data.descontoMotivo,
+        boloQuantidade: data.boloQuantidade,
         extras: data.extrasIds
-          ? { create: data.extrasIds.map((extraId) => ({ extraId })) }
+          ? { create: data.extrasIds.map((extraId) => ({ extraId, textoPersonalizado: data.extrasTexto?.[extraId] })) }
           : undefined,
         monitores: data.monitoresIds
           ? { create: data.monitoresIds.map((monitorId) => ({ monitorId })) }

@@ -179,18 +179,17 @@ async function seedLocais() {
 async function seedExtras() {
   console.log("  Creating extras...");
   const extras = [
-    { id: "extra-001", nome: "Turbo Slide", precoUnitario: 50.0, icone: "Play", descricao: "Tobogã inflável gigante", categoria: "EXTRA" as const },
-    { id: "extra-002", nome: "Laser Show", precoUnitario: 40.0, icone: "Sparkles", descricao: "Espaço com lasers e névoa", categoria: "EXTRA" as const },
-    { id: "extra-003", nome: "Máquina de Gelo", precoUnitario: 25.0, icone: "Snowflake", descricao: "Máquina de gelo seco", categoria: "EXTRA" as const },
-    { id: "extra-004", nome: "Pinturas Faciais", precoUnitario: 30.0, icone: "Palette", descricao: "Pinturas faciais artísticas", categoria: "EXTRA" as const },
-    { id: "extra-005", nome: "Algodão Doce", precoUnitario: 3.0, icone: "Cookie", descricao: "Algodão doce por unidade", categoria: "EXTRA" as const },
-    { id: "extra-006", nome: "Lembranças", precoUnitario: 35.0, icone: "Package", descricao: "Saco de lembranças por criança", categoria: "EXTRA" as const },
-    { id: "extra-lanche-001", nome: "Bolo de Aniversário", precoUnitario: 15.0, icone: "Cake", descricao: "Bolo decorado", categoria: "MENU" as const },
-    { id: "extra-lanche-002", nome: "Pipocas", precoUnitario: 5.0, icone: "Popcorn", descricao: "Pipocas por dose", categoria: "MENU" as const },
-    { id: "extra-lanche-003", nome: "Croissants", precoUnitario: 1.5, icone: "Croissant", descricao: "Croissants por unidade", categoria: "MENU" as const },
-    { id: "extra-lanche-004", nome: "Sumo Natural", precoUnitario: 2.0, icone: "Droplet", descricao: "Sumo natural por unidade", categoria: "MENU" as const },
-    { id: "extra-lanche-005", nome: "Nuggets", precoUnitario: 1.0, icone: "Drumstick", descricao: "Nuggets por unidade", categoria: "MENU" as const },
-    { id: "extra-lanche-006", nome: "Pizza", precoUnitario: 8.0, icone: "Pizza", descricao: "Pizza individual", categoria: "MENU" as const },
+    { id: "extra-001", nome: "Turbo Slide", precoUnitario: 50.0, descricao: "Tobogã inflável gigante", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
+    { id: "extra-002", nome: "Laser Show", precoUnitario: 40.0, descricao: "Espaço com lasers e névoa", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
+    { id: "extra-003", nome: "Máquina de Gelo", precoUnitario: 25.0, descricao: "Máquina de gelo seco", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
+    { id: "extra-004", nome: "Pinturas Faciais", precoUnitario: 30.0, descricao: "Pinturas faciais artísticas", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
+    { id: "extra-005", nome: "Algodão Doce", precoUnitario: 3.0, descricao: "Algodão doce por unidade", categoria: "EXTRA" as const, subcategoria: "Comida", requerTexto: false },
+    { id: "extra-006", nome: "Lembranças", precoUnitario: 35.0, descricao: "Saco de lembranças por criança", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true },
+    { id: "extra-007", nome: "Brinde Personalizado", precoUnitario: 0.0, descricao: "Brinde com texto personalizado", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true },
+    { id: "extra-menu-001", nome: "Menu Principal", precoUnitario: 20.0, descricao: "Menu completo com sumo, croissants, nuggets, pipocas e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
+    { id: "extra-menu-002", nome: "Menu Carne", precoUnitario: 15.0, descricao: "Menu com nuggets, pizza, sumo e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
+    { id: "extra-menu-003", nome: "Menu Lanche", precoUnitario: 10.0, descricao: "Menu leve com croissants, sumo e pipocas", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
+    { id: "extra-menu-004", nome: "Menu Premium", precoUnitario: 25.0, descricao: "Menu premium com pizza, nuggets, sumo natural, pipocas, bolo decorado e surpresa", categoria: "MENU" as const, subcategoria: "Premium", requerTexto: false },
   ];
   for (const extra of extras) {
     await prisma.extra.upsert({ where: { id: extra.id }, update: {}, create: extra });
@@ -200,10 +199,12 @@ async function seedExtras() {
     { extraId: "extra-001", localId: "local-001" }, { extraId: "extra-002", localId: "local-001" },
     { extraId: "extra-003", localId: "local-001" }, { extraId: "extra-004", localId: "local-001" },
     { extraId: "extra-005", localId: "local-001" }, { extraId: "extra-006", localId: "local-001" },
+    { extraId: "extra-007", localId: "local-001" },
     { extraId: "extra-002", localId: "local-002" }, { extraId: "extra-004", localId: "local-002" },
     { extraId: "extra-005", localId: "local-002" }, { extraId: "extra-006", localId: "local-002" },
+    { extraId: "extra-007", localId: "local-002" },
     { extraId: "extra-001", localId: "local-003" }, { extraId: "extra-003", localId: "local-003" },
-    { extraId: "extra-005", localId: "local-003" },
+    { extraId: "extra-005", localId: "local-003" }, { extraId: "extra-007", localId: "local-003" },
   ];
   for (const el of extraLocals) {
     await prisma.extraLocal.upsert({
@@ -211,7 +212,7 @@ async function seedExtras() {
       update: {}, create: el,
     });
   }
-  console.log("  ✓ 12 extras with local associations\n");
+  console.log("  ✓ 13 extras with local associations\n");
 }
 
 // ─── Monitores ────────────────────────────────────────────────

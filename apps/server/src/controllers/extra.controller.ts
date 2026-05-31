@@ -46,13 +46,15 @@ export const criarExtra = async (req: Request, res: Response) => {
     const user = req.user;
     if (!user) return res.status(401).json({ error: req.t("auth.unauthorized") });
 
-    const { nome, descricao, precoUnitario, icone, categoria, locaisIds } = req.body;
+    const { nome, descricao, precoUnitario, icone, categoria, subcategoria, requerTexto, locaisIds } = req.body;
     const extra = await extraService.create({
       nome,
       descricao,
       precoUnitario,
       icone,
       categoria,
+      subcategoria,
+      requerTexto,
       locaisIds: locaisIds || [],
     });
     res.status(201).json(extra);
@@ -67,13 +69,15 @@ export const atualizarExtra = async (req: Request, res: Response) => {
     if (!user) return res.status(401).json({ error: req.t("auth.unauthorized") });
 
     const id = req.params.id as string;
-    const { nome, descricao, precoUnitario, icone, categoria, locaisIds } = req.body;
+    const { nome, descricao, precoUnitario, icone, categoria, subcategoria, requerTexto, locaisIds } = req.body;
     const extra = await extraService.update(id, {
       nome,
       descricao,
       precoUnitario,
       icone,
       categoria,
+      subcategoria,
+      requerTexto,
       locaisIds,
     });
     res.status(200).json(extra);
