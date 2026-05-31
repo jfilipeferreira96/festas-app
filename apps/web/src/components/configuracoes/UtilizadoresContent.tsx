@@ -410,8 +410,8 @@ export default function UtilizadoresContent({
                   )}
                 </button>
               </div>
-              <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
-                <Button variant="outline" onClick={() => setEditUser(null)} className="flex-1 rounded-[10px] px-5 py-3">
+              <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
+                <Button variant="outline" onClick={() => setEditUser(null)}>
                   Fechar
                 </Button>
               </div>
@@ -479,15 +479,13 @@ export default function UtilizadoresContent({
                 <p className="mt-1 text-xs text-accent-red">{createErrors.funcao.message}</p>
               )}
             </div>
-            <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
-              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)} className="flex-1 rounded-[10px] px-5 py-3">
+            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
+              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
                 Cancelar
               </Button>
-              <div className="flex gap-2 flex-1 justify-end">
-                <Button type="submit" disabled={isCreateSubmitting} className="rounded-[10px] px-5 py-3">
-                  {isCreateSubmitting ? "A criar..." : "Criar Utilizador"}
-                </Button>
-              </div>
+              <Button type="submit" disabled={isCreateSubmitting}>
+                {isCreateSubmitting ? "A criar..." : "Criar Utilizador"}
+              </Button>
             </div>
           </form>
         </div>
@@ -508,19 +506,16 @@ export default function UtilizadoresContent({
           <p className="text-sm text-text-primary mb-6">
             Tem a certeza que deseja eliminar o utilizador <strong>{deleteModal.userName}</strong>?
           </p>
-          <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
+          <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
             <Button
               variant="outline"
               onClick={() => setDeleteModal({ isOpen: false, userId: "", userName: "" })}
-              className="flex-1 rounded-[10px] px-5 py-3"
             >
               Cancelar
             </Button>
-            <div className="flex gap-2 flex-1 justify-end">
-              <Button variant="danger" onClick={handleDeleteUser} disabled={isDeleting} className="rounded-[10px] px-5 py-3">
-                {isDeleting ? "A eliminar..." : "Eliminar"}
-              </Button>
-            </div>
+            <Button variant="danger" onClick={handleDeleteUser} disabled={isDeleting}>
+              {isDeleting ? "A eliminar..." : "Eliminar"}
+            </Button>
           </div>
         </div>
       </BaseModal>

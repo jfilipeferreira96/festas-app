@@ -351,26 +351,23 @@ export default function CacifosContent() {
               )}
             </div>
 
-            <div className="border-t border-border pt-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
               <Button
                 variant="outline"
                 onClick={() => setSelectedCacifo(null)}
-                className="flex-1 rounded-[10px] px-5 py-3"
               >
                 Fechar
               </Button>
-              <div className="flex gap-2 flex-1 justify-end">
-                {(selectedCacifo.estado === "OCUPADO" || selectedCacifo.estado === "RESERVADO") && (
-                  <Button
-                    onClick={() => handleLibertar(selectedCacifo.id)}
-                    disabled={libertar.isPending}
-                    loading={libertar.isPending}
-                    className="bg-accent-green-500 hover:bg-accent-green-600 rounded-[10px] px-5 py-3"
-                  >
-                    Libertar
-                  </Button>
-                )}
-              </div>
+              {(selectedCacifo.estado === "OCUPADO" || selectedCacifo.estado === "RESERVADO") && (
+                <Button
+                  onClick={() => handleLibertar(selectedCacifo.id)}
+                  disabled={libertar.isPending}
+                  loading={libertar.isPending}
+                  className="bg-accent-green-500 hover:bg-accent-green-600"
+                >
+                  Libertar
+                </Button>
+              )}
             </div>
           </div>
         </Modal>

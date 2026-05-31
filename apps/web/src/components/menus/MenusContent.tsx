@@ -217,15 +217,13 @@ export default function MenusContent() {
                   className="w-full h-10 px-3 text-sm rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
-              <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
-                <Button variant="outline" onClick={() => setShowForm(false)} className="flex-1 rounded-[10px] px-5 py-3">
+              <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
+                <Button variant="outline" onClick={() => setShowForm(false)}>
                   Cancelar
                 </Button>
-                <div className="flex gap-2 flex-1 justify-end">
-                  <Button type="submit" disabled={createExtra.isPending || updateExtra.isPending} className="rounded-[10px] px-5 py-3">
-                    {createExtra.isPending || updateExtra.isPending ? "A guardar..." : "Guardar"}
-                  </Button>
-                </div>
+                <Button type="submit" disabled={createExtra.isPending || updateExtra.isPending}>
+                  {createExtra.isPending || updateExtra.isPending ? "A guardar..." : "Guardar"}
+                </Button>
               </div>
             </form>
           </div>

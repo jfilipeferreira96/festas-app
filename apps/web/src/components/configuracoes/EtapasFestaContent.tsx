@@ -257,15 +257,13 @@ export default function EtapasFestaContent() {
                 O campo "Ícone" deve conter o nome de um ícone do pacote lucide-react.
                 Exemplos: UtensilsCrossed, Cake, Music, Gift, PartyPopper
               </p>
-              <div className="border-t border-border pt-4 mt-4 flex items-center gap-3">
-                <Button variant="outline" onClick={() => { setShowForm(false); setEditingEtapa(null); }} className="flex-1 rounded-[10px] px-5 py-3">
+              <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
+                <Button variant="outline" onClick={() => { setShowForm(false); setEditingEtapa(null); }}>
                   Cancelar
                 </Button>
-                <div className="flex gap-2 flex-1 justify-end">
-                  <Button type="submit" disabled={isSubmitting} className="rounded-[10px] px-5 py-3">
-                    {isSubmitting ? "A guardar..." : editingEtapa ? "Guardar Alterações" : "Criar Etapa"}
-                  </Button>
-                </div>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "A guardar..." : editingEtapa ? "Guardar Alterações" : "Criar Etapa"}
+                </Button>
               </div>
             </form>
           </div>
