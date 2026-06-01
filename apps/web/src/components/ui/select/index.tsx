@@ -26,6 +26,7 @@ interface SelectProps {
 export function Select({ 
   options, 
   value, 
+  defaultValue,
   onChange, 
   placeholder = 'Selecione...',
   className = '',
@@ -85,7 +86,7 @@ export function Select({
       >
         <div className="flex items-center gap-2 flex-1">
           {selectedOption && selectedOption.color && showColorIndicators && (
-            <span className={`w-3 h-3 rounded-full ${selectedOption.color}`}></span>
+            <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: selectedOption.color }}></span>
           )}
           <span className={textClasses}>
             {selectedOption ? selectedOption.label : placeholder}
@@ -121,7 +122,7 @@ export function Select({
             >
               <div className="flex items-center gap-2 flex-1">
                 {option.color && showColorIndicators && (
-                  <span className={`w-3 h-3 rounded-full ${option.color}`}></span>
+                  <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: option.color }}></span>
                 )}
                 <span>{option.label}</span>
               </div>
