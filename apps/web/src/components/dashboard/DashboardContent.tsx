@@ -112,8 +112,10 @@ const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: 
   const horaInicio = inicio.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
   const nomeSala = festa.local?.nome ?? "—";
   const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "—";
-  // Check if "Lanche Servido" etapa is concluida
-  const lancheServido = festa.etapas?.some(e => e.etapa?.nome?.toLowerCase().includes("lanche") && e.concluida) ?? false;
+
+  // Find the next pending etapa (first one not concluded, ordered by ordem)
+  const proximaEtapa = festa.etapas?.find(e => !e.concluida);
+  const todasConcluidas = festa.etapas?.length > 0 && festa.etapas.every(e => e.concluida);
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
@@ -125,10 +127,15 @@ const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: 
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <StatusBadge status={lancheServido ? "EM_CURSO" : "A_COMECAR"}>
-          {lancheServido ? "Lanche servido" : "Lanche pendente"}
-        </StatusBadge>
-        <StatusBadge status="EM_CURSO">Em curso</StatusBadge>
+        {todasConcluidas ? (
+          <StatusBadge status="CONCLUIDA">Todas concluídas ✓</StatusBadge>
+        ) : proximaEtapa ? (
+          <StatusBadge status="A_COMECAR">
+            {proximaEtapa.etapa?.nome ?? "Próxima etapa"}
+          </StatusBadge>
+        ) : (
+          <StatusBadge status="EM_CURSO">Em curso</StatusBadge>
+        )}
       </div>
     </div>
   );
