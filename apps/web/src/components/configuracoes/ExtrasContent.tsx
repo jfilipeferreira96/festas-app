@@ -9,7 +9,7 @@ import { z } from "zod";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import InputField from "@/components/form/input/InputField";
-import Select from "@/components/form/Select";
+import { Select } from "@/components/ui/select";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { useExtras, useCreateExtra, useUpdateExtra, useDeleteExtra } from "@/hooks/use-extras";

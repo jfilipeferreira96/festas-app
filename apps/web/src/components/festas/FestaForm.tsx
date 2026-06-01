@@ -14,7 +14,7 @@ import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
 import DatePicker from "@/components/form/date-picker";
-import Select from "@/components/form/Select";
+import { Select } from "@/components/ui/select";
 import Switch from "@/components/form/switch/Switch";
 import MultiSelect from "@/components/form/MultiSelect";
 import Checkbox from "@/components/form/input/Checkbox";
@@ -102,6 +102,14 @@ const STEPS = [
 
 function formatEuro(value: number): string {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
+}
+
+/** Formats a Date object as YYYY-MM-DD for backend */
+function toISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function calcIdade(dataNascimento: string, dataFesta: string): number {
@@ -315,7 +323,10 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     const available = cacifosDisponiveis?.filter((c) => c.estado === "LIVRE") ?? [];
     return available.map((c) => ({ value: c.id, label: `#${c.numero}${c.nome ? ` — ${c.nome}` : ""}` }));
   }, [cacifosDisponiveis]);
-  const corOptions = useMemo(() => [{ value: "NONE", label: "Sem cor" }, ...CORES_PREDEFINIDAS.map((c) => ({ value: c.value, label: c.label }))], []);
+  const corOptions = useMemo(() => [
+    { value: "NONE", label: "Sem cor" },
+    ...CORES_PREDEFINIDAS.map((c) => ({ value: c.value, label: c.label, color: c.value }))
+  ], []);
 
   return (
     <div className="flex flex-col max-h-[70vh]">
@@ -458,7 +469,7 @@ function Step1Geral({
                 id={`aniv-data-${i}`}
                 placeholder="Data nascimento"
                 defaultDate={aniv.dataNascimento || undefined}
-                onChange={([_date], dateStr) => updateAniversariante(i, "dataNascimento", dateStr)}
+                onChange={([date]) => { if (date) updateAniversariante(i, "dataNascimento", toISODate(date)); }}
               />
             </div>
             {aniv.dataNascimento ? (
@@ -528,7 +539,7 @@ function Step1Geral({
             id="festa-data"
             placeholder="Selecionar data"
             defaultDate={defaultValues.data || undefined}
-            onChange={([_date], dateStr) => setValue("data", dateStr)}
+            onChange={([date]) => { if (date) setValue("data", toISODate(date)); }}
           />
           {errors.data && <p className="mt-1 text-xs text-error-500">{errors.data.message}</p>}
         </div>
@@ -538,11 +549,11 @@ function Step1Geral({
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Duração *</label>
-          <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" defaultValue={String(defaultValues.duracaoMinutos)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
+          <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" value={String(defaultValues.duracaoMinutos)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1"><MapPin size={12} /> Sala *</label>
-          <Select options={salaOptions} placeholder="Seleccionar" defaultValue={defaultValues.localId} onChange={(val) => setValue("localId", val)} />
+          <Select options={salaOptions} placeholder="Seleccionar" value={defaultValues.localId} onChange={(val) => setValue("localId", val)} />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
         </div>
       </div>
@@ -556,13 +567,13 @@ function Step1Geral({
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Cor</label>
           <div className="relative">
-            <Select options={corOptions} placeholder="Escolher cor" defaultValue={currentCor || "NONE"} onChange={(val) => setValue("cor", val === "NONE" ? "" : val)} />
+            <Select options={corOptions} placeholder="Escolher cor" value={currentCor || "NONE"} onChange={(val) => setValue("cor", val === "NONE" ? "" : val)} showColorIndicators={true} />
             {currentCor && (<div className="absolute right-10 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: currentCor }} />)}
           </div>
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
-          <Select options={menuOptions} placeholder="Seleccionar menu" defaultValue={defaultValues.menuId ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
+          <Select options={menuOptions} placeholder="Seleccionar menu" value={defaultValues.menuId ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
         </div>
         <div className="w-28">
           <label className="block text-xs font-medium text-text-secondary mb-1">Bolo (qtd)</label>
@@ -696,7 +707,7 @@ function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacif
             <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface border border-border">
               <span className="w-6 text-xs font-medium text-text-muted text-center">{i + 1}</span>
               <div className="flex-1"><p className="text-sm font-medium text-text-primary">{c.nome}</p></div>
-              <div className="w-44"><Select options={cacifoOptions} placeholder="Atribuir cacifo" defaultValue={assignedId} onChange={(val) => setCacifoAssignments((prev) => ({ ...prev, [c.nome]: val }))} /></div>
+              <div className="w-44"><Select options={cacifoOptions} placeholder="Atribuir cacifo" value={assignedId} onChange={(val) => setCacifoAssignments((prev) => ({ ...prev, [c.nome]: val }))} /></div>
               {cacifo && (<span className="text-xs font-medium text-accent-green-600 flex items-center gap-1"><Check size={12} /> #{cacifo.numero}</span>)}
             </div>
           );
@@ -768,13 +779,13 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
           <div className="flex items-center gap-2 text-xs font-semibold text-text-primary"><CreditCard size={14} /> Pagamento</div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Método</label>
-              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="Método" defaultValue={defaultValues.metodoPagamento ?? "NONE"} onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)} />
+              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="Método" value={defaultValues.metodoPagamento ?? "NONE"} onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)} />
             </div>
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Total (€)</label><InputField type="number" step={0.01} min={0} {...register("valorPago", { valueAsNumber: true })} placeholder="0,00" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Caução</label>
-              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "NAO_PAGA", label: "Não paga" }, { value: "PAGA", label: "Paga" }, { value: "PAGA_NO_DIA", label: "Paga no dia" }]} placeholder="Caução" defaultValue={defaultValues.caucao ?? "NONE"} onChange={(val) => setValue("caucao", val === "NONE" ? undefined : val)} />
+              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "NAO_PAGA", label: "Não paga" }, { value: "PAGA", label: "Paga" }, { value: "PAGA_NO_DIA", label: "Paga no dia" }]} placeholder="Caução" value={defaultValues.caucao ?? "NONE"} onChange={(val) => setValue("caucao", val === "NONE" ? undefined : val)} />
             </div>
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Caução (€)</label><InputField type="number" step={0.01} min={0} {...register("valorCaucao", { valueAsNumber: true })} placeholder="0,00" /></div>
           </div>

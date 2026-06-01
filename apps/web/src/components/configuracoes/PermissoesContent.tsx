@@ -10,7 +10,7 @@ import {
   useUpdatePermissao,
   useRestaurarDefaults,
 } from "@/hooks/use-permissoes";
-import Select from "@/components/form/Select";
+import { Select } from "@/components/ui/select";
 import {
   MODULOS,
   NIVEIS_ACESSO,

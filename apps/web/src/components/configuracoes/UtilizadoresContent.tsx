@@ -7,7 +7,7 @@ import type { FuncaoUtilizador, Utilizador } from "@saas/shared-types";
 import Button from "@/components/ui/button/Button";
 import { BaseModal } from "@/components/ui/BaseModal";
 import InputField from "@/components/form/input/InputField";
-import Select from "@/components/form/Select";
+import { Select } from "@/components/ui/select";
 import { Plus, Trash2, Shield, UserCheck, UserX } from "lucide-react";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";

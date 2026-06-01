@@ -13,6 +13,7 @@ interface SelectOption {
 interface SelectProps {
   options: SelectOption[]
   value?: string
+  defaultValue?: string
   onChange: (value: string) => void
   placeholder?: string
   className?: string
@@ -35,12 +36,12 @@ export function Select({
 }: SelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedOption, setSelectedOption] = useState<SelectOption | undefined>(
-    options.find(opt => opt.value === value)
+    options.find(opt => opt.value === (value ?? defaultValue))
   )
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setSelectedOption(options.find(opt => opt.value === value))
+    setSelectedOption(options.find(opt => opt.value === (value ?? defaultValue)))
   }, [value, options])
 
   useEffect(() => {

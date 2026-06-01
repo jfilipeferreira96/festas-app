@@ -4,7 +4,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import { UtensilsCrossed, Plus, Trash2, Edit, Package } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
-import Select from "@/components/form/Select";
+import { Select } from "@/components/ui/select";
 import Switch from "@/components/form/switch/Switch";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import { useExtras, useCreateExtra, useUpdateExtra, useDeleteExtra } from "@/hooks/use-extras";
