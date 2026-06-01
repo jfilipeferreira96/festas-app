@@ -370,10 +370,10 @@ export default function FestasTabela() {
         }}
       />
 
-      {/* Form Modal — wider (size="xl") */}
+      {/* Form Modal — wider (size="2xl") */}
       {showForm && (
-        <Modal isOpen={showForm} onClose={handleFormClose} size="xl">
-          <div className="p-6">
+        <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
+          <div className="p-8">
             <h2 className="text-lg font-semibold text-text-primary mb-4">
               {editingReserva ? "Editar Festa" : "Nova Festa"}
             </h2>

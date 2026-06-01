@@ -13,6 +13,7 @@ import { pt } from "date-fns/locale";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
+import DatePicker from "@/components/form/date-picker";
 import Select from "@/components/form/Select";
 import Switch from "@/components/form/switch/Switch";
 import MultiSelect from "@/components/form/MultiSelect";
@@ -156,7 +157,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   );
   const menuOptions = useMemo(
     () => [
-      { value: "", label: "Sem menu" },
+      { value: "NONE", label: "Sem menu" },
       ...(extras ?? []).filter((e) => e.categoria === "MENU" && e.activo).map((e) => ({ value: e.id, label: e.nome })),
     ], [extras]
   );
@@ -314,13 +315,13 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     const available = cacifosDisponiveis?.filter((c) => c.estado === "LIVRE") ?? [];
     return available.map((c) => ({ value: c.id, label: `#${c.numero}${c.nome ? ` — ${c.nome}` : ""}` }));
   }, [cacifosDisponiveis]);
-  const corOptions = useMemo(() => [{ value: "", label: "Sem cor" }, ...CORES_PREDEFINIDAS.map((c) => ({ value: c.value, label: c.label }))], []);
+  const corOptions = useMemo(() => [{ value: "NONE", label: "Sem cor" }, ...CORES_PREDEFINIDAS.map((c) => ({ value: c.value, label: c.label }))], []);
 
   return (
     <div className="flex flex-col max-h-[70vh]">
       <div className="mb-6 shrink-0"><FormStepper steps={STEPS} currentStep={currentStep} onStepChange={setCurrentStep} /></div>
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 min-h-0 flex flex-col overflow-hidden overflow-y-auto">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden overflow-y-auto px-3">
           {currentStep === 0 && (
             <Step1Geral register={register} errors={errors} setValue={setValue} watch={watch} defaultValues={defaultValues}
               aniversariantes={aniversariantes} addAniversariante={addAniversariante} removeAniversariante={removeAniversariante}
@@ -402,7 +403,7 @@ interface Step1Props {
 }
 
 function Step1Geral({
-  register, errors, setValue, defaultValues, aniversariantes,
+  register, errors, setValue, watch, defaultValues, aniversariantes,
   addAniversariante, removeAniversariante, updateAniversariante,
   encarregadosAdicionais, addEncarregadoAdicional, removeEncarregadoAdicional, updateEncarregadoAdicional,
   salaOptions, monitorOptions, currentMonitoresIds, handleMonitoresChange,
@@ -435,7 +436,7 @@ function Step1Geral({
   }, [selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* ── Aniversariante(s) ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -449,11 +450,16 @@ function Step1Geral({
         </div>
         {aniversariantes.map((aniv, i) => (
           <div key={i} className="flex items-end gap-3">
-            <div className="flex-1 min-w-0">
+            <div className="w-3/5">
               <InputField value={aniv.nome} onChange={(e) => updateAniversariante(i, "nome", e.target.value)} placeholder="Nome da criança" />
             </div>
-            <div className="w-44">
-              <InputField type="date" value={aniv.dataNascimento} onChange={(e) => updateAniversariante(i, "dataNascimento", e.target.value)} />
+            <div className="w-2/5">
+              <DatePicker
+                id={`aniv-data-${i}`}
+                placeholder="Data nascimento"
+                defaultDate={aniv.dataNascimento || undefined}
+                onChange={([_date], dateStr) => updateAniversariante(i, "dataNascimento", dateStr)}
+              />
             </div>
             {aniv.dataNascimento ? (
               <span className="text-sm font-bold text-brand-500 whitespace-nowrap py-3">
@@ -478,11 +484,15 @@ function Step1Geral({
             <Plus size={13} /> Adicionar encarregado
           </button>
         </div>
-        <InputField {...register("encarregadoNome")} placeholder="Nome do responsável" required error={!!errors.encarregadoNome} hint={errors.encarregadoNome?.message} />
-        <div className="flex gap-3">
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <InputField {...register("encarregadoNome")} placeholder="Nome do responsável" required error={!!errors.encarregadoNome} hint={errors.encarregadoNome?.message} />
+          </div>
           <div className="flex-1">
             <InputField type="tel" {...register("encarregadoContacto")} placeholder="Telefone" required error={!!errors.encarregadoContacto} hint={errors.encarregadoContacto?.message} />
           </div>
+        </div>
+        <div className="flex gap-4">
           <div className="flex-1">
             <InputField type="email" {...register("encarregadoEmail")} placeholder="Email" required error={!!errors.encarregadoEmail} hint={errors.encarregadoEmail?.message} />
           </div>
@@ -490,7 +500,7 @@ function Step1Geral({
             <InputField {...register("encarregadoCodigoPostal")} placeholder="Código Postal" />
           </div>
           <div className="flex items-center shrink-0 pb-0.5">
-            <Checkbox label="Adicionar aos clientes" checked={true} onChange={() => {}} />
+            <Checkbox label="Adicionar aos clientes" checked={watch("adicionarCliente") ?? true} onChange={(checked) => setValue("adicionarCliente", checked)} />
           </div>
         </div>
         {encarregadosAdicionais.map((enc, i) => (
@@ -511,10 +521,16 @@ function Step1Geral({
       </div>
 
       {/* ── Data · Hora · Duração · Sala ── */}
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Data *</label>
-          <InputField type="date" {...register("data")} error={!!errors.data} hint={errors.data?.message} />
+          <DatePicker
+            id="festa-data"
+            placeholder="Selecionar data"
+            defaultDate={defaultValues.data || undefined}
+            onChange={([_date], dateStr) => setValue("data", dateStr)}
+          />
+          {errors.data && <p className="mt-1 text-xs text-error-500">{errors.data.message}</p>}
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Horário *</label>
@@ -532,7 +548,7 @@ function Step1Geral({
       </div>
 
       {/* ── Tema · Cor · Menu · Bolo ── */}
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         <div className="flex-[2]">
           <label className="block text-xs font-medium text-text-secondary mb-1">Tema da Festa</label>
           <InputField {...register("tema")} placeholder="Ex: Princesas, Super-Heróis..." />
@@ -540,13 +556,13 @@ function Step1Geral({
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Cor</label>
           <div className="relative">
-            <Select options={corOptions} placeholder="Escolher cor" defaultValue={currentCor} onChange={(val) => setValue("cor", val || "")} />
+            <Select options={corOptions} placeholder="Escolher cor" defaultValue={currentCor || "NONE"} onChange={(val) => setValue("cor", val === "NONE" ? "" : val)} />
             {currentCor && (<div className="absolute right-10 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: currentCor }} />)}
           </div>
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
-          <Select options={menuOptions} placeholder="Seleccionar menu" defaultValue={defaultValues.menuId ?? ""} onChange={(val) => setValue("menuId", val || undefined)} />
+          <Select options={menuOptions} placeholder="Seleccionar menu" defaultValue={defaultValues.menuId ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
         </div>
         <div className="w-28">
           <label className="block text-xs font-medium text-text-secondary mb-1">Bolo (qtd)</label>
@@ -555,7 +571,7 @@ function Step1Geral({
       </div>
 
       {/* ── Monitores · Etapas ── */}
-      <div className="flex gap-3">
+      <div className="flex gap-4">
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Monitores</label>
           <MultiSelect label="Monitores" options={monitorOptions} defaultSelected={currentMonitoresIds} onChange={handleMonitoresChange} placeholder="Seleccionar..." />
@@ -631,7 +647,7 @@ function Step2Criancas({ register, errors, criancas, updateCrianca, addCrianca, 
           <p className="text-xs text-brand-700">Aniversariante(s): <strong>{aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome).join(", ")}</strong> — incluídos automaticamente.</p>
         </div>
       )}
-      <div className="max-h-[35vh] space-y-2 overflow-y-auto pr-1">
+      <div className="max-h-[35vh] space-y-2 overflow-y-auto p-1">
         {criancas.map((c, i) => (
           <div key={i} className="flex items-center gap-2">
             <span className="w-6 text-xs font-medium text-text-muted text-center">{i + 1}</span>
@@ -672,7 +688,7 @@ function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacif
           <p className="text-xs text-accent-orange-700"><strong>{named.length}</strong> crianças mas apenas <strong>{avail}</strong> cacifos disponíveis.</p>
         </div>
       )}
-      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-1">
+      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-3">
         {named.length > 0 ? named.map((c, i) => {
           const assignedId = cacifoAssignments[c.nome] ?? "";
           const cacifo = cacifosDisponiveis?.find((cf) => cf.id === assignedId);
@@ -752,13 +768,13 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
           <div className="flex items-center gap-2 text-xs font-semibold text-text-primary"><CreditCard size={14} /> Pagamento</div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Método</label>
-              <Select options={[{ value: "", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="Método" defaultValue={defaultValues.metodoPagamento ?? ""} onChange={(val) => setValue("metodoPagamento", val || undefined)} />
+              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="Método" defaultValue={defaultValues.metodoPagamento ?? "NONE"} onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)} />
             </div>
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Total (€)</label><InputField type="number" step={0.01} min={0} {...register("valorPago", { valueAsNumber: true })} placeholder="0,00" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Caução</label>
-              <Select options={[{ value: "", label: "Não definido" }, { value: "NAO_PAGA", label: "Não paga" }, { value: "PAGA", label: "Paga" }, { value: "PAGA_NO_DIA", label: "Paga no dia" }]} placeholder="Caução" defaultValue={defaultValues.caucao ?? ""} onChange={(val) => setValue("caucao", val || undefined)} />
+              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "NAO_PAGA", label: "Não paga" }, { value: "PAGA", label: "Paga" }, { value: "PAGA_NO_DIA", label: "Paga no dia" }]} placeholder="Caução" defaultValue={defaultValues.caucao ?? "NONE"} onChange={(val) => setValue("caucao", val === "NONE" ? undefined : val)} />
             </div>
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Caução (€)</label><InputField type="number" step={0.01} min={0} {...register("valorCaucao", { valueAsNumber: true })} placeholder="0,00" /></div>
           </div>

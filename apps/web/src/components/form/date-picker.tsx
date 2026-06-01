@@ -29,12 +29,26 @@ export default function DatePicker({
   className,
 }: PropsType) {
   useEffect(() => {
+    // Convert ISO date strings (YYYY-MM-DD) to Date objects since dateFormat is d-m-Y
+    let parsedDefaultDate = defaultDate;
+    if (typeof defaultDate === "string" && defaultDate) {
+      const parts = defaultDate.split("-");
+      if (parts.length === 3 && parts[0].length === 4) {
+        parsedDefaultDate = new Date(
+          parseInt(parts[0]),
+          parseInt(parts[1]) - 1,
+          parseInt(parts[2])
+        );
+      }
+    }
+
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || "single",
-      static: true,
+      static: false,
       monthSelectorType: "static",
-      dateFormat: "Y-m-d",
-      defaultDate,
+      dateFormat: "d-m-Y",
+      allowInput: true,
+      defaultDate: parsedDefaultDate,
       onChange,
       locale: Portuguese,
     });
