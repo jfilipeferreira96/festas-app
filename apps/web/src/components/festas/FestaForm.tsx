@@ -409,7 +409,7 @@ interface Step1Props {
   setExtrasTexto: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   totalEstimado: number;
   watchedData: string;
-  corOptions: { value: string; label: string }[];
+  corOptions: { value: string; label: string; color?: string }[];
   menuOptions: { value: string; label: string }[];
 }
 
