@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, MapPin, Clock, Cake, Sparkles, Package, UserCheck } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
-import { StatusStepper } from "@/components/ui/status-stepper/StatusStepper";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva } from "@/hooks/use-reservas";
 import FestaForm from "./FestaForm";
+import FestaDetailModal from "./FestaDetailModal";
 import CheckInModal from "./CheckInModal";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
 import DataTable from "@/components/ui/table/DataTable";
@@ -21,15 +21,6 @@ const ESTADO_LABELS: Record<string, string> = {
   EM_CURSO: "Em curso",
   CONCLUIDA: "Concluída",
   CANCELADA: "Cancelada",
-};
-
-const METODO_PAGAMENTO_LABELS: Record<string, string> = {
-  DINHEIRO: "Dinheiro",
-  MULTIBANCO: "Multibanco",
-  MBWAY: "MB WAY",
-  TRANSFERENCIA: "Transferência Bancária",
-  CARTAO: "Cartão",
-  OUTRO: "Outro",
 };
 
 const FILTER_OPTIONS = [
@@ -46,11 +37,11 @@ export default function FestasTabela() {
   const [filtro, setFiltro] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
-  const [viewingReserva, setViewingReserva] = useState<Reserva | null>(null);
-  const [iniciarFestaReserva, setIniciarFestaReserva] = useState<Reserva | null>(null);
+  const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
   const [checkInReserva, setCheckInReserva] = useState<Reserva | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
+  const [iniciarFestaReserva, setIniciarFestaReserva] = useState<Reserva | null>(null);
 
   // Build filter params
   const filtros = React.useMemo(() => {
@@ -81,7 +72,7 @@ export default function FestasTabela() {
   }, []);
 
   const handleView = useCallback((reserva: Reserva) => {
-    setViewingReserva(reserva);
+    setViewingReservaId(reserva.id);
   }, []);
 
   const handleDelete = useCallback((id: string) => {
@@ -343,7 +334,7 @@ export default function FestasTabela() {
                 <XCircle size={15} />
               </button>
             )}
-            <button onClick={() => handleView(r)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors" title="Ver">
+            <button onClick={() => handleView(r)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors" title="Ver detalhes">
               <Eye size={15} />
             </button>
             {r.estado !== "CONCLUIDA" && r.estado !== "CANCELADA" && (
@@ -370,7 +361,7 @@ export default function FestasTabela() {
         }}
       />
 
-      {/* Form Modal — wider (size="2xl") */}
+      {/* Form Modal */}
       {showForm && (
         <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
           <div className="p-8">
@@ -382,241 +373,15 @@ export default function FestasTabela() {
         </Modal>
       )}
 
-      {/* View Modal */}
-      {viewingReserva && (
-        <Modal isOpen={!!viewingReserva} onClose={() => setViewingReserva(null)} size="lg" title="Detalhes da Festa">
-          <div className="p-6 max-h-[85vh] overflow-y-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                {viewingReserva.cor && (
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: viewingReserva.cor }} />
-                )}
-                <div>
-                  <h2 className="text-lg font-semibold text-text-primary">
-                    {viewingReserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || "—"}
-                  </h2>
-                  <p className="text-sm text-text-muted">
-                    {viewingReserva.aniversariantes
-                      ?.filter(a => a.aniversariante?.dataNascimento)
-                      .map(a => `${differenceInYears(new Date(viewingReserva.data ?? new Date()), new Date(a.aniversariante.dataNascimento!))} anos`)
-                      .join(", ") || ""}
-                  </p>
-                </div>
-              </div>
-              <StatusBadge status={viewingReserva.estado as StatusType}>
-                {ESTADO_LABELS[viewingReserva.estado] ?? viewingReserva.estado}
-              </StatusBadge>
-            </div>
+      {/* Detail Modal — shared self-contained modal */}
+      <FestaDetailModal
+        reservaId={viewingReservaId}
+        onClose={() => setViewingReservaId(null)}
+      />
 
-            {/* Status Stepper */}
-            <div className="mb-5 px-2">
-              <StatusStepper currentStatus={viewingReserva.estado as "RESERVA" | "CONFIRMADO" | "EM_CURSO" | "CONCLUIDA" | "CANCELADA"} />
-            </div>
-
-            {/* ── Informações Gerais ── */}
-            <div className="mb-4">
-              <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Users size={13} /> Informações Gerais
-              </h4>
-              <div className="space-y-1.5 p-3 rounded-lg bg-surface border border-border">
-                <DetailRow icon={<Cake size={13} />} label="Aniversariante" value={viewingReserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || "—"} />
-                {viewingReserva.aniversariantes?.filter(a => a.aniversariante?.dataNascimento).length ? (
-                  <DetailRow icon={<Cake size={13} />} label="Idade" value={viewingReserva.aniversariantes
-                    .filter(a => a.aniversariante?.dataNascimento)
-                    .map(a => `${differenceInYears(new Date(viewingReserva.data ?? new Date()), new Date(a.aniversariante.dataNascimento!))} anos`)
-                    .join(", ")} />
-                ) : null}
-                <DetailRow icon={<Users size={13} />} label="Encarregado" value={viewingReserva.cliente?.nome ?? "—"} />
-                <DetailRow icon={<MapPin size={13} />} label="Telefone" value={viewingReserva.cliente?.telefone ?? "—"} />
-                {viewingReserva.cliente?.email && <DetailRow icon={<MapPin size={13} />} label="Email" value={viewingReserva.cliente.email} />}
-              </div>
-            </div>
-
-            {/* ── Data e Local ── */}
-            <div className="mb-4">
-              <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                <Clock size={13} /> Data e Local
-              </h4>
-              <div className="space-y-1.5 p-3 rounded-lg bg-surface border border-border">
-                <DetailRow icon={<Clock size={13} />} label="Data" value={formatDate(viewingReserva.data)} />
-                <DetailRow icon={<Clock size={13} />} label="Horário" value={`${viewingReserva.horario} (${formatDuration(viewingReserva.duracaoMinutos)})`} />
-                <DetailRow icon={<MapPin size={13} />} label="Sala" value={viewingReserva.local?.nome ?? "—"} />
-                <DetailRow icon={<Users size={13} />} label="Nº Crianças" value={String(viewingReserva.numCriancas ?? 0)} />
-              </div>
-            </div>
-
-            {/* ── Tema e Bolo ── */}
-            {(viewingReserva.tema || viewingReserva.bolo) && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Sparkles size={13} /> Tema e Bolo
-                </h4>
-                <div className="space-y-1.5 p-3 rounded-lg bg-surface border border-border">
-                  {viewingReserva.tema && <DetailRow icon={<Sparkles size={13} />} label="Tema" value={viewingReserva.tema} />}
-                  {viewingReserva.bolo && <DetailRow icon={<Cake size={13} />} label="Bolo" value={viewingReserva.bolo} />}
-                </div>
-              </div>
-            )}
-
-            {/* ── Monitores ── */}
-            {viewingReserva.monitores && viewingReserva.monitores.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Users size={13} /> Monitores
-                </h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {viewingReserva.monitores.map((m) => (
-                    <span key={m.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-600 text-xs rounded-full font-medium">
-                      {m.monitor.nome}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Etapas ── */}
-            {viewingReserva.etapas && viewingReserva.etapas.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <Package size={13} /> Etapas ({viewingReserva.etapas.filter(e => e.concluida).length}/{viewingReserva.etapas.length})
-                </h4>
-                <div className="space-y-1">
-                  {viewingReserva.etapas.map((etapa) => (
-                    <div key={etapa.id} className="flex items-center justify-between py-0.5">
-                      <span className="text-sm text-text-primary">{etapa.etapa.nome}</span>
-                      <span className={`text-xs font-medium ${etapa.concluida ? "text-accent-green-400" : "text-text-muted"}`}>
-                        {etapa.concluida ? "✓ Concluída" : "Pendente"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Pagamento ── */}
-            <div className="mb-4">
-              <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Pagamento</h4>
-              <div className="space-y-1.5 p-3 rounded-lg bg-surface border border-border">
-                {viewingReserva.metodoPagamento && <DetailRow label="Método" value={METODO_PAGAMENTO_LABELS[viewingReserva.metodoPagamento] ?? viewingReserva.metodoPagamento} />}
-                {viewingReserva.valorPago != null && <DetailRow label="Valor Pago" value={new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(viewingReserva.valorPago)} />}
-                <DetailRow label="Pago" value={viewingReserva.pago ? "Sim" : "Não"} />
-              </div>
-            </div>
-
-            {/* Menu / Lanche */}
-            {viewingReserva.menu && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Lanche / Menu</h4>
-                <div className="p-3 rounded-lg bg-surface border border-border">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-text-primary">{viewingReserva.menu.nome}</span>
-                    <span className="text-text-secondary">
-                      {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(viewingReserva.menu.preco)}
-                    </span>
-                  </div>
-                  {viewingReserva.menu.notas && (
-                    <p className="text-xs text-text-muted mt-1">{viewingReserva.menu.notas}</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Extras */}
-            {viewingReserva.extras.length > 0 && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Extras</h4>
-                <div className="flex flex-wrap gap-1">
-                  {viewingReserva.extras.map((e) => (
-                    <span key={e.extra.id} className="px-2 py-0.5 bg-primary-50 text-primary-500 text-xs rounded-full">
-                      {e.extra.nome}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Notas */}
-            {viewingReserva.notas && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Notas</h4>
-                <p className="text-sm text-text-secondary p-3 rounded-lg bg-surface border border-border">{viewingReserva.notas}</p>
-              </div>
-            )}
-
-            {/* Cacifos */}
-            {(viewingReserva.cacifosHistorico && viewingReserva.cacifosHistorico.length > 0) && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Cacifos utilizados</h4>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {viewingReserva.cacifosHistorico.map((c, i) => (
-                    <div key={i} className="bg-gray-50 border border-border rounded-lg p-1.5 text-center">
-                      <div className="text-sm font-bold text-text-primary">#{c.numero}</div>
-                      {c.criancas && <div className="text-[10px] text-text-secondary truncate" title={c.criancas}>{c.criancas}</div>}
-                      {c.notas && <div className="text-[10px] text-text-muted truncate" title={c.notas}>📝 {c.notas}</div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(viewingReserva.cacifos && viewingReserva.cacifos.length > 0) && (
-              <div className="mb-4">
-                <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Cacifos</h4>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {viewingReserva.cacifos.map((c) => (
-                    <div key={c.id} className="bg-gray-50 border border-border rounded-lg p-1.5 text-center">
-                      <div className="text-sm font-bold text-text-primary">#{c.numero}</div>
-                      <div className="text-[10px] text-text-muted">{c.estado}</div>
-                      {c.criancas && <div className="text-[10px] text-text-secondary truncate" title={c.criancas}>{c.criancas}</div>}
-                      {c.notas && <div className="text-[10px] text-text-muted truncate" title={c.notas}>📝 {c.notas}</div>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Quick Actions in Detail View */}
-            <div className="pt-4 mt-4 flex items-center gap-3 justify-end">
-              <div className="flex gap-2">
-                {(viewingReserva.estado === "RESERVA" || viewingReserva.estado === "CONFIRMADO") && (
-                  <button
-                    onClick={async () => {
-                      await handleCancelar(viewingReserva.id);
-                      setViewingReserva(null);
-                    }}
-                    className="rounded-[10px] px-5 py-3 text-sm font-medium text-accent-red hover:bg-red-50 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                )}
-                {viewingReserva.estado === "RESERVA" && (
-                  <Button
-                    onClick={async () => {
-                      await handleConfirmar(viewingReserva.id);
-                      setViewingReserva(null);
-                    }}
-                    className="flex items-center gap-2 rounded-[10px] px-5 py-3"
-                  >
-                    <CheckCircle2 size={16} />
-                    Confirmar
-                  </Button>
-                )}
-                {viewingReserva.estado === "CONFIRMADO" && (
-                  <Button
-                    onClick={() => {
-                      setIniciarFestaReserva(viewingReserva);
-                      setViewingReserva(null);
-                    }}
-                    className="flex items-center gap-2 rounded-[10px] px-5 py-3"
-                  >
-                    <Play size={16} />
-                    Iniciar Festa
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </Modal>
+      {/* Check-in Modal */}
+      {checkInReserva && (
+        <CheckInModal reserva={checkInReserva} onClose={() => setCheckInReserva(null)} />
       )}
 
       {/* Delete Confirmation Modal */}
@@ -712,21 +477,6 @@ export default function FestasTabela() {
           </div>
         </Modal>
       )}
-
-      {/* Check-in Modal */}
-      {checkInReserva && (
-        <CheckInModal reserva={checkInReserva} onClose={() => setCheckInReserva(null)} />
-      )}
-    </div>
-  );
-}
-
-function DetailRow({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2">
-      {icon && <span className="text-text-muted shrink-0">{icon}</span>}
-      <span className="text-xs text-text-muted w-24 shrink-0">{label}:</span>
-      <span className="text-sm text-text-primary">{value}</span>
     </div>
   );
 }

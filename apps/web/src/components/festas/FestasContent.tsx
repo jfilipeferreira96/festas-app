@@ -22,16 +22,23 @@ import {
   Shield,
   Gift,
   Star,
+  Eye,
+  Trash2,
+  Pencil,
+  UserCheck,
+  UserX,
+  Check,
+  Plus,
 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
-import { Pencil, Trash2, CheckCheck } from "lucide-react";
 import { useReservasAtivas, useFinalizarReserva, useReservasConcluidas, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
 import { useCacifos } from "@/hooks/use-cacifos";
+import { useParticipantes, useConfirmarPresenca, useAdicionarParticipante } from "@/hooks/use-participantes";
 import FestaForm from "./FestaForm";
+import FestaDetailModal from "./FestaDetailModal";
 import HistoricoModal from "./HistoricoModal";
-import CheckInModal from "./CheckInModal";
 import type { Reserva } from "@/lib/api/reservas";
 import { getAniversarianteNome, getAniversarianteNomes } from "@/lib/api/reservas";
 import type { EstadoCacifo } from "@/lib/api/cacifos";
@@ -51,7 +58,7 @@ export default function FestasContent() {
   const [historicoReserva, setHistoricoReserva] = useState<Reserva | null>(null);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [checkInReserva, setCheckInReserva] = useState<Reserva | null>(null);
+  const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
 
   const handleFormClose = useCallback(() => {
     setShowForm(false);
@@ -112,13 +119,14 @@ export default function FestasContent() {
             setEditingReserva(reserva);
             setShowForm(true);
           }}
-          onCheckIn={(reserva) => setCheckInReserva(reserva)}
+          onView={(reserva) => setViewingReservaId(reserva.id)}
         />
       ) : (
         <ConcluidasTab
           reservas={concluidas}
           isLoading={isLoadingConcluidas}
           onHistorico={setHistoricoReserva}
+          onView={(reserva) => setViewingReservaId(reserva.id)}
         />
       )}
 
@@ -140,11 +148,6 @@ export default function FestasContent() {
         onClose={() => setHistoricoReserva(null)}
       />
 
-      {/* Check-in Modal */}
-      {checkInReserva && (
-        <CheckInModal reserva={checkInReserva} onClose={() => setCheckInReserva(null)} />
-      )}
-
       {/* Edit Reserva Modal */}
       {showForm && (
         <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
@@ -156,6 +159,12 @@ export default function FestasContent() {
           </div>
         </Modal>
       )}
+
+      {/* Detail Modal — shared self-contained modal */}
+      <FestaDetailModal
+        reservaId={viewingReservaId}
+        onClose={() => setViewingReservaId(null)}
+      />
     </div>
   );
 }
@@ -166,13 +175,13 @@ function EmCursoTab({
   isLoading,
   onFinalizar,
   onEdit,
-  onCheckIn,
+  onView,
 }: {
   festas?: Reserva[];
   isLoading: boolean;
   onFinalizar: (id: string) => void;
   onEdit: (reserva: Reserva) => void;
-  onCheckIn: (reserva: Reserva) => void;
+  onView: (reserva: Reserva) => void;
 }) {
   if (isLoading) {
     return (
@@ -210,7 +219,7 @@ function EmCursoTab({
           festa={festa}
           onFinalizar={() => onFinalizar(festa.id)}
           onEdit={() => onEdit(festa)}
-          onCheckIn={() => onCheckIn(festa)}
+          onView={() => onView(festa)}
         />
       ))}
     </div>
@@ -222,10 +231,12 @@ function ConcluidasTab({
   reservas,
   isLoading,
   onHistorico,
+  onView,
 }: {
   reservas?: Reserva[];
   isLoading: boolean;
   onHistorico: (reserva: Reserva) => void;
+  onView: (reserva: Reserva) => void;
 }) {
   if (isLoading) {
     return (
@@ -284,13 +295,22 @@ function ConcluidasTab({
                 )}
               </div>
             </div>
-            <Button
-              onClick={() => onHistorico(reserva)}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
-            >
-              <History size={13} />
-              <span>Histórico</span>
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                onClick={() => onView(reserva)}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+              >
+                <Eye size={13} />
+                <span>Ver</span>
+              </Button>
+              <Button
+                onClick={() => onHistorico(reserva)}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+              >
+                <History size={13} />
+                <span>Histórico</span>
+              </Button>
+            </div>
           </div>
         );
       })}
@@ -303,18 +323,19 @@ function FestaCard({
   festa,
   onFinalizar,
   onEdit,
-  onCheckIn,
+  onView,
 }: {
   festa: Reserva;
   onFinalizar: () => void;
   onEdit?: () => void;
-  onCheckIn?: () => void;
+  onView: () => void;
 }) {
   const [elapsed, setElapsed] = useState("");
   const [remaining, setRemaining] = useState("");
   const [progress, setProgress] = useState(0);
   const [isOverdue, setIsOverdue] = useState(false);
   const [showCacifos, setShowCacifos] = useState(false);
+  const [showCheckIn, setShowCheckIn] = useState(false);
 
   const toggleEtapa = useToggleEtapa();
   const removerEtapa = useRemoverEtapa();
@@ -325,6 +346,28 @@ function FestaCard({
   const { data: cacifos } = useCacifos(
     showCacifos ? { reservaId: festa.id } : undefined
   );
+
+  // Participantes para check-in inline
+  const { data: participantes } = useParticipantes(showCheckIn ? festa.id : "");
+  const confirmarPresenca = useConfirmarPresenca(festa.id);
+  const adicionarParticipante = useAdicionarParticipante(festa.id);
+  const [novoNome, setNovoNome] = useState("");
+  const [filtroParticipantes, setFiltroParticipantes] = useState("");
+
+  const participantesFiltrados = React.useMemo(() => {
+    if (!participantes) return [];
+    if (!filtroParticipantes.trim()) return participantes;
+    return participantes.filter(p =>
+      p.nome.toLowerCase().includes(filtroParticipantes.toLowerCase())
+    );
+  }, [participantes, filtroParticipantes]);
+
+  // Reset filter when panel closes
+  React.useEffect(() => {
+    if (!showCheckIn) {
+      setFiltroParticipantes("");
+    }
+  }, [showCheckIn]);
 
   React.useEffect(() => {
     if (!festa.inicioEm || !festa.fimPrevisto) return;
@@ -337,7 +380,6 @@ function FestaCard({
       const elapsedMs = now.getTime() - inicio.getTime();
       const remainingMs = fim.getTime() - now.getTime();
 
-      // Elapsed
       const elapsedH = Math.floor(elapsedMs / 3600000);
       const elapsedM = Math.floor((elapsedMs % 3600000) / 60000);
       const elapsedS = Math.floor((elapsedMs % 60000) / 1000);
@@ -345,7 +387,6 @@ function FestaCard({
         `${elapsedH.toString().padStart(2, "0")}:${elapsedM.toString().padStart(2, "0")}:${elapsedS.toString().padStart(2, "0")}`
       );
 
-      // Remaining
       if (remainingMs <= 0) {
         setIsOverdue(true);
         const overMs = Math.abs(remainingMs);
@@ -361,7 +402,6 @@ function FestaCard({
         );
       }
 
-      // Progress
       const totalDuration = fim.getTime() - inicio.getTime();
       const pct = Math.min(100, Math.max(0, (elapsedMs / totalDuration) * 100));
       setProgress(pct);
@@ -376,6 +416,19 @@ function FestaCard({
     () => festa.monitores?.map((m) => m.monitor.nome).join(", ") || "Sem monitor",
     [festa.monitores]
   );
+
+  const handleTogglePresenca = useCallback((participanteId: string, currentState: boolean) => {
+    confirmarPresenca.mutate({ participanteId, presenca: !currentState });
+  }, [confirmarPresenca]);
+
+  const handleAdicionar = useCallback(() => {
+    const nome = novoNome.trim();
+    if (!nome) return;
+    adicionarParticipante.mutate({ nome }, { onSuccess: () => setNovoNome("") });
+  }, [novoNome, adicionarParticipante]);
+
+  const presentes = participantes?.filter(p => p.presente).length ?? 0;
+  const total = participantes?.length ?? 0;
 
   return (
     <div
@@ -440,7 +493,6 @@ function FestaCard({
             </p>
           </div>
         </div>
-        {/* Progress bar */}
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
@@ -572,7 +624,7 @@ function FestaCard({
                 disabled={festa.etapas.every((e) => e.concluida) || marcarTodas.isPending}
                 className="flex items-center gap-1 text-[10px] text-primary-500 hover:bg-primary-50 px-1.5 py-0.5 rounded transition-colors disabled:opacity-50"
               >
-                <CheckCheck size={11} />
+                <SquareCheck size={11} />
                 Marcar todas
               </button>
             </div>
@@ -627,23 +679,26 @@ function FestaCard({
       <div className="p-4 border-t border-border flex flex-wrap items-center gap-2">
         <button
           onClick={() => setShowCacifos(!showCacifos)}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-text-secondary hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
+          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
+            showCacifos ? "text-primary-500 bg-primary-50" : "text-text-secondary hover:text-primary-500 hover:bg-primary-50"
+          }`}
           title="Cacifos"
         >
           <Package size={13} />
           <span>Cacifos</span>
           {showCacifos ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>
-        {onCheckIn && (
-          <button
-            onClick={onCheckIn}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors"
-            title="Check-in"
-          >
-            <Users size={13} />
-            <span>Check-in</span>
-          </button>
-        )}
+        <button
+          onClick={() => setShowCheckIn(!showCheckIn)}
+          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
+            showCheckIn ? "text-accent-green-600 bg-accent-green-50" : "text-text-secondary hover:text-accent-green-600 hover:bg-accent-green-50"
+          }`}
+          title="Check-in crianças"
+        >
+          <UserCheck size={13} />
+          <span>Crianças</span>
+          {showCheckIn ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+        </button>
         {onEdit && (
           <button
             onClick={onEdit}
@@ -654,6 +709,14 @@ function FestaCard({
             <span>Editar</span>
           </button>
         )}
+        <button
+          onClick={onView}
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-text-secondary hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
+          title="Ver tudo"
+        >
+          <Eye size={13} />
+          <span>Ver tudo</span>
+        </button>
         <button
           onClick={onFinalizar}
           className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-accent-red hover:bg-red-50 rounded-lg transition-colors ml-auto"
@@ -702,6 +765,99 @@ function FestaCard({
           ) : (
             <p className="text-xs text-text-muted text-center py-4">
               Nenhum cacifo atribuído a esta festa.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Check-in Panel */}
+      {showCheckIn && (
+        <div className="p-4 border-t border-border bg-gray-50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-semibold text-text-primary flex items-center gap-2">
+              <UserCheck size={14} />
+              Check-in ({presentes}/{total})
+            </h4>
+            {total > 0 && (
+              <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${presentes === total ? "bg-accent-green-500" : "bg-primary-400"}`}
+                  style={{ width: `${(presentes / total) * 100}%` }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Search/Filter */}
+          <div className="mb-3">
+            <input
+              type="text"
+              value={filtroParticipantes}
+              onChange={(e) => setFiltroParticipantes(e.target.value)}
+              placeholder="Filtrar crianças..."
+              className="w-full text-xs px-3 py-1.5 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary-400"
+            />
+          </div>
+
+          {/* Add participant */}
+          <div className="flex items-center gap-2 mb-3">
+            <input
+              type="text"
+              value={novoNome}
+              onChange={(e) => setNovoNome(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdicionar(); } }}
+              placeholder="Nome da criança..."
+              className="flex-1 text-xs px-3 py-1.5 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary-400"
+            />
+            <button
+              onClick={handleAdicionar}
+              disabled={!novoNome.trim() || adicionarParticipante.isPending}
+              className="p-1.5 text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors disabled:opacity-50"
+              title="Adicionar"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
+
+          {/* Participants list */}
+          {participantesFiltrados.length > 0 ? (
+            <div className="space-y-1 max-h-[200px] overflow-y-auto">
+              {participantesFiltrados.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-white transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleTogglePresenca(p.id, p.presente ?? false)}
+                      disabled={confirmarPresenca.isPending}
+                      className={`shrink-0 transition-all ${p.presente ? "text-accent-green-500" : "text-text-muted hover:text-accent-green-400"}`}
+                      title={p.presente ? "Desmarcar presença" : "Marcar presente"}
+                    >
+                      {p.presente ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                    </button>
+                    <span className={`text-xs ${p.presente ? "text-text-primary font-medium" : "text-text-secondary"}`}>
+                      {p.nome}
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                    p.presente ? "bg-accent-green-50 text-accent-green-600" : "bg-gray-100 text-text-muted"
+                  }`}>
+                    {p.presente ? "Presente" : "Ausente"}
+                  </span>
+                </div>
+              ))}
+              {filtroParticipantes && participantesFiltrados.length === 0 && participantes && participantes.length > 0 && (
+                <p className="text-xs text-text-muted text-center py-2">
+                  Nenhum participante encontrado.
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-text-muted text-center py-4">
+              {participantes && participantes.length > 0
+                ? "Nenhum participante encontrado."
+                : "Nenhum participante registado."}
             </p>
           )}
         </div>
