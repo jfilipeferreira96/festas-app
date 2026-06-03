@@ -11,7 +11,6 @@ import {
   Package,
   ChevronDown,
   ChevronUp,
-  History,
   CheckCircle,
   XCircle,
   Sparkles,
@@ -33,29 +32,21 @@ import {
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
-import { useReservasAtivas, useFinalizarReserva, useReservasConcluidas, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
+import { useReservasAtivas, useFinalizarReserva, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
 import { useCacifos } from "@/hooks/use-cacifos";
 import { useParticipantes, useConfirmarPresenca, useAdicionarParticipante } from "@/hooks/use-participantes";
 import FestaForm from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
-import HistoricoModal from "./HistoricoModal";
 import type { Reserva } from "@/lib/api/reservas";
 import { getAniversarianteNome, getAniversarianteNomes } from "@/lib/api/reservas";
 import type { EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 
-type Tab = "em_curso" | "concluidas";
-
 export default function FestasContent() {
-  const [activeTab, setActiveTab] = useState<Tab>("em_curso");
   const { data: festas, isLoading } = useReservasAtivas();
-  const { data: concluidas, isLoading: isLoadingConcluidas } = useReservasConcluidas(
-    new Date().toISOString().split("T")[0]
-  );
   const finalizarFesta = useFinalizarReserva();
 
   const [confirmFinalizar, setConfirmFinalizar] = useState<string | null>(null);
-  const [historicoReserva, setHistoricoReserva] = useState<Reserva | null>(null);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
@@ -85,50 +76,19 @@ export default function FestasContent() {
         subtitle={`Acompanhe em tempo real — ${todayStr}`}
       />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs mt-4 mb-6 w-fit">
-        <button
-          onClick={() => setActiveTab("em_curso")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-            activeTab === "em_curso"
-              ? "bg-brand-500 text-white shadow-theme-sm"
-              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          Em Curso ({festas?.length ?? 0})
-        </button>
-        <button
-          onClick={() => setActiveTab("concluidas")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-            activeTab === "concluidas"
-              ? "bg-brand-500 text-white shadow-theme-sm"
-              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          Concluídas Hoje ({concluidas?.length ?? 0})
-        </button>
+      {/* Festas Em Curso */}
+      <div className="mt-6">
+      <EmCursoTab
+        festas={festas}
+        isLoading={isLoading}
+        onFinalizar={setConfirmFinalizar}
+        onEdit={(reserva) => {
+          setEditingReserva(reserva);
+          setShowForm(true);
+        }}
+        onView={(reserva) => setViewingReservaId(reserva.id)}
+      />
       </div>
-
-      {/* Tab Content */}
-      {activeTab === "em_curso" ? (
-        <EmCursoTab
-          festas={festas}
-          isLoading={isLoading}
-          onFinalizar={setConfirmFinalizar}
-          onEdit={(reserva) => {
-            setEditingReserva(reserva);
-            setShowForm(true);
-          }}
-          onView={(reserva) => setViewingReservaId(reserva.id)}
-        />
-      ) : (
-        <ConcluidasTab
-          reservas={concluidas}
-          isLoading={isLoadingConcluidas}
-          onHistorico={setHistoricoReserva}
-          onView={(reserva) => setViewingReservaId(reserva.id)}
-        />
-      )}
 
       {/* Confirm Finalize Modal */}
       <ConfirmActionModal
@@ -140,12 +100,6 @@ export default function FestasContent() {
         confirmText="Finalizar"
         variant="danger"
         isConfirming={finalizarFesta.isPending}
-      />
-
-      {/* Historico Modal */}
-      <HistoricoModal
-        reserva={historicoReserva}
-        onClose={() => setHistoricoReserva(null)}
       />
 
       {/* Edit Reserva Modal */}
@@ -222,98 +176,6 @@ function EmCursoTab({
           onView={() => onView(festa)}
         />
       ))}
-    </div>
-  );
-}
-
-// ── Concluidas Tab ────────────────────────────────────────────
-function ConcluidasTab({
-  reservas,
-  isLoading,
-  onHistorico,
-  onView,
-}: {
-  reservas?: Reserva[];
-  isLoading: boolean;
-  onHistorico: (reserva: Reserva) => void;
-  onView: (reserva: Reserva) => void;
-}) {
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  if (!reservas || reservas.length === 0) {
-    return (
-      <div className="bg-surface rounded-[14px] p-8 shadow-card border border-border text-center">
-        <CheckCircle size={48} className="mx-auto text-text-muted mb-3" />
-        <p className="text-sm text-text-muted">
-          Nenhuma festa concluída hoje.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-surface rounded-[14px] shadow-card border border-border overflow-hidden">
-      {reservas.map((reserva) => {
-        const duracaoReal = reserva.inicioEm && reserva.fimReal
-          ? Math.round((new Date(reserva.fimReal).getTime() - new Date(reserva.inicioEm).getTime()) / 60000)
-          : null;
-        const numCacifos = reserva.cacifosHistorico?.length ?? 0;
-
-        return (
-          <div
-            key={reserva.id}
-            className="flex items-center justify-between py-3 px-4 border-b border-border last:border-0 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent-purple-100 flex items-center justify-center">
-                <CheckCircle size={18} className="text-accent-purple-500" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-text-primary">
-                  {getAniversarianteNome(reserva)}
-                </p>
-                <p className="text-xs text-text-muted">
-                  {reserva.local?.nome ?? "—"} · {reserva.horario}
-                  {duracaoReal ? ` · ${duracaoReal} min` : ` · ${reserva.duracaoMinutos} min`}
-                  {" · "}{reserva.participantes?.filter((p) => p.presente).length ?? 0}/{reserva.numCriancas ?? 0} crianças
-                  {numCacifos > 0 ? ` · ${numCacifos} cacifos` : ""}
-                </p>
-                {(reserva.tema || reserva.menu) && (
-                  <p className="text-xs text-text-muted mt-0.5">
-                    {reserva.tema && <span>{reserva.tema}</span>}
-                    {reserva.tema && reserva.menu && " · "}
-                    {reserva.menu && <span>{reserva.menu.nome}</span>}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <Button
-                onClick={() => onView(reserva)}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
-              >
-                <Eye size={13} />
-                <span>Ver</span>
-              </Button>
-              <Button
-                onClick={() => onHistorico(reserva)}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
-              >
-                <History size={13} />
-                <span>Histórico</span>
-              </Button>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
