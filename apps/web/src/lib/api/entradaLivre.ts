@@ -71,13 +71,14 @@ export interface ConfiguracaoEntradaLivre {
 }
 
 export const entradaLivreApi = {
-  list: (filtros?: { estado?: string; localId?: string; data?: string; dataInicio?: string; dataFim?: string; pesquisa?: string }) => {
+  list: (filtros?: { estado?: string; localId?: string; data?: string; dataInicio?: string; dataFim?: string; dataConclusao?: string; pesquisa?: string }) => {
     const params = new URLSearchParams();
     if (filtros?.estado) params.set("estado", filtros.estado);
     if (filtros?.localId) params.set("localId", filtros.localId);
     if (filtros?.data) params.set("data", filtros.data);
     if (filtros?.dataInicio) params.set("dataInicio", filtros.dataInicio);
     if (filtros?.dataFim) params.set("dataFim", filtros.dataFim);
+    if (filtros?.dataConclusao) params.set("dataConclusao", filtros.dataConclusao);
     if (filtros?.pesquisa) params.set("pesquisa", filtros.pesquisa);
     const query = params.toString();
     return api<EntradaLivre[]>(`/api/entradas-livres${query ? `?${query}` : ""}`);

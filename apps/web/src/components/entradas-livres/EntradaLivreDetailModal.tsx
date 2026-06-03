@@ -11,14 +11,12 @@ import {
   CreditCard,
   FileText,
   AlertTriangle,
-  Square,
-  XCircle,
   CheckCircle,
   Timer,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge, Button } from "@/components/ui";
-import { useEntradaLivre, useConcluirEntradaLivre, useCancelarEntradaLivre, useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
+import { useEntradaLivre, useConcluirEntradaLivre, useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import type { StatusType } from "@/components/ui/status-badge/StatusBadge";
 
@@ -53,10 +51,9 @@ interface EntradaLivreDetailModalProps {
 export default function EntradaLivreDetailModal({ entradaId, onClose }: EntradaLivreDetailModalProps) {
   const { data: entrada, isLoading } = useEntradaLivre(entradaId ?? "");
   const concluir = useConcluirEntradaLivre();
-  const cancelar = useCancelarEntradaLivre();
   const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
 
-  const [confirmAction, setConfirmAction] = useState<"concluir" | "cancelar" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<"concluir" | null>(null);
 
   const now = useCurrentTime();
 
@@ -65,13 +62,6 @@ export default function EntradaLivreDetailModal({ entradaId, onClose }: EntradaL
     await concluir.mutateAsync(entradaId);
     setConfirmAction(null);
   }, [concluir, entradaId]);
-
-  const handleCancelar = useCallback(async () => {
-    if (!entradaId) return;
-    await cancelar.mutateAsync(entradaId);
-    setConfirmAction(null);
-    onClose();
-  }, [cancelar, entradaId, onClose]);
 
   const handleMarcarPago = useCallback(async () => {
     if (!entradaId) return;
@@ -174,24 +164,19 @@ export default function EntradaLivreDetailModal({ entradaId, onClose }: EntradaL
               <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end flex-wrap">
                 <Button variant="outline" onClick={onClose}>Fechar</Button>
                 {entrada.estado === "ATIVA" && !entrada.pago && (
-                  <Button onClick={handleMarcarPago} loading={atualizarPagamento.isPending} className="gap-1.5 bg-accent-green-500 hover:bg-accent-green-600">
+                  <Button onClick={handleMarcarPago} loading={atualizarPagamento.isPending} className="gap-1.5">
                     <CheckCircle size={14} /> Marcar Pago
                   </Button>
                 )}
                 {entrada.estado === "CONCLUIDA" && entrada.custoExcesso != null && entrada.custoExcesso > 0 && !entrada.pagoExcesso && (
-                  <Button onClick={handlePagarExcesso} loading={atualizarPagamento.isPending} className="gap-1.5 bg-accent-orange-500 hover:bg-accent-orange-600">
+                  <Button onClick={handlePagarExcesso} loading={atualizarPagamento.isPending} className="gap-1.5">
                     <CreditCard size={14} /> Pagar Excesso
                   </Button>
                 )}
                 {entrada.estado === "ATIVA" && (
-                  <>
-                    <Button onClick={() => setConfirmAction("concluir")} loading={concluir.isPending} className="gap-1.5 bg-accent-green-500 hover:bg-accent-green-600">
-                      <Square size={14} /> Concluir
-                    </Button>
-                    <Button variant="outline" onClick={() => setConfirmAction("cancelar")} className="gap-1.5 text-accent-red-500 border-accent-red-200 hover:bg-accent-red-50">
-                      <XCircle size={14} /> Cancelar
-                    </Button>
-                  </>
+                  <Button onClick={() => setConfirmAction("concluir")} loading={concluir.isPending} className="gap-1.5">
+                    Concluir
+                  </Button>
                 )}
               </div>
             </>
@@ -203,12 +188,12 @@ export default function EntradaLivreDetailModal({ entradaId, onClose }: EntradaL
       <ConfirmActionModal
         isOpen={!!confirmAction}
         onClose={() => setConfirmAction(null)}
-        onConfirm={confirmAction === "concluir" ? handleConcluir : handleCancelar}
-        title={confirmAction === "concluir" ? "Concluir Entrada" : "Cancelar Entrada"}
-        message={confirmAction === "concluir" ? "Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente." : "Tem a certeza que deseja cancelar esta entrada?"}
-        confirmText={confirmAction === "concluir" ? "Concluir" : "Cancelar"}
+        onConfirm={handleConcluir}
+        title="Concluir Entrada"
+        message="Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente."
+        confirmText="Concluir"
         variant="danger"
-        isConfirming={concluir.isPending || cancelar.isPending}
+        isConfirming={concluir.isPending}
       />
     </>
   );

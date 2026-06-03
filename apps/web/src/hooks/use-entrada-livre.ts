@@ -6,7 +6,7 @@ import { entradaLivreApi, type CriarEntradaLivreDTO } from "@/lib/api/entradaLiv
 // ── Queries ───────────────────────────────────────
 
 export function useEntradasLivres(
-  filtros?: { estado?: string; localId?: string; data?: string; dataInicio?: string; dataFim?: string; pesquisa?: string },
+  filtros?: { estado?: string; localId?: string; data?: string; dataInicio?: string; dataFim?: string; dataConclusao?: string; pesquisa?: string },
   options?: { refetchInterval?: number | false },
 ) {
   return useQuery({
@@ -44,7 +44,7 @@ export function useEntradasLivresConcluidasHoje() {
   const hoje = new Date().toISOString().split("T")[0];
   return useQuery({
     queryKey: ["entradas-livres", "concluidas", hoje],
-    queryFn: () => entradaLivreApi.list({ estado: "CONCLUIDA", data: hoje }),
+    queryFn: () => entradaLivreApi.list({ estado: "CONCLUIDA", dataConclusao: hoje }),
   });
 }
 

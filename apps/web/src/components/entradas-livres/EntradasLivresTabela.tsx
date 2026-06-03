@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Trash2, Square, XCircle, Users, Clock } from "lucide-react";
+import { Plus, Eye, Trash2, Check, XCircle, Users, Clock } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -159,7 +159,11 @@ export default function EntradasLivresTabela() {
             render: (_v, r) => (
               <div>
                 <p className="text-sm font-medium text-text-primary">{r.encarregadoNome}</p>
-                <p className="text-xs text-text-muted">{r.encarregadoTelefone}</p>
+                <p className="text-xs text-text-muted">
+                  {r.encarregadoTelefone ?? ""}
+                  {r.encarregadoTelefone && r.encarregadoEmail ? " · " : ""}
+                  {r.encarregadoEmail ?? ""}
+                </p>
               </div>
             ),
           },
@@ -214,20 +218,21 @@ export default function EntradasLivresTabela() {
               r.pago ? (
                 <span className="text-accent-green-600 font-medium text-sm">Sim</span>
               ) : (
-                <span className="text-text-muted text-sm">Não</span>
+                <span className="text-accent-red-600 font-medium text-sm">Não</span>
               )
             ),
           },
         ]}
         loading={isLoading}
         searchable
-        searchPlaceholder="Pesquisar por nome, telefone..."
+        searchPlaceholder="Pesquisar por nome, telefone, email..."
         searchFn={(r, q) => {
           const criancasNomes = r.criancas.map((c: any) => c.nome || "").join(" ").toLowerCase();
           return (
             criancasNomes.includes(q) ||
             (r.encarregadoNome?.toLowerCase()?.includes(q) ?? false) ||
-            (r.encarregadoTelefone?.includes(q) ?? false)
+            (r.encarregadoTelefone?.includes(q) ?? false) ||
+            (r.encarregadoEmail?.toLowerCase()?.includes(q) ?? false)
           );
         }}
         pagination
@@ -241,7 +246,7 @@ export default function EntradasLivresTabela() {
                 className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
                 title="Concluir entrada"
               >
-                <Square size={15} />
+                <Check size={15} />
               </button>
             )}
             {/* Quick action: Cancelar */}

@@ -32,6 +32,7 @@ export const listarEntradas = async (req: Request, res: Response) => {
       data: req.query.data as string | undefined,
       dataInicio: req.query.dataInicio as string | undefined,
       dataFim: req.query.dataFim as string | undefined,
+      dataConclusao: req.query.dataConclusao as string | undefined,
       pesquisa: req.query.pesquisa as string | undefined,
     };
     const entradas = await entradaLivreService.list(filtros);

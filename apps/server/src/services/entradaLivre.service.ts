@@ -1,4 +1,6 @@
 import prisma from "@festas/db";
+import { Prisma } from "@prisma/client";
+import type { MetodoPagamento } from "@prisma/client";
 
 interface CriancaInput {
   nome: string;
@@ -12,7 +14,7 @@ interface CriarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos: number;
   localId: string;
-  metodoPagamento?: string;
+  metodoPagamento?: MetodoPagamento;
   pago?: boolean;
   cacifoId?: string;
   extrasIds?: string[];
@@ -28,11 +30,20 @@ export const entradaLivreService = {
     data?: string;
     dataInicio?: string;
     dataFim?: string;
+    dataConclusao?: string;
     pesquisa?: string;
   }) {
     const where: Record<string, unknown> = {};
     if (filtros?.estado) where.estado = filtros.estado;
     if (filtros?.localId) where.localId = filtros.localId;
+
+    // Filtro por data específica de conclusão (fimReal)
+    if (filtros?.dataConclusao) {
+      const date = new Date(filtros.dataConclusao + "T00:00:00.000Z");
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      where.fimReal = { gte: date, lt: nextDay };
+    }
 
     // Filtro por data específica (hoje, amanhã, etc.)
     if (filtros?.data) {
@@ -140,7 +151,7 @@ export const entradaLivreService = {
     // Criar entrada
     const entrada = await prisma.entradaLivre.create({
       data: {
-        criancas,
+        criancas: criancas as unknown as Prisma.InputJsonValue,
         duracaoMinutos,
         custoHora: config.precoHora,
         custoTotal,
@@ -282,7 +293,7 @@ export const entradaLivreService = {
   },
 
   // ── Atualizar pagamento ─────────────────────────
-  async atualizarPagamento(id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: string }) {
+  async atualizarPagamento(id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: MetodoPagamento }) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
 

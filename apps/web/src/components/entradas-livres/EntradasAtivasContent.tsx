@@ -4,8 +4,6 @@ import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Clock,
   Users,
-  Square,
-  XCircle,
   Timer,
   AlertTriangle,
   Plus,
@@ -17,27 +15,30 @@ import {
 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
-import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import {
-  useEntradasLivresAtivas,
-  useEntradasLivresConcluidasHoje,
-  useConcluirEntradaLivre,
-  useCancelarEntradaLivre,
+  useEntradasLivres,
   useAtualizarPagamentoEntradaLivre,
 } from "@/hooks/use-entrada-livre";
 import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
-import type { EntradaLivre } from "@/lib/api/entradaLivre";
+import type { EntradaLivre, Crianca } from "@/lib/api/entradaLivre";
 
-type Tab = "em_curso" | "concluidas";
+// ── Filter options for tabs ──────────────────────────────────────
+const FILTER_OPTIONS = [
+  { value: "", label: "Todas" },
+  { value: "hoje", label: "Hoje" },
+  { value: "semana", label: "Esta semana" },
+  { value: "ATIVA", label: "Em Curso" },
+  { value: "CONCLUIDA", label: "Concluídas" },
+  { value: "CANCELADA", label: "Canceladas" },
+];
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatCurrency(value: number | undefined | null): string {
-  if (value == null) return "—";
-  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 /** Hook that returns current time, updated every second */
@@ -54,7 +55,6 @@ function useCurrentTime() {
 function useTimer(inicioEm: string, duracaoMinutos: number) {
   const now = useCurrentTime();
   const inicio = new Date(inicioEm);
-  const fimPrevisto = new Date(inicio.getTime() + duracaoMinutos * 60 * 1000);
 
   const elapsedMs = now.getTime() - inicio.getTime();
   const plannedMs = duracaoMinutos * 60 * 1000;
@@ -80,23 +80,14 @@ function useTimer(inicioEm: string, duracaoMinutos: number) {
     excess: isOvertime ? `+${String(excessMin).padStart(2, "0")}:${String(excessSec).padStart(2, "0")}` : null,
     isOvertime,
     progressPercent,
-    excessMinutes: excessMin,
-    fimPrevisto,
   };
 }
 
 // ── Main Component ──────────────────────────────────────────────
 export default function EntradasAtivasContent() {
-  const [activeTab, setActiveTab] = useState<Tab>("em_curso");
-  const { data: entradas, isLoading } = useEntradasLivresAtivas();
-  const { data: concluidas, isLoading: isLoadingConcluidas } = useEntradasLivresConcluidasHoje();
-
-  const concluir = useConcluirEntradaLivre();
-  const cancelar = useCancelarEntradaLivre();
+  const [filtro, setFiltro] = useState("ATIVA");
   const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
 
-  const [confirmConcluir, setConfirmConcluir] = useState<string | null>(null);
-  const [confirmCancelar, setConfirmCancelar] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [viewingEntradaId, setViewingEntradaId] = useState<string | null>(null);
 
@@ -105,21 +96,29 @@ export default function EntradasAtivasContent() {
     []
   );
 
-  const handleConcluir = useCallback(
-    async (id: string) => {
-      await concluir.mutateAsync(id);
-      setConfirmConcluir(null);
-    },
-    [concluir]
-  );
+  // Build filter params from active tab
+  const filtros = useMemo(() => {
+    const hoje = new Date().toISOString().split("T")[0];
+    if (filtro === "hoje") return { data: hoje };
+    if (filtro === "semana") {
+      const inicioSemana = new Date();
+      inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay() + 1); // Monday
+      const fimSemana = new Date(inicioSemana);
+      fimSemana.setDate(fimSemana.getDate() + 7);
+      return { dataInicio: inicioSemana.toISOString().split("T")[0], dataFim: fimSemana.toISOString().split("T")[0] };
+    }
+    if (["ATIVA", "CONCLUIDA", "CANCELADA"].includes(filtro)) {
+      return { estado: filtro };
+    }
+    return undefined;
+  }, [filtro]);
 
-  const handleCancelar = useCallback(
-    async (id: string) => {
-      await cancelar.mutateAsync(id);
-      setConfirmCancelar(null);
-    },
-    [cancelar]
-  );
+  // Use refetchInterval for ATIVA tab to keep real-time updates
+  const isAtivaTab = filtro === "ATIVA";
+
+  const { data: entradas, isLoading } = useEntradasLivres(filtros, {
+    refetchInterval: isAtivaTab ? 30000 : false,
+  });
 
   const handleMarcarPago = useCallback(
     async (id: string) => {
@@ -145,72 +144,39 @@ export default function EntradasAtivasContent() {
         }
       />
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs mt-4 mb-6 w-fit">
-        <button
-          onClick={() => setActiveTab("em_curso")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-            activeTab === "em_curso"
-              ? "bg-brand-500 text-white shadow-theme-sm"
-              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          Em Curso ({entradas?.length ?? 0})
-        </button>
-        <button
-          onClick={() => setActiveTab("concluidas")}
-          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-            activeTab === "concluidas"
-              ? "bg-brand-500 text-white shadow-theme-sm"
-              : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-          }`}
-        >
-          Concluídas Hoje ({concluidas?.length ?? 0})
-        </button>
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs mt-4 mb-6 overflow-x-auto filter-scrollbar max-w-full">
+        {FILTER_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setFiltro(opt.value)}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+              filtro === opt.value
+                ? "bg-brand-500 text-white shadow-theme-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
-      {activeTab === "em_curso" ? (
+      {isAtivaTab ? (
         <EmCursoTab
           entradas={entradas}
           isLoading={isLoading}
-          onConcluir={setConfirmConcluir}
-          onCancelar={setConfirmCancelar}
           onMarcarPago={handleMarcarPago}
           onView={setViewingEntradaId}
           pagamentoPending={atualizarPagamento.isPending}
         />
       ) : (
-        <ConcluidasTab
-          entradas={concluidas}
-          isLoading={isLoadingConcluidas}
+        <ListaTab
+          entradas={entradas}
+          isLoading={isLoading}
           onView={setViewingEntradaId}
         />
       )}
-
-      {/* Confirm Concluir */}
-      <ConfirmActionModal
-        isOpen={!!confirmConcluir}
-        onClose={() => setConfirmConcluir(null)}
-        onConfirm={() => handleConcluir(confirmConcluir!)}
-        title="Concluir Entrada"
-        message="Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente."
-        confirmText="Concluir"
-        variant="danger"
-        isConfirming={concluir.isPending}
-      />
-
-      {/* Confirm Cancelar */}
-      <ConfirmActionModal
-        isOpen={!!confirmCancelar}
-        onClose={() => setConfirmCancelar(null)}
-        onConfirm={() => handleCancelar(confirmCancelar!)}
-        title="Cancelar Entrada"
-        message="Tem a certeza que deseja cancelar esta entrada?"
-        confirmText="Cancelar"
-        variant="danger"
-        isConfirming={cancelar.isPending}
-      />
 
       {/* Create Modal */}
       {showForm && (
@@ -235,16 +201,12 @@ export default function EntradasAtivasContent() {
 function EmCursoTab({
   entradas,
   isLoading,
-  onConcluir,
-  onCancelar,
   onMarcarPago,
   onView,
   pagamentoPending,
 }: {
   entradas?: EntradaLivre[];
   isLoading: boolean;
-  onConcluir: (id: string) => void;
-  onCancelar: (id: string) => void;
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
   pagamentoPending: boolean;
@@ -277,12 +239,8 @@ function EmCursoTab({
         <EntradaAtivaCard
           key={entrada.id}
           entrada={entrada}
-          onConcluir={onConcluir}
-          onCancelar={onCancelar}
           onMarcarPago={onMarcarPago}
           onView={onView}
-          concluirPending={false}
-          cancelarPending={false}
           pagamentoPending={pagamentoPending}
         />
       ))}
@@ -290,8 +248,8 @@ function EmCursoTab({
   );
 }
 
-// ── Concluídas Tab (List) ─────────────────────────────────────
-function ConcluidasTab({
+// ── Lista Tab (non-ATIVA filters: Todas, Hoje, Semana, Concluídas, Canceladas) ──
+function ListaTab({
   entradas,
   isLoading,
   onView,
@@ -303,7 +261,7 @@ function ConcluidasTab({
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {Array.from({ length: 3 }).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
         ))}
       </div>
@@ -313,9 +271,9 @@ function ConcluidasTab({
   if (!entradas || entradas.length === 0) {
     return (
       <div className="bg-white rounded-xl p-8 shadow-theme-xs border border-border text-center">
-        <CheckCircle size={48} className="mx-auto text-text-muted mb-3" />
+        <Clock size={48} className="mx-auto text-text-muted mb-3" />
         <p className="text-sm text-text-muted">
-          Nenhuma entrada concluída hoje.
+          Nenhum registo encontrado para este filtro.
         </p>
       </div>
     );
@@ -324,9 +282,25 @@ function ConcluidasTab({
   return (
     <div className="bg-white rounded-xl shadow-theme-xs border border-border overflow-hidden">
       {entradas.map((entrada) => {
+        const isConcluida = entrada.estado === "CONCLUIDA";
+        const isCancelada = entrada.estado === "CANCELADA";
+        const isAtiva = entrada.estado === "ATIVA";
+
         const duracaoReal = entrada.inicioEm && entrada.fimReal
           ? Math.round((new Date(entrada.fimReal).getTime() - new Date(entrada.inicioEm).getTime()) / 60000)
           : null;
+
+        const statusIcon = isConcluida
+          ? <CheckCircle size={18} className="text-accent-green-500" />
+          : isCancelada
+            ? <Clock size={18} className="text-accent-red-500" />
+            : <Clock size={18} className="text-brand-500" />;
+
+        const statusBg = isConcluida
+          ? "bg-accent-green-100"
+          : isCancelada
+            ? "bg-accent-red-100"
+            : "bg-brand-100";
 
         return (
           <div
@@ -334,15 +308,15 @@ function ConcluidasTab({
             className="flex items-center justify-between py-3 px-4 border-b border-border last:border-0 hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-accent-green-100 flex items-center justify-center">
-                <CheckCircle size={18} className="text-accent-green-500" />
+              <div className={`w-10 h-10 rounded-full ${statusBg} flex items-center justify-center`}>
+                {statusIcon}
               </div>
               <div>
                 <p className="text-sm font-semibold text-text-primary">
-                  {entrada.criancas.map((c: any) => c.nome).join(", ")}
+                  {entrada.criancas.map((c: Crianca) => c.nome).join(", ")}
                 </p>
                 <p className="text-xs text-text-muted">
-                  {entrada.local?.nome ?? "—"} · {formatTime(entrada.inicioEm)}
+                  {entrada.local?.nome ?? "—"} · {formatDate(entrada.inicioEm)} {formatTime(entrada.inicioEm)}
                   {duracaoReal ? ` · ${duracaoReal} min` : ` · ${entrada.duracaoMinutos} min`}
                   {entrada.excessoMinutos != null && entrada.excessoMinutos > 0 ? ` · +${entrada.excessoMinutos} min excesso` : ""}
                   {entrada.cacifo ? ` · Cacifo #${entrada.cacifo.numero}` : ""}
@@ -353,7 +327,13 @@ function ConcluidasTab({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
+              {isAtiva && !entrada.pago && (
+                <span className="text-xs font-medium text-accent-orange-600">Por pagar</span>
+              )}
+              {isAtiva && entrada.pago && (
+                <span className="text-xs font-medium text-accent-green-600">Pago</span>
+              )}
               <Button
                 onClick={() => onView(entrada.id)}
                 className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
@@ -372,25 +352,16 @@ function ConcluidasTab({
 // ── Entrada Ativa Card ─────────────────────────────────────────
 function EntradaAtivaCard({
   entrada,
-  onConcluir,
-  onCancelar,
   onMarcarPago,
   onView,
-  concluirPending,
-  cancelarPending,
   pagamentoPending,
 }: {
   entrada: EntradaLivre;
-  onConcluir: (id: string) => void;
-  onCancelar: (id: string) => void;
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
-  concluirPending: boolean;
-  cancelarPending: boolean;
   pagamentoPending: boolean;
 }) {
   const timer = useTimer(entrada.inicioEm, entrada.duracaoMinutos);
-  const [showConfirm, setShowConfirm] = useState<"concluir" | "cancelar" | null>(null);
 
   return (
     <div className={`rounded-xl border shadow-theme-xs bg-white overflow-hidden transition-all ${timer.isOvertime ? "border-accent-red-200 ring-1 ring-accent-red-100" : "border-border"}`}>
@@ -408,7 +379,7 @@ function EntradaAtivaCard({
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-text-muted shrink-0" />
               <span className="text-sm font-semibold text-text-primary truncate">
-                {entrada.criancas.map((c: any) => c.nome).join(", ")}
+                {entrada.criancas.map((c: Crianca) => c.nome).join(", ")}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-text-muted">
@@ -472,61 +443,24 @@ function EntradaAtivaCard({
           <span className="flex items-center gap-1"><Phone size={11} /> {entrada.encarregadoTelefone}</span>
         </div>
 
-        {/* Actions */}
-        {showConfirm ? (
-          <div className="flex items-center gap-2 pt-2 border-t border-border">
-            <span className="text-xs text-text-muted">
-              {showConfirm === "concluir" ? "Concluir esta entrada?" : "Cancelar esta entrada?"}
-            </span>
-            <div className="flex gap-2 ml-auto">
-              <Button variant="outline" size="sm" onClick={() => setShowConfirm(null)}>Não</Button>
-              <Button
-                size="sm"
-                loading={showConfirm === "concluir" ? concluirPending : cancelarPending}
-                onClick={() => {
-                  if (showConfirm === "concluir") onConcluir(entrada.id);
-                  else onCancelar(entrada.id);
-                  setShowConfirm(null);
-                }}
-                className={showConfirm === "concluir" ? "bg-accent-green-500 hover:bg-accent-green-600" : "bg-accent-red-500 hover:bg-accent-red-600"}
-              >
-                {showConfirm === "concluir" ? "Sim, concluir" : "Sim, cancelar"}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 pt-2 border-t border-border">
+        {/* Actions — only Ver + Pagar */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border">
+          <button
+            onClick={() => onView(entrada.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-primary-500 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <Eye size={13} /> Ver
+          </button>
+          {!entrada.pago && (
             <button
-              onClick={() => onView(entrada.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-primary-500 hover:bg-gray-50 rounded-lg transition-colors"
+              onClick={() => onMarcarPago(entrada.id)}
+              disabled={pagamentoPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-green-600 hover:bg-green-50 rounded-lg transition-colors"
             >
-              <Eye size={13} /> Ver
+              <CreditCard size={13} /> Pagar
             </button>
-            {!entrada.pago && (
-              <button
-                onClick={() => onMarcarPago(entrada.id)}
-                disabled={pagamentoPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              >
-                <CreditCard size={13} /> Pagar
-              </button>
-            )}
-            <div className="flex gap-2 ml-auto">
-              <button
-                onClick={() => setShowConfirm("concluir")}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-green-600 hover:bg-green-50 rounded-lg transition-colors"
-              >
-                <Square size={13} /> Concluir
-              </button>
-              <button
-                onClick={() => setShowConfirm("cancelar")}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <XCircle size={13} /> Cancelar
-              </button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
