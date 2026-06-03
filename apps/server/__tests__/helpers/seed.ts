@@ -48,6 +48,11 @@ export const TEST_IDS = {
 
   // Campanhas
   CAMPANHA_1: "test-campanha-001",
+
+  // Entradas Livres
+  ENTRADA_LIVRE_1: "test-entrada-livre-001",
+  ENTRADA_LIVRE_2: "test-entrada-livre-002",
+  ENTRADA_LIVRE_3: "test-entrada-livre-003",
 } as const;
 
 /**
@@ -90,21 +95,21 @@ export async function seedTestData(): Promise<void> {
     create: { id: TEST_IDS.EXTRA_2, nome: "Pinturas Faciais Teste", precoUnitario: 30.0, icone: "palette", categoria: "EXTRA" },
   });
 
-  // ── Extras (LANCHE category) ────────────────────────────────
+  // ── Extras (LANCHE category - usando EXTRA como categoria) ───
   await testPrisma.extra.upsert({
     where: { id: TEST_IDS.EXTRA_LANCHE_1 },
     update: {},
-    create: { id: TEST_IDS.EXTRA_LANCHE_1, nome: "Bolo de Aniversário", precoUnitario: 15.0, icone: "birthday-cake", categoria: "LANCHE" },
+    create: { id: TEST_IDS.EXTRA_LANCHE_1, nome: "Bolo de Aniversário", precoUnitario: 15.0, icone: "birthday-cake", categoria: "EXTRA", subcategoria: "Lanche" },
   });
   await testPrisma.extra.upsert({
     where: { id: TEST_IDS.EXTRA_LANCHE_2 },
     update: {},
-    create: { id: TEST_IDS.EXTRA_LANCHE_2, nome: "Pipocas", precoUnitario: 5.0, icone: "popcorn", categoria: "LANCHE" },
+    create: { id: TEST_IDS.EXTRA_LANCHE_2, nome: "Pipocas", precoUnitario: 5.0, icone: "popcorn", categoria: "EXTRA", subcategoria: "Lanche" },
   });
   await testPrisma.extra.upsert({
     where: { id: TEST_IDS.EXTRA_LANCHE_3 },
     update: {},
-    create: { id: TEST_IDS.EXTRA_LANCHE_3, nome: "Sumo Natural", precoUnitario: 3.5, icone: "juice-bottle", categoria: "LANCHE" },
+    create: { id: TEST_IDS.EXTRA_LANCHE_3, nome: "Sumo Natural", precoUnitario: 3.5, icone: "juice-bottle", categoria: "EXTRA", subcategoria: "Lanche" },
   });
 
   // ── Extra-Local associations ────────────────────────────────
@@ -269,12 +274,116 @@ export async function seedTestData(): Promise<void> {
     update: {},
     create: { id: TEST_IDS.SEGMENTO_1, nome: "Segmento Teste", descricao: "Para testes" },
   });
+
+  // ── Configuração Entrada Livre ──────────────────────────────
+  await testPrisma.configuracaoEntradaLivre.upsert({
+    where: { localId: TEST_IDS.LOCAL_1 },
+    update: {},
+    create: { localId: TEST_IDS.LOCAL_1, precoHora: 10.0, precoHoraExcesso: 12.0, activo: true },
+  });
+  await testPrisma.configuracaoEntradaLivre.upsert({
+    where: { localId: TEST_IDS.LOCAL_2 },
+    update: {},
+    create: { localId: TEST_IDS.LOCAL_2, precoHora: 8.0, precoHoraExcesso: 10.0, activo: true },
+  });
+
+  // ── Entradas Livres ─────────────────────────────────────────
+  const entradaInicio = new Date(today);
+  entradaInicio.setHours(9, 0, 0, 0);
+  const entradaFim = new Date(entradaInicio);
+  entradaFim.setMinutes(entradaFim.getMinutes() + 90);
+
+  // Entrada ativa
+  await testPrisma.entradaLivre.upsert({
+    where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
+    update: {},
+    create: {
+      id: TEST_IDS.ENTRADA_LIVRE_1,
+      encarregadoNome: "Encarregado Teste 1",
+      encarregadoTelefone: "911111111",
+      encarregadoEmail: "teste1@email.pt",
+      duracaoMinutos: 90,
+      custoHora: 10.0,
+      custoTotal: 15.0,
+      inicioEm: entradaInicio,
+      fimPrevisto: entradaFim,
+      estado: "ATIVA",
+      localId: TEST_IDS.LOCAL_1,
+      pago: true,
+      metodoPagamento: "MBWAY",
+      criancas: [{ nome: "João", idade: 6 }, { nome: "Maria", idade: 5 }],
+    },
+  });
+
+  // Entrada concluída (ontem)
+  const ontem = new Date(today);
+  ontem.setDate(ontem.getDate() - 1);
+  const entradaInicioOntem = new Date(ontem);
+  entradaInicioOntem.setHours(10, 0, 0, 0);
+  const entradaFimOntem = new Date(entradaInicioOntem);
+  entradaFimOntem.setMinutes(entradaFimOntem.getMinutes() + 90);
+  const entradaFimReal = new Date(entradaFimOntem);
+  entradaFimReal.setMinutes(entradaFimReal.getMinutes() + 30); // 30 min de excesso
+
+  await testPrisma.entradaLivre.upsert({
+    where: { id: TEST_IDS.ENTRADA_LIVRE_2 },
+    update: {},
+    create: {
+      id: TEST_IDS.ENTRADA_LIVRE_2,
+      encarregadoNome: "Encarregado Teste 2",
+      encarregadoTelefone: "922222222",
+      duracaoMinutos: 90,
+      custoHora: 8.0,
+      custoTotal: 12.0,
+      inicioEm: entradaInicioOntem,
+      fimPrevisto: entradaFimOntem,
+      fimReal: entradaFimReal,
+      estado: "CONCLUIDA",
+      localId: TEST_IDS.LOCAL_2,
+      excessoMinutos: 30,
+      custoExcesso: 5.0,
+      custoTotalFinal: 17.0,
+      pago: true,
+      pagoExcesso: true,
+      metodoPagamento: "MULTIBANCO",
+      criancas: [{ nome: "Pedro", idade: 7 }],
+    },
+  });
+
+  // Entrada cancelada
+  const entradaInicio3 = new Date(today);
+  entradaInicio3.setHours(11, 0, 0, 0);
+  const entradaFim3 = new Date(entradaInicio3);
+  entradaFim3.setMinutes(entradaFim3.getMinutes() + 60);
+
+  await testPrisma.entradaLivre.upsert({
+    where: { id: TEST_IDS.ENTRADA_LIVRE_3 },
+    update: {},
+    create: {
+      id: TEST_IDS.ENTRADA_LIVRE_3,
+      encarregadoNome: "Encarregado Teste 3",
+      encarregadoTelefone: "933333333",
+      duracaoMinutos: 60,
+      custoHora: 10.0,
+      custoTotal: 10.0,
+      inicioEm: entradaInicio3,
+      fimPrevisto: entradaFim3,
+      estado: "CANCELADA",
+      localId: TEST_IDS.LOCAL_1,
+      fimReal: new Date(today), // Cancelada rapidamente
+      criancas: [{ nome: "Ana", idade: 4 }],
+    },
+  });
 }
 
 /**
  * Cleans all test data from the test schema.
  */
 export async function cleanTestData(): Promise<void> {
+  await testPrisma.entradaLivreExtra.deleteMany().catch(() => {});
+  await testPrisma.entradaLivre.deleteMany().catch(() => {});
+  await testPrisma.configuracaoEntradaLivre.deleteMany().catch(() => {});
+
   await testPrisma.envioCampanha.deleteMany().catch(() => {});
   await testPrisma.campanha.deleteMany().catch(() => {});
   await testPrisma.contactoSegmento.deleteMany().catch(() => {});

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
@@ -42,6 +42,11 @@ export default function FestasTabela() {
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [iniciarFestaReserva, setIniciarFestaReserva] = useState<Reserva | null>(null);
+
+  const todayStr = useMemo(
+    () => new Date().toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" }),
+    []
+  );
 
   // Build filter params
   const filtros = React.useMemo(() => {
@@ -113,7 +118,7 @@ export default function FestasTabela() {
     <div>
       <PageHeader
         title="Festas"
-        subtitle="Gestão de festas"
+        subtitle={`Gestão de festas — ${todayStr}`}
       />
 
       {/* Filters */}

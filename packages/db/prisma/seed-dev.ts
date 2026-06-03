@@ -90,6 +90,7 @@ async function main() {
   await seedClientes();
   await seedEtapasFestaConfig();
   await seedReservas();
+  await seedEntradasLivres();
   await seedMarketing();
 
   console.log("\n✅ Dev seed complete!");
@@ -803,6 +804,137 @@ async function seedMarketing() {
   });
 
   console.log("  ✓ 1 segmento, 6 contactos, 1 campanha\n");
+}
+
+// ─── Entradas Livres ────────────────────────────────────────────
+async function seedEntradasLivres() {
+  console.log("  Creating entrada livre data...");
+
+  // Configuração para os locais
+  await prisma.configuracaoEntradaLivre.upsert({
+    where: { localId: "local-001" },
+    update: {},
+    create: { localId: "local-001", precoHora: 10.0, precoHoraExcesso: 12.0, activo: true },
+  });
+  await prisma.configuracaoEntradaLivre.upsert({
+    where: { localId: "local-002" },
+    update: {},
+    create: { localId: "local-002", precoHora: 8.0, precoHoraExcesso: 10.0, activo: true },
+  });
+  await prisma.configuracaoEntradaLivre.upsert({
+    where: { localId: "local-003" },
+    update: {},
+    create: { localId: "local-003", precoHora: 12.0, precoHoraExcesso: 15.0, activo: true },
+  });
+
+  const now = new Date();
+  const todayDate = today();
+  const todayStr = toDateStr(todayDate);
+
+  // ─── Entrada ATIVA (hoje, às 9:00) ───────────────────────────────
+  const ativaInicio = dateAt(todayDate, 9, 0);
+  await prisma.entradaLivre.upsert({
+    where: { id: "entrada-livre-ativa-001" },
+    update: {},
+    create: {
+      id: "entrada-livre-ativa-001",
+      encarregadoNome: "Pedro Santos",
+      encarregadoTelefone: "910000001",
+      encarregadoEmail: "pedro@email.pt",
+      duracaoMinutos: 90,
+      custoHora: 10.0,
+      custoTotal: 15.0,
+      inicioEm: ativaInicio,
+      fimPrevisto: addMin(ativaInicio, 90),
+      estado: "ATIVA",
+      localId: "local-001",
+      pago: true,
+      metodoPagamento: "MBWAY",
+      criancas: [{ nome: "Miguel", idade: 6 }, { nome: "Sofia", idade: 4 }],
+    },
+  });
+
+  // ─── Entrada ATIVA (hoje, às 10:30) com cacifo ─────────────────────
+  const ativaInicio2 = dateAt(todayDate, 10, 30);
+  const cacifo31 = await prisma.cacifo.findUnique({ where: { numero: 31 } });
+  await prisma.entradaLivre.upsert({
+    where: { id: "entrada-livre-ativa-002" },
+    update: {},
+    create: {
+      id: "entrada-livre-ativa-002",
+      encarregadoNome: "Ana Costa",
+      encarregadoTelefone: "920000002",
+      duracaoMinutos: 60,
+      custoHora: 8.0,
+      custoTotal: 8.0,
+      inicioEm: ativaInicio2,
+      fimPrevisto: addMin(ativaInicio2, 60),
+      estado: "ATIVA",
+      localId: "local-002",
+      cacifoId: cacifo31?.id,
+      pago: false,
+      criancas: [{ nome: "Beatriz", idade: 5 }],
+    },
+  });
+  if (cacifo31) {
+    await prisma.cacifo.update({
+      where: { id: cacifo31.id },
+      data: { estado: "OCUPADO", criancas: "Beatriz" },
+    });
+  }
+
+  // ─── Entrada CONCLUIDA (ontem, com excesso) ───────────────────────
+  const ontem = daysAgo(1);
+  const concluidaInicio = dateAt(ontem, 14, 0);
+  const concluidaFim = addMin(concluidaInicio, 120 + 30); // 120 min + 30 min excesso
+  await prisma.entradaLivre.upsert({
+    where: { id: "entrada-livre-conc-001" },
+    update: {},
+    create: {
+      id: "entrada-livre-conc-001",
+      encarregadoNome: "Ricardo Mendes",
+      encarregadoTelefone: "930000003",
+      duracaoMinutos: 120,
+      custoHora: 10.0,
+      custoTotal: 20.0,
+      inicioEm: concluidaInicio,
+      fimPrevisto: addMin(concluidaInicio, 120),
+      fimReal: concluidaFim,
+      estado: "CONCLUIDA",
+      localId: "local-001",
+      excessoMinutos: 30,
+      custoExcesso: 6.0,
+      custoTotalFinal: 26.0,
+      pago: true,
+      pagoExcesso: true,
+      metodoPagamento: "MULTIBANCO",
+      criancas: [{ nome: "Tomás", idade: 7 }, { nome: "João", idade: 5 }],
+    },
+  });
+
+  // ─── Entrada CANCELADA (hoje, cancelada rapidamente) ────────────────
+  const canceladaInicio = dateAt(todayDate, 8, 0);
+  await prisma.entradaLivre.upsert({
+    where: { id: "entrada-livre-canc-001" },
+    update: {},
+    create: {
+      id: "entrada-livre-canc-001",
+      encarregadoNome: "Cláudia Silva",
+      encarregadoTelefone: "940000004",
+      duracaoMinutos: 90,
+      custoHora: 12.0,
+      custoTotal: 18.0,
+      inicioEm: canceladaInicio,
+      fimPrevisto: addMin(canceladaInicio, 90),
+      fimReal: addMin(canceladaInicio, 5),
+      estado: "CANCELADA",
+      localId: "local-003",
+      observacoes: "Cancelado por emergência familiar",
+      criancas: [{ nome: "Leonor", idade: 6 }],
+    },
+  });
+
+  console.log("  ✓ 2 configurações, 4 entradas livres (2 ativas, 1 concluída, 1 cancelada)\n");
 }
 
 // ─── Run ──────────────────────────────────────────────────────

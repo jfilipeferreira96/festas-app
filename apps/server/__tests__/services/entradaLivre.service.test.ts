@@ -1,0 +1,513 @@
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import testPrisma from "../helpers/test-prisma";
+import { seedTestData, cleanTestData, TEST_IDS } from "../helpers/seed";
+
+vi.mock("@festas/db", () => ({
+  default: testPrisma,
+}));
+
+vi.mock("@/lib/logger", () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    http: vi.fn(),
+  },
+}));
+
+import { entradaLivreService } from "@/services/entradaLivre.service";
+
+describe("Entrada Livre Service", () => {
+  beforeAll(async () => {
+    await seedTestData();
+  });
+
+  afterAll(async () => {
+    await cleanTestData();
+    await testPrisma.$disconnect();
+  });
+
+  // ── list ──────────────────────────────────────────────────────
+  describe("list()", () => {
+    it("should return all entradas livres", async () => {
+      const entradas = await entradaLivreService.list();
+      expect(entradas.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("should filter by estado", async () => {
+      const ativas = await entradaLivreService.list({ estado: "ATIVA" });
+      expect(ativas.every((e: any) => e.estado === "ATIVA")).toBe(true);
+
+      const concluidas = await entradaLivreService.list({ estado: "CONCLUIDA" });
+      expect(concluidas.every((e: any) => e.estado === "CONCLUIDA")).toBe(true);
+    });
+
+    it("should filter by localId", async () => {
+      const local1 = await entradaLivreService.list({ localId: TEST_IDS.LOCAL_1 });
+      expect(local1.every((e: any) => e.localId === TEST_IDS.LOCAL_1)).toBe(true);
+    });
+
+    // ── Date filters ────────────────────────────────────────────
+    it("should filter by data (today)", async () => {
+      const hoje = new Date().toISOString().split("T")[0];
+      const entradas = await entradaLivreService.list({ data: hoje });
+      expect(entradas.length).toBeGreaterThanOrEqual(0);
+      // All results should have inicioEm on the given date
+      entradas.forEach((e: any) => {
+        const entradaDate = new Date(e.inicioEm).toISOString().split("T")[0];
+        expect(entradaDate).toBe(hoje);
+      });
+    });
+
+    it("should filter by data (tomorrow — expect empty)", async () => {
+      const amanha = new Date();
+      amanha.setDate(amanha.getDate() + 1);
+      const amanhaStr = amanha.toISOString().split("T")[0];
+      const entradas = await entradaLivreService.list({ data: amanhaStr });
+      // Should be empty since we don't seed entries for tomorrow
+      expect(entradas.length).toBe(0);
+    });
+
+    it("should filter by dataInicio and dataFim (date range)", async () => {
+      const hoje = new Date().toISOString().split("T")[0];
+      const entradas = await entradaLivreService.list({ dataInicio: hoje, dataFim: hoje });
+      // Range of same day should work
+      expect(Array.isArray(entradas)).toBe(true);
+    });
+
+    it("should combine estado + data filters", async () => {
+      const hoje = new Date().toISOString().split("T")[0];
+      const entradas = await entradaLivreService.list({ estado: "ATIVA", data: hoje });
+      expect(entradas.every((e: any) => e.estado === "ATIVA")).toBe(true);
+      entradas.forEach((e: any) => {
+        const entradaDate = new Date(e.inicioEm).toISOString().split("T")[0];
+        expect(entradaDate).toBe(hoje);
+      });
+    });
+
+    // ── Pesquisa ────────────────────────────────────────────────
+    it("should search by encarregadoNome", async () => {
+      const entradas = await entradaLivreService.list({ pesquisa: "Encarregado" });
+      expect(entradas.length).toBeGreaterThanOrEqual(1);
+      entradas.forEach((e: any) => {
+        const match =
+          e.encarregadoNome?.toLowerCase().includes("encarregado") ||
+          e.criancas?.some?.((c: any) => c.nome?.toLowerCase().includes("encarregado"));
+        expect(match).toBe(true);
+      });
+    });
+
+    it("should return empty for non-matching search", async () => {
+      const entradas = await entradaLivreService.list({ pesquisa: "ZZZ_NONEXISTENT_ZZZ" });
+      expect(entradas.length).toBe(0);
+    });
+
+    it("should search by crianca nome", async () => {
+      // The seed data has criança names
+      const entradas = await entradaLivreService.list({ pesquisa: "Criança" });
+      expect(entradas.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  // ── getById ───────────────────────────────────────────────────
+  describe("getById()", () => {
+    it("should return an entrada by ID with criancas", async () => {
+      const entrada = await entradaLivreService.getById("test-entrada-livre-001");
+      expect(entrada).toBeDefined();
+      expect(entrada.id).toBe("test-entrada-livre-001");
+      expect(entrada.estado).toBe("ATIVA");
+      expect(entrada.criancas).toHaveLength(2);
+    });
+
+    it("should throw NOT_FOUND for non-existent ID", async () => {
+      await expect(entradaLivreService.getById("non-existent-id")).rejects.toThrow("NOT_FOUND");
+    });
+  });
+
+  // ── create ────────────────────────────────────────────────────
+  describe("create()", () => {
+    it("should create a new entrada livre with children", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Maria Teste",
+        encarregadoTelefone: "912345678",
+        encarregadoEmail: "maria@email.pt",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 90,
+        criancas: [{ nome: "João", idade: 6 }, { nome: "Ana", idade: 5 }],
+        observacoes: "Teste de criação",
+      });
+
+      expect(entrada).toBeDefined();
+      expect(entrada.encarregadoNome).toBe("Maria Teste");
+      expect(entrada.criancas).toHaveLength(2);
+      expect(entrada.estado).toBe("ATIVA");
+      expect(entrada.inicioEm).toBeDefined();
+      expect(entrada.fimPrevisto).toBeDefined();
+      expect(entrada.custoTotal).toBeGreaterThan(0);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should create entrada without cacifo", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Pedro Sem Cacifo",
+        encarregadoTelefone: "923456789",
+        localId: TEST_IDS.LOCAL_2,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Luís" }],
+      });
+
+      expect(entrada.cacifo).toBeNull();
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should create entrada with cacifo (via cacifoId)", async () => {
+      // Ensure cacifo 1 is free
+      await testPrisma.cacifo.update({
+        where: { numero: 1 },
+        data: { estado: "LIVRE", reservaId: null },
+      });
+
+      const cacifo = await testPrisma.cacifo.findUnique({ where: { numero: 1 } });
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Ana Com Cacifo",
+        encarregadoTelefone: "934567890",
+        localId: TEST_IDS.LOCAL_1,
+        cacifoId: cacifo!.id,
+        duracaoMinutos: 120,
+        criancas: [{ nome: "Beatriz" }],
+      });
+
+      expect(entrada.cacifo).not.toBeNull();
+      expect(entrada.cacifo.numero).toBe(1);
+
+      // Cleanup
+      await testPrisma.cacifo.update({
+        where: { numero: 1 },
+        data: { estado: "LIVRE", reservaId: null },
+      });
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should throw CONFIG_NOT_FOUND if local has no config", async () => {
+      // Create local without config
+      const localSemConfig = await testPrisma.local.create({
+        data: { id: "local-no-config", nome: "Sem Config", capacidade: 10 },
+      });
+
+      await expect(
+        entradaLivreService.create({
+          encarregadoNome: "Teste",
+          encarregadoTelefone: "912345678",
+          localId: localSemConfig.id,
+          duracaoMinutos: 60,
+          criancas: [{ nome: "Criança" }],
+        })
+      ).rejects.toThrow("CONFIG_NOT_FOUND");
+
+      // Cleanup
+      await testPrisma.local.delete({ where: { id: localSemConfig.id } });
+    });
+  });
+
+  // ── concluir ─────────────────────────────────────────────────
+  describe("concluir()", () => {
+    it("should conclude entrada without overtime", async () => {
+      // Create entrada that started 60 min ago with 90 min duration
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 60 * 60 * 1000);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          id: "test-concluir-no-excess",
+          encarregadoNome: "Teste Sem Excesso",
+          encarregadoTelefone: "999999999",
+          localId: TEST_IDS.LOCAL_1,
+          inicioEm: inicio,
+          duracaoMinutos: 90,
+          custoHora: 10.0,
+          custoTotal: 12.0,
+          estado: "ATIVA",
+          fimPrevisto: new Date(inicio.getTime() + 90 * 60 * 1000),
+          criancas: { create: [{ nome: "Criança" }] },
+        },
+      });
+
+      const concluida = await entradaLivreService.concluir(entrada.id);
+
+      expect(concluida.estado).toBe("CONCLUIDA");
+      expect(concluida.fimReal).toBeDefined();
+      expect(concluida.excessoMinutos).toBe(0);
+      expect(concluida.custoExcesso).toBe(0);
+      expect(concluida.custoTotalFinal).toBe(12.0);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should conclude entrada with overtime and calculate excess cost", async () => {
+      // Create entrada that started 120 min ago with 90 min duration (30 min excess)
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          id: "test-concluir-com-excesso",
+          encarregadoNome: "Teste Com Excesso",
+          encarregadoTelefone: "999999999",
+          localId: TEST_IDS.LOCAL_1,
+          inicioEm: inicio,
+          duracaoMinutos: 90,
+          custoHora: 10.0,
+          custoTotal: 12.0,
+          estado: "ATIVA",
+          fimPrevisto: new Date(inicio.getTime() + 90 * 60 * 1000),
+          criancas: { create: [{ nome: "Criança" }] },
+        },
+      });
+
+      const concluida = await entradaLivreService.concluir(entrada.id);
+
+      expect(concluida.estado).toBe("CONCLUIDA");
+      expect(concluida.excessoMinutos).toBe(30);
+      expect(concluida.custoExcesso).toBe(6.0); // 30min * €12/h = €6 (using precoHoraExcesso from config)
+      expect(concluida.custoTotalFinal).toBe(18.0); // 12 + 6
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should throw NOT_FOUND for non-existent entrada", async () => {
+      await expect(entradaLivreService.concluir("non-existent-id")).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should free cacifo when concluding", async () => {
+      // Ensure cacifo 2 is free
+      await testPrisma.cacifo.update({
+        where: { numero: 2 },
+        data: { estado: "LIVRE", reservaId: null },
+      });
+
+      const cacifo = await testPrisma.cacifo.findUnique({ where: { numero: 2 } });
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Libertar Cacifo",
+        encarregadoTelefone: "999999999",
+        localId: TEST_IDS.LOCAL_1,
+        cacifoId: cacifo!.id,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+      });
+
+      expect(entrada.cacifo.estado).toBe("OCUPADO");
+
+      await entradaLivreService.concluir(entrada.id);
+
+      const cacifoAfter = await testPrisma.cacifo.findUnique({ where: { numero: 2 } });
+      expect(cacifoAfter?.estado).toBe("LIVRE");
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+  });
+
+  // ── cancelar ─────────────────────────────────────────────────
+  describe("cancelar()", () => {
+    it("should cancel an active entrada", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Para Cancelar",
+        encarregadoTelefone: "999999999",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+      });
+
+      const cancelada = await entradaLivreService.cancelar(entrada.id);
+
+      expect(cancelada.estado).toBe("CANCELADA");
+      expect(cancelada.fimReal).toBeDefined();
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should throw NOT_FOUND for non-existent entrada", async () => {
+      await expect(entradaLivreService.cancelar("non-existent-id")).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should free cacifo when canceling", async () => {
+      // Ensure cacifo 3 is free
+      await testPrisma.cacifo.update({
+        where: { numero: 3 },
+        data: { estado: "LIVRE", reservaId: null },
+      });
+
+      const cacifo = await testPrisma.cacifo.findUnique({ where: { numero: 3 } });
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Cancelar Com Cacifo",
+        encarregadoTelefone: "999999999",
+        localId: TEST_IDS.LOCAL_1,
+        cacifoId: cacifo!.id,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+      });
+
+      await entradaLivreService.cancelar(entrada.id);
+
+      const cacifoAfter = await testPrisma.cacifo.findUnique({ where: { numero: 3 } });
+      expect(cacifoAfter?.estado).toBe("LIVRE");
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+  });
+
+  // ── eliminar ─────────────────────────────────────────────────
+  describe("eliminar()", () => {
+    it("should delete a non-active entrada", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Para Eliminar",
+        encarregadoTelefone: "999999999",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+      });
+
+      await entradaLivreService.cancelar(entrada.id);
+
+      await entradaLivreService.eliminar(entrada.id);
+
+      const deleted = await testPrisma.entradaLivre.findUnique({ where: { id: entrada.id } });
+      expect(deleted).toBeNull();
+    });
+
+    it("should throw NOT_FOUND for non-existent entrada", async () => {
+      await expect(entradaLivreService.eliminar("non-existent-id")).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should throw CANNOT_DELETE_ACTIVE if entrada is ATIVA", async () => {
+      // Create an active entrada first
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Ativa Teste",
+        encarregadoTelefone: "999999999",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+      });
+
+      await expect(entradaLivreService.eliminar(entrada.id)).rejects.toThrow("CANNOT_DELETE_ACTIVE");
+
+      // Cleanup
+      await entradaLivreService.cancelar(entrada.id);
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+  });
+
+  // ── atualizarPagamento ───────────────────────────────────────
+  describe("atualizarPagamento()", () => {
+    it("should mark pago as true", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Pagamento",
+        encarregadoTelefone: "999999999",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+        pago: false,
+      });
+
+      const atualizada = await entradaLivreService.atualizarPagamento(entrada.id, {
+        pago: true,
+        metodoPagamento: "MBWAY",
+      });
+
+      expect(atualizada.pago).toBe(true);
+      expect(atualizada.metodoPagamento).toBe("MBWAY");
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should mark pagoExcesso as true", async () => {
+      // Create entrada with excess
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          id: "test-pagamento-excesso",
+          encarregadoNome: "Teste",
+          encarregadoTelefone: "999999999",
+          localId: TEST_IDS.LOCAL_1,
+          inicioEm: inicio,
+          duracaoMinutos: 90,
+          custoHora: 10.0,
+          custoTotal: 12.0,
+          custoExcesso: 5.0,
+          excessoMinutos: 30,
+          custoTotalFinal: 17.0,
+          estado: "CONCLUIDA",
+          fimPrevisto: new Date(inicio.getTime() + 90 * 60 * 1000),
+          criancas: { create: [{ nome: "Criança" }] },
+        },
+      });
+
+      const atualizada = await entradaLivreService.atualizarPagamento(entrada.id, {
+        pagoExcesso: true,
+      });
+
+      expect(atualizada.pagoExcesso).toBe(true);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+  });
+
+  // ── configuracoes ────────────────────────────────────────────
+  describe("listarConfiguracoes()", () => {
+    it("should return configuracoes for all locais", async () => {
+      const configs = await entradaLivreService.listarConfiguracoes();
+      expect(configs.length).toBeGreaterThanOrEqual(1);
+      expect(configs.some((c: any) => c.localId === TEST_IDS.LOCAL_1)).toBe(true);
+    });
+  });
+
+  describe("upsertConfiguracao()", () => {
+    it("should create configuracao for local", async () => {
+      const config = await entradaLivreService.upsertConfiguracao({
+        localId: TEST_IDS.LOCAL_2,
+        precoHora: 15.0,
+        precoHoraExcesso: 20.0,
+      });
+
+      expect(config.localId).toBe(TEST_IDS.LOCAL_2);
+      expect(config.precoHora).toBe(15.0);
+      expect(config.precoHoraExcesso).toBe(20.0);
+    });
+
+    it("should update existing configuracao", async () => {
+      const updated = await entradaLivreService.upsertConfiguracao({
+        localId: TEST_IDS.LOCAL_1,
+        precoHora: 25.0,
+        precoHoraExcesso: 30.0,
+      });
+
+      expect(updated.precoHora).toBe(25.0);
+      expect(updated.precoHoraExcesso).toBe(30.0);
+    });
+  });
+
+  // ── contadores ───────────────────────────────────────────────
+  describe("getContadores()", () => {
+    it("should return counters", async () => {
+      const contadores = await entradaLivreService.getContadores();
+      expect(contadores).toHaveProperty("ativas");
+      expect(contadores).toHaveProperty("concluidasHoje");
+      expect(contadores).toHaveProperty("totalHoje");
+      expect(contadores.ativas).toBeGreaterThanOrEqual(0);
+    });
+  });
+});

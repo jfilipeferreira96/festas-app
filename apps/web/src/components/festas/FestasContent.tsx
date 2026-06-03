@@ -82,7 +82,7 @@ export default function FestasContent() {
     <div>
       <PageHeader
         title="Festas"
-        subtitle={`Gestão de festas — ${todayStr}`}
+        subtitle={`Acompanhe em tempo real — ${todayStr}`}
       />
 
       {/* Tabs */}

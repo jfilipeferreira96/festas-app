@@ -12,7 +12,6 @@ import type { Modulo } from "@/lib/api/permissoes";
 
 import {
   LayoutDashboard,
-  CalendarCheck,
   Calendar,
   PartyPopper,
   Package,
@@ -29,6 +28,7 @@ import {
   ListChecks,
   BookUser,
   LockKeyhole,
+  DoorOpen,
 } from "lucide-react";
 
 type NavItem = {
@@ -67,6 +67,16 @@ const mainNavItems: NavItem[] = [
     subItems: [
       { name: "Todas", path: "/festas", icon: <PartyPopper className="w-4 h-4" /> },
       { name: "A decorrer", path: "/festas/a-decorrer", icon: <Sparkles className="w-4 h-4" /> },
+    ],
+  },
+  {
+    name: "Entradas Livres",
+    icon: <DoorOpen className="w-5 h-5" />,
+    path: "/entradas-livres",
+    modulo: "reservas",
+    subItems: [
+      { name: "Todas", path: "/entradas-livres", icon: <DoorOpen className="w-4 h-4" /> },
+      { name: "A decorrer", path: "/entradas-livres/a-decorrer", icon: <Sparkles className="w-4 h-4" /> },
     ],
   },
   {
@@ -167,7 +177,6 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
   );
 
   const isConfigOpen = openSubmenu === "config";
-  const isFestasOpen = openSubmenu === "festas";
 
   // On mobile, when the sidebar is open, treat it as fully expanded
   const showExpanded = isExpanded || isHovered || isMobileOpen;
@@ -208,23 +217,27 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
               .filter((item) => !item.modulo || permissoesLoading || canRead(item.modulo))
               .map((item) => (
               <li key={item.name}>
-                {item.subItems ? (
+                {item.subItems ? (() => {
+                  const subKey = item.path?.replace(/^\//, "") || item.name.toLowerCase();
+                  const isOpen = openSubmenu === subKey;
+                  const isActive_ = pathname.startsWith(item.path || "");
+                  return (
                   <>
-                    <button onClick={() => toggleSubmenu("festas")} className={`menu-item group w-full ${isFestasOpen || pathname.startsWith("/festas") ? "menu-item-soft-active" : "menu-item-inactive"}`}>
+                    <button onClick={() => toggleSubmenu(subKey)} className={`menu-item group w-full ${isOpen || isActive_ ? "menu-item-soft-active" : "menu-item-inactive"}`}>
                       <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-3">
-                          <span className={`${isFestasOpen || pathname.startsWith("/festas") ? "menu-item-icon-soft-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>
+                          <span className={`${isOpen || isActive_ ? "menu-item-icon-soft-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>
                           {showExpanded && <span className="menu-item-text">{item.name}</span>}
                         </div>
                         <ChevronDown
                           className={`menu-item-arrow w-4 h-4 transition-all duration-200 ${
-                            isFestasOpen || pathname.startsWith("/festas") ? "menu-item-arrow-soft-active" : "menu-item-arrow-inactive"
+                            isOpen || isActive_ ? "menu-item-arrow-soft-active" : "menu-item-arrow-inactive"
                           } ${!showExpanded ? "opacity-0 w-0 h-0" : ""}`}
                         />
                       </div>
                     </button>
                     {showExpanded && (
-                      <div className={`grid transition-all duration-200 ease-in-out ${isFestasOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                      <div className={`grid transition-all duration-200 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
                         <div className="overflow-hidden">
                           <ul className="mt-1 space-y-0.5 pl-3">
                             {item.subItems.map((subItem) => (
@@ -240,7 +253,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
                       </div>
                     )}
                   </>
-                ) : (
+                  );
+                })() : (
                   <Link href={(item.path || "/") as Route} className={`menu-item group ${isActive(item.path || "") ? "menu-item-active" : "menu-item-inactive"}`}>
                     <span className={`${isActive(item.path || "") ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>
                     {showExpanded && <span className="menu-item-text">{item.name}</span>}

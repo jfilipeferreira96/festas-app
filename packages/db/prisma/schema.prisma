@@ -134,6 +134,12 @@ enum EstadoCampanha {
   CANCELADA
 }
 
+enum EstadoEntradaLivre {
+  ATIVA
+  CONCLUIDA
+  CANCELADA
+}
+
 // ============================================
 // CLIENTES & ANIVERSARIANTES
 // ============================================
@@ -187,6 +193,8 @@ model Local {
   reservas      Reserva[]
   monitores     MonitorLocal[]
   extras        ExtraLocal[]
+  entradasLivres EntradaLivre[]
+  configuracaoEntradaLivre ConfiguracaoEntradaLivre?
 
   @@map("local")
 }
@@ -210,6 +218,7 @@ model Extra {
 
   reservas      ReservaExtra[]
   locais        ExtraLocal[]
+  entradasLivres EntradaLivreExtra[]
 
   @@map("extra")
 }
@@ -452,6 +461,7 @@ model Cacifo {
   reserva         Reserva?          @relation(fields: [reservaId], references: [id])
 
   participante    Participante?
+  entradaLivre    EntradaLivre?
 
   @@index([estado])
   @@map("cacifo")
@@ -589,4 +599,88 @@ model FuncaoPermissao {
 
   @@unique([funcao, modulo])
   @@map("funcao_permissao")
+}
+
+// ============================================
+// ENTRADAS LIVRES (Walk-in / Open Play)
+// ============================================
+
+model EntradaLivre {
+  id              String              @id @default(cuid())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  // ── Crianças (flexível — pode ser 1 ou mais) ──
+  criancas        Json                // Array de { nome: string, idade?: number }
+
+  // ── Dados do Encarregado ────────────
+  encarregadoNome String
+  encarregadoTelefone String
+  encarregadoEmail String?
+
+  // ── Duração e Custo ─────────────────
+  duracaoMinutos  Int
+  custoHora       Decimal             @db.Decimal(10, 2)
+  custoTotal      Decimal             @db.Decimal(10, 2)
+  custoExcesso    Decimal?            @db.Decimal(10, 2)
+  custoTotalFinal Decimal?            @db.Decimal(10, 2)
+
+  // ── Timer / Runtime ─────────────────
+  inicioEm        DateTime
+  fimPrevisto     DateTime
+  fimReal         DateTime?
+  excessoMinutos  Int?                @default(0)
+
+  // ── Local ───────────────────────────
+  localId         String
+  local           Local               @relation(fields: [localId], references: [id])
+
+  // ── Estado ──────────────────────────
+  estado          EstadoEntradaLivre  @default(ATIVA)
+
+  // ── Pagamento ───────────────────────
+  metodoPagamento MetodoPagamento?
+  pago            Boolean             @default(false)
+  pagoExcesso     Boolean             @default(false)
+
+  // ── Cacifo (opcional) ───────────────
+  cacifoId        String?             @unique
+  cacifo          Cacifo?             @relation(fields: [cacifoId], references: [id])
+
+  // ── Observações ─────────────────────
+  observacoes     String?             @db.Text
+  observacoesLesoes String?           @db.Text
+
+  // ── Extras (opcional) ───────────────
+  extras          EntradaLivreExtra[]
+
+  @@index([estado])
+  @@index([inicioEm])
+  @@map("entrada_livre")
+}
+
+model EntradaLivreExtra {
+  id                String       @id @default(cuid())
+  entradaLivreId    String
+  extraId           String
+  quantidade        Int          @default(1)
+  textoPersonalizado String?
+  entradaLivre      EntradaLivre @relation(fields: [entradaLivreId], references: [id], onDelete: Cascade)
+  extra             Extra        @relation(fields: [extraId], references: [id])
+
+  @@unique([entradaLivreId, extraId])
+  @@map("entrada_livre_extra")
+}
+
+model ConfiguracaoEntradaLivre {
+  id                String   @id @default(cuid())
+  precoHora         Decimal  @db.Decimal(10, 2)
+  precoHoraExcesso  Decimal  @db.Decimal(10, 2)
+  localId           String   @unique
+  local             Local    @relation(fields: [localId], references: [id])
+  activo            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("configuracao_entrada_livre")
 }

@@ -26,6 +26,8 @@ const statusBadgeVariants = cva(
         // Alert states
         A_COMECAR: "bg-accent-orange-50 text-accent-orange-600",
         INSUFICIENTE: "bg-accent-red-50 text-accent-red-600",
+        // Entrada Livre states
+        ATIVA: "bg-accent-orange-50 text-accent-orange-600",
       },
     },
     defaultVariants: {
@@ -47,7 +49,8 @@ export type StatusType =
   | "ACTIVO"
   | "INACTIVO"
   | "A_COMECAR"
-  | "INSUFICIENTE";
+  | "INSUFICIENTE"
+  | "ATIVA";
 
 interface StatusBadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
@@ -70,6 +73,7 @@ const statusLabels: Record<StatusType, string> = {
   INACTIVO: "Inactivo",
   A_COMECAR: "A começar",
   INSUFICIENTE: "Insuficiente",
+  ATIVA: "Ativa",
 };
 
 export function StatusBadge({ status, className, children, ...props }: StatusBadgeProps) {

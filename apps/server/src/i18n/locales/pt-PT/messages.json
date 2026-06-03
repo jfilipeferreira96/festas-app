@@ -169,6 +169,16 @@
     "updatedSuccessfully": "Permissões atualizadas com sucesso",
     "restoredDefaults": "Permissões restauradas para os valores padrão"
   },
+  "entradaLivre": {
+    "notFound": "Entrada livre não encontrada",
+    "notActive": "Entrada livre não está ativa",
+    "configNotFound": "Configuração de entrada livre não encontrada para este local",
+    "created": "Entrada livre criada com sucesso",
+    "concluded": "Entrada livre concluída com sucesso",
+    "cancelled": "Entrada livre cancelada com sucesso",
+    "updated": "Entrada livre atualizada com sucesso",
+    "deleted": "Entrada livre eliminada com sucesso"
+  },
   "general": {
     "success": "Operação realizada com sucesso",
     "error": "Ocorreu um erro inesperado",

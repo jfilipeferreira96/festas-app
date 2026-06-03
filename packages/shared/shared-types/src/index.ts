@@ -17,3 +17,4 @@ export type { TipoCampanha, EstadoCampanha, Campanha, EnvioCampanha, Segmento, N
 export type { EtapaFesta, ReservaEtapa as ReservaEtapaWithDetails } from "./types/etapaFesta";
 export type { Permissao, PermissaoInput } from "./types/permissao";
 export type { AuditLog } from "./types/audit";
+export type { CriancaInput, EntradaLivre, EntradaLivreExtraItem, CriarEntradaLivreDTO, ConfiguracaoEntradaLivre } from "./types/entradaLivre";

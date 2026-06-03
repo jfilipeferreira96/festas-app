@@ -14,6 +14,7 @@ import uploadRoutes from "./upload.routes";
 import permissoesRoutes from "./permissoes.routes";
 import configuracaoCacifoRoutes from "./configuracaoCacifo.routes";
 import participantesRoutes from "./participantes.routes";
+import entradaLivreRoutes from "./entradaLivre.routes";
 
 const router = Router();
 
@@ -61,5 +62,8 @@ router.use("/configuracoes/cacifos", configuracaoCacifoRoutes);
 
 // Participantes
 router.use("/participantes", participantesRoutes);
+
+// Entradas Livres (Open Play)
+router.use("/entradas-livres", entradaLivreRoutes);
 
 export default router;
