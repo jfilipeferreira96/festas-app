@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   Clock,
   Users,
-  Square,
   XCircle,
   AlertTriangle,
   Plus,
@@ -14,10 +13,13 @@ import {
   Package,
   Phone,
   Pencil,
+  MoreVertical,
 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import { Dropdown } from "@/components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import {
   useEntradasLivresAtivas,
   useConcluirEntradaLivre,
@@ -278,6 +280,8 @@ function EntradaAtivaCard({
   pagamentoPending: boolean;
 }) {
   const timer = useTimer(entrada.inicioEm, entrada.duracaoMinutos);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className={`rounded-xl border shadow-theme-xs bg-white overflow-hidden transition-all ${timer.isOvertime ? "border-accent-red-200 ring-1 ring-accent-red-100" : "border-border"}`}>
@@ -290,13 +294,14 @@ function EntradaAtivaCard({
       </div>
 
       <div className="p-4">
-        <div className="flex items-start justify-between gap-4 mb-1">
+        <div className="flex items-start justify-between gap-3 mb-1">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-text-muted shrink-0" />
               <span className="text-sm font-semibold text-text-primary truncate">
                 {entrada.criancas.map((c) => c.nome).join(", ")}
               </span>
+              <StatusBadge status="ATIVA" />
             </div>
             <div className="flex items-center gap-2 text-xs text-text-muted">
               <span>{entrada.local?.nome ?? "—"}</span>
@@ -311,7 +316,84 @@ function EntradaAtivaCard({
               <span>{entrada.encarregadoNome}</span>
             </div>
           </div>
-          <StatusBadge status="ATIVA" />
+          {/* 3-dots dropdown — acções secundárias */}
+          <div className="relative shrink-0">
+            <button
+              ref={dropdownTriggerRef}
+              type="button"
+              onClick={() => setIsDropdownOpen((v) => !v)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-text-muted hover:bg-gray-100 hover:text-text-primary transition-colors"
+              aria-label="Mais acções"
+            >
+              <MoreVertical size={16} />
+            </button>
+            <Dropdown
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+              usePortal
+              triggerRef={dropdownTriggerRef}
+            >
+              <ul className="flex flex-col">
+                <li>
+                  <DropdownItem
+                    onItemClick={() => { onEdit(entrada); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <Pencil size={14} className="text-text-muted" />
+                    Editar
+                  </DropdownItem>
+                </li>
+                {!entrada.pago && (
+                  <li>
+                    <DropdownItem
+                      onItemClick={() => {
+                        if (pagamentoPending) return;
+                        onMarcarPago(entrada.id);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors w-full text-left ${
+                        pagamentoPending
+                          ? "text-gray-400 cursor-not-allowed"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      <CreditCard size={14} className="text-text-muted" />
+                      Marcar como paga
+                    </DropdownItem>
+                  </li>
+                )}
+                <li>
+                  <DropdownItem
+                    onItemClick={() => { onView(entrada.id); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <Eye size={14} className="text-text-muted" />
+                    Ver detalhes
+                  </DropdownItem>
+                </li>
+                <li className="my-1 border-t border-gray-100" />
+                <li>
+                  <DropdownItem
+                    onItemClick={() => { onConcluir(entrada.id); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-accent-green-700 hover:bg-accent-green-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <CheckCircle size={14} />
+                    Concluir
+                  </DropdownItem>
+                </li>
+                <li className="my-1 border-t border-gray-100" />
+                <li>
+                  <DropdownItem
+                    onItemClick={() => { onCancelar(entrada.id); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-accent-red-600 hover:bg-red-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <XCircle size={14} />
+                    Cancelar
+                  </DropdownItem>
+                </li>
+              </ul>
+            </Dropdown>
+          </div>
         </div>
 
         {/* Timer Display */}
@@ -359,43 +441,20 @@ function EntradaAtivaCard({
           <span className="flex items-center gap-1"><Phone size={11} /> {entrada.encarregadoTelefone}</span>
         </div>
 
-        {/* Actions */}
+        {/* Actions — quick buttons */}
         <div className="flex items-center gap-2 pt-2 border-t border-border">
           <button
             onClick={() => onView(entrada.id)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-primary-500 hover:bg-gray-50 rounded-lg transition-colors"
           >
-            <Eye size={13} /> Ver
+            <Eye size={13} /> Ver detalhes
           </button>
           <button
-            onClick={() => onEdit(entrada)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-primary-500 hover:bg-gray-50 rounded-lg transition-colors"
+            onClick={() => onConcluir(entrada.id)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors ml-auto"
           >
-            <Pencil size={13} /> Editar
+            <CheckCircle size={13} /> Concluir
           </button>
-          {!entrada.pago && (
-            <button
-              onClick={() => onMarcarPago(entrada.id)}
-              disabled={pagamentoPending}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-green-600 hover:bg-green-50 rounded-lg transition-colors"
-            >
-              <CreditCard size={13} /> Pagar
-            </button>
-          )}
-          <div className="flex gap-2 ml-auto">
-            <button
-              onClick={() => onConcluir(entrada.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-green-600 hover:bg-green-50 rounded-lg transition-colors"
-            >
-              <Square size={13} /> Concluir
-            </button>
-            <button
-              onClick={() => onCancelar(entrada.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            >
-              <XCircle size={13} /> Cancelar
-            </button>
-          </div>
         </div>
       </div>
     </div>

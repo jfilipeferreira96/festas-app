@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
   PartyPopper,
   Clock,
@@ -28,10 +28,13 @@ import {
   UserX,
   Check,
   Plus,
+  MoreVertical,
 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
+import { Dropdown } from "@/components/ui/dropdown/Dropdown";
+import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import { useReservasAtivas, useFinalizarReserva, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
 import { useCacifos } from "@/hooks/use-cacifos";
@@ -199,6 +202,8 @@ function FestaCard({
   const [isOverdue, setIsOverdue] = useState(false);
   const [showCacifos, setShowCacifos] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
   const toggleEtapa = useToggleEtapa();
   const removerEtapa = useRemoverEtapa();
@@ -306,15 +311,68 @@ function FestaCard({
 
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {getAniversarianteNome(festa)}
-          </h3>
-          <StatusBadge status={isOverdue ? "INSUFICIENTE" : ("EM_CURSO" as StatusType)}>
-            {isOverdue ? "Ultrapassou" : "Em curso"}
-          </StatusBadge>
+        <div className="flex items-start justify-between gap-3 mb-1">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-text-primary truncate">
+              {getAniversarianteNome(festa)}
+            </h3>
+            <StatusBadge status={isOverdue ? "INSUFICIENTE" : ("EM_CURSO" as StatusType)}>
+              {isOverdue ? "Ultrapassou" : "Em curso"}
+            </StatusBadge>
+          </div>
+          {/* 3-dots dropdown — acções secundárias */}
+          <div className="relative shrink-0">
+            <button
+              ref={dropdownTriggerRef}
+              type="button"
+              onClick={() => setIsDropdownOpen((v) => !v)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-text-muted hover:bg-gray-100 hover:text-text-primary transition-colors"
+              aria-label="Mais acções"
+            >
+              <MoreVertical size={16} />
+            </button>
+            <Dropdown
+              isOpen={isDropdownOpen}
+              onClose={() => setIsDropdownOpen(false)}
+              usePortal
+              triggerRef={dropdownTriggerRef}
+            >
+              <ul className="flex flex-col">
+                {onEdit && (
+                  <li>
+                    <DropdownItem
+                      onItemClick={() => { onEdit(); setIsDropdownOpen(false); }}
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
+                    >
+                      <Pencil size={14} className="text-text-muted" />
+                      Editar
+                    </DropdownItem>
+                  </li>
+                )}
+                <li>
+                  <DropdownItem
+                    onItemClick={() => { onView(); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <Eye size={14} className="text-text-muted" />
+                    Ver tudo
+                  </DropdownItem>
+                </li>
+                <li className="my-1 border-t border-gray-100" />
+                <li>
+                  <DropdownItem
+                    onItemClick={() => { onFinalizar(); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-accent-green-700 hover:bg-accent-green-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <CheckCircle size={14} />
+                    Finalizar
+                  </DropdownItem>
+                </li>
+              </ul>
+            </Dropdown>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-text-muted">
+        <div className="flex items-center gap-2 text-xs text-text-muted mt-1">
           <span>{festa.local?.nome ?? "—"}</span>
           <span>·</span>
           <span>{festa.horario}</span>
@@ -544,7 +602,7 @@ function FestaCard({
         )}
       </div>
 
-      {/* Actions */}
+      {/* Actions — quick buttons (Cacifos / Crianças / Ver tudo / Finalizar) */}
       <div className="p-4 border-t border-border flex flex-wrap items-center gap-2">
         <button
           onClick={() => setShowCacifos(!showCacifos)}
@@ -568,16 +626,6 @@ function FestaCard({
           <span>Crianças</span>
           {showCheckIn ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>
-        {onEdit && (
-          <button
-            onClick={onEdit}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
-            title="Editar"
-          >
-            <Pencil size={13} />
-            <span>Editar</span>
-          </button>
-        )}
         <button
           onClick={onView}
           className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-text-secondary hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
@@ -588,9 +636,10 @@ function FestaCard({
         </button>
         <button
           onClick={onFinalizar}
-          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-accent-red hover:bg-red-50 rounded-lg transition-colors ml-auto"
+          className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors ml-auto"
+          title="Finalizar"
         >
-          <SquareCheck size={13} />
+          <CheckCircle size={13} />
           <span>Finalizar</span>
         </button>
       </div>
