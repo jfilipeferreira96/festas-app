@@ -30,6 +30,7 @@ const entradaLivreSchema = z.object({
   encarregadoEmail: z.string().email("Email inválido").optional().or(z.literal("")),
   localId: z.string().min(1, "Seleccione um local"),
   duracaoMinutos: z.number().min(30, "Duração mínima é 30 minutos"),
+  custoTotal: z.number().min(0, "O custo não pode ser negativo").optional(),
   metodoPagamento: z.string().optional(),
   pago: z.boolean().optional(),
   cacifoId: z.string().optional(),
@@ -97,7 +98,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const { data: configuracoes } = useEntradasLivresConfiguracoes();
   const { data: locais } = useLocais();
-  const { data: cacifosData } = useCacifos();
+  // ── Cacifos: usa filtro server-side para só trazer cacifos LIVRE.
+  // Em modo edição, o cacifo actualmente associado vem do objeto `entrada`
+  // (porque está OCUPADO e não apareceria na query de LIVRE).
+  const { data: cacifosLivresData } = useCacifos({ estado: "LIVRE" });
   const { data: extras } = useExtras();
 
   // ── Crianças (managed outside RHF because dynamic array) ──
@@ -118,6 +122,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       encarregadoEmail: entrada?.encarregadoEmail ?? "",
       localId: entrada?.localId ?? "",
       duracaoMinutos: entrada?.duracaoMinutos ?? 60,
+      custoTotal: entrada?.custoTotal,
       metodoPagamento: entrada?.metodoPagamento ?? "",
       pago: entrada?.pago ?? false,
       cacifoId: entrada?.cacifoId ?? "",
@@ -145,10 +150,24 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const cacifoIdWatched = watch("cacifoId");
 
   const config = configuracoes?.find((c) => c.localId === localId);
-  const custoEstimado = useMemo(() => {
-    if (!config) return null;
+
+  // Custo calculado a partir da configuração do local (precoHora * duração).
+  // Usado como valor por defeito no input editável.
+  const custoCalculado = useMemo(() => {
+    if (!config) return 0;
     return (config.precoHora / 60) * (duracaoMinutos || 0);
   }, [config, duracaoMinutos]);
+
+  // Sync do custoTotal quando o local/duração mudem (auto-preenchimento).
+  // O utilizador pode sempre reescrever o valor manualmente no input.
+  React.useEffect(() => {
+    if (custoCalculado > 0) {
+      setValue("custoTotal", Number(custoCalculado.toFixed(2)));
+    }
+  }, [custoCalculado, setValue]);
+
+  const custoTotalWatched = watch("custoTotal");
+  const custoFinal = custoTotalWatched ?? custoCalculado;
 
   const extraItems = useMemo<ExtraItem[]>(
     () =>
@@ -182,12 +201,25 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     [locais]
   );
 
+  // Lista de cacifos: só LIVRES (da API) + o cacifo actualmente associado
+  // (em edição) para que continue visível no dropdown.
   const cacifosLivres = useMemo(() => {
-    const all = Array.isArray(cacifosData) ? cacifosData : ((cacifosData as unknown as { items?: unknown[] })?.items ?? []);
-    return (all as Array<{ id: string; numero: number; nome?: string; estado: string }>).filter(
-      (c) => c.estado === "LIVRE" || c.id === entrada?.cacifoId
-    );
-  }, [cacifosData, entrada?.cacifoId]);
+    const livres = Array.isArray(cacifosLivresData)
+      ? cacifosLivresData
+      : ((cacifosLivresData as unknown as { items?: Array<{ id: string; numero: number; nome?: string; estado: string }> })?.items ?? []);
+    const lista: Array<{ id: string; numero: number; nome?: string; estado: string }> = [
+      ...(livres as Array<{ id: string; numero: number; nome?: string; estado: string }>),
+    ];
+    if (entrada?.cacifo && !lista.some((c) => c.id === entrada.cacifo!.id)) {
+      lista.push({
+        id: entrada.cacifo.id,
+        numero: entrada.cacifo.numero,
+        nome: entrada.cacifo.nome ?? undefined,
+        estado: "OCUPADO",
+      });
+    }
+    return lista;
+  }, [cacifosLivresData, entrada?.cacifo]);
 
   const cacifoOptions = useMemo(
     () => [
@@ -233,6 +265,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         encarregadoEmail: data.encarregadoEmail || undefined,
         localId: data.localId,
         duracaoMinutos: data.duracaoMinutos,
+        custoTotal: data.custoTotal,
         metodoPagamento: data.metodoPagamento && data.metodoPagamento !== "NONE" ? data.metodoPagamento : undefined,
         pago: data.pago,
         cacifoId: data.cacifoId || undefined,
@@ -402,12 +435,35 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                 Sem configuração de preço para este local.
               </p>
             )}
-            {custoEstimado != null && config && (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
-                <span className="text-sm font-medium text-text-secondary">Custo estimado</span>
-                <span className="text-lg font-bold text-primary-500">
-                  {formatEuro(custoEstimado)}
-                </span>
+            {config && (
+              <div className="space-y-1">
+                <label className="block text-xs font-medium text-text-secondary">
+                  Custo total (€) — editável
+                </label>
+                <div className="flex items-center gap-2">
+                  <InputField
+                    type="number"
+                    step={0.01}
+                    min={0}
+                    placeholder="0.00"
+                    value={
+                      custoTotalWatched != null
+                        ? String(custoTotalWatched)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setValue(
+                        "custoTotal",
+                        v === "" ? undefined : Number(v),
+                        { shouldDirty: true }
+                      );
+                    }}
+                  />
+                  <span className="text-xs text-text-muted whitespace-nowrap">
+                    ≈ {formatEuro(custoCalculado)}
+                  </span>
+                </div>
               </div>
             )}
           </div>
@@ -496,10 +552,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
           </div>
 
           {/* ── Pagamento ── */}
-          <div className="space-y-3 p-4 rounded-lg bg-surface border border-border">
-            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
-              <CreditCard size={14} /> Pagamento
-            </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <CreditCard size={14} className="text-brand-500" /> Pagamento
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">
@@ -520,11 +576,11 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                 />
               </div>
             </div>
-            {custoEstimado != null && (
-              <div className="flex items-center justify-between pt-2 border-t border-border">
-                <span className="text-xs text-text-muted">Total estimado</span>
+            {custoFinal > 0 && (
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs text-text-muted">Total a pagar</span>
                 <span className="text-sm font-bold text-primary-500">
-                  {formatEuro(custoEstimado + totalExtras / 100)}
+                  {formatEuro(custoFinal + totalExtras / 100)}
                 </span>
               </div>
             )}

@@ -6,16 +6,20 @@ import { useUser } from "@/contexts/AuthContext";
 import {
   PartyPopper,
   Play,
-  Timer,
-  Package,
   Calendar,
+  DoorOpen,
+  CheckCircle2,
+  Package,
+  Lock,
+  Clock,
 } from "lucide-react";
-import { KPICard, StatusBadge } from "@/components/ui";
+import { StatusBadge } from "@/components/ui";
 import {
   useDashboardKPIs,
   useFestasEmCurso,
   useProximasFestas,
 } from "@/hooks/use-dashboard";
+import { useEntradasLivresContadores } from "@/hooks/use-entrada-livre";
 import type { ReservaEmCurso, ProximaFesta } from "@/lib/api/dashboard";
 
 interface DashboardContentProps {
@@ -39,70 +43,220 @@ function getGreeting(): string {
 //   }).format(new Date());
 // }
 
-// Sub-components
-const KPIGrid = React.memo(function KPIGrid() {
-  const { data: kpis, isLoading } = useDashboardKPIs();
+// ── MiniStat (sub-card dentro de um cartão contextual) ──────────
+interface MiniStatProps {
+  label: string;
+  value: number | string;
+  hint?: string;
+  icon: React.ReactNode;
+  color: string;       // cor do ícone e do valor (hex)
+  bgColor?: string;    // cor de fundo do sub-card (opcional — se omitido, fica transparente)
+}
 
-  if (isLoading) {
+const MiniStat = React.memo(function MiniStat({
+  label,
+  value,
+  hint,
+  icon,
+  color,
+  bgColor,
+}: MiniStatProps) {
+  return (
+    <div
+      className="rounded-[10px] p-3 flex flex-col gap-1.5 min-w-0"
+      style={bgColor ? { backgroundColor: bgColor } : undefined}
+    >
+      <div className="flex items-center gap-1.5">
+        <span style={{ color }}>{icon}</span>
+        <p className="text-[11px] font-medium text-text-secondary truncate">
+          {label}
+        </p>
+      </div>
+      <p
+        className="font-poppins text-[24px] font-bold leading-none"
+        style={{ color }}
+      >
+        {value}
+      </p>
+      {hint && <p className="text-[10px] text-text-muted truncate">{hint}</p>}
+    </div>
+  );
+});
+
+// ── ContextualCard (cartão wrapper com header + grid de mini-stats) ──
+interface ContextualCardProps {
+  title: string;
+  icon: React.ReactNode;
+  iconColor: string;
+  children: React.ReactNode;
+  columns?: 2 | 3;
+}
+
+const ContextualCard = React.memo(function ContextualCard({
+  title,
+  icon,
+  iconColor,
+  children,
+  columns = 3,
+}: ContextualCardProps) {
+  return (
+    <div
+      className="rounded-[14px] border border-border p-5 shadow-card flex flex-col"
+      style={{ backgroundColor: "var(--color-surface)" }}
+    >
+      <div className="flex items-center gap-2 mb-4">
+        <span
+          className="inline-flex items-center justify-center w-9 h-9 rounded-[10px] shrink-0"
+          style={{ backgroundColor: `${iconColor}15`, color: iconColor }}
+        >
+          {icon}
+        </span>
+        <h3 className="font-poppins font-semibold text-[15px] text-text-primary">
+          {title}
+        </h3>
+      </div>
+      <div
+        className={columns === 2 ? "grid grid-cols-2 gap-3" : "grid grid-cols-3 gap-3"}
+      >
+        {children}
+      </div>
+    </div>
+  );
+});
+
+// ── Grid principal de cartões contextuais ────────────────────────
+const KPIGrid = React.memo(function KPIGrid() {
+  const { data: kpis, isLoading: loadingKpis } = useDashboardKPIs();
+  const { data: festasEmCurso } = useFestasEmCurso();
+  const { data: proximasFestas } = useProximasFestas();
+  const { data: contadores, isLoading: loadingCont } =
+    useEntradasLivresContadores();
+
+  const cacifosTotal = kpis?.cacifosTotal ?? 0;
+  const cacifosOcupados = kpis?.cacifosOcupados ?? 0;
+  const cacifosReservados = kpis?.cacifosReservados ?? 0;
+  const cacifosLivres = Math.max(
+    0,
+    cacifosTotal - cacifosOcupados - cacifosReservados
+  );
+
+  if (loadingKpis) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-surface rounded-[14px] p-5 shadow-card border border-border animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-20 mb-2" />
-            <div className="h-8 bg-gray-200 rounded w-12" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="bg-surface rounded-[14px] p-5 shadow-card border border-border animate-pulse"
+          >
+            <div className="h-4 bg-gray-200 rounded w-24 mb-3" />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="h-16 bg-gray-100 rounded" />
+              <div className="h-16 bg-gray-100 rounded" />
+              <div className="h-16 bg-gray-100 rounded" />
+            </div>
           </div>
         ))}
       </div>
     );
   }
 
-  const cards = [
-    {
-      title: "Festas Hoje",
-      value: kpis?.festasHoje ?? 0,
-      icon: <PartyPopper size={22} />,
-      iconColor: "#465fff",
-      backgroundColor: "var(--color-brand-50)",
-    },
-    {
-      title: "A Começar",
-      value: kpis?.aComecar ?? 0,
-      icon: <Play size={22} />,
-      iconColor: "#FF9F43",
-      backgroundColor: "var(--color-accent-orange-50)",
-      subtitle: "Próx. 60 min",
-    },
-    {
-      title: "A Terminar",
-      value: kpis?.aTerminar ?? 0,
-      icon: <Timer size={22} />,
-      iconColor: "#E74C3C",
-      backgroundColor: "var(--color-accent-red-50)",
-      subtitle: "Próx. 60 min",
-    },
-    {
-      title: "Cacifos Ocupados",
-      value: kpis ? `${kpis.cacifosOcupados}/${kpis.cacifosTotal}` : "—",
-      icon: <Package size={22} />,
-      iconColor: "#3dc47e",
-      backgroundColor: "var(--color-accent-green-50)",
-      subtitle: kpis ? `${kpis.cacifosReservados} reservados` : undefined,
-    },
-  ];
+  // ── Paletas por cartão (Opção A — 1 cor por cartão) ──
+  // Reduz ruído visual: cada cartão usa apenas a sua cor de acento.
+  const palette = {
+    festas:   { fg: "#465fff", bg: "var(--color-brand-50)" },
+    entradas: { fg: "#8648a0", bg: "var(--color-accent-purple-50)" },
+    cacifos:  { fg: "#3dc47e", bg: "var(--color-accent-green-50)" },
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {cards.map((card) => (
-        <KPICard
-          key={card.title}
-          title={card.title}
-          value={card.value}
-          icon={card.icon}
-          iconColor={card.iconColor}
-          backgroundColor={card.backgroundColor}
-          subtitle={card.subtitle}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* ── Cartão Festas ── */}
+      <ContextualCard
+        title="Festas"
+        icon={<PartyPopper size={20} />}
+        iconColor={palette.festas.fg}
+      >
+        <MiniStat
+          label="Hoje"
+          value={kpis?.festasHoje ?? 0}
+          icon={<Calendar size={16} />}
+          color={palette.festas.fg}
+          bgColor={palette.festas.bg}
         />
-      ))}
+        <MiniStat
+          label="Em Curso"
+          value={festasEmCurso?.length ?? 0}
+          icon={<Play size={16} />}
+          color={palette.festas.fg}
+          bgColor={palette.festas.bg}
+        />
+        <MiniStat
+          label="Próximas"
+          value={proximasFestas?.length ?? 0}
+          icon={<Clock size={16} />}
+          color={palette.festas.fg}
+          bgColor={palette.festas.bg}
+        />
+      </ContextualCard>
+
+      {/* ── Cartão Entradas Livres ── */}
+      <ContextualCard
+        title="Entradas Livres"
+        icon={<DoorOpen size={20} />}
+        iconColor={palette.entradas.fg}
+        columns={2}
+      >
+        <MiniStat
+          label="Ativas"
+          value={loadingCont ? "—" : contadores?.ativas ?? 0}
+          hint="No espaço agora"
+          icon={<DoorOpen size={16} />}
+          color={palette.entradas.fg}
+          bgColor={palette.entradas.bg}
+        />
+        <MiniStat
+          label="Concluídas Hoje"
+          value={loadingCont ? "—" : contadores?.concluidasHoje ?? 0}
+          hint={
+            contadores
+              ? `Total hoje: ${contadores.totalHoje}`
+              : undefined
+          }
+          icon={<CheckCircle2 size={16} />}
+          color={palette.entradas.fg}
+          bgColor={palette.entradas.bg}
+        />
+      </ContextualCard>
+
+      {/* ── Cartão Cacifos ── */}
+      <ContextualCard
+        title="Cacifos"
+        icon={<Package size={20} />}
+        iconColor={palette.cacifos.fg}
+      >
+        <MiniStat
+          label="Ocupados"
+          value={cacifosOcupados}
+          icon={<Lock size={16} />}
+          color={palette.cacifos.fg}
+          bgColor={palette.cacifos.bg}
+        />
+        <MiniStat
+          label="Reservados"
+          value={cacifosReservados}
+          icon={<Package size={16} />}
+          color={palette.cacifos.fg}
+          bgColor={palette.cacifos.bg}
+        />
+        <MiniStat
+          label="Livres"
+          value={cacifosLivres}
+          hint={`de ${cacifosTotal}`}
+          icon={<CheckCircle2 size={16} />}
+          color={palette.cacifos.fg}
+          bgColor={palette.cacifos.bg}
+        />
+      </ContextualCard>
     </div>
   );
 });

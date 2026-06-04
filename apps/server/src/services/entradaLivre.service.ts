@@ -14,6 +14,7 @@ interface CriarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos: number;
   localId: string;
+  custoTotal?: number;
   metodoPagamento?: MetodoPagamento;
   pago?: boolean;
   cacifoId?: string;
@@ -134,7 +135,7 @@ export const entradaLivreService = {
 
   // ── Criar entrada livre ─────────────────────────
   async create(data: CriarEntradaLivreDTO) {
-    const { criancas, duracaoMinutos, localId, extrasIds, cacifoId, ...rest } = data;
+    const { criancas, duracaoMinutos, localId, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
     // Buscar configuração do local
     const config = await prisma.configuracaoEntradaLivre.findUnique({
@@ -142,8 +143,13 @@ export const entradaLivreService = {
     });
     if (!config) throw new Error("CONFIG_NOT_FOUND");
 
+    // Preço: usa valor manual do utilizador se fornecido, senão calcula a partir
+    // da configuração do local (precoHora × duração).
     const custoHora = Number(config.precoHora);
-    const custoTotal = (custoHora / 60) * duracaoMinutos;
+    const custoTotal =
+      typeof custoTotalInput === "number" && custoTotalInput >= 0
+        ? custoTotalInput
+        : (custoHora / 60) * duracaoMinutos;
 
     const inicioEm = new Date();
     const fimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
@@ -328,6 +334,7 @@ export const entradaLivreService = {
       encarregadoTelefone?: string;
       encarregadoEmail?: string;
       duracaoMinutos?: number;
+      custoTotal?: number;
       metodoPagamento?: MetodoPagamento;
       pago?: boolean;
       cacifoId?: string | null;
@@ -344,20 +351,28 @@ export const entradaLivreService = {
       duracaoMinutos,
       cacifoId,
       extrasIds,
+      custoTotal: custoTotalInput,
       ...rest
     } = data;
 
-    // Se a duração mudar, recalcular custoTotal e fimPrevisto
+    // Decisão do custoTotal:
+    // - Se o utilizador forneceu um valor manual, esse prevalece.
+    // - Senão, se a duração mudou, recalcula a partir da config.
     let novoCustoTotal: number | undefined;
     let novoFimPrevisto: Date | undefined;
+    if (typeof custoTotalInput === "number" && custoTotalInput >= 0) {
+      novoCustoTotal = custoTotalInput;
+    }
     if (duracaoMinutos !== undefined && duracaoMinutos !== entrada.duracaoMinutos) {
       const config = await prisma.configuracaoEntradaLivre.findUnique({
         where: { localId: entrada.localId },
       });
-      const custoHora = config ? Number(config.precoHora) : Number(entrada.custoHora);
-      novoCustoTotal = (custoHora / 60) * duracaoMinutos;
       const inicioEm = new Date(entrada.inicioEm);
       novoFimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
+      if (novoCustoTotal === undefined) {
+        const custoHora = config ? Number(config.precoHora) : Number(entrada.custoHora);
+        novoCustoTotal = (custoHora / 60) * duracaoMinutos;
+      }
     }
 
     // Reatribuir cacifo se tiver mudado

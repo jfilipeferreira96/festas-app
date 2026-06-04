@@ -51,6 +51,7 @@ export interface CriarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos: number;
   localId: string;
+  custoTotal?: number;
   metodoPagamento?: string;
   pago?: boolean;
   cacifoId?: string;
@@ -65,6 +66,7 @@ export interface AtualizarEntradaLivreDTO {
   encarregadoTelefone?: string;
   encarregadoEmail?: string;
   duracaoMinutos?: number;
+  custoTotal?: number;
   metodoPagamento?: string;
   pago?: boolean;
   cacifoId?: string | null;
