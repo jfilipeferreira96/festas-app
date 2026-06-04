@@ -200,6 +200,7 @@ function FestaCard({
   const [remaining, setRemaining] = useState("");
   const [progress, setProgress] = useState(0);
   const [isOverdue, setIsOverdue] = useState(false);
+  const [isWaitingStart, setIsWaitingStart] = useState(false);
   const [showCacifos, setShowCacifos] = useState(false);
   const [showCheckIn, setShowCheckIn] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -247,6 +248,27 @@ function FestaCard({
 
       const elapsedMs = now.getTime() - inicio.getTime();
       const remainingMs = fim.getTime() - now.getTime();
+      const totalDuration = fim.getTime() - inicio.getTime();
+
+      // Pré-início: a festa ainda nem começou (estado EM_CURSO mas horário futuro)
+      if (elapsedMs < 0) {
+        setIsWaitingStart(true);
+        setIsOverdue(false);
+        setElapsed("00:00:00");
+        setProgress(0);
+        // Countdown até ao início
+        const untilStartMs = Math.abs(elapsedMs);
+        const untilH = Math.floor(untilStartMs / 3600000);
+        const untilM = Math.floor((untilStartMs % 3600000) / 60000);
+        const untilS = Math.floor((untilStartMs % 60000) / 1000);
+        setRemaining(
+          `${untilH.toString().padStart(2, "0")}:${untilM.toString().padStart(2, "0")}:${untilS.toString().padStart(2, "0")}`
+        );
+        return;
+      }
+
+      // Em curso normal ou ultrapassou
+      setIsWaitingStart(false);
 
       const elapsedH = Math.floor(elapsedMs / 3600000);
       const elapsedM = Math.floor((elapsedMs % 3600000) / 60000);
@@ -270,7 +292,6 @@ function FestaCard({
         );
       }
 
-      const totalDuration = fim.getTime() - inicio.getTime();
       const pct = Math.min(100, Math.max(0, (elapsedMs / totalDuration) * 100));
       setProgress(pct);
     };
@@ -301,7 +322,7 @@ function FestaCard({
   return (
     <div
       className={`bg-surface rounded-[14px] shadow-card border overflow-hidden ${
-        isOverdue ? "border-accent-red" : "border-border"
+        isOverdue ? "border-accent-red" : isWaitingStart ? "border-primary-300" : "border-border"
       }`}
     >
       {/* Color bar */}
@@ -316,8 +337,8 @@ function FestaCard({
             <h3 className="text-sm font-semibold text-text-primary truncate">
               {getAniversarianteNome(festa)}
             </h3>
-            <StatusBadge status={isOverdue ? "INSUFICIENTE" : ("EM_CURSO" as StatusType)}>
-              {isOverdue ? "Ultrapassou" : "Em curso"}
+            <StatusBadge status={isOverdue ? "INSUFICIENTE" : isWaitingStart ? ("RESERVA" as StatusType) : ("EM_CURSO" as StatusType)}>
+              {isOverdue ? "Ultrapassou" : isWaitingStart ? "Aguarda início" : "Em curso"}
             </StatusBadge>
           </div>
           {/* 3-dots dropdown — acções secundárias */}
@@ -395,29 +416,29 @@ function FestaCard({
         <div className="flex items-center justify-between mb-2">
           <div>
             <p className="text-[10px] text-text-muted uppercase tracking-wider">
-              Tempo decorrido
+              {isWaitingStart ? "Inicia em" : "Tempo decorrido"}
             </p>
             <p className="text-2xl font-bold text-text-primary font-mono">
-              {elapsed}
+              {isWaitingStart ? remaining : elapsed}
             </p>
           </div>
           <div className="text-right">
             <p className="text-[10px] text-text-muted uppercase tracking-wider">
-              Tempo restante
+              {isWaitingStart ? "Duração prevista" : "Tempo restante"}
             </p>
             <p
               className={`text-2xl font-bold font-mono ${
-                isOverdue ? "text-accent-red" : "text-accent-orange"
+                isOverdue ? "text-accent-red" : isWaitingStart ? "text-text-secondary" : "text-accent-orange"
               }`}
             >
-              {remaining}
+              {isWaitingStart ? `${festa.duracaoMinutos} min` : remaining}
             </p>
           </div>
         </div>
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
-              isOverdue ? "bg-accent-red" : "bg-accent-green"
+              isOverdue ? "bg-accent-red" : isWaitingStart ? "bg-primary-400" : "bg-accent-green"
             }`}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />

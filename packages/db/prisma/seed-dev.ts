@@ -19,6 +19,9 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+
+// Type assertion helper for MetodoPagamento enum values
+const MP = (s: string) => s as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
@@ -358,6 +361,17 @@ async function seedReservas() {
       participantes.push({ id: pId, nome: names[i] ?? `Criança ${i + 1}`, presente, cacifoNum });
     }
 
+    // Limpar participantes antigos associados aos cacifos que vamos usar
+    const cacifosToUse = participantes
+      .filter(p => p.presente && p.cacifoNum !== null)
+      .map(p => p.cacifoNum!);
+    if (cacifosToUse.length > 0) {
+      await prisma.participante.updateMany({
+        where: { cacifo: { numero: { in: cacifosToUse } } },
+        data: { cacifoId: null },
+      });
+    }
+
     // Create participantes with cacifo lookup
     for (const p of participantes) {
       let cacifoId: string | null = null;
@@ -368,7 +382,7 @@ async function seedReservas() {
 
       await prisma.participante.upsert({
         where: { id: p.id },
-        update: {},
+        update: { cacifoId },
         create: { id: p.id, nome: p.nome, presente: p.presente, reservaId, cacifoId },
       });
     }
@@ -758,7 +772,163 @@ async function seedReservas() {
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-f3" }, update: {}, create: { id: "ra-f3", reservaId: "reserva-future-003", aniversarianteId: "aniv-009" } });
   await prisma.menu.upsert({ where: { id: "menu-f3" }, update: {}, create: { id: "menu-f3", nome: "Menu Pequeno", preco: 6.00, notas: "Sumo e bolo", reservaId: "reserva-future-003" } });
 
-  console.log("  ✓ 10 reservas (4 passadas, 1 em curso, 1 confirmado hoje, 4 futuras)");
+  // ═══════════════════════════════════════════════════════════
+  // ADDITIONAL EM_CURSO (hoje) — 4 reservas em curso simultâneas
+  // Usa cacifos 16-30 (reserva-001 já ocupa 1-15)
+  // ═══════════════════════════════════════════════════════════
+  // Cacifos 1-15 já usados pela reserva-001. Restantes: 16-40 (25 cacifos)
+  // Distribuir sem sobreposição: a=16-23 (8 pres), b=24-27 (4 pres), c=28-32 (5 pres), d=33-36 (4 pres)
+  const emCursoExtras = [
+    { id: "reserva-em-curso-a", hora: 14, min: 0, dur: 120, n: 10, p: 12, tema: "Galáxia", cor: "#1E3A8A", local: "local-002", cli: "cliente-003", aniv: "aniv-004", mons: ["monitor-002", "monitor-005"], cacifoStart: 16, etapasConc: 3, obs: "Decoração espacial com estrelas e planetas.", bolo: "Bolo galáxia com planetas", menuNome: "Menu Galáxia", menuPreco: 9.00, menuNotas: "Pizza, pipocas, sumo, bolo" },
+    { id: "reserva-em-curso-b", hora: 15, min: 30, dur: 90, n: 6, p: 8, tema: "Frozen", cor: "#0EA5E9", local: "local-003", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-004"], cacifoStart: 24, etapasConc: 1, obs: "Elsa e Anna. Tudo azul e branco.", bolo: "Bolo Frozen com Elsa", menuNome: "Menu Frozen", menuPreco: 7.50, menuNotas: "Croissants, sumo, bolo" },
+    { id: "reserva-em-curso-c", hora: 16, min: 0, dur: 150, n: 8, p: 10, tema: "Marvel", cor: "#DC2626", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-006"], cacifoStart: 28, etapasConc: 0, obs: "Super-heróis Marvel. Crianças muito animadas!", bolo: "Bolo Vingadores", menuNome: "Menu Marvel", menuPreco: 10.00, menuNotas: "Pizza, nuggets, sumo, bolo" },
+    { id: "reserva-em-curso-d", hora: 11, min: 30, dur: 60, n: 6, p: 8, tema: "Patrulha Pata", cor: "#F59E0B", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-003"], cacifoStart: 33, etapasConc: 4, obs: "Crianças pequenas, 3-4 anos.", bolo: "Bolo Patrulha Pata", menuNome: "Menu Pequeno", menuPreco: 6.00, menuNotas: "Croissants, sumo" },
+  ];
+
+  for (const e of emCursoExtras) {
+    const start = dateAt(todayDate, e.hora, e.min);
+    await prisma.reserva.upsert({
+      where: { id: e.id },
+      update: {},
+      create: {
+        id: e.id,
+        data: new Date(todayStr),
+        horario: `${String(e.hora).padStart(2, "0")}:${String(e.min).padStart(2, "0")}`,
+        duracaoMinutos: e.dur, numCriancas: e.n, previsaoCriancas: e.p,
+        estado: "EM_CURSO",
+        inicioEm: start, fimPrevisto: addMin(start, e.dur),
+        tema: e.tema, cor: e.cor, bolo: e.bolo,
+        observacoesGerais: e.obs,
+        metodoPagamento: "MBWAY", valorPago: e.dur * 1.5, pago: true,
+        caucao: "PAGA",
+        clienteId: e.cli, localId: e.local,
+      },
+    });
+    await prisma.reservaAniversariante.upsert({ where: { id: `ra-${e.id}` }, update: {}, create: { id: `ra-${e.id}`, reservaId: e.id, aniversarianteId: e.aniv } });
+    for (const [i, mId] of e.mons.entries()) {
+      await prisma.reservaMonitor.upsert({ where: { id: `rm-${e.id}-${i}` }, update: {}, create: { id: `rm-${e.id}-${i}`, reservaId: e.id, monitorId: mId } });
+    }
+    await prisma.menu.upsert({ where: { id: `menu-${e.id}` }, update: {}, create: { id: `menu-${e.id}`, nome: e.menuNome, preco: e.menuPreco, notas: e.menuNotas, reservaId: e.id } });
+    await prisma.reservaExtra.upsert({ where: { id: `rext-${e.id}-0` }, update: {}, create: { id: `rext-${e.id}-0`, reservaId: e.id, extraId: "extra-004", quantidade: 1 } });
+    await prisma.reservaExtra.upsert({ where: { id: `rext-${e.id}-1` }, update: {}, create: { id: `rext-${e.id}-1`, reservaId: e.id, extraId: "extra-006", quantidade: e.n } });
+    await createParticipantes(e.id, e.n, Math.min(e.n - 1, Math.max(1, Math.floor(e.n * 0.8))), e.cacifoStart);
+    await createEtapas(e.id, e.etapasConc, 6, start);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // CONCLUIDA esta semana (-2 a -5 dias) — 5 reservas
+  // ═══════════════════════════════════════════════════════════
+  const concluidasSemanaConfigs = [
+    { dias: 2, hora: 10, min: 0, dur: 120, n: 14, p: 16, tema: "Safari", cor: "#84CC16", local: "local-001", cli: "cliente-002", aniv: "aniv-003", mons: ["monitor-001"], bolo: "Bolo selva", obs: "Animais de pelúcia.", menuNome: "Menu Safari", menuPreco: 8.50 },
+    { dias: 3, hora: 15, min: 0, dur: 90, n: 10, p: 12, tema: "Circo", cor: "#EF4444", local: "local-002", cli: "cliente-006", aniv: "aniv-007", mons: ["monitor-005", "monitor-006"], bolo: "Bolo circo", obs: "Palhaçada.", menuNome: "Menu Circo", menuPreco: 9.00 },
+    { dias: 4, hora: 11, min: 0, dur: 150, n: 20, p: 22, tema: "Harry Potter", cor: "#7C2D12", local: "local-001", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-002", "monitor-003"], bolo: "Bolo Hogwarts", obs: "Magia.", menuNome: "Menu Potter", menuPreco: 11.00 },
+    { dias: 5, hora: 14, min: 30, dur: 120, n: 12, p: 14, tema: "Cars", cor: "#F97316", local: "local-003", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-004"], bolo: "Bolo Cars", obs: "Corridas.", menuNome: "Menu Cars", menuPreco: 7.50 },
+    { dias: 5, hora: 10, min: 0, dur: 90, n: 8, p: 10, tema: "Peppa Pig", cor: "#F472B6", local: "local-002", cli: "cliente-001", aniv: "aniv-002", mons: ["monitor-006"], bolo: "Bolo Peppa", obs: "Crianças pequenas.", menuNome: "Menu Peppa", menuPreco: 6.00 },
+  ];
+
+  for (const [idx, c] of concluidasSemanaConfigs.entries()) {
+    const start = dateAt(daysAgo(c.dias), c.hora, c.min);
+    const fim = addMin(start, c.dur);
+    const fimReal = addMin(fim, Math.floor(Math.random() * 20));
+    const id = `reserva-semana-${idx + 1}`;
+    await prisma.reserva.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        data: new Date(toDateStr(daysAgo(c.dias))),
+        horario: `${String(c.hora).padStart(2, "0")}:${String(c.min).padStart(2, "0")}`,
+        duracaoMinutos: c.dur, numCriancas: c.n, previsaoCriancas: c.p,
+        estado: "CONCLUIDA",
+        inicioEm: start, fimPrevisto: fim, fimReal,
+        tema: c.tema, cor: c.cor, bolo: c.bolo,
+        observacoesGerais: c.obs,
+        metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
+        caucao: "PAGA",
+        clienteId: c.cli, localId: c.local,
+      },
+    });
+    await prisma.reservaAniversariante.upsert({ where: { id: `ra-${id}` }, update: {}, create: { id: `ra-${id}`, reservaId: id, aniversarianteId: c.aniv } });
+    for (const [i, mId] of c.mons.entries()) {
+      await prisma.reservaMonitor.upsert({ where: { id: `rm-${id}-${i}` }, update: {}, create: { id: `rm-${id}-${i}`, reservaId: id, monitorId: mId } });
+    }
+    await prisma.menu.upsert({ where: { id: `menu-${id}` }, update: {}, create: { id: `menu-${id}`, nome: c.menuNome, preco: c.menuPreco, notas: "Sumo, pipocas, bolo", reservaId: id } });
+    await prisma.reservaExtra.upsert({ where: { id: `rext-${id}-0` }, update: {}, create: { id: `rext-${id}-0`, reservaId: id, extraId: "extra-005", quantidade: c.n } });
+    await createEtapas(id, 6, 6, start);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // CONCLUIDA semana passada (-7 a -11 dias) — 5 reservas
+  // ═══════════════════════════════════════════════════════════
+  const concluidasPasConfigs = [
+    { dias: 8, hora: 10, min: 0, dur: 120, n: 16, p: 18, tema: "Piratas", cor: "#92400E", local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001"], bolo: "Bolo pirata", obs: "Caça ao tesouro.", menuNome: "Menu Pirata", menuPreco: 9.00 },
+    { dias: 9, hora: 15, min: 0, dur: 90, n: 12, p: 14, tema: "Princesa", cor: "#EC4899", local: "local-002", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-002", "monitor-006"], bolo: "Bolo princesa", obs: "Cor-de-rosa.", menuNome: "Menu Princesa", menuPreco: 10.00 },
+    { dias: 10, hora: 11, min: 0, dur: 150, n: 22, p: 25, tema: "Marvel", cor: "#DC2626", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-003", "monitor-004"], bolo: "Bolo Vingadores", obs: "Super-heróis.", menuNome: "Menu Marvel", menuPreco: 11.00 },
+    { dias: 11, hora: 14, min: 0, dur: 120, n: 10, p: 12, tema: "Sereia", cor: "#06B6D4", local: "local-003", cli: "cliente-008", aniv: "aniv-009", mons: ["monitor-005"], bolo: "Bolo sereia", obs: "Decoração oceânica.", menuNome: "Menu Sereia", menuPreco: 8.00 },
+    { dias: 7, hora: 16, min: 0, dur: 60, n: 6, p: 8, tema: "Teletubbies", cor: "#8B5CF6", local: "local-002", cli: "cliente-001", aniv: "aniv-001", mons: ["monitor-006"], bolo: "Bolo teletubbies", obs: "Bebés.", menuNome: "Menu Bebé", menuPreco: 5.00 },
+  ];
+
+  for (const [idx, c] of concluidasPasConfigs.entries()) {
+    const start = dateAt(daysAgo(c.dias), c.hora, c.min);
+    const fim = addMin(start, c.dur);
+    const fimReal = addMin(fim, Math.floor(Math.random() * 15));
+    const id = `reserva-pasada-${idx + 1}`;
+    await prisma.reserva.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        data: new Date(toDateStr(daysAgo(c.dias))),
+        horario: `${String(c.hora).padStart(2, "0")}:${String(c.min).padStart(2, "0")}`,
+        duracaoMinutos: c.dur, numCriancas: c.n, previsaoCriancas: c.p,
+        estado: "CONCLUIDA",
+        inicioEm: start, fimPrevisto: fim, fimReal,
+        tema: c.tema, cor: c.cor, bolo: c.bolo,
+        observacoesGerais: c.obs,
+        metodoPagamento: "DINHEIRO", valorPago: c.dur * 1.2, pago: true,
+        caucao: "PAGA_NO_DIA",
+        clienteId: c.cli, localId: c.local,
+      },
+    });
+    await prisma.reservaAniversariante.upsert({ where: { id: `ra-${id}` }, update: {}, create: { id: `ra-${id}`, reservaId: id, aniversarianteId: c.aniv } });
+    for (const [i, mId] of c.mons.entries()) {
+      await prisma.reservaMonitor.upsert({ where: { id: `rm-${id}-${i}` }, update: {}, create: { id: `rm-${id}-${i}`, reservaId: id, monitorId: mId } });
+    }
+    await prisma.menu.upsert({ where: { id: `menu-${id}` }, update: {}, create: { id: `menu-${id}`, nome: c.menuNome, preco: c.menuPreco, notas: "Sumo, bolo", reservaId: id } });
+    await createEtapas(id, 6, 6, start);
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // CONFIRMADO hoje (a aguardar início) — 3 reservas
+  // ═══════════════════════════════════════════════════════════
+  const confirmadasConfigs = [
+    { id: "reserva-conf-hoje-1", hora: 17, min: 0, dur: 90, n: 12, p: 14, tema: "Futebol", cor: "#16A34A", local: "local-001", cli: "cliente-003", aniv: "aniv-004", bolo: "Bolo bola", obs: "Tema futebol.", menuPreco: 8.00 },
+    { id: "reserva-conf-hoje-2", hora: 18, min: 0, dur: 60, n: 8, p: 10, tema: "Looney Tunes", cor: "#F97316", local: "local-002", cli: "cliente-006", aniv: "aniv-007", bolo: "Bolo Looney", obs: "Pessoagens clássicos.", menuPreco: 7.00 },
+    { id: "reserva-conf-hoje-3", hora: 17, min: 30, dur: 120, n: 18, p: 20, tema: "Ninja", cor: "#000000", local: "local-003", cli: "cliente-005", aniv: "aniv-006", bolo: "Bolo ninja", obs: "Ninjas vermelhos.", menuPreco: 10.00 },
+  ];
+
+  for (const c of confirmadasConfigs) {
+    await prisma.reserva.upsert({
+      where: { id: c.id },
+      update: {},
+      create: {
+        id: c.id,
+        data: new Date(todayStr),
+        horario: `${String(c.hora).padStart(2, "0")}:${String(c.min).padStart(2, "0")}`,
+        duracaoMinutos: c.dur, numCriancas: c.n, previsaoCriancas: c.p,
+        estado: "CONFIRMADO",
+        tema: c.tema, cor: c.cor, bolo: c.bolo,
+        observacoesGerais: c.obs,
+        metodoPagamento: "MBWAY", valorPago: c.dur * 1.3, pago: false,
+        caucao: "PAGA_NO_DIA",
+        clienteId: c.cli, localId: c.local,
+      },
+    });
+    await prisma.reservaAniversariante.upsert({ where: { id: `ra-${c.id}` }, update: {}, create: { id: `ra-${c.id}`, reservaId: c.id, aniversarianteId: c.aniv } });
+    await prisma.menu.upsert({ where: { id: `menu-${c.id}` }, update: {}, create: { id: `menu-${c.id}`, nome: `Menu ${c.tema}`, preco: c.menuPreco, notas: "Sumo, pipocas, bolo", reservaId: c.id } });
+  }
+
+  console.log("  ✓ 27 reservas (10 originais + 4 em curso + 5 esta semana + 5 semana passada + 3 confirmadas hoje)");
   console.log("  ✓ Menus, extras, participantes, etapas para todas\n");
 }
 
@@ -934,7 +1104,157 @@ async function seedEntradasLivres() {
     },
   });
 
-  console.log("  ✓ 2 configurações, 4 entradas livres (2 ativas, 1 concluída, 1 cancelada)\n");
+  // ─── MAIS ATIVAS (hoje) — 5 entradas em vários estados ──────────
+  const ativasExtras = [
+    { id: "entrada-livre-ativa-003", hora: 11, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Mariana Alves", tel: "911111112", email: "mariana@email.pt", pago: true, met: MP("DINHEIRO"), criancas: [{ nome: "João", idade: 5 }, { nome: "Rita", idade: 7 }] },
+    { id: "entrada-livre-ativa-004", hora: 13, min: 30, dur: 90, custo: 12.0, local: "local-003", nome: "Carlos Pereira", tel: "922222223", email: "carlos@email.pt", pago: false, met: undefined, criancas: [{ nome: "Pedro", idade: 8 }, { nome: "Inês", idade: 6 }, { nome: "Tiago", idade: 4 }] },
+    { id: "entrada-livre-ativa-005", hora: 14, min: 45, dur: 120, custo: 8.0, local: "local-002", nome: "Filipa Dinis", tel: "933333334", email: "filipa@email.pt", pago: true, met: MP("MBWAY"), criancas: [{ nome: "Sofia", idade: 5 }] },
+    { id: "entrada-livre-ativa-006", hora: 15, min: 0, dur: 30, custo: 10.0, local: "local-001", nome: "Hugo Cardoso", tel: "944444445", email: "hugo@email.pt", pago: false, met: undefined, criancas: [{ nome: "Marta", idade: 6 }, { nome: "Guilherme", idade: 3 }] },
+    { id: "entrada-livre-ativa-007", hora: 16, min: 15, dur: 60, custo: 12.0, local: "local-003", nome: "Teresa Morais", tel: "955555556", email: "teresa@email.pt", pago: true, met: MP("CARTAO"), criancas: [{ nome: "Afonso", idade: 7 }] },
+  ];
+
+  for (const a of ativasExtras) {
+    const start = dateAt(todayDate, a.hora, a.min);
+    await prisma.entradaLivre.upsert({
+      where: { id: a.id },
+      update: {},
+      create: {
+        id: a.id,
+        encarregadoNome: a.nome,
+        encarregadoTelefone: a.tel,
+        encarregadoEmail: a.email,
+        duracaoMinutos: a.dur,
+        custoHora: a.custo,
+        custoTotal: (a.custo / 60) * a.dur,
+        inicioEm: start,
+        fimPrevisto: addMin(start, a.dur),
+        estado: "ATIVA",
+        localId: a.local,
+        pago: a.pago,
+        metodoPagamento: a.met,
+        criancas: a.criancas,
+      },
+    });
+  }
+
+  // ─── CONCLUIDAS esta semana (-1 a -5 dias) — 7 entradas ──────────
+  const concluidasSemana = [
+    { dias: 1, hora: 10, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Rui Costa", tel: "966666667", met: MP("MBWAY"), excesso: 15, criancas: [{ nome: "Diogo", idade: 6 }] },
+    { dias: 2, hora: 14, min: 30, dur: 90, custo: 8.0, local: "local-002", nome: "Sandra Ribeiro", tel: "977777778", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Beatriz", idade: 5 }, { nome: "Carlos", idade: 7 }] },
+    { dias: 2, hora: 16, min: 0, dur: 120, custo: 12.0, local: "local-003", nome: "Paulo Sousa", tel: "988888889", met: MP("MULTIBANCO"), excesso: 45, criancas: [{ nome: "João", idade: 8 }, { nome: "Marta", idade: 6 }, { nome: "Pedro", idade: 5 }] },
+    { dias: 3, hora: 11, min: 30, dur: 60, custo: 10.0, local: "local-001", nome: "Catarina Lopes", tel: "999999990", met: MP("CARTAO"), excesso: 0, criancas: [{ nome: "Ana", idade: 4 }] },
+    { dias: 4, hora: 15, min: 0, dur: 90, custo: 8.0, local: "local-002", nome: "Gonçalo Ferreira", tel: "910000011", met: MP("MBWAY"), excesso: 20, criancas: [{ nome: "Rita", idade: 6 }, { nome: "Miguel", idade: 8 }] },
+    { dias: 4, hora: 10, min: 0, dur: 30, custo: 12.0, local: "local-003", nome: "Inês Martins", tel: "920000012", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Tiago", idade: 3 }] },
+    { dias: 5, hora: 17, min: 0, dur: 120, custo: 10.0, local: "local-001", nome: "André Santos", tel: "930000013", met: MP("TRANSFERENCIA"), excesso: 30, criancas: [{ nome: "Sofia", idade: 7 }, { nome: "Laura", idade: 5 }, { nome: "Rodrigo", idade: 6 }] },
+  ];
+
+  for (const [idx, c] of concluidasSemana.entries()) {
+    const id = `entrada-livre-conc-semana-${idx + 1}`;
+    const start = dateAt(daysAgo(c.dias), c.hora, c.min);
+    const fim = addMin(start, c.dur);
+    const fimReal = addMin(fim, c.excesso);
+    const custoTotal = (c.custo / 60) * c.dur;
+    const custoExcesso = c.excesso > 0 ? ((c.custo * 1.2) / 60) * c.excesso : 0;
+    await prisma.entradaLivre.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        encarregadoNome: c.nome,
+        encarregadoTelefone: c.tel,
+        duracaoMinutos: c.dur,
+        custoHora: c.custo,
+        custoTotal,
+        inicioEm: start,
+        fimPrevisto: fim,
+        fimReal,
+        estado: "CONCLUIDA",
+        localId: c.local,
+        excessoMinutos: c.excesso || null,
+        custoExcesso: c.excesso > 0 ? custoExcesso : null,
+        custoTotalFinal: custoTotal + custoExcesso,
+        pago: true,
+        pagoExcesso: c.excesso > 0,
+        metodoPagamento: c.met,
+        criancas: c.criancas,
+      },
+    });
+  }
+
+  // ─── CONCLUIDAS semana passada (-7 a -11 dias) — 5 entradas ──────
+  const concluidasPas = [
+    { dias: 7, hora: 14, min: 0, dur: 90, custo: 10.0, local: "local-001", nome: "Luís Pereira", tel: "940000014", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Mariana", idade: 6 }] },
+    { dias: 8, hora: 10, min: 30, dur: 60, custo: 8.0, local: "local-002", nome: "Helena Costa", tel: "950000015", met: MP("MBWAY"), excesso: 10, criancas: [{ nome: "João", idade: 5 }, { nome: "Beatriz", idade: 7 }] },
+    { dias: 9, hora: 16, min: 0, dur: 120, custo: 12.0, local: "local-003", nome: "Ricardo Silva", tel: "960000016", met: MP("MULTIBANCO"), excesso: 25, criancas: [{ nome: "Pedro", idade: 8 }, { nome: "Inês", idade: 6 }, { nome: "Marta", idade: 4 }] },
+    { dias: 10, hora: 11, min: 0, dur: 90, custo: 10.0, local: "local-001", nome: "Sofia Mendes", tel: "970000017", met: MP("CARTAO"), excesso: 0, criancas: [{ nome: "Tiago", idade: 6 }] },
+    { dias: 11, hora: 15, min: 30, dur: 60, custo: 8.0, local: "local-002", nome: "Nuno Ribeiro", tel: "980000018", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Ana", idade: 5 }, { nome: "Rita", idade: 7 }] },
+  ];
+
+  for (const [idx, c] of concluidasPas.entries()) {
+    const id = `entrada-livre-conc-pas-${idx + 1}`;
+    const start = dateAt(daysAgo(c.dias), c.hora, c.min);
+    const fim = addMin(start, c.dur);
+    const fimReal = addMin(fim, c.excesso);
+    const custoTotal = (c.custo / 60) * c.dur;
+    const custoExcesso = c.excesso > 0 ? ((c.custo * 1.2) / 60) * c.excesso : 0;
+    await prisma.entradaLivre.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        encarregadoNome: c.nome,
+        encarregadoTelefone: c.tel,
+        duracaoMinutos: c.dur,
+        custoHora: c.custo,
+        custoTotal,
+        inicioEm: start,
+        fimPrevisto: fim,
+        fimReal,
+        estado: "CONCLUIDA",
+        localId: c.local,
+        excessoMinutos: c.excesso || null,
+        custoExcesso: c.excesso > 0 ? custoExcesso : null,
+        custoTotalFinal: custoTotal + custoExcesso,
+        pago: true,
+        pagoExcesso: c.excesso > 0,
+        metodoPagamento: c.met,
+        criancas: c.criancas,
+      },
+    });
+  }
+
+  // ─── CANCELADAS — 3 entradas ─────────────────────────────────────
+  const canceladasExtras = [
+    { dias: 2, hora: 9, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Vasco Almeida", tel: "990000019", obs: "Criança adoeceu", criancas: [{ nome: "Leonor", idade: 5 }] },
+    { dias: 4, hora: 14, min: 0, dur: 90, custo: 8.0, local: "local-002", nome: "Marta Cardoso", tel: "901000020", obs: "Mudança de planos", criancas: [{ nome: "Diogo", idade: 6 }, { nome: "Sofia", idade: 4 }] },
+    { dias: 6, hora: 11, min: 30, dur: 120, custo: 12.0, local: "local-003", nome: "Pedro Lourenço", tel: "912000021", obs: "Conflito de horário", criancas: [{ nome: "Beatriz", idade: 7 }] },
+  ];
+
+  for (const [idx, c] of canceladasExtras.entries()) {
+    const id = `entrada-livre-canc-${idx + 2}`;
+    const start = dateAt(daysAgo(c.dias), c.hora, c.min);
+    await prisma.entradaLivre.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        encarregadoNome: c.nome,
+        encarregadoTelefone: c.tel,
+        duracaoMinutos: c.dur,
+        custoHora: c.custo,
+        custoTotal: (c.custo / 60) * c.dur,
+        inicioEm: start,
+        fimPrevisto: addMin(start, c.dur),
+        fimReal: addMin(start, 5),
+        estado: "CANCELADA",
+        localId: c.local,
+        observacoes: c.obs,
+        criancas: c.criancas,
+      },
+    });
+  }
+
+  console.log("  ✓ 3 configurações, 26 entradas livres (7 ativas, 12 concluídas, 4 canceladas)\n");
 }
 
 // ─── Run ──────────────────────────────────────────────────────
