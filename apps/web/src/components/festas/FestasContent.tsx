@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import { useReservasAtivas, useFinalizarReserva, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
 import { useCacifos } from "@/hooks/use-cacifos";
@@ -495,24 +496,29 @@ function FestaCard({
                 key={etapa.id}
                 className="flex items-center justify-between hover:bg-gray-50 rounded-lg px-1 py-0.5 -mx-1 transition-all duration-200"
               >
-                <button
-                  type="button"
-                  onClick={() => toggleEtapa.mutate({ id: festa.id, etapaId: etapa.etapa.id })}
-                  disabled={toggleEtapaPending}
-                  className="flex items-center gap-2 flex-1 text-left disabled:opacity-50 group"
-                  title={etapa.concluida ? "Marcar como pendente" : "Marcar como concluída"}
+                <Tooltip
+                  content={etapa.concluida ? "Marcar como pendente" : "Marcar como concluída"}
+                  position="top"
+                  theme="dark"
                 >
-                  <span className={`shrink-0 transition-all duration-300 ${etapa.concluida ? "scale-110" : "scale-100 group-hover:scale-105"}`}>
-                    {etapa.concluida ? (
-                      <CheckCircle size={14} className="text-brand-500" />
-                    ) : (
-                      <XCircle size={14} className="text-text-muted" />
-                    )}
-                  </span>
-                  <span className={`text-xs transition-colors duration-200 ${etapa.concluida ? "text-brand-500" : "text-text-secondary"}`}>
-                    {etapa.etapa?.nome ?? "Etapa"}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleEtapa.mutate({ id: festa.id, etapaId: etapa.etapa.id })}
+                    disabled={toggleEtapaPending}
+                    className="flex items-center gap-2 flex-1 text-left disabled:opacity-50 group"
+                  >
+                    <span className={`shrink-0 transition-all duration-300 ${etapa.concluida ? "scale-110" : "scale-100 group-hover:scale-105"}`}>
+                      {etapa.concluida ? (
+                        <CheckCircle size={14} className="text-brand-500" />
+                      ) : (
+                        <XCircle size={14} className="text-text-muted" />
+                      )}
+                    </span>
+                    <span className={`text-xs transition-colors duration-200 ${etapa.concluida ? "text-brand-500" : "text-text-secondary"}`}>
+                      {etapa.etapa?.nome ?? "Etapa"}
+                    </span>
+                  </button>
+                </Tooltip>
                 <div className="flex items-center gap-1">
                   <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 transition-all duration-300 ${
                     etapa.concluida
@@ -521,15 +527,16 @@ function FestaCard({
                   }`}>
                     {etapa.concluida ? "Concluída ✓" : "Pendente"}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => removerEtapa.mutate({ id: festa.id, etapaId: etapa.etapa.id })}
-                    disabled={removerEtapa.isPending}
-                    className="p-0.5 text-text-muted hover:text-accent-red transition-colors disabled:opacity-50"
-                    title="Remover etapa"
-                  >
-                    <Trash2 size={11} />
-                  </button>
+                  <Tooltip content="Remover etapa" position="top" theme="dark">
+                    <button
+                      type="button"
+                      onClick={() => removerEtapa.mutate({ id: festa.id, etapaId: etapa.etapa.id })}
+                      disabled={removerEtapa.isPending}
+                      className="p-0.5 text-text-muted hover:text-accent-red transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}
@@ -671,14 +678,15 @@ function FestaCard({
               placeholder="Nome da criança..."
               className="flex-1 text-xs px-3 py-1.5 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary-400"
             />
-            <button
-              onClick={handleAdicionar}
-              disabled={!novoNome.trim() || adicionarParticipante.isPending}
-              className="p-1.5 text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors disabled:opacity-50"
-              title="Adicionar"
-            >
-              <Plus size={14} />
-            </button>
+            <Tooltip content="Adicionar" position="top" theme="dark">
+              <button
+                onClick={handleAdicionar}
+                disabled={!novoNome.trim() || adicionarParticipante.isPending}
+                className="p-1.5 text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors disabled:opacity-50"
+              >
+                <Plus size={14} />
+              </button>
+            </Tooltip>
           </div>
 
           {/* Participants list */}
@@ -690,14 +698,19 @@ function FestaCard({
                   className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-white transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleTogglePresenca(p.id, p.presente ?? false)}
-                      disabled={confirmarPresenca.isPending}
-                      className={`shrink-0 transition-all ${p.presente ? "text-accent-green-500" : "text-text-muted hover:text-accent-green-400"}`}
-                      title={p.presente ? "Desmarcar presença" : "Marcar presente"}
+                    <Tooltip
+                      content={p.presente ? "Desmarcar presença" : "Marcar presente"}
+                      position="top"
+                      theme="dark"
                     >
-                      {p.presente ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                    </button>
+                      <button
+                        onClick={() => handleTogglePresenca(p.id, p.presente ?? false)}
+                        disabled={confirmarPresenca.isPending}
+                        className={`shrink-0 transition-all ${p.presente ? "text-accent-green-500" : "text-text-muted hover:text-accent-green-400"}`}
+                      >
+                        {p.presente ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                      </button>
+                    </Tooltip>
                     <span className={`text-xs ${p.presente ? "text-text-primary font-medium" : "text-text-secondary"}`}>
                       {p.nome}
                     </span>

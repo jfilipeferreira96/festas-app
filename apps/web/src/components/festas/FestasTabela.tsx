@@ -12,6 +12,7 @@ import CheckInModal from "./CheckInModal";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
 import DataTable from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { formatDate, formatDuration } from "@/utils/date";
 import { differenceInYears } from "date-fns";
 
@@ -301,56 +302,66 @@ export default function FestasTabela() {
           <div className="flex items-center justify-end gap-1">
             {/* Quick action: Confirmar */}
             {r.estado === "RESERVA" && (
-              <button
-                onClick={() => handleConfirmar(r.id)}
-                className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
-                title="Confirmar festa"
-              >
-                <CheckCircle2 size={15} />
-              </button>
+              <Tooltip content="Confirmar festa" position="top" theme="dark">
+                <button
+                  onClick={() => handleConfirmar(r.id)}
+                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
+                >
+                  <CheckCircle2 size={15} />
+                </button>
+              </Tooltip>
             )}
             {/* Quick action: Iniciar Festa */}
             {r.estado === "CONFIRMADO" && (
-              <button
-                onClick={() => setIniciarFestaReserva(r)}
-                className="p-1.5 rounded-lg hover:bg-blue-50 text-text-muted hover:text-brand-500 transition-colors"
-                title="Iniciar festa"
-              >
-                <Play size={15} />
-              </button>
+              <Tooltip content="Iniciar festa" position="top" theme="dark">
+                <button
+                  onClick={() => setIniciarFestaReserva(r)}
+                  className="p-1.5 rounded-lg hover:bg-blue-50 text-text-muted hover:text-brand-500 transition-colors"
+                >
+                  <Play size={15} />
+                </button>
+              </Tooltip>
             )}
             {/* Quick action: Check-in */}
             {(r.estado === "CONFIRMADO" || r.estado === "EM_CURSO") && (
-              <button
-                onClick={() => setCheckInReserva(r)}
-                className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
-                title="Check-in participantes"
-              >
-                <UserCheck size={15} />
-              </button>
+              <Tooltip content="Check-in participantes" position="top" theme="dark">
+                <button
+                  onClick={() => setCheckInReserva(r)}
+                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
+                >
+                  <UserCheck size={15} />
+                </button>
+              </Tooltip>
             )}
             {/* Quick action: Cancelar */}
             {(r.estado === "RESERVA" || r.estado === "CONFIRMADO") && (
-              <button
-                onClick={() => handleCancelar(r.id)}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
-                title="Cancelar festa"
-              >
-                <XCircle size={15} />
-              </button>
+              <Tooltip content="Cancelar festa" position="top" theme="dark">
+                <button
+                  onClick={() => handleCancelar(r.id)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                >
+                  <XCircle size={15} />
+                </button>
+              </Tooltip>
             )}
-            <button onClick={() => handleView(r)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors" title="Ver detalhes">
-              <Eye size={15} />
-            </button>
-            {r.estado !== "CONCLUIDA" && r.estado !== "CANCELADA" && (
-              <button onClick={() => handleEdit(r)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors" title="Editar">
-                <Pencil size={15} />
+            <Tooltip content="Ver detalhes" position="top" theme="dark">
+              <button onClick={() => handleView(r)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors">
+                <Eye size={15} />
               </button>
+            </Tooltip>
+            {r.estado !== "CONCLUIDA" && r.estado !== "CANCELADA" && (
+              <Tooltip content="Editar" position="top" theme="dark">
+                <button onClick={() => handleEdit(r)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors">
+                  <Pencil size={15} />
+                </button>
+              </Tooltip>
             )}
             {r.estado !== "EM_CURSO" && (
-              <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors" title="Eliminar">
-                <Trash2 size={15} />
-              </button>
+              <Tooltip content="Eliminar" position="top" theme="dark">
+                <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors">
+                  <Trash2 size={15} />
+                </button>
+              </Tooltip>
             )}
           </div>
         )}

@@ -5,6 +5,7 @@ import { UserCheck, UserX, Check, X, Plus, Trash2, Loader2 } from "lucide-react"
 import { Modal } from "@/components/ui/modal";
 import { useParticipantes, useAdicionarParticipante, useConfirmarPresenca, useMarcarTodosPresenca, useRemoverParticipante } from "@/hooks/use-participantes";
 import type { Reserva } from "@/lib/api/reservas";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 
 interface CheckInModalProps {
   reserva: Reserva;
@@ -202,17 +203,18 @@ export default React.memo(function CheckInModal({ reserva, onClose }: CheckInMod
                   >
                     {p.presente ? "Presente" : "Ausente"}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemover(p.id);
-                    }}
-                    disabled={removerParticipante.isPending}
-                    className="p-1 text-text-muted hover:text-accent-red transition-colors disabled:opacity-50"
-                    title="Remover participante"
-                  >
-                    <Trash2 size={13} />
-                  </button>
+                  <Tooltip content="Remover participante" position="top" theme="dark">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemover(p.id);
+                      }}
+                      disabled={removerParticipante.isPending}
+                      className="p-1 text-text-muted hover:text-accent-red transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}

@@ -9,6 +9,7 @@ import Switch from "@/components/form/switch/Switch";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import { useExtras, useCreateExtra, useUpdateExtra, useDeleteExtra } from "@/hooks/use-extras";
 import type { Extra } from "@/lib/api/extras";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 
 export default function MenusContent() {
   const { data: extras, isLoading } = useExtras();
@@ -308,20 +309,22 @@ function ItemCard({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <button
-          onClick={onEdit}
-          className="p-1.5 text-text-muted hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
-          title="Editar"
-        >
-          <Edit size={14} />
-        </button>
-        <button
-          onClick={onDelete}
-          className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-50 rounded-lg transition-colors"
-          title="Eliminar"
-        >
-          <Trash2 size={14} />
-        </button>
+        <Tooltip content="Editar" position="top" theme="dark">
+          <button
+            onClick={onEdit}
+            className="p-1.5 text-text-muted hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
+          >
+            <Edit size={14} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Eliminar" position="top" theme="dark">
+          <button
+            onClick={onDelete}
+            className="p-1.5 text-text-muted hover:text-accent-red hover:bg-red-50 rounded-lg transition-colors"
+          >
+            <Trash2 size={14} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import { Select } from "@/components/ui/select";
 import Input from "@/components/ui/input";
 import TablePagination from "../pagination/TablePagination";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "./index";
+import { Tooltip } from "../tooltip/Tooltip";
 
 export interface Column<T> {
   key: keyof T | string;
@@ -277,31 +278,34 @@ function DataTable<T extends { id: string }>({
                     ) : (
                       <div className="flex items-center justify-end gap-1">
                         {onView && (
-                          <button
-                            onClick={() => onView(row)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
-                            title="Ver detalhes"
-                          >
-                            <Eye size={15} />
-                          </button>
+                          <Tooltip content="Ver detalhes" position="top" theme="dark">
+                            <button
+                              onClick={() => onView(row)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+                            >
+                              <Eye size={15} />
+                            </button>
+                          </Tooltip>
                         )}
                         {onEdit && (
-                          <button
-                            onClick={() => onEdit(row)}
-                            className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
-                            title="Editar"
-                          >
-                            <Pencil size={15} />
-                          </button>
+                          <Tooltip content="Editar" position="top" theme="dark">
+                            <button
+                              onClick={() => onEdit(row)}
+                              className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+                            >
+                              <Pencil size={15} />
+                            </button>
+                          </Tooltip>
                         )}
                         {onDelete && (
-                          <button
-                            onClick={() => onDelete(row)}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
-                            title="Eliminar"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          <Tooltip content="Eliminar" position="top" theme="dark">
+                            <button
+                              onClick={() => onDelete(row)}
+                              className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </Tooltip>
                         )}
                       </div>
                     )}

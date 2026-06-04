@@ -9,6 +9,7 @@ import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import { useCampanhas, useCreateCampanha, useEnviarCampanha, useDeleteCampanha } from "@/hooks/use-campanhas";
 import type { Campanha } from "@/lib/api/campanhas";
 import type { StatusType } from "@/components/ui";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 
 const ESTADO_LABELS: Record<string, string> = {
   RASCUNHO: "Rascunho",
@@ -298,22 +299,24 @@ export default function DivulgacoesContent() {
           renderActions={(c) => (
             <div className="flex items-center justify-end gap-1">
               {c.estado === "RASCUNHO" && (
-                <button
-                  onClick={() => handleEnviar(c.id)}
-                  className="p-1.5 rounded-lg hover:bg-primary-50 text-text-muted hover:text-primary-500 transition-colors"
-                  title="Enviar"
-                >
-                  <Send size={14} />
-                </button>
+                <Tooltip content="Enviar" position="top" theme="dark">
+                  <button
+                    onClick={() => handleEnviar(c.id)}
+                    className="p-1.5 rounded-lg hover:bg-primary-50 text-text-muted hover:text-primary-500 transition-colors"
+                  >
+                    <Send size={14} />
+                  </button>
+                </Tooltip>
               )}
               {c.estado !== "ENVIADA" && (
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
-                  title="Eliminar"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <Tooltip content="Eliminar" position="top" theme="dark">
+                  <button
+                    onClick={() => handleDelete(c.id)}
+                    className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </Tooltip>
               )}
             </div>
           )}

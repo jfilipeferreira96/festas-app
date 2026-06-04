@@ -10,6 +10,7 @@ import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import DataTable from "@/components/ui/table/DataTable";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 
 const ESTADO_LABELS: Record<string, string> = {
   ATIVA: "Ativa",
@@ -241,41 +242,45 @@ export default function EntradasLivresTabela() {
           <div className="flex items-center justify-end gap-1">
             {/* Quick action: Concluir */}
             {r.estado === "ATIVA" && (
-              <button
-                onClick={() => setConcluirModal({ isOpen: true, id: r.id })}
-                className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
-                title="Concluir entrada"
-              >
-                <Check size={15} />
-              </button>
+              <Tooltip content="Concluir entrada" position="top" theme="dark">
+                <button
+                  onClick={() => setConcluirModal({ isOpen: true, id: r.id })}
+                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
+                >
+                  <Check size={15} />
+                </button>
+              </Tooltip>
             )}
             {/* Quick action: Cancelar */}
             {r.estado === "ATIVA" && (
-              <button
-                onClick={() => setCancelarModal({ isOpen: true, id: r.id })}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
-                title="Cancelar entrada"
-              >
-                <XCircle size={15} />
-              </button>
+              <Tooltip content="Cancelar entrada" position="top" theme="dark">
+                <button
+                  onClick={() => setCancelarModal({ isOpen: true, id: r.id })}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                >
+                  <XCircle size={15} />
+                </button>
+              </Tooltip>
             )}
             {/* View */}
-            <button
-              onClick={() => setViewingEntradaId(r.id)}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
-              title="Ver detalhes"
-            >
-              <Eye size={15} />
-            </button>
+            <Tooltip content="Ver detalhes" position="top" theme="dark">
+              <button
+                onClick={() => setViewingEntradaId(r.id)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+              >
+                <Eye size={15} />
+              </button>
+            </Tooltip>
             {/* Delete (only non-active) */}
             {r.estado !== "ATIVA" && (
-              <button
-                onClick={() => setDeleteModal({ isOpen: true, id: r.id })}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
-                title="Eliminar"
-              >
-                <Trash2 size={15} />
-              </button>
+              <Tooltip content="Eliminar" position="top" theme="dark">
+                <button
+                  onClick={() => setDeleteModal({ isOpen: true, id: r.id })}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </Tooltip>
             )}
           </div>
         )}
