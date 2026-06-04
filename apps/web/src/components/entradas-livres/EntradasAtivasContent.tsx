@@ -6,7 +6,6 @@ import {
   Users,
   Square,
   XCircle,
-  Timer,
   AlertTriangle,
   Plus,
   Eye,
@@ -14,6 +13,7 @@ import {
   CreditCard,
   Package,
   Phone,
+  Pencil,
 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
@@ -32,11 +32,6 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatCurrency(value: number | undefined | null): string {
-  if (value == null) return "—";
-  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
-}
-
 /** Hook that returns current time, updated every second */
 function useCurrentTime() {
   const [now, setNow] = useState(() => new Date());
@@ -51,7 +46,6 @@ function useCurrentTime() {
 function useTimer(inicioEm: string, duracaoMinutos: number) {
   const now = useCurrentTime();
   const inicio = new Date(inicioEm);
-  const fimPrevisto = new Date(inicio.getTime() + duracaoMinutos * 60 * 1000);
 
   const elapsedMs = now.getTime() - inicio.getTime();
   const plannedMs = duracaoMinutos * 60 * 1000;
@@ -78,7 +72,6 @@ function useTimer(inicioEm: string, duracaoMinutos: number) {
     isOvertime,
     progressPercent,
     excessMinutes: excessMin,
-    fimPrevisto,
   };
 }
 
@@ -93,6 +86,7 @@ export default function EntradasAtivasContent() {
   const [confirmConcluir, setConfirmConcluir] = useState<string | null>(null);
   const [confirmCancelar, setConfirmCancelar] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
   const [viewingEntradaId, setViewingEntradaId] = useState<string | null>(null);
 
   const todayStr = useMemo(
@@ -125,7 +119,15 @@ export default function EntradasAtivasContent() {
 
   const handleFormClose = useCallback(() => {
     setShowForm(false);
+    setEditingEntrada(null);
   }, []);
+
+  const handleEdit = useCallback((entrada: EntradaLivre) => {
+    setEditingEntrada(entrada);
+  }, []);
+
+  const isFormOpen = showForm || !!editingEntrada;
+  const formTitle = editingEntrada ? "Editar Entrada Livre" : "Nova Entrada Livre";
 
   return (
     <div>
@@ -142,15 +144,16 @@ export default function EntradasAtivasContent() {
 
       {/* Entradas Ativas */}
       <div className="mt-6">
-      <EmCursoTab
-        entradas={entradas}
-        isLoading={isLoading}
-        onConcluir={setConfirmConcluir}
-        onCancelar={setConfirmCancelar}
-        onMarcarPago={handleMarcarPago}
-        onView={setViewingEntradaId}
-        pagamentoPending={atualizarPagamento.isPending}
-      />
+        <EmCursoTab
+          entradas={entradas}
+          isLoading={isLoading}
+          onConcluir={setConfirmConcluir}
+          onCancelar={setConfirmCancelar}
+          onMarcarPago={handleMarcarPago}
+          onView={setViewingEntradaId}
+          onEdit={handleEdit}
+          pagamentoPending={atualizarPagamento.isPending}
+        />
       </div>
 
       {/* Confirm Concluir */}
@@ -177,12 +180,12 @@ export default function EntradasAtivasContent() {
         isConfirming={cancelar.isPending}
       />
 
-      {/* Create Modal */}
-      {showForm && (
-        <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
+      {/* Create/Edit Modal */}
+      {isFormOpen && (
+        <Modal isOpen={isFormOpen} onClose={handleFormClose} size="2xl">
           <div className="p-6">
-            <h2 className="text-xl font-semibold text-text-primary mb-4">Nova Entrada Livre</h2>
-            <EntradaLivreForm onClose={handleFormClose} />
+            <h2 className="text-xl font-semibold text-text-primary mb-4">{formTitle}</h2>
+            <EntradaLivreForm entrada={editingEntrada} onClose={handleFormClose} />
           </div>
         </Modal>
       )}
@@ -204,6 +207,7 @@ function EmCursoTab({
   onCancelar,
   onMarcarPago,
   onView,
+  onEdit,
   pagamentoPending,
 }: {
   entradas?: EntradaLivre[];
@@ -212,6 +216,7 @@ function EmCursoTab({
   onCancelar: (id: string) => void;
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
+  onEdit: (entrada: EntradaLivre) => void;
   pagamentoPending: boolean;
 }) {
   if (isLoading) {
@@ -246,6 +251,7 @@ function EmCursoTab({
           onCancelar={onCancelar}
           onMarcarPago={onMarcarPago}
           onView={onView}
+          onEdit={onEdit}
           pagamentoPending={pagamentoPending}
         />
       ))}
@@ -260,6 +266,7 @@ function EntradaAtivaCard({
   onCancelar,
   onMarcarPago,
   onView,
+  onEdit,
   pagamentoPending,
 }: {
   entrada: EntradaLivre;
@@ -267,6 +274,7 @@ function EntradaAtivaCard({
   onCancelar: (id: string) => void;
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
+  onEdit: (entrada: EntradaLivre) => void;
   pagamentoPending: boolean;
 }) {
   const timer = useTimer(entrada.inicioEm, entrada.duracaoMinutos);
@@ -287,7 +295,7 @@ function EntradaAtivaCard({
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-text-muted shrink-0" />
               <span className="text-sm font-semibold text-text-primary truncate">
-                {entrada.criancas.map((c: any) => c.nome).join(", ")}
+                {entrada.criancas.map((c) => c.nome).join(", ")}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-text-muted">
@@ -358,6 +366,12 @@ function EntradaAtivaCard({
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-primary-500 hover:bg-gray-50 rounded-lg transition-colors"
           >
             <Eye size={13} /> Ver
+          </button>
+          <button
+            onClick={() => onEdit(entrada)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-primary-500 hover:bg-gray-50 rounded-lg transition-colors"
+          >
+            <Pencil size={13} /> Editar
           </button>
           {!entrada.pago && (
             <button

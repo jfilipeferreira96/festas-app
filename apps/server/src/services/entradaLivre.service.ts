@@ -320,13 +320,100 @@ export const entradaLivreService = {
   },
 
   // ── Atualizar entrada ───────────────────────────
-  async atualizar(id: string, data: { observacoes?: string; observacoesLesoes?: string }) {
+  async atualizar(
+    id: string,
+    data: {
+      criancas?: CriancaInput[];
+      encarregadoNome?: string;
+      encarregadoTelefone?: string;
+      encarregadoEmail?: string;
+      duracaoMinutos?: number;
+      metodoPagamento?: MetodoPagamento;
+      pago?: boolean;
+      cacifoId?: string | null;
+      extrasIds?: string[];
+      observacoes?: string;
+      observacoesLesoes?: string;
+    }
+  ) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
 
+    const {
+      criancas,
+      duracaoMinutos,
+      cacifoId,
+      extrasIds,
+      ...rest
+    } = data;
+
+    // Se a duração mudar, recalcular custoTotal e fimPrevisto
+    let novoCustoTotal: number | undefined;
+    let novoFimPrevisto: Date | undefined;
+    if (duracaoMinutos !== undefined && duracaoMinutos !== entrada.duracaoMinutos) {
+      const config = await prisma.configuracaoEntradaLivre.findUnique({
+        where: { localId: entrada.localId },
+      });
+      const custoHora = config ? Number(config.precoHora) : Number(entrada.custoHora);
+      novoCustoTotal = (custoHora / 60) * duracaoMinutos;
+      const inicioEm = new Date(entrada.inicioEm);
+      novoFimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
+    }
+
+    // Reatribuir cacifo se tiver mudado
+    if (cacifoId !== undefined) {
+      // Libertar cacifo antigo
+      if (entrada.cacifoId && entrada.cacifoId !== cacifoId) {
+        await prisma.cacifo.update({
+          where: { id: entrada.cacifoId },
+          data: { estado: "LIVRE", criancas: null },
+        });
+      }
+      // Ocupar novo cacifo
+      if (cacifoId && cacifoId !== entrada.cacifoId) {
+        await prisma.cacifo.update({
+          where: { id: cacifoId },
+          data: {
+            estado: "OCUPADO",
+            criancas: criancas
+              ? criancas.map((c) => c.nome).join(", ")
+              : entrada.criancas
+                ? (entrada.criancas as unknown as Array<{ nome: string }>).map((c) => c.nome).join(", ")
+                : null,
+          },
+        });
+      }
+    } else if (criancas && entrada.cacifoId) {
+      // Apenas atualizar nomes no cacifo ocupado
+      await prisma.cacifo.update({
+        where: { id: entrada.cacifoId },
+        data: { criancas: criancas.map((c) => c.nome).join(", ") },
+      });
+    }
+
+    // Atualizar extras se fornecidos
+    if (extrasIds !== undefined) {
+      await prisma.entradaLivreExtra.deleteMany({ where: { entradaLivreId: id } });
+      if (extrasIds.length > 0) {
+        await prisma.entradaLivreExtra.createMany({
+          data: extrasIds.map((extraId) => ({
+            entradaLivreId: id,
+            extraId,
+          })),
+        });
+      }
+    }
+
+    const updateData: Record<string, unknown> = { ...rest };
+    if (criancas !== undefined) updateData.criancas = criancas as unknown as Prisma.InputJsonValue;
+    if (duracaoMinutos !== undefined) updateData.duracaoMinutos = duracaoMinutos;
+    if (cacifoId !== undefined) updateData.cacifoId = cacifoId || null;
+    if (novoCustoTotal !== undefined) updateData.custoTotal = novoCustoTotal;
+    if (novoFimPrevisto !== undefined) updateData.fimPrevisto = novoFimPrevisto;
+
     const updated = await prisma.entradaLivre.update({
       where: { id },
-      data,
+      data: updateData,
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },

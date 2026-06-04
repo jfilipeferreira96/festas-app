@@ -59,6 +59,20 @@ export interface CriarEntradaLivreDTO {
   observacoesLesoes?: string;
 }
 
+export interface AtualizarEntradaLivreDTO {
+  criancas?: Crianca[];
+  encarregadoNome?: string;
+  encarregadoTelefone?: string;
+  encarregadoEmail?: string;
+  duracaoMinutos?: number;
+  metodoPagamento?: string;
+  pago?: boolean;
+  cacifoId?: string | null;
+  extrasIds?: string[];
+  observacoes?: string;
+  observacoesLesoes?: string;
+}
+
 export interface ConfiguracaoEntradaLivre {
   id: string;
   precoHora: number;
@@ -104,7 +118,7 @@ export const entradaLivreApi = {
       body: JSON.stringify(data),
     }),
 
-  atualizar: (id: string, data: { observacoes?: string; observacoesLesoes?: string }) =>
+  atualizar: (id: string, data: AtualizarEntradaLivreDTO) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),

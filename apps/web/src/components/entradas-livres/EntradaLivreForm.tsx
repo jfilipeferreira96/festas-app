@@ -1,14 +1,43 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import React, { useCallback, useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+  Plus, Trash2, CreditCard, User, Users, MapPin,
+  Clock, Package, MessageSquare,
+} from "lucide-react";
 import { Button } from "@/components/ui";
-import { useCriarEntradaLivre } from "@/hooks/use-entrada-livre";
-import { useEntradasLivresConfiguracoes } from "@/hooks/use-entrada-livre";
+import InputField from "@/components/form/input/InputField";
+import TextArea from "@/components/form/input/TextArea";
+import { Select } from "@/components/ui/select";
+import Switch from "@/components/form/switch/Switch";
+import {
+  useCriarEntradaLivre,
+  useAtualizarEntradaLivre,
+  useEntradasLivresConfiguracoes,
+} from "@/hooks/use-entrada-livre";
 import { useLocais } from "@/hooks/use-locais";
 import { useCacifos } from "@/hooks/use-cacifos";
 import { useExtras } from "@/hooks/use-extras";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
+
+// ── Zod Schema ─────────────────────────────────────────────────
+const entradaLivreSchema = z.object({
+  encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
+  encarregadoTelefone: z.string().min(9, "Contacto inválido"),
+  encarregadoEmail: z.string().email("Email inválido").optional().or(z.literal("")),
+  localId: z.string().min(1, "Seleccione um local"),
+  duracaoMinutos: z.number().min(30, "Duração mínima é 30 minutos"),
+  metodoPagamento: z.string().optional(),
+  pago: z.boolean().optional(),
+  cacifoId: z.string().optional(),
+  observacoes: z.string().optional(),
+  observacoesLesoes: z.string().optional(),
+});
+
+type EntradaLivreFormData = z.infer<typeof entradaLivreSchema>;
 
 interface EntradaLivreFormProps {
   entrada?: EntradaLivre | null;
@@ -16,59 +45,162 @@ interface EntradaLivreFormProps {
 }
 
 const DURACAO_OPTIONS = [
-  { value: 30, label: "30 min" },
-  { value: 60, label: "1 hora" },
-  { value: 90, label: "1h 30min" },
-  { value: 120, label: "2 horas" },
-  { value: 180, label: "3 horas" },
+  { value: "30", label: "30 min" },
+  { value: "60", label: "1 hora" },
+  { value: "90", label: "1h 30min" },
+  { value: "120", label: "2 horas" },
+  { value: "180", label: "3 horas" },
 ];
 
 const METODO_PAGAMENTO_OPTIONS = [
-  { value: "", label: "Selecionar..." },
+  { value: "NONE", label: "Não definido" },
   { value: "DINHEIRO", label: "Dinheiro" },
   { value: "MULTIBANCO", label: "Multibanco" },
   { value: "MBWAY", label: "MB WAY" },
   { value: "TRANSFERENCIA", label: "Transferência" },
   { value: "CARTAO", label: "Cartão" },
+  { value: "OUTRO", label: "Outro" },
 ];
+
+interface ExtraItem {
+  id: string;
+  nome: string;
+  precoUnitario: number;
+  subcategoria?: string;
+  activo?: boolean;
+}
+
+function formatEuro(value: number): string {
+  return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
+}
+
+/** Agrupa extras por subcategoria */
+function groupBySubcategoria(items: ExtraItem[]) {
+  const grouped: Record<string, ExtraItem[]> = {};
+  const ungrouped: ExtraItem[] = [];
+  for (const item of items) {
+    const sub = item.subcategoria?.trim();
+    if (sub) {
+      if (!grouped[sub]) grouped[sub] = [];
+      grouped[sub].push(item);
+    } else {
+      ungrouped.push(item);
+    }
+  }
+  return { grouped, ungrouped };
+}
 
 export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormProps) {
   const isEdit = !!entrada;
   const criar = useCriarEntradaLivre();
+  const atualizar = useAtualizarEntradaLivre();
 
   const { data: configuracoes } = useEntradasLivresConfiguracoes();
   const { data: locais } = useLocais();
   const { data: cacifosData } = useCacifos();
   const { data: extras } = useExtras();
 
-  const cacifosLivres = useMemo(
-    () => (Array.isArray(cacifosData) ? cacifosData : (cacifosData as any)?.items ?? []).filter((c: any) => c.estado === "LIVRE"),
-    [cacifosData]
+  // ── Crianças (managed outside RHF because dynamic array) ──
+  const [criancas, setCriancas] = React.useState<Array<{ nome: string; idade: string }>>(
+    entrada?.criancas?.map((c) => ({ nome: c.nome, idade: c.idade?.toString() ?? "" })) ??
+      [{ nome: "", idade: "" }]
   );
 
-  // Form state
-  const [criancas, setCriancas] = useState<Array<{ nome: string; idade: string }>>(
-    entrada?.criancas?.map((c: any) => ({ nome: c.nome, idade: c.idade?.toString() ?? "" })) ?? [{ nome: "", idade: "" }]
+  // ── Extras seleccionados (managed outside RHF) ──
+  const [selectedExtrasIds, setSelectedExtrasIds] = React.useState<string[]>(
+    entrada?.extras?.map((e) => e.extraId) ?? []
   );
-  const [encarregadoNome, setEncarregadoNome] = useState(entrada?.encarregadoNome ?? "");
-  const [encarregadoTelefone, setEncarregadoTelefone] = useState(entrada?.encarregadoTelefone ?? "");
-  const [encarregadoEmail, setEncarregadoEmail] = useState(entrada?.encarregadoEmail ?? "");
-  const [localId, setLocalId] = useState(entrada?.localId ?? "");
-  const [duracaoMinutos, setDuracaoMinutos] = useState(entrada?.duracaoMinutos?.toString() ?? "60");
-  const [metodoPagamento, setMetodoPagamento] = useState(entrada?.metodoPagamento ?? "");
-  const [pago, setPago] = useState(entrada?.pago ?? false);
-  const [cacifoId, setCacifoId] = useState(entrada?.cacifoId ?? "");
-  const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
-  const [observacoes, setObservacoes] = useState(entrada?.observacoes ?? "");
-  const [observacoesLesoes, setObservacoesLesoes] = useState(entrada?.observacoesLesoes ?? "");
 
-  // Calculate estimated cost
-  const config = configuracoes?.find((c: any) => c.localId === localId);
+  const defaultValues = useMemo<EntradaLivreFormData>(
+    () => ({
+      encarregadoNome: entrada?.encarregadoNome ?? "",
+      encarregadoTelefone: entrada?.encarregadoTelefone ?? "",
+      encarregadoEmail: entrada?.encarregadoEmail ?? "",
+      localId: entrada?.localId ?? "",
+      duracaoMinutos: entrada?.duracaoMinutos ?? 60,
+      metodoPagamento: entrada?.metodoPagamento ?? "",
+      pago: entrada?.pago ?? false,
+      cacifoId: entrada?.cacifoId ?? "",
+      observacoes: entrada?.observacoes ?? "",
+      observacoesLesoes: entrada?.observacoesLesoes ?? "",
+    }),
+    [entrada]
+  );
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<EntradaLivreFormData>({
+    resolver: zodResolver(entradaLivreSchema),
+    defaultValues,
+  });
+
+  // ── Derived data ──
+  const localId = watch("localId");
+  const duracaoMinutos = watch("duracaoMinutos");
+  const pago = watch("pago") ?? false;
+  const cacifoIdWatched = watch("cacifoId");
+
+  const config = configuracoes?.find((c) => c.localId === localId);
   const custoEstimado = useMemo(() => {
     if (!config) return null;
-    return (config.precoHora / 60) * parseInt(duracaoMinutos || "0");
+    return (config.precoHora / 60) * (duracaoMinutos || 0);
   }, [config, duracaoMinutos]);
 
+  const extraItems = useMemo<ExtraItem[]>(
+    () =>
+      (extras ?? [])
+        .filter((e: ExtraItem) => e.activo !== false)
+        .map((e) => ({
+          id: e.id,
+          nome: e.nome,
+          precoUnitario: Number(e.precoUnitario),
+          subcategoria: e.subcategoria,
+        })),
+    [extras]
+  );
+
+  const extraGroups = useMemo(() => groupBySubcategoria(extraItems), [extraItems]);
+
+  const totalExtras = useMemo(() => {
+    let total = 0;
+    for (const extraId of selectedExtrasIds) {
+      const extra = extraItems.find((e) => e.id === extraId);
+      if (extra) total += extra.precoUnitario;
+    }
+    return total;
+  }, [selectedExtrasIds, extraItems]);
+
+  const localOptions = useMemo(
+    () => [
+      { value: "", label: "Seleccionar local" },
+      ...(locais ?? []).map((l) => ({ value: l.id, label: l.nome })),
+    ],
+    [locais]
+  );
+
+  const cacifosLivres = useMemo(() => {
+    const all = Array.isArray(cacifosData) ? cacifosData : ((cacifosData as unknown as { items?: unknown[] })?.items ?? []);
+    return (all as Array<{ id: string; numero: number; nome?: string; estado: string }>).filter(
+      (c) => c.estado === "LIVRE" || c.id === entrada?.cacifoId
+    );
+  }, [cacifosData, entrada?.cacifoId]);
+
+  const cacifoOptions = useMemo(
+    () => [
+      { value: "", label: "Nenhum" },
+      ...cacifosLivres.map((c) => ({
+        value: c.id,
+        label: `#${c.numero}${c.nome ? ` — ${c.nome}` : ""}`,
+      })),
+    ],
+    [cacifosLivres]
+  );
+
+  // ── Handlers ──
   const addCrianca = useCallback(() => {
     setCriancas((prev) => [...prev, { nome: "", idade: "" }]);
   }, []);
@@ -82,256 +214,337 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   }, []);
 
   const toggleExtra = useCallback((extraId: string) => {
-    setSelectedExtras((prev) =>
+    setSelectedExtrasIds((prev) =>
       prev.includes(extraId) ? prev.filter((id) => id !== extraId) : [...prev, extraId]
     );
   }, []);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      try {
-        await criar.mutateAsync({
-          criancas: criancas
-            .filter((c) => c.nome.trim())
-            .map((c) => ({
-              nome: c.nome.trim(),
-              idade: c.idade ? parseInt(c.idade) : undefined,
-            })),
-          encarregadoNome,
-          encarregadoTelefone,
-          encarregadoEmail: encarregadoEmail || undefined,
-          localId,
-          duracaoMinutos: parseInt(duracaoMinutos),
-          metodoPagamento: metodoPagamento || undefined,
-          pago,
-          cacifoId: cacifoId || undefined,
-          extrasIds: selectedExtras.length > 0 ? selectedExtras : undefined,
-          observacoes: observacoes || undefined,
-          observacoesLesoes: observacoesLesoes || undefined,
-        });
-        onClose();
-      } catch {
-        // Error handled by mutation
+  const onSubmit = useCallback(
+    async (data: EntradaLivreFormData) => {
+      const payload = {
+        criancas: criancas
+          .filter((c) => c.nome.trim())
+          .map((c) => ({
+            nome: c.nome.trim(),
+            idade: c.idade ? parseInt(c.idade, 10) : undefined,
+          })),
+        encarregadoNome: data.encarregadoNome,
+        encarregadoTelefone: data.encarregadoTelefone,
+        encarregadoEmail: data.encarregadoEmail || undefined,
+        localId: data.localId,
+        duracaoMinutos: data.duracaoMinutos,
+        metodoPagamento: data.metodoPagamento && data.metodoPagamento !== "NONE" ? data.metodoPagamento : undefined,
+        pago: data.pago,
+        cacifoId: data.cacifoId || undefined,
+        extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
+        observacoes: data.observacoes || undefined,
+        observacoesLesoes: data.observacoesLesoes || undefined,
+      };
+
+      if (isEdit && entrada) {
+        await atualizar.mutateAsync({ id: entrada.id, data: payload });
+      } else {
+        await criar.mutateAsync(payload);
       }
+      onClose();
     },
-    [criancas, encarregadoNome, encarregadoTelefone, encarregadoEmail, localId, duracaoMinutos, metodoPagamento, pago, cacifoId, selectedExtras, observacoes, observacoesLesoes, criar, onClose]
+    [criancas, selectedExtrasIds, isEdit, entrada, atualizar, criar, onClose]
+  );
+
+  const isLoading = isSubmitting || criar.isPending || atualizar.isPending;
+
+  const renderExtraItem = useCallback(
+    (item: ExtraItem) => {
+      const isSelected = selectedExtrasIds.includes(item.id);
+      return (
+        <button
+          key={item.id}
+          type="button"
+          onClick={() => toggleExtra(item.id)}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors cursor-pointer ${
+            isSelected ? "border-primary-300 bg-primary-50/50" : "border-border hover:border-gray-300"
+          }`}
+        >
+          <span className="text-sm text-text-primary">{item.nome}</span>
+          <span className="text-xs font-medium text-text-secondary">
+            +{formatEuro(item.precoUnitario / 100)}
+          </span>
+        </button>
+      );
+    },
+    [selectedExtrasIds, toggleExtra]
   );
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Dados da Criança */}
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">Dados da Criança</h3>
-        <div className="space-y-2">
-          {criancas.map((crianca, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Nome *"
-                value={crianca.nome}
-                onChange={(e) => updateCrianca(index, "nome", e.target.value)}
-                required
-                className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+    <div className="flex flex-col max-h-[70vh]">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+        {/* ── Scrollable Content ── */}
+        <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto px-3 space-y-6">
+          {/* ── Crianças ── */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                <Users size={14} className="text-brand-500" /> Crianças *
+              </label>
+              <button
+                type="button"
+                onClick={addCrianca}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+              >
+                <Plus size={13} /> Adicionar criança
+              </button>
+            </div>
+            <div className="space-y-2">
+              {criancas.map((crianca, index) => (
+                <div key={index} className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <InputField
+                      value={crianca.nome}
+                      onChange={(e) => updateCrianca(index, "nome", e.target.value)}
+                      placeholder={`Nome da criança ${index + 1}`}
+                    />
+                  </div>
+                  <div className="w-24">
+                    <InputField
+                      type="number"
+                      value={crianca.idade}
+                      onChange={(e) => updateCrianca(index, "idade", e.target.value)}
+                      placeholder="Idade"
+                      min={0}
+                      max={18}
+                    />
+                  </div>
+                  {criancas.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCrianca(index)}
+                      className="p-2 text-text-muted hover:text-accent-red transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Encarregado ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <User size={14} className="text-brand-500" /> Encarregado de Educação *
+            </label>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <InputField
+                  {...register("encarregadoNome")}
+                  placeholder="Nome do responsável"
+                  error={!!errors.encarregadoNome}
+                  hint={errors.encarregadoNome?.message}
+                />
+              </div>
+              <div className="flex-1">
+                <InputField
+                  type="tel"
+                  {...register("encarregadoTelefone")}
+                  placeholder="Telefone"
+                  error={!!errors.encarregadoTelefone}
+                  hint={errors.encarregadoTelefone?.message}
+                />
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <InputField
+                  type="email"
+                  {...register("encarregadoEmail")}
+                  placeholder="Email (opcional)"
+                  error={!!errors.encarregadoEmail}
+                  hint={errors.encarregadoEmail?.message}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Configuração (Local · Duração) ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <MapPin size={14} className="text-brand-500" /> Configuração
+            </label>
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Local *
+                </label>
+                <Select
+                  options={localOptions}
+                  placeholder="Seleccionar local"
+                  value={localId}
+                  onChange={(val) => setValue("localId", val)}
+                />
+                {errors.localId && (
+                  <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>
+                )}
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1">
+                  <Clock size={12} /> Duração *
+                </label>
+                <Select
+                  options={DURACAO_OPTIONS}
+                  placeholder="Seleccionar"
+                  value={String(duracaoMinutos)}
+                  onChange={(val) => setValue("duracaoMinutos", Number(val))}
+                />
+              </div>
+            </div>
+            {localId && !config && (
+              <p className="text-xs text-accent-red-500">
+                Sem configuração de preço para este local.
+              </p>
+            )}
+            {custoEstimado != null && config && (
+              <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
+                <span className="text-sm font-medium text-text-secondary">Custo estimado</span>
+                <span className="text-lg font-bold text-primary-500">
+                  {formatEuro(custoEstimado)}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* ── Cacifo ── */}
+          {cacifoOptions.length > 1 && (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                <Package size={14} className="text-brand-500" /> Cacifo (opcional)
+              </label>
+              <Select
+                options={cacifoOptions}
+                placeholder="Seleccionar cacifo"
+                value={cacifoIdWatched ?? ""}
+                onChange={(val) => setValue("cacifoId", val)}
               />
-              <input
-                type="number"
-                placeholder="Idade"
-                value={crianca.idade}
-                onChange={(e) => updateCrianca(index, "idade", e.target.value)}
-                min={0}
-                max={18}
-                className="w-20 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-              />
-              {criancas.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeCrianca(index)}
-                  className="p-2 text-accent-red-500 hover:bg-accent-red-50 rounded-lg transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
+            </div>
+          )}
+
+          {/* ── Extras (desactivado temporariamente) ── */}
+          {/* {extraItems.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-text-primary block">
+                ✨ Extras (opcional)
+              </label>
+              <div className="space-y-3">
+                {Object.entries(extraGroups.grouped).map(([sub, items]) => (
+                  <div key={sub}>
+                    <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">
+                      {sub}
+                    </p>
+                    <div className="flex flex-wrap gap-3">{items.map(renderExtraItem)}</div>
+                  </div>
+                ))}
+                {extraGroups.ungrouped.length > 0 && (
+                  <div>
+                    {Object.keys(extraGroups.grouped).length > 0 && (
+                      <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">
+                        Outros
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-3">
+                      {extraGroups.ungrouped.map(renderExtraItem)}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {totalExtras > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
+                  <span className="text-sm font-medium text-text-secondary">Total Extras</span>
+                  <span className="text-lg font-bold text-primary-500">
+                    {formatEuro(totalExtras / 100)}
+                  </span>
+                </div>
               )}
             </div>
-          ))}
-          <button
-            type="button"
-            onClick={addCrianca}
-            className="flex items-center gap-1.5 text-xs font-medium text-brand-500 hover:text-brand-600 transition-colors"
-          >
-            <Plus size={14} /> Adicionar criança
-          </button>
-        </div>
-      </div>
+          )} */}
 
-      {/* Dados do Encarregado */}
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">Dados do Encarregado</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="text"
-            placeholder="Nome *"
-            value={encarregadoNome}
-            onChange={(e) => setEncarregadoNome(e.target.value)}
-            required
-            className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-          />
-          <input
-            type="tel"
-            placeholder="Telefone *"
-            value={encarregadoTelefone}
-            onChange={(e) => setEncarregadoTelefone(e.target.value)}
-            required
-            className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-          />
-          <input
-            type="email"
-            placeholder="Email (opcional)"
-            value={encarregadoEmail}
-            onChange={(e) => setEncarregadoEmail(e.target.value)}
-            className="sm:col-span-2 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
-          />
-        </div>
-      </div>
-
-      {/* Configuração */}
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">Configuração</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <select
-            value={localId}
-            onChange={(e) => setLocalId(e.target.value)}
-            required
-            className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-white"
-          >
-            <option value="">Selecionar local *</option>
-            {locais?.map?.((l: any) => (
-              <option key={l.id} value={l.id}>{l.nome}</option>
-            )) ?? (locais as any)?.items?.map((l: any) => (
-              <option key={l.id} value={l.id}>{l.nome}</option>
-            ))}
-          </select>
-          <select
-            value={duracaoMinutos}
-            onChange={(e) => setDuracaoMinutos(e.target.value)}
-            required
-            className="px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-white"
-          >
-            {DURACAO_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        {localId && !config && (
-          <p className="text-xs text-accent-red-500 mt-1">Sem configuração de preço para este local.</p>
-        )}
-        {custoEstimado != null && (
-          <div className="mt-2 px-3 py-2 rounded-lg bg-brand-50 border border-brand-100">
-            <p className="text-sm font-medium text-brand-600">
-              Custo estimado: {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(custoEstimado)}
-              <span className="text-xs text-text-muted ml-1">
-                ({duracaoMinutos} min × {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(config!.precoHora)}/h)
-              </span>
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Pagamento */}
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">Pagamento</h3>
-        <div className="flex items-center gap-3">
-          <select
-            value={metodoPagamento}
-            onChange={(e) => setMetodoPagamento(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-white"
-          >
-            {METODO_PAGAMENTO_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
-            <input
-              type="checkbox"
-              checked={pago}
-              onChange={(e) => setPago(e.target.checked)}
-              className="w-4 h-4 rounded border-border text-brand-500 focus:ring-brand-500"
-            />
-            Pago
-          </label>
-        </div>
-      </div>
-
-      {/* Cacifo */}
-      {cacifosLivres.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary mb-3">Cacifo (opcional)</h3>
-          <select
-            value={cacifoId}
-            onChange={(e) => setCacifoId(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-white"
-          >
-            <option value="">Nenhum</option>
-            {cacifosLivres.map((c: any) => (
-              <option key={c.id} value={c.id}>#{c.numero} {c.nome ? `— ${c.nome}` : ""}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Extras */}
-      {extras && (Array.isArray(extras) ? extras : (extras as any)?.items)?.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary mb-3">Extras (opcional)</h3>
-          <div className="space-y-1 max-h-32 overflow-y-auto">
-            {(Array.isArray(extras) ? extras : (extras as any)?.items)?.map((extra: any) => (
-              <label key={extra.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={selectedExtras.includes(extra.id)}
-                  onChange={() => toggleExtra(extra.id)}
-                  className="w-4 h-4 rounded border-border text-brand-500 focus:ring-brand-500"
-                />
-                <span className="text-sm text-text-primary">{extra.nome}</span>
-                {extra.precoUnitario != null && (
-                  <span className="text-xs text-text-muted ml-auto">
-                    {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(extra.precoUnitario)}
-                  </span>
-                )}
+          {/* ── Observações ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <MessageSquare size={14} className="text-brand-500" /> Observações
+            </label>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">
+                Observações gerais
               </label>
-            ))}
+              <TextArea
+                placeholder="Notas gerais..."
+                value={watch("observacoes") ?? ""}
+                onChange={(v) => setValue("observacoes", v)}
+                rows={2}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">
+                Lesões / Alergias
+              </label>
+              <TextArea
+                placeholder="Alergias, lesões..."
+                value={watch("observacoesLesoes") ?? ""}
+                onChange={(v) => setValue("observacoesLesoes", v)}
+                rows={2}
+              />
+            </div>
+          </div>
+
+          {/* ── Pagamento ── */}
+          <div className="space-y-3 p-4 rounded-lg bg-surface border border-border">
+            <div className="flex items-center gap-2 text-xs font-semibold text-text-primary">
+              <CreditCard size={14} /> Pagamento
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Método
+                </label>
+                <Select
+                  options={METODO_PAGAMENTO_OPTIONS}
+                  placeholder="Método"
+                  value={watch("metodoPagamento") ?? "NONE"}
+                  onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)}
+                />
+              </div>
+              <div className="flex items-end justify-end pb-1">
+                <Switch
+                  checked={pago}
+                  onChange={(checked) => setValue("pago", checked)}
+                  label={pago ? "Pago" : "Não pago"}
+                />
+              </div>
+            </div>
+            {custoEstimado != null && (
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <span className="text-xs text-text-muted">Total estimado</span>
+                <span className="text-sm font-bold text-primary-500">
+                  {formatEuro(custoEstimado + totalExtras / 100)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Observações */}
-      <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">Observações</h3>
-        <textarea
-          placeholder="Observações gerais..."
-          value={observacoes}
-          onChange={(e) => setObservacoes(e.target.value)}
-          rows={2}
-          className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
-        />
-        <textarea
-          placeholder="Alergias / Lesões..."
-          value={observacoesLesoes}
-          onChange={(e) => setObservacoesLesoes(e.target.value)}
-          rows={2}
-          className="w-full mt-2 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none"
-        />
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-3 pt-3 border-t border-border">
-        <Button variant="outline" type="button" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit" loading={criar.isPending} disabled={!localId || !encarregadoNome || !encarregadoTelefone || criancas.every((c) => !c.nome.trim())}>
-          {isEdit ? "Guardar" : "Criar Entrada"}
-        </Button>
-      </div>
-    </form>
+        {/* ── Footer (fixed) ── */}
+        <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end shrink-0">
+          <Button variant="outline" onClick={onClose} type="button">
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading
+              ? "A guardar..."
+              : isEdit
+                ? "Guardar Alterações"
+                : "Criar Entrada"}
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

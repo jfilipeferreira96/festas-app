@@ -111,7 +111,7 @@ export function useEliminarEntradaLivre() {
 export function useAtualizarEntradaLivre() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { observacoes?: string; observacoesLesoes?: string } }) =>
+    mutationFn: ({ id, data }: { id: string; data: import("@/lib/api/entradaLivre").AtualizarEntradaLivreDTO }) =>
       entradaLivreApi.atualizar(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entradas-livres"] });
