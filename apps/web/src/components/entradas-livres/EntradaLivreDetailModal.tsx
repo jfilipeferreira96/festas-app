@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Clock,
   Users,
@@ -11,13 +11,11 @@ import {
   CreditCard,
   FileText,
   AlertTriangle,
-  CheckCircle,
   Timer,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { StatusBadge, Button } from "@/components/ui";
-import { useEntradaLivre, useConcluirEntradaLivre, useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
-import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import { StatusBadge } from "@/components/ui";
+import { useEntradaLivre } from "@/hooks/use-entrada-livre";
 import type { StatusType } from "@/components/ui/status-badge/StatusBadge";
 
 function formatCurrency(value: number | undefined | null): string {
@@ -50,152 +48,98 @@ interface EntradaLivreDetailModalProps {
 
 export default function EntradaLivreDetailModal({ entradaId, onClose }: EntradaLivreDetailModalProps) {
   const { data: entrada, isLoading } = useEntradaLivre(entradaId ?? "");
-  const concluir = useConcluirEntradaLivre();
-  const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
-
-  const [confirmAction, setConfirmAction] = useState<"concluir" | null>(null);
 
   const now = useCurrentTime();
-
-  const handleConcluir = useCallback(async () => {
-    if (!entradaId) return;
-    await concluir.mutateAsync(entradaId);
-    setConfirmAction(null);
-  }, [concluir, entradaId]);
-
-  const handleMarcarPago = useCallback(async () => {
-    if (!entradaId) return;
-    await atualizarPagamento.mutateAsync({ id: entradaId, data: { pago: true } });
-  }, [atualizarPagamento, entradaId]);
-
-  const handlePagarExcesso = useCallback(async () => {
-    if (!entradaId) return;
-    await atualizarPagamento.mutateAsync({ id: entradaId, data: { pagoExcesso: true } });
-  }, [atualizarPagamento, entradaId]);
 
   if (!entradaId) return null;
 
   return (
-    <>
-      <Modal isOpen={!!entradaId} onClose={onClose} size="lg">
-        <div className="p-6">
-          {isLoading || !entrada ? (
-            <div className="space-y-3">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-10 rounded-lg bg-gray-100 animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <>
-              {/* Header */}
-              <div className="flex items-center justify-between mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50">
-                    <Clock size={20} className="text-brand-500" />
-                  </div>
-                  <div>
-                    <h2 className="text-lg font-semibold text-text-primary">
-                      {entrada.criancas.map((c: any) => c.nome).join(", ")}
-                    </h2>
-                    <p className="text-xs text-text-muted">{formatDate(entrada.inicioEm)}</p>
-                  </div>
+    <Modal isOpen={!!entradaId} onClose={onClose} size="lg" title="Detalhes da Entrada Livre">
+      <div className="p-6">
+        {isLoading || !entrada ? (
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-10 rounded-lg bg-gray-100 animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <>
+            {/* Header (identidade) */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-50">
+                  <Clock size={20} className="text-brand-500" />
                 </div>
-                <StatusBadge status={entrada.estado as StatusType}>
-                  {entrada.estado === "ATIVA" ? "Ativa" : entrada.estado === "CONCLUIDA" ? "Concluída" : "Cancelada"}
-                </StatusBadge>
+                <div>
+                  <h2 className="text-lg font-semibold text-text-primary">
+                    {entrada.criancas.map((c: any) => c.nome).join(", ")}
+                  </h2>
+                  <p className="text-xs text-text-muted">{formatDate(entrada.inicioEm)}</p>
+                </div>
               </div>
+              <StatusBadge status={entrada.estado as StatusType}>
+                {entrada.estado === "ATIVA" ? "Ativa" : entrada.estado === "CONCLUIDA" ? "Concluída" : "Cancelada"}
+              </StatusBadge>
+            </div>
 
-              {/* Timer (only for ATIVA) */}
-              {entrada.estado === "ATIVA" && (
-                <TimerSection inicioEm={entrada.inicioEm} duracaoMinutos={entrada.duracaoMinutos} now={now} />
+            {/* Timer (only for ATIVA) */}
+            {entrada.estado === "ATIVA" && (
+              <TimerSection inicioEm={entrada.inicioEm} duracaoMinutos={entrada.duracaoMinutos} now={now} />
+            )}
+
+            {/* Info Grid */}
+            <div className="space-y-2">
+              <DetailRow icon={<Users size={12} />} label="Crianças" value={entrada.criancas.map((c: any) => c.nome + (c.idade ? ` (${c.idade}a)` : "")).join(", ")} />
+              <DetailRow icon={<Users size={12} />} label="Encarregado" value={entrada.encarregadoNome} />
+              <DetailRow icon={<Phone size={12} />} label="Telefone" value={entrada.encarregadoTelefone} />
+              {entrada.encarregadoEmail && (
+                <DetailRow icon={<Mail size={12} />} label="Email" value={entrada.encarregadoEmail} />
               )}
-
-              {/* Info Grid */}
-              <div className="space-y-2 mb-5">
-                <DetailRow icon={<Users size={12} />} label="Crianças" value={entrada.criancas.map((c: any) => c.nome + (c.idade ? ` (${c.idade}a)` : "")).join(", ")} />
-                <DetailRow icon={<Users size={12} />} label="Encarregado" value={entrada.encarregadoNome} />
-                <DetailRow icon={<Phone size={12} />} label="Telefone" value={entrada.encarregadoTelefone} />
-                {entrada.encarregadoEmail && (
-                  <DetailRow icon={<Mail size={12} />} label="Email" value={entrada.encarregadoEmail} />
-                )}
-                <DetailRow icon={<MapPin size={12} />} label="Local" value={entrada.local?.nome ?? "—"} />
-                {entrada.cacifo && (
-                  <DetailRow icon={<Package size={12} />} label="Cacifo" value={`#${entrada.cacifo.numero}`} />
-                )}
-                <div className="border-t border-border my-2" />
-                <DetailRow icon={<Clock size={12} />} label="Início" value={`${formatDate(entrada.inicioEm)} ${formatTime(entrada.inicioEm)}`} />
-                <DetailRow icon={<Timer size={12} />} label="Duração" value={`${entrada.duracaoMinutos} min`} />
-                <DetailRow label="Fim Previsto" value={formatTime(entrada.fimPrevisto)} />
-                {entrada.fimReal && (
-                  <DetailRow label="Fim Real" value={formatTime(entrada.fimReal)} />
-                )}
-                {entrada.excessoMinutos != null && entrada.excessoMinutos > 0 && (
-                  <DetailRow icon={<AlertTriangle size={12} />} label="Excesso" value={`${entrada.excessoMinutos} min`} accent />
-                )}
-                <div className="border-t border-border my-2" />
-                <DetailRow icon={<CreditCard size={12} />} label="Custo Base" value={formatCurrency(entrada.custoTotal)} />
-                {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
-                  <DetailRow label="Custo Excesso" value={formatCurrency(entrada.custoExcesso)} accent />
-                )}
-                <DetailRow label="Total Final" value={formatCurrency(entrada.custoTotalFinal ?? entrada.custoTotal)} bold />
+              <DetailRow icon={<MapPin size={12} />} label="Local" value={entrada.local?.nome ?? "—"} />
+              {entrada.cacifo && (
+                <DetailRow icon={<Package size={12} />} label="Cacifo" value={`#${entrada.cacifo.numero}`} />
+              )}
+              <div className="border-t border-border my-2" />
+              <DetailRow icon={<Clock size={12} />} label="Início" value={`${formatDate(entrada.inicioEm)} ${formatTime(entrada.inicioEm)}`} />
+              <DetailRow icon={<Timer size={12} />} label="Duração" value={`${entrada.duracaoMinutos} min`} />
+              <DetailRow label="Fim Previsto" value={formatTime(entrada.fimPrevisto)} />
+              {entrada.fimReal && (
+                <DetailRow label="Fim Real" value={formatTime(entrada.fimReal)} />
+              )}
+              {entrada.excessoMinutos != null && entrada.excessoMinutos > 0 && (
+                <DetailRow icon={<AlertTriangle size={12} />} label="Excesso" value={`${entrada.excessoMinutos} min`} accent />
+              )}
+              <div className="border-t border-border my-2" />
+              <DetailRow icon={<CreditCard size={12} />} label="Custo Base" value={formatCurrency(entrada.custoTotal)} />
+              {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
+                <DetailRow label="Custo Excesso" value={formatCurrency(entrada.custoExcesso)} accent />
+              )}
+              <DetailRow label="Total Final" value={formatCurrency(entrada.custoTotalFinal ?? entrada.custoTotal)} bold />
+              <DetailRow
+                label="Pagamento"
+                value={entrada.pago ? "Pago" : "Por pagar"}
+              />
+              {entrada.metodoPagamento && (
+                <DetailRow label="Método" value={entrada.metodoPagamento} />
+              )}
+              {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
                 <DetailRow
-                  label="Pagamento"
-                  value={entrada.pago ? "Pago" : "Por pagar"}
+                  label="Excesso Pago"
+                  value={entrada.pagoExcesso ? "Sim" : "Não"}
+                  accent={!entrada.pagoExcesso}
                 />
-                {entrada.metodoPagamento && (
-                  <DetailRow label="Método" value={entrada.metodoPagamento} />
-                )}
-                {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
-                  <DetailRow
-                    label="Excesso Pago"
-                    value={entrada.pagoExcesso ? "Sim" : "Não"}
-                    accent={!entrada.pagoExcesso}
-                  />
-                )}
-                {entrada.observacoes && (
-                  <DetailRow icon={<FileText size={12} />} label="Observações" value={entrada.observacoes} />
-                )}
-                {entrada.observacoesLesoes && (
-                  <DetailRow icon={<AlertTriangle size={12} />} label="Alergias/Lesões" value={entrada.observacoesLesoes} accent />
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end flex-wrap">
-                <Button variant="outline" onClick={onClose}>Fechar</Button>
-                {entrada.estado === "ATIVA" && !entrada.pago && (
-                  <Button onClick={handleMarcarPago} loading={atualizarPagamento.isPending} className="gap-1.5">
-                    <CheckCircle size={14} /> Marcar Pago
-                  </Button>
-                )}
-                {entrada.estado === "CONCLUIDA" && entrada.custoExcesso != null && entrada.custoExcesso > 0 && !entrada.pagoExcesso && (
-                  <Button onClick={handlePagarExcesso} loading={atualizarPagamento.isPending} className="gap-1.5">
-                    <CreditCard size={14} /> Pagar Excesso
-                  </Button>
-                )}
-                {entrada.estado === "ATIVA" && (
-                  <Button onClick={() => setConfirmAction("concluir")} loading={concluir.isPending} className="gap-1.5">
-                    Concluir
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </Modal>
-
-      {/* Confirm Action Modal */}
-      <ConfirmActionModal
-        isOpen={!!confirmAction}
-        onClose={() => setConfirmAction(null)}
-        onConfirm={handleConcluir}
-        title="Concluir Entrada"
-        message="Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente."
-        confirmText="Concluir"
-        variant="danger"
-        isConfirming={concluir.isPending}
-      />
-    </>
+              )}
+              {entrada.observacoes && (
+                <DetailRow icon={<FileText size={12} />} label="Observações" value={entrada.observacoes} />
+              )}
+              {entrada.observacoesLesoes && (
+                <DetailRow icon={<AlertTriangle size={12} />} label="Alergias/Lesões" value={entrada.observacoesLesoes} accent />
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
   );
 }
 

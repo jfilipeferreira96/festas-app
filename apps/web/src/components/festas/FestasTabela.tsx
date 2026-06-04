@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
-import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva } from "@/hooks/use-reservas";
+import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva } from "@/hooks/use-reservas";
 import FestaForm from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
 import CheckInModal from "./CheckInModal";
+import HistoricoModal from "./HistoricoModal";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
 import DataTable from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
@@ -40,8 +41,10 @@ export default function FestasTabela() {
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
   const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
   const [checkInReserva, setCheckInReserva] = useState<Reserva | null>(null);
+  const [historicoReserva, setHistoricoReserva] = useState<Reserva | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
+  const [finalizarModal, setFinalizarModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [iniciarFestaReserva, setIniciarFestaReserva] = useState<Reserva | null>(null);
 
   const todayStr = useMemo(
@@ -66,6 +69,7 @@ export default function FestasTabela() {
   const deleteReserva = useDeleteReserva();
   const updateStatus = useUpdateReservaStatus();
   const iniciarFesta = useIniciarReserva();
+  const finalizarReserva = useFinalizarReserva();
 
   const handleCreate = useCallback(() => {
     setEditingReserva(null);
@@ -108,6 +112,15 @@ export default function FestasTabela() {
     await updateStatus.mutateAsync({ id: cancelModal.id, estado: "CANCELADA" });
     setCancelModal({ isOpen: false, id: "" });
   }, [updateStatus, cancelModal.id]);
+
+  const handleFinalizar = useCallback((id: string) => {
+    setFinalizarModal({ isOpen: true, id });
+  }, []);
+
+  const confirmFinalizar = useCallback(async () => {
+    await finalizarReserva.mutateAsync(finalizarModal.id);
+    setFinalizarModal({ isOpen: false, id: "" });
+  }, [finalizarReserva, finalizarModal.id]);
 
   const handleIniciarFesta = useCallback(async () => {
     if (!iniciarFestaReserva) return;
@@ -300,7 +313,7 @@ export default function FestasTabela() {
         onEdit={handleEdit}
         renderActions={(r) => (
           <div className="flex items-center justify-end gap-1">
-            {/* Quick action: Confirmar */}
+            {/* Quick action: Confirmar (RESERVA) */}
             {r.estado === "RESERVA" && (
               <Tooltip content="Confirmar festa" position="top" theme="dark">
                 <button
@@ -311,7 +324,7 @@ export default function FestasTabela() {
                 </button>
               </Tooltip>
             )}
-            {/* Quick action: Iniciar Festa */}
+            {/* Quick action: Iniciar Festa (CONFIRMADO) */}
             {r.estado === "CONFIRMADO" && (
               <Tooltip content="Iniciar festa" position="top" theme="dark">
                 <button
@@ -322,7 +335,18 @@ export default function FestasTabela() {
                 </button>
               </Tooltip>
             )}
-            {/* Quick action: Check-in */}
+            {/* Quick action: Finalizar (EM_CURSO) */}
+            {r.estado === "EM_CURSO" && (
+              <Tooltip content="Finalizar festa" position="top" theme="dark">
+                <button
+                  onClick={() => handleFinalizar(r.id)}
+                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
+                >
+                  <SquareCheck size={15} />
+                </button>
+              </Tooltip>
+            )}
+            {/* Quick action: Check-in (CONFIRMADO / EM_CURSO) */}
             {(r.estado === "CONFIRMADO" || r.estado === "EM_CURSO") && (
               <Tooltip content="Check-in participantes" position="top" theme="dark">
                 <button
@@ -333,12 +357,23 @@ export default function FestasTabela() {
                 </button>
               </Tooltip>
             )}
-            {/* Quick action: Cancelar */}
+            {/* Quick action: Histórico (CONCLUIDA) */}
+            {r.estado === "CONCLUIDA" && (
+              <Tooltip content="Ver histórico" position="top" theme="dark">
+                <button
+                  onClick={() => setHistoricoReserva(r)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+                >
+                  <History size={15} />
+                </button>
+              </Tooltip>
+            )}
+            {/* Quick action: Cancelar (RESERVA / CONFIRMADO) */}
             {(r.estado === "RESERVA" || r.estado === "CONFIRMADO") && (
               <Tooltip content="Cancelar festa" position="top" theme="dark">
                 <button
                   onClick={() => handleCancelar(r.id)}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-orange-50 text-text-muted hover:text-accent-orange transition-colors"
                 >
                   <XCircle size={15} />
                 </button>
@@ -356,13 +391,11 @@ export default function FestasTabela() {
                 </button>
               </Tooltip>
             )}
-            {r.estado !== "EM_CURSO" && (
-              <Tooltip content="Eliminar" position="top" theme="dark">
-                <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors">
-                  <Trash2 size={15} />
-                </button>
-              </Tooltip>
-            )}
+            <Tooltip content="Eliminar" position="top" theme="dark">
+              <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors">
+                <Trash2 size={15} />
+              </button>
+            </Tooltip>
           </div>
         )}
         emptyState={{
@@ -400,6 +433,11 @@ export default function FestasTabela() {
         <CheckInModal reserva={checkInReserva} onClose={() => setCheckInReserva(null)} />
       )}
 
+      {/* Histórico Modal */}
+      {historicoReserva && (
+        <HistoricoModal reserva={historicoReserva} onClose={() => setHistoricoReserva(null)} />
+      )}
+
       {/* Delete Confirmation Modal */}
       <ConfirmActionModal
         isOpen={deleteModal.isOpen}
@@ -422,6 +460,18 @@ export default function FestasTabela() {
         confirmText="Cancelar Festa"
         variant="warning"
         isConfirming={updateStatus.isPending}
+      />
+
+      {/* Finalizar Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={finalizarModal.isOpen}
+        onClose={() => setFinalizarModal({ isOpen: false, id: "" })}
+        onConfirm={confirmFinalizar}
+        title="Finalizar Festa"
+        message="Tem a certeza que deseja finalizar esta festa? Esta acção é irreversível."
+        confirmText="Finalizar"
+        variant="success"
+        isConfirming={finalizarReserva.isPending}
       />
 
       {/* Iniciar Festa Confirmation Modal */}

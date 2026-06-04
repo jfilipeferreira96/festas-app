@@ -99,7 +99,7 @@ export default function FestasContent() {
         title="Finalizar Festa"
         message="Tem a certeza que deseja finalizar esta festa? Esta acção é irreversível."
         confirmText="Finalizar"
-        variant="danger"
+        variant="success"
         isConfirming={finalizarFesta.isPending}
       />
 

@@ -164,7 +164,7 @@ export default function EntradasAtivasContent() {
         title="Concluir Entrada"
         message="Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente."
         confirmText="Concluir"
-        variant="danger"
+        variant="success"
         isConfirming={concluir.isPending}
       />
 
@@ -176,7 +176,7 @@ export default function EntradasAtivasContent() {
         title="Cancelar Entrada"
         message="Tem a certeza que deseja cancelar esta entrada?"
         confirmText="Cancelar"
-        variant="danger"
+        variant="warning"
         isConfirming={cancelar.isPending}
       />
 

@@ -1,29 +1,18 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
-  Pencil, Trash2, CheckCircle2, Play, XCircle, Users, MapPin,
-  Clock, Cake, Sparkles, Package, UserCheck, CreditCard, Shield,
-  Gift, Star, FileText, MessageSquare, History,
+  CheckCircle2, Play, XCircle, Users, MapPin,
+  Clock, Cake, Sparkles, Package, CreditCard, Shield,
+  Gift, Star, FileText, MessageSquare,
   SquareCheck, Phone, Mail, Hash, Percent, Tag, Calendar,
-  Eye,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { StatusBadge, Button, type StatusType } from "@/components/ui";
-import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import { StatusBadge, type StatusType } from "@/components/ui";
 import { StatusStepper } from "@/components/ui/status-stepper/StatusStepper";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
-import {
-  useReserva,
-  useDeleteReserva,
-  useUpdateReservaStatus,
-  useIniciarReserva,
-  useFinalizarReserva,
-} from "@/hooks/use-reservas";
-import FestaForm from "./FestaForm";
-import CheckInModal from "./CheckInModal";
-import HistoricoModal from "./HistoricoModal";
-import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
+import { useReserva } from "@/hooks/use-reservas";
+import type { Reserva } from "@/lib/api/reservas";
 import { formatDate, formatDuration } from "@/utils/date";
 import { differenceInYears } from "date-fns";
 
@@ -64,219 +53,46 @@ interface FestaDetailModalProps {
 export default function FestaDetailModal({ reservaId, onClose }: FestaDetailModalProps) {
   const { data: reserva, isLoading } = useReserva(reservaId ?? "");
 
-  // Action mutations
-  const deleteReserva = useDeleteReserva();
-  const updateStatus = useUpdateReservaStatus();
-  const iniciarReserva = useIniciarReserva();
-  const finalizarReserva = useFinalizarReserva();
-
-  // Sub-modal states
-  const [showEditForm, setShowEditForm] = useState(false);
-  const [showCheckIn, setShowCheckIn] = useState(false);
-  const [showHistorico, setShowHistorico] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{
-    type: "delete" | "cancel" | "confirmar" | "finalizar" | "iniciar";
-  } | null>(null);
-
   // Quick nav
   const [activeTab, setActiveTab] = useState<QuickTab>("geral");
-
-  // ── Action handlers ────────────────────────────────────────────────
-  const handleConfirmAction = useCallback(async () => {
-    if (!reserva || !confirmAction) return;
-    try {
-      switch (confirmAction.type) {
-        case "delete":
-          await deleteReserva.mutateAsync(reserva.id);
-          onClose();
-          break;
-        case "cancel":
-          await updateStatus.mutateAsync({ id: reserva.id, estado: "CANCELADA" as EstadoReserva });
-          break;
-        case "confirmar":
-          await updateStatus.mutateAsync({ id: reserva.id, estado: "CONFIRMADO" as EstadoReserva });
-          break;
-        case "finalizar":
-          await finalizarReserva.mutateAsync(reserva.id);
-          break;
-        case "iniciar":
-          await iniciarReserva.mutateAsync(reserva.id);
-          break;
-      }
-    } catch {
-      // Error handled by mutation
-    }
-    setConfirmAction(null);
-  }, [reserva, confirmAction, deleteReserva, updateStatus, finalizarReserva, iniciarReserva, onClose]);
-
-  const isActionPending =
-    deleteReserva.isPending ||
-    updateStatus.isPending ||
-    iniciarReserva.isPending ||
-    finalizarReserva.isPending;
 
   // ── Render ─────────────────────────────────────────────────────────
   if (!reservaId) return null;
 
   return (
-    <>
-      {/* Main Detail Modal */}
-      <Modal isOpen={!!reservaId} onClose={onClose} size="2xl">
-        <div className="p-6 max-h-[85vh] overflow-y-auto">
-          {isLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
-              ))}
-            </div>
-          ) : reserva ? (
-            <DetailContent
-              reserva={reserva}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              onEdit={() => setShowEditForm(true)}
-              onCheckIn={() => setShowCheckIn(true)}
-              onHistorico={() => setShowHistorico(true)}
-              onConfirmar={() => setConfirmAction({ type: "confirmar" })}
-              onCancelar={() => setConfirmAction({ type: "cancel" })}
-              onEliminar={() => setConfirmAction({ type: "delete" })}
-              onIniciar={() => setConfirmAction({ type: "iniciar" })}
-              onFinalizar={() => setConfirmAction({ type: "finalizar" })}
-            />
-          ) : (
-            <div className="text-center text-text-muted py-8">
-              Reserva não encontrada.
-            </div>
-          )}
-        </div>
-      </Modal>
-
-      {/* Edit Form Modal */}
-      {showEditForm && reserva && (
-        <Modal isOpen={showEditForm} onClose={() => setShowEditForm(false)} size="2xl">
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-text-primary mb-4">Editar Festa</h2>
-            <FestaForm reserva={reserva} onClose={() => setShowEditForm(false)} />
+    <Modal isOpen={!!reservaId} onClose={onClose} size="2xl" title="Detalhes da Festa">
+      <div className="p-6 max-h-[85vh] overflow-y-auto">
+        {isLoading ? (
+          <div className="space-y-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+            ))}
           </div>
-        </Modal>
-      )}
-
-      {/* Check-in Modal */}
-      {showCheckIn && reserva && (
-        <CheckInModal reserva={reserva} onClose={() => setShowCheckIn(false)} />
-      )}
-
-      {/* Historico Modal */}
-      {showHistorico && reserva && (
-        <HistoricoModal reserva={reserva} onClose={() => setShowHistorico(false)} />
-      )}
-
-      {/* Confirmation Modals */}
-      {confirmAction?.type === "delete" && (
-        <ConfirmActionModal
-          isOpen
-          onClose={() => setConfirmAction(null)}
-          onConfirm={handleConfirmAction}
-          title="Eliminar Festa"
-          message="Tem a certeza que deseja eliminar esta festa? Esta acção não pode ser revertida."
-          confirmText="Eliminar"
-          variant="danger"
-          isConfirming={isActionPending}
-        />
-      )}
-      {confirmAction?.type === "cancel" && (
-        <ConfirmActionModal
-          isOpen
-          onClose={() => setConfirmAction(null)}
-          onConfirm={handleConfirmAction}
-          title="Cancelar Festa"
-          message="Tem a certeza que deseja cancelar esta festa?"
-          confirmText="Cancelar Festa"
-          variant="warning"
-          isConfirming={isActionPending}
-        />
-      )}
-      {confirmAction?.type === "confirmar" && (
-        <ConfirmActionModal
-          isOpen
-          onClose={() => setConfirmAction(null)}
-          onConfirm={handleConfirmAction}
-          title="Confirmar Festa"
-          message="Tem a certeza que deseja confirmar esta festa?"
-          confirmText="Confirmar"
-          variant="success"
-          isConfirming={isActionPending}
-        />
-      )}
-      {confirmAction?.type === "finalizar" && (
-        <ConfirmActionModal
-          isOpen
-          onClose={() => setConfirmAction(null)}
-          onConfirm={handleConfirmAction}
-          title="Finalizar Festa"
-          message="Tem a certeza que deseja finalizar esta festa? Esta acção é irreversível."
-          confirmText="Finalizar"
-          variant="danger"
-          isConfirming={isActionPending}
-        />
-      )}
-      {confirmAction?.type === "iniciar" && reserva && (
-        <Modal isOpen onClose={() => setConfirmAction(null)}>
-          <div className="p-6">
-            <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
-              <Play size={20} className="text-brand-500" />
-              Iniciar Festa
-            </h2>
-            <p className="text-sm text-text-secondary mb-4">
-              Confirme os dados antes de iniciar a festa. Esta acção irá transformar a reserva numa festa em curso.
-            </p>
-            <div className="bg-surface rounded-lg border border-border p-4 space-y-2 mb-4">
-              <ConfirmRow label="Aniversariante" value={reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || "—"} />
-              <ConfirmRow label="Encarregado" value={reserva.cliente?.nome ?? "—"} />
-              <ConfirmRow label="Sala" value={reserva.local?.nome ?? "—"} />
-              <ConfirmRow label="Nº Crianças" value={String(reserva.numCriancas ?? 0)} />
-              <ConfirmRow label="Duração" value={formatDuration(reserva.duracaoMinutos)} />
-              {reserva.menu && <ConfirmRow label="Menu" value={reserva.menu.nome} />}
-              {reserva.extras.length > 0 && <ConfirmRow label="Extras" value={`${reserva.extras.length} extras`} />}
-            </div>
-            <div className="flex items-center gap-3 justify-end">
-              <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancelar</Button>
-              <Button onClick={handleConfirmAction} disabled={isActionPending} className="flex items-center gap-2">
-                {isActionPending ? "A iniciar..." : <><Play size={16} /> Iniciar Festa</>}
-              </Button>
-            </div>
+        ) : reserva ? (
+          <DetailContent
+            reserva={reserva}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        ) : (
+          <div className="text-center text-text-muted py-8">
+            Reserva não encontrada.
           </div>
-        </Modal>
-      )}
-    </>
+        )}
+      </div>
+    </Modal>
   );
 }
 
-// ── Detail Content ─────────────────────────────────────────────────
+// ── Detail Content (read-only) ─────────────────────────────────────
 function DetailContent({
   reserva,
   activeTab,
   setActiveTab,
-  onEdit,
-  onCheckIn,
-  onHistorico,
-  onConfirmar,
-  onCancelar,
-  onEliminar,
-  onIniciar,
-  onFinalizar,
 }: {
   reserva: Reserva;
   activeTab: QuickTab;
   setActiveTab: (tab: QuickTab) => void;
-  onEdit: () => void;
-  onCheckIn: () => void;
-  onHistorico: () => void;
-  onConfirmar: () => void;
-  onCancelar: () => void;
-  onEliminar: () => void;
-  onIniciar: () => void;
-  onFinalizar: () => void;
 }) {
   const estado = reserva.estado;
   const numParticipantes = reserva.participantes?.length ?? 0;
@@ -363,41 +179,6 @@ function DetailContent({
         <CacifosTab reserva={reserva} />
       )}
 
-      {/* Actions */}
-      <div className="pt-4 mt-4 border-t border-border flex flex-wrap items-center gap-2">
-        {/* RESERVA */}
-        {estado === "RESERVA" && (
-          <>
-            <ActionButton icon={<CheckCircle2 size={14} />} label="Confirmar" onClick={onConfirmar} variant="success" />
-            <ActionButton icon={<Pencil size={14} />} label="Editar" onClick={onEdit} variant="primary" />
-            <ActionButton icon={<XCircle size={14} />} label="Cancelar" onClick={onCancelar} variant="warning" />
-            <ActionButton icon={<Trash2 size={14} />} label="Eliminar" onClick={onEliminar} variant="danger" />
-          </>
-        )}
-        {/* CONFIRMADO */}
-        {estado === "CONFIRMADO" && (
-          <>
-            <ActionButton icon={<Play size={14} />} label="Iniciar" onClick={onIniciar} variant="primary" />
-            <ActionButton icon={<UserCheck size={14} />} label="Check-in" onClick={onCheckIn} variant="success" />
-            <ActionButton icon={<Pencil size={14} />} label="Editar" onClick={onEdit} variant="primary" />
-            <ActionButton icon={<XCircle size={14} />} label="Cancelar" onClick={onCancelar} variant="warning" />
-          </>
-        )}
-        {/* EM_CURSO */}
-        {estado === "EM_CURSO" && (
-          <>
-            <ActionButton icon={<SquareCheck size={14} />} label="Finalizar" onClick={onFinalizar} variant="danger" />
-            <ActionButton icon={<UserCheck size={14} />} label="Check-in" onClick={onCheckIn} variant="success" />
-            <ActionButton icon={<Pencil size={14} />} label="Editar" onClick={onEdit} variant="primary" />
-          </>
-        )}
-        {/* CONCLUIDA */}
-        {estado === "CONCLUIDA" && (
-          <>
-            <ActionButton icon={<History size={14} />} label="Histórico" onClick={onHistorico} variant="primary" />
-          </>
-        )}
-      </div>
     </div>
   );
 }
@@ -787,36 +568,6 @@ function RuntimeTimer({ reserva }: { reserva: Reserva }) {
   );
 }
 
-// ── Action Button ──────────────────────────────────────────────────
-function ActionButton({
-  icon,
-  label,
-  onClick,
-  variant,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  variant: "primary" | "success" | "danger" | "warning";
-}) {
-  const styles = {
-    primary: "text-brand-500 hover:bg-brand-50",
-    success: "text-accent-green-600 hover:bg-accent-green-50",
-    danger: "text-accent-red hover:bg-red-50",
-    warning: "text-accent-orange hover:bg-orange-50",
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${styles[variant]}`}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
-
 // ── Section Component ──────────────────────────────────────────────
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -839,16 +590,6 @@ function DetailRow({ icon, label, value }: { icon?: React.ReactNode; label: stri
       {icon && <span className="text-text-muted shrink-0">{icon}</span>}
       <span className="text-xs text-text-muted w-24 shrink-0">{label}:</span>
       <span className="text-sm text-text-primary">{value}</span>
-    </div>
-  );
-}
-
-// ── Confirm Row (for Iniciar modal) ────────────────────────────────
-function ConfirmRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between text-sm">
-      <span className="text-text-muted">{label}</span>
-      <span className="text-text-primary font-medium">{value}</span>
     </div>
   );
 }

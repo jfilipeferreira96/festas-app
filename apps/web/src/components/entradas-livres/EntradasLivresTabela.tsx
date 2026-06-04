@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Trash2, Check, XCircle, Users, Clock } from "lucide-react";
+import { Plus, Eye, Trash2, Check, CheckCircle, XCircle, Users, Clock, Pencil, CreditCard } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
-import { useEntradasLivres, useEliminarEntradaLivre, useConcluirEntradaLivre, useCancelarEntradaLivre } from "@/hooks/use-entrada-livre";
+import { useEntradasLivres, useEliminarEntradaLivre, useConcluirEntradaLivre, useCancelarEntradaLivre, useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
 import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
@@ -43,10 +43,14 @@ function formatDate(iso: string): string {
 export default function EntradasLivresTabela() {
   const [filtro, setFiltro] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
   const [viewingEntradaId, setViewingEntradaId] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [concluirModal, setConcluirModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [cancelarModal, setCancelarModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
+
+  const isFormOpen = showForm || !!editingEntrada;
+  const formTitle = editingEntrada ? "Editar Entrada Livre" : "Nova Entrada Livre";
 
   // Build filter params
   const filtros = useMemo(() => {
@@ -69,6 +73,7 @@ export default function EntradasLivresTabela() {
   const eliminar = useEliminarEntradaLivre();
   const concluir = useConcluirEntradaLivre();
   const cancelar = useCancelarEntradaLivre();
+  const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
 
   const handleCreate = useCallback(() => {
     setShowForm(true);
@@ -76,6 +81,11 @@ export default function EntradasLivresTabela() {
 
   const handleFormClose = useCallback(() => {
     setShowForm(false);
+    setEditingEntrada(null);
+  }, []);
+
+  const handleEdit = useCallback((entrada: EntradaLivre) => {
+    setEditingEntrada(entrada);
   }, []);
 
   const handleView = useCallback((entrada: EntradaLivre) => {
@@ -96,6 +106,14 @@ export default function EntradasLivresTabela() {
     await cancelar.mutateAsync(cancelarModal.id);
     setCancelarModal({ isOpen: false, id: "" });
   }, [cancelar, cancelarModal.id]);
+
+  const handleMarcarPago = useCallback(async (id: string) => {
+    await atualizarPagamento.mutateAsync({ id, data: { pago: true } });
+  }, [atualizarPagamento]);
+
+  const handlePagarExcesso = useCallback(async (id: string) => {
+    await atualizarPagamento.mutateAsync({ id, data: { pagoExcesso: true } });
+  }, [atualizarPagamento]);
 
   return (
     <div>
@@ -240,23 +258,47 @@ export default function EntradasLivresTabela() {
         pageSize={10}
         renderActions={(r) => (
           <div className="flex items-center justify-end gap-1">
-            {/* Quick action: Concluir */}
+            {/* Quick action: Marcar Pago (ATIVA não paga) */}
+            {r.estado === "ATIVA" && !r.pago && (
+              <Tooltip content="Marcar como paga" position="top" theme="dark">
+                <button
+                  onClick={() => handleMarcarPago(r.id)}
+                  disabled={atualizarPagamento.isPending}
+                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors disabled:opacity-50"
+                >
+                  <Check size={15} />
+                </button>
+              </Tooltip>
+            )}
+            {/* Quick action: Pagar Excesso (CONCLUIDA com excesso em falta) */}
+            {r.estado === "CONCLUIDA" && r.custoExcesso != null && r.custoExcesso > 0 && !r.pagoExcesso && (
+              <Tooltip content="Marcar excesso pago" position="top" theme="dark">
+                <button
+                  onClick={() => handlePagarExcesso(r.id)}
+                  disabled={atualizarPagamento.isPending}
+                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors disabled:opacity-50"
+                >
+                  <CreditCard size={15} />
+                </button>
+              </Tooltip>
+            )}
+            {/* Quick action: Concluir (ATIVA) */}
             {r.estado === "ATIVA" && (
               <Tooltip content="Concluir entrada" position="top" theme="dark">
                 <button
                   onClick={() => setConcluirModal({ isOpen: true, id: r.id })}
                   className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
                 >
-                  <Check size={15} />
+                  <CheckCircle size={15} />
                 </button>
               </Tooltip>
             )}
-            {/* Quick action: Cancelar */}
+            {/* Quick action: Cancelar (ATIVA) */}
             {r.estado === "ATIVA" && (
               <Tooltip content="Cancelar entrada" position="top" theme="dark">
                 <button
                   onClick={() => setCancelarModal({ isOpen: true, id: r.id })}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-orange-50 text-text-muted hover:text-accent-orange transition-colors"
                 >
                   <XCircle size={15} />
                 </button>
@@ -271,17 +313,26 @@ export default function EntradasLivresTabela() {
                 <Eye size={15} />
               </button>
             </Tooltip>
-            {/* Delete (only non-active) */}
-            {r.estado !== "ATIVA" && (
-              <Tooltip content="Eliminar" position="top" theme="dark">
+            {/* Edit (não conclusivas) */}
+            {r.estado !== "CONCLUIDA" && r.estado !== "CANCELADA" && (
+              <Tooltip content="Editar" position="top" theme="dark">
                 <button
-                  onClick={() => setDeleteModal({ isOpen: true, id: r.id })}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                  onClick={() => handleEdit(r)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
                 >
-                  <Trash2 size={15} />
+                  <Pencil size={15} />
                 </button>
               </Tooltip>
             )}
+            {/* Delete */}
+            <Tooltip content="Eliminar" position="top" theme="dark">
+              <button
+                onClick={() => setDeleteModal({ isOpen: true, id: r.id })}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+              >
+                <Trash2 size={15} />
+              </button>
+            </Tooltip>
           </div>
         )}
         emptyState={{
@@ -295,12 +346,12 @@ export default function EntradasLivresTabela() {
         }}
       />
 
-      {/* Create Modal */}
-      {showForm && (
-        <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
+      {/* Create / Edit Modal */}
+      {isFormOpen && (
+        <Modal isOpen={isFormOpen} onClose={handleFormClose} size="2xl">
           <div className="p-6">
-            <h2 className="text-xl font-semibold text-text-primary mb-4">Nova Entrada Livre</h2>
-            <EntradaLivreForm onClose={handleFormClose} />
+            <h2 className="text-xl font-semibold text-text-primary mb-4">{formTitle}</h2>
+            <EntradaLivreForm entrada={editingEntrada} onClose={handleFormClose} />
           </div>
         </Modal>
       )}
@@ -331,7 +382,7 @@ export default function EntradasLivresTabela() {
         title="Concluir Entrada"
         message="Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente."
         confirmText="Concluir"
-        variant="danger"
+        variant="success"
         isConfirming={concluir.isPending}
       />
 
@@ -343,7 +394,7 @@ export default function EntradasLivresTabela() {
         title="Cancelar Entrada"
         message="Tem a certeza que deseja cancelar esta entrada?"
         confirmText="Cancelar"
-        variant="danger"
+        variant="warning"
         isConfirming={cancelar.isPending}
       />
     </div>
