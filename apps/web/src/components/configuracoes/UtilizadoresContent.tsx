@@ -5,7 +5,7 @@ import { useUtilizadores } from "@/hooks/use-utilizadores";
 import { useUser } from "@/contexts/AuthContext";
 import type { FuncaoUtilizador, Utilizador } from "@saas/shared-types";
 import Button from "@/components/ui/button/Button";
-import { BaseModal } from "@/components/ui/BaseModal";
+import { Modal } from "@/components/ui/modal";
 import InputField from "@/components/form/input/InputField";
 import { Select } from "@/components/ui/select";
 import { Plus, Trash2, Shield, UserCheck, UserX } from "lucide-react";
@@ -36,11 +36,16 @@ type CreateUserFormData = z.infer<typeof createUserSchema>;
 type EditUserFormData = z.infer<typeof editUserSchema>;
 
 // --- Constants ---
+// Design tokens (see apps/web/src/app/globals.css @theme directive):
+//   brand-*      → primary blue family (GESTOR)
+//   accent-purple-* → ADMINISTRADOR
+//   accent-green-*  → RECECAO
+//   accent-orange-* → MARKETING
 const roleColors: Record<FuncaoUtilizador, string> = {
-  ADMINISTRADOR: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  GESTOR: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  RECECAO: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  MARKETING: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  ADMINISTRADOR: "bg-accent-purple-50 text-accent-purple-700",
+  GESTOR: "bg-brand-50 text-brand-700",
+  RECECAO: "bg-accent-green-50 text-accent-green-700",
+  MARKETING: "bg-accent-orange-50 text-accent-orange-700",
 };
 
 const roleLabels: Record<FuncaoUtilizador, string> = {
@@ -259,8 +264,8 @@ export default function UtilizadoresContent({
               disabled={isUpdatingActivo}
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full transition-colors ${
                 user.activo
-                  ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                  ? "bg-accent-green-50 text-accent-green-700 hover:bg-accent-green-100"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
               }`}
             >
               {user.activo ? (
@@ -277,8 +282,8 @@ export default function UtilizadoresContent({
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full ${
                 user.activo
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                  ? "bg-accent-green-50 text-accent-green-700"
+                  : "bg-gray-100 text-gray-500"
               }`}
             >
               {user.activo ? (
@@ -345,7 +350,7 @@ export default function UtilizadoresContent({
       />
 
       {/* Edit User Modal */}
-      <BaseModal isOpen={!!editUser} onClose={() => setEditUser(null)} className="max-w-md">
+      <Modal isOpen={!!editUser} onClose={() => setEditUser(null)} className="max-w-md">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-text-primary mb-6">Editar Utilizador</h2>
           {editUser && (
@@ -399,8 +404,8 @@ export default function UtilizadoresContent({
                   }}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full transition-colors ${
                     editUser.activo
-                      ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400"
+                      ? "bg-accent-green-50 text-accent-green-700 hover:bg-accent-green-100"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                   }`}
                 >
                   {editUser.activo ? (
@@ -418,10 +423,10 @@ export default function UtilizadoresContent({
             </div>
           )}
         </div>
-      </BaseModal>
+      </Modal>
 
       {/* Create User Modal */}
-      <BaseModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-md">
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="max-w-md">
         <div className="p-6">
           <h2 className="text-lg font-semibold text-text-primary mb-6">Novo Utilizador</h2>
           <form onSubmit={handleCreateSubmit(handleCreateUser)} className="space-y-4">
@@ -489,10 +494,10 @@ export default function UtilizadoresContent({
             </div>
           </form>
         </div>
-      </BaseModal>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      <BaseModal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, userId: "", userName: "" })} className="max-w-md">
+      <Modal isOpen={deleteModal.isOpen} onClose={() => setDeleteModal({ isOpen: false, userId: "", userName: "" })} className="max-w-md">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-accent-red-100 flex items-center justify-center">
@@ -518,7 +523,7 @@ export default function UtilizadoresContent({
             </Button>
           </div>
         </div>
-      </BaseModal>
+      </Modal>
     </div>
   );
 }

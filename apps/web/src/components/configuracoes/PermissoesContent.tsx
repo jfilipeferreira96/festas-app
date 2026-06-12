@@ -20,20 +20,20 @@ import {
   type Permissao,
 } from "@/lib/api/permissoes";
 
-// Level color coding
+// Level color coding — uses project design tokens (see globals.css @theme)
 const nivelColors: Record<string, string> = {
-  sem_acesso: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
-  leitura: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
-  escrita: "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  administracao: "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  sem_acesso: "bg-gray-100 text-gray-500",
+  leitura: "bg-brand-50 text-brand-700",
+  escrita: "bg-accent-orange-50 text-accent-orange-700",
+  administracao: "bg-accent-green-50 text-accent-green-700",
 };
 
 // Level dot color (for legend)
 const nivelDotColors: Record<string, string> = {
-  sem_acesso: "bg-gray-400 dark:bg-gray-500",
-  leitura: "bg-blue-500 dark:bg-blue-400",
-  escrita: "bg-amber-500 dark:bg-amber-400",
-  administracao: "bg-green-500 dark:bg-green-400",
+  sem_acesso: "bg-gray-400",
+  leitura: "bg-brand-500",
+  escrita: "bg-accent-orange-500",
+  administracao: "bg-accent-green-500",
 };
 
 // Read-only label map for ADMINISTRADOR badges
@@ -46,11 +46,12 @@ const nivelLabels: Record<string, string> = {
 
 const nivelOptions = NIVEIS_ACESSO.map((n) => ({ value: n.value, label: n.label }));
 
+// Função badge styles — same palette as UtilizadoresContent for consistency
 const funcaoBadgeStyles: Record<string, string> = {
-  ADMINISTRADOR: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  GESTOR: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  RECECAO: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  MARKETING: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  ADMINISTRADOR: "bg-accent-purple-50 text-accent-purple-700",
+  GESTOR: "bg-brand-50 text-brand-700",
+  RECECAO: "bg-accent-green-50 text-accent-green-700",
+  MARKETING: "bg-accent-orange-50 text-accent-orange-700",
 };
 
 export default function PermissoesContent() {
@@ -124,9 +125,9 @@ export default function PermissoesContent() {
       />
 
       {/* Info Banner */}
-      <div className="mt-6 flex items-start gap-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3">
-        <Info className="w-5 h-5 text-blue-500 dark:text-blue-400 mt-0.5 shrink-0" />
-        <p className="text-sm text-blue-700 dark:text-blue-300">
+      <div className="mt-6 flex items-start gap-3 rounded-xl bg-brand-50 border border-brand-200 px-4 py-3">
+        <Info className="w-5 h-5 text-brand-500 mt-0.5 shrink-0" />
+        <p className="text-sm text-brand-700">
           As permissões do <strong>Administrador</strong> são fixas e não podem ser alteradas.
           Apenas as funções Gestor, Receção e Marketing podem ser configuradas.
         </p>
@@ -138,7 +139,7 @@ export default function PermissoesContent() {
           <div className="hidden md:block overflow-x-auto custom-scrollbar">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-border bg-gray-50 dark:bg-gray-800/50">
+                <tr className="border-b border-border bg-gray-50">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-text-secondary min-w-[140px]">
                     Função
                   </th>
@@ -163,8 +164,8 @@ export default function PermissoesContent() {
                       key={funcao}
                       className={`border-b border-border last:border-0 ${
                         isAdmin
-                          ? "bg-gray-50/80 dark:bg-gray-800/30"
-                          : "hover:bg-gray-50/50 dark:hover:bg-gray-800/20"
+                          ? "bg-gray-50/80"
+                          : "hover:bg-gray-50/50"
                       }`}
                     >
                       <td className="px-4 py-3 text-sm text-text-primary">

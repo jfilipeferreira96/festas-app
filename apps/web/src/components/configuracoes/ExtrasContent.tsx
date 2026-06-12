@@ -63,8 +63,8 @@ const columns: Column<Extra>[] = [
     sortable: true,
     render: (_value, e) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-          <LucideIcon name={e.icone} className="text-purple-600" />
+        <div className="w-8 h-8 rounded-full bg-accent-purple-50 flex items-center justify-center">
+          <LucideIcon name={e.icone} className="text-accent-purple-600" />
         </div>
         <div>
           <span className="text-sm font-medium text-text-primary">{e.nome}</span>

@@ -48,8 +48,8 @@ const columns: Column<EtapaFesta>[] = [
     sortable: true,
     render: (_value, e) => (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-          <LucideIcon name={e.icone} className="text-blue-600" />
+        <div className="w-8 h-8 rounded-full bg-brand-50 flex items-center justify-center">
+          <LucideIcon name={e.icone} className="text-brand-600" />
         </div>
         <div>
           <span className="text-sm font-medium text-text-primary">{e.nome}</span>
