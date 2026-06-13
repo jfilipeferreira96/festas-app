@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Produce a self-contained .next/standalone build for cPanel/Phusion Passenger
+  output: "standalone",
+  // Keep Prisma/auth workspace packages external on the server (not bundled)
+  serverExternalPackages: ["@festas/db", "@festas/auth", "@prisma/client"],
   typedRoutes: true,
   compiler: {
     styledComponents: true,

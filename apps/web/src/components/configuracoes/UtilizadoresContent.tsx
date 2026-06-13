@@ -18,7 +18,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555";
+const SERVER_URL = ""; // Single-app: API/uploads served same-origin via Next.js Route Handlers
 
 // --- Zod Schemas ---
 const createUserSchema = z.object({
@@ -213,7 +213,7 @@ export default function UtilizadoresContent({
           <div className="flex items-center">
             {user.image ? (
               <img
-                src={`${process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555"}${user.image}`}
+                src={user.image}
                 alt={user.name}
                 className="h-10 w-10 rounded-full object-cover"
               />

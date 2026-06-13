@@ -11,7 +11,6 @@ import { sendEmailVerificationEmail, sendPasswordResetEmail } from "./email";
 for (const candidate of [
   resolve(process.cwd(), ".env"),
   resolve(process.cwd(), "apps/web/.env"),
-  resolve(process.cwd(), "apps/server/.env"),
 ]) {
   config({ path: candidate });
 }

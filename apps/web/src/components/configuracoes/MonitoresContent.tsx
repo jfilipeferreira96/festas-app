@@ -17,7 +17,7 @@ import { useMonitores, useCreateMonitor, useUpdateMonitor, useDeleteMonitor } fr
 import type { Monitor } from "@/lib/api/monitores";
 import type { StatusType } from "@/components/ui";
 
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555";
+const SERVER_URL = ""; // Single-app: API/uploads served same-origin via Next.js Route Handlers
 
 // --- Zod Schema ---
 const monitorSchema = z.object({
@@ -38,7 +38,7 @@ const columns: Column<Monitor>[] = [
       <div className="flex items-center gap-2">
         {m.fotoUrl ? (
           <img
-            src={`${process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555"}${m.fotoUrl}`}
+            src={m.fotoUrl}
             alt={m.nome}
             className="w-8 h-8 rounded-full object-cover"
           />

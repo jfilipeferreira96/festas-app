@@ -10,7 +10,6 @@
   "scripts": {
     "dev": "turbo dev",
     "dev:web": "turbo -F web dev",
-    "dev:server": "turbo -F server dev",
     "build": "turbo build",
     "build:shared": "turbo --filter @saas/shared-types --filter @saas/shared-defaults build",
     "db:generate": "turbo -F @festas/db db:generate",

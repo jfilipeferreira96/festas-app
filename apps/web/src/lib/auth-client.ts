@@ -2,10 +2,9 @@ import { lastLoginMethodClient, organizationClient } from "better-auth/client/pl
 
 import { createAuthClient } from "better-auth/client";
 
-const serverURL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555";
-
+// Single-app: the API (including /api/auth/*) is served same-origin via Next.js
+// Route Handlers, so no explicit baseURL is needed (defaults to current origin).
 export const authClient = createAuthClient({
-    baseURL: serverURL,
     plugins: [
         organizationClient(),
         lastLoginMethodClient()

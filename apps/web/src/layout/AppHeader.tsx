@@ -41,7 +41,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ user }) => {
           >
             {user?.image ? (
               <img
-                src={`${process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555"}${user.image}`}
+                src={user.image}
                 alt={user.name || "Utilizador"}
                 className="w-8 h-8 rounded-full object-cover"
               />

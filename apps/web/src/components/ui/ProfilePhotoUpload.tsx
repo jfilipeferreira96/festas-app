@@ -3,7 +3,7 @@
 import React, { useRef, useState, useCallback } from "react";
 import { Camera } from "lucide-react";
 
-const SERVER_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555";
+const SERVER_URL = ""; // Single-app: uploads served same-origin via Next.js Route Handlers
 
 interface ProfilePhotoUploadProps {
   /** Current photo URL (relative to server, e.g. /api/uploads/profile-photos/user.jpg) */

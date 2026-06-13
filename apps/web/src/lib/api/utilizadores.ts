@@ -1,6 +1,6 @@
 import type { Utilizador, FuncaoUtilizador } from "@saas/shared-types";
 
-const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555";
+const API_URL = ""; // Single-app: API served same-origin via Next.js Route Handlers
 
 interface CreateUtilizadorData {
   name: string;
