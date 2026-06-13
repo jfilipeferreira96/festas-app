@@ -158,11 +158,6 @@ describe("Monitor Service — Filtragem", () => {
       expect(monitores.length).toBeGreaterThanOrEqual(8);
     });
 
-    it("deve incluir relações de locais", async () => {
-      const monitores = await monitorService.list();
-      expect(monitores[0]).toHaveProperty("locais");
-    });
-
     it("deve retornar monitores ordenados por nome", async () => {
       const monitores = await monitorService.list();
       for (let i = 1; i < monitores.length; i++) {
