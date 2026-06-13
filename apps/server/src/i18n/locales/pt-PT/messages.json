@@ -188,6 +188,11 @@
     "updated": "Entrada livre atualizada com sucesso",
     "deleted": "Entrada livre eliminada com sucesso"
   },
+  "relatorio": {
+    "invalidDateRange": "Intervalo de datas inválido",
+    "dataInicioRequired": "Data de início é obrigatória",
+    "dataFimRequired": "Data de fim é obrigatória"
+  },
   "general": {
     "success": "Operação realizada com sucesso",
     "error": "Ocorreu um erro inesperado",

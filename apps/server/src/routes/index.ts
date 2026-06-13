@@ -16,6 +16,7 @@ import configuracaoCacifoRoutes from "./configuracaoCacifo.routes";
 import participantesRoutes from "./participantes.routes";
 import entradaLivreRoutes from "./entradaLivre.routes";
 import alocacaoMonitorRoutes from "./alocacaoMonitor.routes";
+import relatorioRoutes from "./relatorio.routes";
 
 const router = Router();
 
@@ -69,5 +70,8 @@ router.use("/entradas-livres", entradaLivreRoutes);
 
 // Alocação de Monitores (escalação por dia + intervalo horário)
 router.use("/alocacoes-monitor", alocacaoMonitorRoutes);
+
+// Relatórios (Financeiro)
+router.use("/relatorios", relatorioRoutes);
 
 export default router;

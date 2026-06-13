@@ -1242,7 +1242,47 @@ async function seedEntradasLivres() {
     });
   }
 
-  console.log("  ✓ 3 configurações, 26 entradas livres (7 ativas, 12 concluídas, 4 canceladas)\n");
+  // ─── CONCLUIDAS HOJE (para o relatório de hoje ter dados) ─────────
+  const concluidasHoje = [
+    { id: "entrada-livre-conc-hoje-001", hora: 11, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Patrícia Gomes", tel: "910000099", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Marta", idade: 5 }] },
+    { id: "entrada-livre-conc-hoje-002", hora: 13, min: 30, dur: 90, custo: 8.0, local: "local-002", nome: "Bruno Antunes", tel: "920000099", met: MP("MBWAY"), excesso: 15, criancas: [{ nome: "Tomás", idade: 6 }, { nome: "Madalena", idade: 4 }] },
+    { id: "entrada-livre-conc-hoje-003", hora: 15, min: 0, dur: 120, custo: 12.0, local: "local-003", nome: "Sónia Rocha", tel: "930000099", met: MP("MULTIBANCO"), excesso: 0, criancas: [{ nome: "Afonso", idade: 7 }] },
+    { id: "entrada-livre-conc-hoje-004", hora: 16, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Daniel Faria", tel: "940000099", met: MP("TRANSFERENCIA"), excesso: 0, criancas: [{ nome: "Leonor", idade: 5 }, { nome: "Vicente", idade: 3 }] },
+  ];
+
+  for (const c of concluidasHoje) {
+    const start = dateAt(todayDate, c.hora, c.min);
+    const fim = addMin(start, c.dur);
+    const fimReal = addMin(fim, c.excesso);
+    const custoTotal = (c.custo / 60) * c.dur;
+    const custoExcesso = c.excesso > 0 ? ((c.custo * 1.2) / 60) * c.excesso : 0;
+    await prisma.entradaLivre.upsert({
+      where: { id: c.id },
+      update: {},
+      create: {
+        id: c.id,
+        encarregadoNome: c.nome,
+        encarregadoTelefone: c.tel,
+        duracaoMinutos: c.dur,
+        custoHora: c.custo,
+        custoTotal,
+        inicioEm: start,
+        fimPrevisto: fim,
+        fimReal,
+        estado: "CONCLUIDA",
+        localId: c.local,
+        excessoMinutos: c.excesso || null,
+        custoExcesso: c.excesso > 0 ? custoExcesso : null,
+        custoTotalFinal: custoTotal + custoExcesso,
+        pago: true,
+        pagoExcesso: c.excesso > 0,
+        metodoPagamento: c.met,
+        criancas: c.criancas,
+      },
+    });
+  }
+
+  console.log("  ✓ 3 configurações, 30 entradas livres (7 ativas, 16 concluídas, 4 canceladas — 4 concluídas hoje)\n");
 }
 
 // ─── Alocações de Monitores (escalonamento) ──────────────────

@@ -19,3 +19,4 @@ export type { EtapaFesta, ReservaEtapa as ReservaEtapaWithDetails } from "./type
 export type { Permissao, PermissaoInput } from "./types/permissao";
 export type { AuditLog } from "./types/audit";
 export type { CriancaInput, EntradaLivre, EntradaLivreExtraItem, CriarEntradaLivreDTO, ConfiguracaoEntradaLivre } from "./types/entradaLivre";
+export type { LinhaRelatorio, SecaoRelatorio, RelatorioFinanceiro } from "./types/relatorio";
