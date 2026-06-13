@@ -92,6 +92,15 @@
     "inactiveNotAvailable": "Monitores inactivos não estão disponíveis para alocação",
     "insufficientMonitors": "Monitores insuficientes para o número de crianças"
   },
+  "alocacao": {
+    "notFound": "Alocação não encontrada",
+    "deleted": "Alocação eliminada com sucesso",
+    "monitorRequired": "Monitor é obrigatório",
+    "localRequired": "Local é obrigatório",
+    "dataRequired": "A data é obrigatória",
+    "horasInvalidas": "A hora de fim tem de ser superior à hora de início",
+    "monitorOverlap": "O monitor já tem uma alocação sobreposta neste horário"
+  },
   "extra": {
     "notFound": "Extra não encontrado",
     "createdSuccessfully": "Extra criado com sucesso",

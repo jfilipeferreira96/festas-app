@@ -92,6 +92,12 @@ const mainNavItems: NavItem[] = [
     modulo: "cacifos",
   },
   {
+    name: "Monitores",
+    icon: <UserCog className="w-5 h-5" />,
+    path: "/monitores",
+    modulo: "reservas",
+  },
+  {
     name: "Menus",
     icon: <UtensilsCrossed className="w-5 h-5" />,
     path: "/menus",

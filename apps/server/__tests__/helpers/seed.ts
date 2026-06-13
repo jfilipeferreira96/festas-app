@@ -406,6 +406,7 @@ export async function cleanTestData(): Promise<void> {
   await testPrisma.cliente.deleteMany().catch(() => {});
 
   await testPrisma.etapaFesta.deleteMany().catch(() => {});
+  await testPrisma.alocacaoMonitor.deleteMany().catch(() => {});
   await testPrisma.monitorLocal.deleteMany().catch(() => {});
   await testPrisma.monitor.deleteMany().catch(() => {});
 

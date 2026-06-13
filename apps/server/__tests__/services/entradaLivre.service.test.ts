@@ -184,7 +184,7 @@ describe("Entrada Livre Service", () => {
       });
 
       expect(entrada.cacifo).not.toBeNull();
-      expect(entrada.cacifo.numero).toBe(1);
+      expect(entrada.cacifo!.numero).toBe(1);
 
       // Cleanup
       await testPrisma.cacifo.update({
@@ -303,7 +303,7 @@ describe("Entrada Livre Service", () => {
         criancas: [{ nome: "Criança" }],
       });
 
-      expect(entrada.cacifo.estado).toBe("OCUPADO");
+      expect(entrada.cacifo!.estado).toBe("OCUPADO");
 
       await entradaLivreService.concluir(entrada.id);
 

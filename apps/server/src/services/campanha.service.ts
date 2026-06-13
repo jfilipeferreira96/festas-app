@@ -126,7 +126,7 @@ export const campanhaService = {
   },
 
   async getMetricas(id: string) {
-    const campanha = await this.getById(id);
+    await this.getById(id);
 
     const [totalEnvios, abertos, falhados] = await Promise.all([
       prisma.envioCampanha.count({ where: { campanhaId: id } }),

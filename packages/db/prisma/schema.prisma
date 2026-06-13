@@ -195,6 +195,7 @@ model Local {
   extras        ExtraLocal[]
   entradasLivres EntradaLivre[]
   configuracaoEntradaLivre ConfiguracaoEntradaLivre?
+  alocacoes     AlocacaoMonitor[]
 
   @@map("local")
 }
@@ -253,6 +254,7 @@ model Monitor {
 
   reservas  ReservaMonitor[]
   locais    MonitorLocal[]
+  alocacoes AlocacaoMonitor[]
 
   @@map("monitor")
 }
@@ -266,6 +268,28 @@ model MonitorLocal {
 
   @@unique([monitorId, localId])
   @@map("monitor_local")
+}
+
+// ============================================
+// ALOCAÇÃO DE MONITORES (escalação por dia + intervalo horário)
+// ============================================
+
+model AlocacaoMonitor {
+  id          String   @id @default(cuid())
+  data        DateTime             // O dia (filtrado por range gte/lt, como Reserva.data)
+  horaInicio  Int                  // Minutos desde meia-noite (0–1440). Ex.: 14h = 840
+  horaFim     Int                  // Minutos desde meia-noite
+  observacoes String?  @db.Text
+  monitorId   String
+  localId     String
+  monitor     Monitor  @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  local       Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([data])
+  @@index([monitorId, data])
+  @@map("alocacao_monitor")
 }
 
 // ============================================

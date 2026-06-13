@@ -15,6 +15,7 @@ import permissoesRoutes from "./permissoes.routes";
 import configuracaoCacifoRoutes from "./configuracaoCacifo.routes";
 import participantesRoutes from "./participantes.routes";
 import entradaLivreRoutes from "./entradaLivre.routes";
+import alocacaoMonitorRoutes from "./alocacaoMonitor.routes";
 
 const router = Router();
 
@@ -65,5 +66,8 @@ router.use("/participantes", participantesRoutes);
 
 // Entradas Livres (Open Play)
 router.use("/entradas-livres", entradaLivreRoutes);
+
+// Alocação de Monitores (escalação por dia + intervalo horário)
+router.use("/alocacoes-monitor", alocacaoMonitorRoutes);
 
 export default router;

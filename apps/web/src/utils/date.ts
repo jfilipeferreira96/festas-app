@@ -1,4 +1,20 @@
 /**
+ * Converte um Date para "yyyy-MM-dd" usando o dia civil LOCAL.
+ *
+ * Evita o desvio de fuso do `date.toISOString()` (que converte para UTC).
+ * Em Portugal (UTC+1/UTC+0), o toISOString deslocaria um dia escolhido à meia-noite
+ * para o dia anterior. Usar os componentes locais garante o dia civil correcto.
+ *
+ * @example toLocalISODate(new Date(2026, 5, 13)) -> "2026-06-13"
+ */
+export function toLocalISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
  * Formata data ISO para PT-PT (DD/MM/YYYY)
  * @example formatDate("2026-05-21") -> "21/05/2026"
  */

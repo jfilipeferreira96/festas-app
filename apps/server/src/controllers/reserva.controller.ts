@@ -232,7 +232,7 @@ export const atualizarReserva = async (req: Request, res: Response) => {
       menuNotas,
     } = req.body;
 
-    const reserva = await reservaService.update(id, {
+    await reservaService.update(id, {
       data,
       horario,
       duracaoMinutos,

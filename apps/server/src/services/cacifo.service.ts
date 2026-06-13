@@ -80,7 +80,7 @@ export const cacifoService = {
   },
 
   async actualizarCacifo(id: string, dados: { notas?: string; criancas?: string }) {
-    const cacifo = await this.getById(id);
+    await this.getById(id);
 
     return prisma.cacifo.update({
       where: { id },

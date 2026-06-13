@@ -6,6 +6,7 @@
  * - 3 Locais (salas)
  * - 12 Extras (6 EXTRA + 6 MENU) + ExtraLocal associations
  * - 6 Monitores + MonitorLocal associations
+ * - Alocações de monitores (escalonamento por dia + intervalo horário)
  * - 1 Configuração Cacifos + 40 Cacifos
  * - 8 Clientes with 10 Aniversariantes
  * - 10 Reservas (past, today, future — various states) ALL with:
@@ -94,6 +95,7 @@ async function main() {
   await seedEtapasFestaConfig();
   await seedReservas();
   await seedEntradasLivres();
+  await seedAlocacoesMonitores();
   await seedMarketing();
 
   console.log("\n✅ Dev seed complete!");
@@ -1255,6 +1257,74 @@ async function seedEntradasLivres() {
   }
 
   console.log("  ✓ 3 configurações, 26 entradas livres (7 ativas, 12 concluídas, 4 canceladas)\n");
+}
+
+// ─── Alocações de Monitores (escalonamento) ──────────────────
+async function seedAlocacoesMonitores() {
+  console.log("  Creating alocacoes de monitores...");
+
+  // Limpa alocações anteriores do seed (idempotente)
+  await prisma.alocacaoMonitor.deleteMany({});
+
+  // H:MM → minutos desde meia-noite
+  const toMin = (h: number, m: number) => h * 60 + m;
+
+  type Aloca = {
+    dias: number; // relativo a hoje (0 = hoje, -1 = ontem, +1 = amanhã)
+    monitorId: string;
+    localId: string;
+    horaInicio: number;
+    horaFim: number;
+    observacoes?: string;
+  };
+
+  const alocacoes: Aloca[] = [
+    // ─── HOJE (timeline preenchida ao abrir a página) ─────────────
+    { dias: 0, monitorId: "monitor-001", localId: "local-001", horaInicio: toMin(9, 0), horaFim: toMin(13, 0) },
+    { dias: 0, monitorId: "monitor-001", localId: "local-002", horaInicio: toMin(14, 0), horaFim: toMin(18, 0), observacoes: "Turno da tarde" },
+    { dias: 0, monitorId: "monitor-002", localId: "local-002", horaInicio: toMin(9, 0), horaFim: toMin(12, 0) },
+    { dias: 0, monitorId: "monitor-002", localId: "local-003", horaInicio: toMin(13, 0), horaFim: toMin(17, 0) },
+    { dias: 0, monitorId: "monitor-003", localId: "local-001", horaInicio: toMin(10, 0), horaFim: toMin(14, 0) },
+    { dias: 0, monitorId: "monitor-004", localId: "local-003", horaInicio: toMin(9, 30), horaFim: toMin(13, 0), observacoes: "Reforço Parque" },
+    { dias: 0, monitorId: "monitor-005", localId: "local-002", horaInicio: toMin(15, 0), horaFim: toMin(19, 0) },
+    { dias: 0, monitorId: "monitor-006", localId: "local-001", horaInicio: toMin(14, 0), horaFim: toMin(18, 0) },
+
+    // ─── ONTEM ────────────────────────────────────────────────────
+    { dias: -1, monitorId: "monitor-001", localId: "local-001", horaInicio: toMin(10, 0), horaFim: toMin(14, 0) },
+    { dias: -1, monitorId: "monitor-003", localId: "local-003", horaInicio: toMin(14, 0), horaFim: toMin(18, 0) },
+    { dias: -1, monitorId: "monitor-005", localId: "local-002", horaInicio: toMin(9, 0), horaFim: toMin(13, 0) },
+
+    // ─── ANTEONTEM (-3 dias) ──────────────────────────────────────
+    { dias: -3, monitorId: "monitor-002", localId: "local-002", horaInicio: toMin(9, 0), horaFim: toMin(12, 30) },
+    { dias: -3, monitorId: "monitor-006", localId: "local-001", horaInicio: toMin(15, 0), horaFim: toMin(19, 0) },
+
+    // ─── AMANHÃ ───────────────────────────────────────────────────
+    { dias: 1, monitorId: "monitor-004", localId: "local-001", horaInicio: toMin(9, 0), horaFim: toMin(13, 0) },
+    { dias: 1, monitorId: "monitor-004", localId: "local-003", horaInicio: toMin(14, 0), horaFim: toMin(18, 0) },
+    { dias: 1, monitorId: "monitor-001", localId: "local-002", horaInicio: toMin(10, 0), horaFim: toMin(16, 0) },
+
+    // ─── DAQUI A 2 DIAS ───────────────────────────────────────────
+    { dias: 2, monitorId: "monitor-003", localId: "local-001", horaInicio: toMin(9, 0), horaFim: toMin(13, 0) },
+    { dias: 2, monitorId: "monitor-005", localId: "local-003", horaInicio: toMin(14, 0), horaFim: toMin(19, 0) },
+    { dias: 2, monitorId: "monitor-006", localId: "local-002", horaInicio: toMin(10, 0), horaFim: toMin(14, 0) },
+  ];
+
+  let criadas = 0;
+  for (const a of alocacoes) {
+    await prisma.alocacaoMonitor.create({
+      data: {
+        data: new Date(toDateStr(daysFromNow(a.dias))),
+        horaInicio: a.horaInicio,
+        horaFim: a.horaFim,
+        monitorId: a.monitorId,
+        localId: a.localId,
+        observacoes: a.observacoes ?? null,
+      },
+    });
+    criadas++;
+  }
+
+  console.log(`  ✓ ${criadas} alocações de monitores (hoje, ontem, -3d, amanhã, +2d)\n`);
 }
 
 // ─── Run ──────────────────────────────────────────────────────
