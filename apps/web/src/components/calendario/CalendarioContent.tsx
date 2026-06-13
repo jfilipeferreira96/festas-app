@@ -506,22 +506,18 @@ function MonthView({
                         e.stopPropagation();
                         onEventClick(ev);
                       }}
-                      className={`text-[10px] leading-tight px-1.5 py-0.5 rounded-md truncate font-medium text-white`}
-                      style={
-                        ev.hex
-                          ? { backgroundColor: ev.hex }
-                          : { backgroundColor: undefined }
-                      }
+                      className={`text-[10px] leading-tight px-1.5 py-0.5 rounded-md truncate font-medium ${
+                        ev.hex ? "text-white" : ev.className
+                      }`}
+                      style={ev.hex ? { backgroundColor: ev.hex } : undefined}
                     >
-                      <span className={ev.hex ? "" : `${ev.className} !text-inherit`}>
-                        {ev.hex && (
-                          <span
-                            className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle"
-                            style={{ backgroundColor: "#ffffffcc" }}
-                          />
-                        )}
-                        {ev.horario} {ev.titulo}
-                      </span>
+                      {ev.hex && (
+                        <span
+                          className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle"
+                          style={{ backgroundColor: "#ffffffcc" }}
+                        />
+                      )}
+                      {ev.horario} {ev.titulo}
                     </div>
                   ))}
                   {remaining > 0 && (
