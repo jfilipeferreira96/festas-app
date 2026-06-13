@@ -191,7 +191,6 @@ model Local {
   updatedAt  DateTime @updatedAt
 
   reservas      Reserva[]
-  monitores     MonitorLocal[]
   extras        ExtraLocal[]
   entradasLivres EntradaLivre[]
   configuracaoEntradaLivre ConfiguracaoEntradaLivre?
@@ -253,21 +252,9 @@ model Monitor {
   user      User?    @relation(fields: [userId], references: [id])
 
   reservas  ReservaMonitor[]
-  locais    MonitorLocal[]
   alocacoes AlocacaoMonitor[]
 
   @@map("monitor")
-}
-
-model MonitorLocal {
-  id        String  @id @default(cuid())
-  monitorId String
-  localId   String
-  monitor   Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  local     Local   @relation(fields: [localId], references: [id], onDelete: Cascade)
-
-  @@unique([monitorId, localId])
-  @@map("monitor_local")
 }
 
 // ============================================

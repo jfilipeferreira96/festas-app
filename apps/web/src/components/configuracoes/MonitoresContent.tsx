@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback } from "react";
 import { UserCog, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,11 +11,9 @@ import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import InputField from "@/components/form/input/InputField";
 import Switch from "@/components/form/switch/Switch";
-import MultiSelect from "@/components/form/MultiSelect";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { useMonitores, useCreateMonitor, useUpdateMonitor, useDeleteMonitor } from "@/hooks/use-monitores";
-import { useLocais } from "@/hooks/use-locais";
 import type { Monitor } from "@/lib/api/monitores";
 import type { StatusType } from "@/components/ui";
 
@@ -26,7 +24,6 @@ const monitorSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   contacto: z.string().min(9, "Contacto inválido (mín. 9 dígitos)"),
   activo: z.boolean(),
-  locaisIds: z.array(z.string()),
 });
 
 type MonitorFormData = z.infer<typeof monitorSchema>;
@@ -60,15 +57,6 @@ const columns: Column<Monitor>[] = [
     sortable: true,
   },
   {
-    key: "locais",
-    label: "Salas",
-    render: (_value, m) => (
-      <span className="text-xs text-text-muted">
-        {m.locais.map((l) => l.local.nome).join(", ") || "—"}
-      </span>
-    ),
-  },
-  {
     key: "activo",
     label: "Estado",
     sortable: true,
@@ -82,7 +70,6 @@ const columns: Column<Monitor>[] = [
 
 export default function MonitoresContent() {
   const { data: monitores, isLoading } = useMonitores();
-  const { data: locais } = useLocais();
   const createMonitor = useCreateMonitor();
   const updateMonitor = useUpdateMonitor();
   const deleteMonitor = useDeleteMonitor();
@@ -105,12 +92,10 @@ export default function MonitoresContent() {
       nome: "",
       contacto: "",
       activo: true,
-      locaisIds: [],
     },
   });
 
   const activo = watch("activo");
-  const locaisIds = watch("locaisIds");
   const nome = watch("nome");
 
   /** Upload a pending photo file after entity creation */
@@ -131,7 +116,7 @@ export default function MonitoresContent() {
   const handleCreate = useCallback(() => {
     setEditingMonitor(null);
     setPendingPhotoFile(null);
-    reset({ nome: "", contacto: "", activo: true, locaisIds: [] });
+    reset({ nome: "", contacto: "", activo: true });
     setShowForm(true);
   }, [reset]);
 
@@ -143,7 +128,6 @@ export default function MonitoresContent() {
         nome: monitor.nome,
         contacto: monitor.contacto,
         activo: monitor.activo,
-        locaisIds: monitor.locais.map((l) => l.local.id),
       });
       setShowForm(true);
     },
@@ -155,14 +139,13 @@ export default function MonitoresContent() {
       if (editingMonitor) {
         await updateMonitor.mutateAsync({
           id: editingMonitor.id,
-          data: { nome: data.nome, contacto: data.contacto, activo: data.activo, locaisIds: data.locaisIds },
+          data: { nome: data.nome, contacto: data.contacto, activo: data.activo },
         });
       } else {
         const newMonitor = await createMonitor.mutateAsync({
           nome: data.nome,
           contacto: data.contacto,
           activo: data.activo,
-          locaisIds: data.locaisIds,
         });
 
         // Upload pending photo if one was selected
@@ -187,16 +170,6 @@ export default function MonitoresContent() {
     await deleteMonitor.mutateAsync(deleteModal.id);
     setDeleteModal({ isOpen: false, id: "", nome: "" });
   }, [deleteMonitor, deleteModal.id]);
-
-  const locaisOptions = useMemo(
-    () =>
-      (locais || []).map((local) => ({
-        value: local.id,
-        text: local.nome,
-        selected: locaisIds.includes(local.id),
-      })),
-    [locais, locaisIds]
-  );
 
   return (
     <div>
@@ -301,14 +274,6 @@ export default function MonitoresContent() {
                   placeholder="912 345 678"
                   error={!!errors.contacto}
                   hint={errors.contacto?.message}
-                />
-              </div>
-              <div>
-                <MultiSelect
-                  label="Salas"
-                  options={locaisOptions}
-                  defaultSelected={locaisIds}
-                  onChange={(selected: string[]) => setValue("locaisIds", selected)}
                 />
               </div>
               <div className="flex items-center justify-between">

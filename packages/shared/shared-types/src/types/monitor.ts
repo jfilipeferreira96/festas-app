@@ -12,9 +12,3 @@ export interface Monitor {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface MonitorLocal {
-  id: string;
-  monitorId: string;
-  localId: string;
-}

@@ -30,17 +30,15 @@ describe("Monitor Service", () => {
 
   // ── list ──────────────────────────────────────────────────────
   describe("list()", () => {
-    it("should return all monitores with locais", async () => {
+    it("should return all monitores", async () => {
       const monitores = await monitorService.list();
       expect(monitores.length).toBeGreaterThanOrEqual(2);
-      const firstMonitor = monitores[0];
-      expect(firstMonitor?.locais).toBeDefined();
     });
   });
 
   // ── getById ───────────────────────────────────────────────────
   describe("getById()", () => {
-    it("should return a monitor with locais", async () => {
+    it("should return a monitor", async () => {
       const monitor = await monitorService.getById(TEST_IDS.MONITOR_1);
       expect(monitor).toBeDefined();
       expect(monitor.id).toBe(TEST_IDS.MONITOR_1);
@@ -64,19 +62,6 @@ describe("Monitor Service", () => {
       expect(monitor.activo).toBe(true);
 
       // Cleanup
-      await testPrisma.monitor.delete({ where: { id: monitor.id } });
-    });
-
-    it("should create a monitor with locais", async () => {
-      const monitor = await monitorService.create({
-        nome: "Monitor Com Local",
-        contacto: "954444444",
-        locaisIds: [TEST_IDS.LOCAL_1],
-      });
-      expect(monitor.locais.length).toBe(1);
-
-      // Cleanup
-      await testPrisma.monitorLocal.deleteMany({ where: { monitorId: monitor.id } });
       await testPrisma.monitor.delete({ where: { id: monitor.id } });
     });
 
@@ -105,17 +90,6 @@ describe("Monitor Service", () => {
       await monitorService.update(TEST_IDS.MONITOR_1, { nome: "Monitor Teste 1" });
     });
 
-    it("should update monitor's locais", async () => {
-      const updated = await monitorService.update(TEST_IDS.MONITOR_1, {
-        locaisIds: [TEST_IDS.LOCAL_2],
-      });
-      expect(updated.locais.length).toBe(1);
-      expect(updated.locais[0]?.localId).toBe(TEST_IDS.LOCAL_2);
-
-      // Restore
-      await monitorService.update(TEST_IDS.MONITOR_1, { locaisIds: [] });
-    });
-
     it("should throw NOT_FOUND for non-existent ID", async () => {
       await expect(
         monitorService.update("non-existent", { nome: "X" })
@@ -125,11 +99,10 @@ describe("Monitor Service", () => {
 
   // ── delete ────────────────────────────────────────────────────
   describe("delete()", () => {
-    it("should delete a monitor and its associations", async () => {
+    it("should delete a monitor", async () => {
       const monitor = await monitorService.create({
         nome: "Para Apagar",
         contacto: "933333333",
-        locaisIds: [TEST_IDS.LOCAL_1],
       });
 
       await monitorService.delete(monitor.id);

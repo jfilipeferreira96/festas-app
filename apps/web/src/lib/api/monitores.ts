@@ -1,17 +1,13 @@
 import { api } from "./utils";
 import type { Monitor as MonitorBase } from "@saas/shared-types";
-import type { Local } from "@saas/shared-types";
 
 // API response type (base + relations from API)
-export interface Monitor extends MonitorBase {
-  locais: { local: Local }[];
-}
+export interface Monitor extends MonitorBase {}
 
 export interface CreateMonitorData {
   nome: string;
   contacto: string;
   activo?: boolean;
-  locaisIds?: string[];
 }
 
 // API calls

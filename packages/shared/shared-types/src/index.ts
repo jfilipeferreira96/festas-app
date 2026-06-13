@@ -11,7 +11,7 @@ export type { EstadoCacifo, Cacifo, ConfiguracaoCacifo, UpdateConfiguracaoCacifo
 export type { CategoriaItem, Menu } from "./types/menu";
 export type { Participante, CriarParticipanteDTO } from "./types/participante";
 export type { Local } from "./types/local";
-export type { Monitor, MonitorLocal } from "./types/monitor";
+export type { Monitor } from "./types/monitor";
 export type { AlocacaoMonitor, CriarAlocacaoMonitorDTO, AtualizarAlocacaoMonitorDTO } from "./types/alocacaoMonitor";
 export type { Extra, ExtraLocal } from "./types/extra";
 export type { TipoCampanha, EstadoCampanha, Campanha, EnvioCampanha, Segmento, NewsletterContacto, ContactoSegmento } from "./types/campanha";

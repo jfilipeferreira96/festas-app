@@ -5,7 +5,7 @@
  * - 5 Users (with Better Auth) + RBAC permissions
  * - 3 Locais (salas)
  * - 12 Extras (6 EXTRA + 6 MENU) + ExtraLocal associations
- * - 6 Monitores + MonitorLocal associations
+ * - 6 Monitores (perfil: nome, contacto)
  * - Alocações de monitores (escalonamento por dia + intervalo horário)
  * - 1 Configuração Cacifos + 40 Cacifos
  * - 8 Clientes with 10 Aniversariantes
@@ -235,21 +235,7 @@ async function seedMonitores() {
   for (const mon of monitores) {
     await prisma.monitor.upsert({ where: { id: mon.id }, update: {}, create: mon });
   }
-  const monitorLocals = [
-    { monitorId: "monitor-001", localId: "local-001" }, { monitorId: "monitor-001", localId: "local-002" },
-    { monitorId: "monitor-002", localId: "local-002" }, { monitorId: "monitor-002", localId: "local-003" },
-    { monitorId: "monitor-003", localId: "local-001" }, { monitorId: "monitor-003", localId: "local-003" },
-    { monitorId: "monitor-004", localId: "local-001" }, { monitorId: "monitor-004", localId: "local-003" },
-    { monitorId: "monitor-005", localId: "local-002" }, { monitorId: "monitor-005", localId: "local-003" },
-    { monitorId: "monitor-006", localId: "local-001" }, { monitorId: "monitor-006", localId: "local-002" },
-  ];
-  for (const ml of monitorLocals) {
-    await prisma.monitorLocal.upsert({
-      where: { monitorId_localId: { monitorId: ml.monitorId, localId: ml.localId } },
-      update: {}, create: ml,
-    });
-  }
-  console.log("  ✓ 6 monitores with local associations\n");
+  console.log("  ✓ 6 monitores\n");
 }
 
 // ─── Cacifos ──────────────────────────────────────────────────

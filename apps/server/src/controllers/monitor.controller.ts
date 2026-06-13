@@ -49,12 +49,11 @@ export const criarMonitor = async (req: Request, res: Response) => {
     const user = req.user;
     if (!user) return res.status(401).json({ error: req.t("auth.unauthorized") });
 
-    const { nome, contacto, activo, locaisIds } = req.body;
+    const { nome, contacto, activo } = req.body;
     const monitor = await monitorService.create({
       nome,
       contacto,
       activo,
-      locaisIds: locaisIds || [],
     });
     res.status(201).json(monitor);
   } catch (error) {
@@ -68,12 +67,11 @@ export const atualizarMonitor = async (req: Request, res: Response) => {
     if (!user) return res.status(401).json({ error: req.t("auth.unauthorized") });
 
     const id = req.params.id as string;
-    const { nome, contacto, activo, locaisIds } = req.body;
+    const { nome, contacto, activo } = req.body;
     const monitor = await monitorService.update(id, {
       nome,
       contacto,
       activo,
-      locaisIds,
     });
     res.status(200).json(monitor);
   } catch (error) {
