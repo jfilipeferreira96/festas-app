@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || "http://localhost:5555";
+// Single-app: the API is served same-origin via Next.js Route Handlers (/api/*),
+// so no absolute base URL is needed. (Kept as a constant for clarity/overridability.)
+const API_URL = process.env.NEXT_PUBLIC_SERVER_URL || "";
 
 /**
  * Custom API error that preserves the HTTP status code.

@@ -1,12 +1,20 @@
 import { config } from 'dotenv';
+import { resolve } from 'path';
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { localization } from "better-auth-localization";
 import prisma from "@festas/db";
 import { sendEmailVerificationEmail, sendPasswordResetEmail } from "./email";
 
-// Carregar variáveis de ambiente do .env do backend
-config({ path: '../../apps/server/.env' });
+// Carregar variáveis de ambiente. O Next.js carrega automaticamente apps/web/.env;
+// o ciclo abaixo mantém o pacote utilizável fora do Next (ex.: testes/vitest).
+for (const candidate of [
+  resolve(process.cwd(), ".env"),
+  resolve(process.cwd(), "apps/web/.env"),
+  resolve(process.cwd(), "apps/server/.env"),
+]) {
+  config({ path: candidate });
+}
 
 const envConfig = {
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
@@ -31,7 +39,7 @@ validateEnv(envConfig, REQUIRED_ENV_VARS);
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
-    provider: "postgresql",
+    provider: "mysql",
   }),
   secret: envConfig.BETTER_AUTH_SECRET!,
   trustedOrigins: [envConfig.CORS_ORIGIN || "http://localhost:4444"],

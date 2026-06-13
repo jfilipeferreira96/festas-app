@@ -139,8 +139,8 @@ export const reservaService = {
     if (filters?.localId) where.localId = filters.localId;
     if (filters?.pesquisa) {
       where.OR = [
-        { aniversariantes: { some: { aniversariante: { nome: { contains: filters.pesquisa, mode: "insensitive" } } } } },
-        { cliente: { nome: { contains: filters.pesquisa, mode: "insensitive" } } },
+        { aniversariantes: { some: { aniversariante: { nome: { contains: filters.pesquisa } } } } },
+        { cliente: { nome: { contains: filters.pesquisa } } },
         { cliente: { telefone: { contains: filters.pesquisa } } },
       ];
     }

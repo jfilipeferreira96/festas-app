@@ -25,8 +25,8 @@ export const clienteService = {
     const where: Record<string, unknown> = {};
     if (filters?.pesquisa) {
       where.OR = [
-        { nome: { contains: filters.pesquisa, mode: "insensitive" } },
-        { email: { contains: filters.pesquisa, mode: "insensitive" } },
+        { nome: { contains: filters.pesquisa } },
+        { email: { contains: filters.pesquisa } },
         { telefone: { contains: filters.pesquisa } },
         { contribuinte: { contains: filters.pesquisa } },
       ];
@@ -130,8 +130,8 @@ export const clienteService = {
     return prisma.cliente.findMany({
       where: {
         OR: [
-          { nome: { contains: query, mode: "insensitive" } },
-          { email: { contains: query, mode: "insensitive" } },
+          { nome: { contains: query } },
+          { email: { contains: query } },
           { telefone: { contains: query } },
           { contribuinte: { contains: query } },
         ],

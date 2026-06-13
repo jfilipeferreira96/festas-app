@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "next dev --port=4444",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "npm run test:setup && npx vitest run",
+    "test:watch": "npx vitest",
+    "test:setup": "npx tsx __tests__/setup-db.ts"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.15",
@@ -72,7 +75,9 @@
     "postcss": "^8",
     "prisma": "^6.15.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5"
+    "tsx": "^4.19.2",
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   },
   "optionalDependencies": {
     "@tailwindcss/oxide-linux-x64-gnu": "^4.0.1",

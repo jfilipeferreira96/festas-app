@@ -66,7 +66,7 @@ export const entradaLivreService = {
     if (filtros?.pesquisa) {
       const termo = filtros.pesquisa.trim();
       where.OR = [
-        { encarregadoNome: { contains: termo, mode: "insensitive" } },
+        { encarregadoNome: { contains: termo } },
         { encarregadoTelefone: { contains: termo } },
       ];
     }
