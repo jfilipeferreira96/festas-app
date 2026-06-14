@@ -61,7 +61,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync, createWriteStream } from "node:fs";
+import { cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync, createWriteStream } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -142,6 +142,29 @@ log("A copiar standalone -> deploy/ (pode demorar ~1 min)...");
 cpSync(STANDALONE, DEPLOY, { recursive: true });
 ok("standalone copiado.");
 
+// 2a1. CloudLinux — renomear node_modules para node_modules_deps -----------
+// O CloudLinux Node.js Selector NÃO permite uma pasta "node_modules" real na
+// raiz da aplicação (exige um symlink para virtualenv). Renomeamos para
+// "node_modules_deps" e configuramos NODE_PATH no app.js para resolução de
+// módulos. Isto evita o erro: "application should not contain folder/file with
+// such name [node_modules] in application root".
+log("A renomear node_modules -> node_modules_deps (compatibilidade CloudLinux)...");
+{
+  const nmDir = join(DEPLOY, "node_modules");
+  const nmDepsDir = join(DEPLOY, "node_modules_deps");
+  rmSync(nmDepsDir, { recursive: true, force: true });
+  try {
+    renameSync(nmDir, nmDepsDir);
+  } catch {
+    // Windows: renameSync pode falhar com EPERM (ficheiros ainda locked).
+    // Fallback: copiar + apagar original.
+    log("renameSync falhou (EPERM?), a usar cpSync como fallback...");
+    cpSync(nmDir, nmDepsDir, { recursive: true });
+    rmSync(nmDir, { recursive: true, force: true });
+  }
+}
+ok("node_modules renomeado para node_modules_deps.");
+
 // 2b. .next/static (assets do cliente — NÃO vêm no standalone)
 const webNext = join(DEPLOY, "apps", "web", ".next");
 mkdirSync(webNext, { recursive: true });
@@ -188,9 +211,18 @@ const APP_JS = `// app.js — entry point do Phusion Passenger (cPanel Node.js A
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import Module from "node:module";
 
 // --- carregar .env de produção manualmente (robusto, sem dependências) -----
 const here = dirname(fileURLToPath(import.meta.url));
+
+// --- NODE_PATH: resolver módulos de node_modules_deps (compat. CloudLinux) ---
+// O CloudLinux Node.js Selector exige que "node_modules" seja um symlink para
+// um virtualenv, não uma pasta real na raiz da app. As dependências foram
+// renomeadas para "node_modules_deps" e NODE_PATH garante a resolução.
+process.env.NODE_PATH = join(here, "node_modules_deps");
+Module._initPaths();
+
 const envPath = join(here, "apps", "web", ".env");
 if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf8").split("\\n")) {
@@ -214,6 +246,13 @@ await import("./apps/web/server.js");
 `;
 writeFileSync(join(DEPLOY, "app.js"), APP_JS);
 ok("app.js (entry Passenger) criado.");
+
+// 2f2. app2.js — TESTE de configuração (servir HTML estático) ---------------
+// Ficheiro de teste que serve uma página HTML simples (sem node_modules).
+// O utilizador pode mudar o "Application startup file" para app2.js no cPanel
+// para verificar que a configuração Node.js + Passenger está correcta.
+cpSync(join(__dirname, "app2.js"), join(DEPLOY, "app2.js"));
+ok("app2.js (teste de configuração) copiado.");
 
 // 2g. README-DEPLOY.md — instruções de deploy no cPanel ---------------------
 const README = `# 🚀 Deploy no cPanel — Festas (Next.js standalone)
@@ -303,7 +342,7 @@ writeFileSync(join(DEPLOY, "README-DEPLOY.md"), README);
 ok("README-DEPLOY.md criado.");
 
 // 3. VALIDAR ENGINE PRISMA LINUX --------------------------------------------
-const prismaClientDir = join(DEPLOY, "node_modules", ".prisma", "client");
+const prismaClientDir = join(DEPLOY, "node_modules_deps", ".prisma", "client");
 let linuxEngine = false;
 if (existsSync(prismaClientDir)) {
   const engines = readdirSync(prismaClientDir).filter((f) => /libquery_engine-(debian|rhel|linux)/.test(f));
