@@ -1,5 +1,6 @@
 import { config } from "dotenv";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
 /**
  * Global test setup.
@@ -11,8 +12,10 @@ import { resolve } from "path";
  *   1. MySQL is reachable and the test database exists
  *   2. Run the DB setup (creates the test DB + tables):
  *      npx tsx apps/web/__tests__/setup-db.ts
- *   (or set DATABASE_URL_TEST and run: npx prisma db push --schema packages/db/prisma/schema.prisma)
  */
 
-// Load .env from the apps/web directory (one level up from __tests__)
-config({ path: resolve(import.meta.dirname, "../.env") });
+// Robust __dirname for both vitest (Vite) and tsx/node (CJS). import.meta.dirname
+// is undefined when these files are transpiled to CJS, so use fileURLToPath instead.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+config({ path: resolve(__dirname, "../.env") });

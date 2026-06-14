@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 
 // Use absolute paths — works identically on Windows and Linux
 dotenv.config({
-	path: path.join(__dirname, "..", "..", "apps", "server", ".env"),
+	path: path.join(__dirname, "..", "..", "apps", "web", ".env"),
 });
 
 export default {

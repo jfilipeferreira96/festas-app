@@ -6,29 +6,46 @@ Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, 
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 15 + React 19 + Tailwind CSS 4 + TanStack Query |
-| Backend | Express 5 + TypeScript + Prisma + Better Auth |
-| Database | PostgreSQL via Prisma ORM |
-| Validation | Zod (both frontend and backend) |
-| Auth | Better Auth (email/password only) |
+| Fullstack | Next.js 15 (App Router) + React 19 + TypeScript |
+| Database | Neon PostgreSQL (serverless) via Prisma ORM |
+| Validation | Zod (frontend & API routes) |
+| Auth | Better Auth 1.3.x (email/password only) |
+| State Management | TanStack Query (React Query) |
+| Styling | Tailwind CSS 4 |
 | i18n | i18next (locale: `pt-PT` only) |
-| Logging | Winston with daily rotate files |
-| Docs | Swagger UI at `/api/docs` |
+| Testing | Vitest |
 
 ## Architecture
 
 ```
 festas/
 ├── apps/
-│   ├── web/              # Next.js 15 (Frontend) — Port 4444
-│   └── server/           # Express 5 (Backend API) — Port 5555
+│   └── web/              # Next.js 15 (Fullstack: Frontend + API Routes)
+│       ├── src/
+│       │   ├── app/              # App Router pages + API routes
+│       │   │   ├── (guest)/      # Public pages (auth, password recovery)
+│       │   │   ├── (protected)/  # Authenticated pages (sidebar + header layout)
+│       │   │   └── api/          # API routes (/api/*)
+│       │   ├── services/         # Business logic (Service layer)
+│       │   ├── components/       # React components
+│       │   ├── hooks/            # TanStack Query hooks
+│       │   ├── lib/              # Utilities, auth, API clients
+│       │   └── layout/           # AppSidebar, AppHeader, Backdrop
+│       ├── __tests__/            # Vitest test files
+│       └── package.json
 ├── packages/
-│   ├── auth/             # Better Auth configuration
-│   ├── db/               # Prisma schema & database client
+│   ├── auth/             # Better Auth configuration (@festas/auth)
+│   ├── db/               # Prisma schema & database client (@festas/db)
 │   └── shared/
 │       ├── shared-types/ # @saas/shared-types — TypeScript interfaces
 │       └── shared-defaults/ # @saas/shared-defaults — Default configurations
+├── skills/               # AI agent skill files (form, estado, realtime, tabela, layout, db, ptpt)
+├── AGENTS.md             # Agent context file
+├── PROJECTO.md           # Design system, navigation, types
+└── PAGINAS.md            # Page descriptions and business rules
 ```
+
+**Pattern:** API Route → Service → Prisma (no controllers, no Express)
 
 ## Getting Started
 
@@ -59,18 +76,12 @@ This starts a PostgreSQL database on port 5432 with:
 
 ### 3. Configure Environment
 
-**Backend** (`apps/server/.env`):
+**App** (`apps/web/.env`):
 ```env
-DATABASE_URL="postgresql://festas:password@localhost:5432/festas_db"
+DATABASE_URL="postgresql://festas:password@localhost:5432/festas_db?schema=festas"
 BETTER_AUTH_SECRET="your-secret-key"
-BETTER_AUTH_URL="http://localhost:5555"
-CORS_ORIGIN="http://localhost:4444"
-```
-
-**Frontend** (`apps/web/.env`):
-```env
-NEXT_PUBLIC_SERVER_URL=http://localhost:5555
-NEXT_PUBLIC_APP_URL=http://localhost:4444
+BETTER_AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
 ### 4. Setup Database
@@ -86,36 +97,50 @@ npm run db:push        # Push schema to database
 npm run dev
 ```
 
-- Frontend: http://localhost:4444
-- Backend API: http://localhost:5555
-- Swagger Docs: http://localhost:5555/api/docs
+- Application: http://localhost:3000
+- API routes: http://localhost:3000/api/*
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start all apps in dev mode |
-| `npm run build` | Build everything |
+| `npm run dev` | Start Next.js in dev mode |
+| `npm run build` | Build Next.js application |
 | `npm run build:shared` | Build shared packages only |
 | `npm run check-types` | TypeScript type checking |
 | `npm run db:push` | Push Prisma schema to DB |
 | `npm run db:generate` | Generate Prisma client |
 | `npm run db:studio` | Open Prisma Studio |
+| `npm run db:reset` | Reset database (drop + push + generate) |
+| `npm run db:clean` | Clean database (wipe migrations + drop stale enums + push:force + generate) |
+| `npm run db:seed:dev` | Seed dev data (festas schema) |
+| `npm run test` | Run tests (Vitest) |
 
-## API Modules
+## API Routes (Next.js App Router)
 
-| Module | Routes | Description |
-|--------|--------|-------------|
-| Dashboard | `/api/dashboard/*` | KPIs, festas em curso, próximas festas |
-| Reservas | `/api/reservas/*` | CRUD reservas, estado stepper |
-| Festas | `/api/festas/*` | Festas activas, iniciar/finalizar |
-| Cacifos | `/api/cacifos/*` | Gestão de cacifos, estados |
-| Menus | `/api/menus/*` | Lanches e extras por reserva |
-| Locais | `/api/locais/*` | Salas e espaços |
-| Clientes | `/api/clientes/*` | Gestão de clientes |
-| Monitores | `/api/monitores/*` | Monitores e alocação |
-| Extras | `/api/extras/*` | Extras disponíveis |
-| Campanhas | `/api/campanhas/*` | Newsletter e SMS |
+All API routes are defined in `apps/web/src/app/api/[resource]/route.ts` and follow the pattern:
+**API Route → Service → Prisma**
+
+| Module | Routes | Service |
+|--------|--------|---------|
+| Dashboard | `/api/dashboard/*` | `src/services/dashboard.service.ts` |
+| Reservas | `/api/reservas/*` | `src/services/reserva.service.ts` |
+| Cacifos | `/api/cacifos/*` | `src/services/cacifo.service.ts` |
+| Configuração Cacifos | `/api/configuracoes/cacifos/*` | `src/services/configuracaoCacifo.service.ts` |
+| Menus | `/api/menus/*` | `src/services/menu.service.ts` |
+| Locais | `/api/locais/*` | `src/services/local.service.ts` |
+| Clientes | `/api/clientes/*` | `src/services/cliente.service.ts` |
+| Monitores | `/api/monitores/*` | `src/services/monitor.service.ts` |
+| Extras | `/api/extras/*` | `src/services/extra.service.ts` |
+| Etapas de Festa | `/api/etapas-festa/*` | `src/services/etapaFesta.service.ts` |
+| Participantes | `/api/participantes/*` | `src/services/participante.service.ts` |
+| Campanhas | `/api/campanhas/*` | `src/services/campanha.service.ts` |
+| Utilizadores | `/api/utilizadores/*` | `src/services/utilizador.service.ts` |
+| Permissões | `/api/permissoes/*` | `src/services/permissoes.service.ts` |
+| Upload | `/api/upload/*` | `src/services/upload.service.ts` |
+| Aloc. Monitores | `/api/alocacao-monitores/*` | `src/services/alocacaoMonitor.service.ts` |
+| Entrada Livre | `/api/entrada-livre/*` | `src/services/entradaLivre.service.ts` |
+| Relatórios | `/api/relatorios/*` | `src/services/relatorio.service.ts` |
 
 ## User Roles (RBAC)
 

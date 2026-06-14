@@ -16,7 +16,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "ConfiguracaoCacifo",
 });
 
-// GET /api/configuracoes/cacifos
+// GET /api/configuracao-cacifos
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/configuracoes/cacifos
+// PUT /api/configuracao-cacifos (ADMINISTRADOR, GESTOR)
 export async function PUT(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

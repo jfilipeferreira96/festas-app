@@ -17,7 +17,7 @@ const __dirname = dirname(__filename);
 const DB_ROOT = resolve(__dirname, "..");
 const SCHEMA = join(DB_ROOT, "prisma", "schema.prisma");
 const MIGRATIONS_DIR = join(DB_ROOT, "prisma", "migrations");
-const ENV_FILE = resolve(DB_ROOT, "..", "..", "apps", "server", ".env");
+const ENV_FILE = resolve(DB_ROOT, "..", "..", "apps", "web", ".env");
 
 // Load env with ABSOLUTE path — ensures DATABASE_URL is always available
 if (existsSync(ENV_FILE)) {
@@ -29,7 +29,7 @@ if (existsSync(ENV_FILE)) {
 
 if (!process.env.DATABASE_URL) {
   console.error("❌ Error: DATABASE_URL is not set.");
-  console.error("   Make sure it exists in apps/server/.env or in your environment.");
+  console.error("   Make sure it exists in apps/web/.env or in your environment.");
   process.exit(1);
 }
 

@@ -549,8 +549,8 @@ const reservas = await prisma.reserva.findMany({
 ## Testes
 
 - **Test schema:** `test` (isolado, via `?schema=testfestas`)
-- **Test helpers:** `apps/server/__tests__/helpers/seed.ts`
-- **Test client:** `apps/server/__tests__/helpers/test-prisma.ts`
+- **Test helpers:** `apps/web/__tests__/helpers/seed.ts`
+- **Test client:** `apps/web/__tests__/helpers/test-prisma.ts`
 - **Padrão:** Mock `@festas/db` → `testPrisma` com schema `test`
 
 ```typescript

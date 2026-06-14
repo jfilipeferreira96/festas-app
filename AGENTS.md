@@ -14,8 +14,20 @@ Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, 
 ```
 festas/
 ├── apps/
-│   ├── web/              # Next.js 15 (Frontend) — Port 4444
-│   └── server/           # Express 5 (Backend API) — Port 5555
+│   └── web/              # Next.js 15 (Fullstack: Frontend + API Routes)
+│       ├── src/
+│       │   ├── app/              # App Router pages + API routes
+│       │   │   ├── (guest)/      # Public pages (auth, password recovery)
+│       │   │   ├── (protected)/  # Authenticated pages (sidebar + header layout)
+│       │   │   └── api/          # API routes (/api/*)
+│       │   ├── services/         # Business logic (Service layer)
+│       │   ├── components/       # React components
+│       │   ├── hooks/            # TanStack Query hooks
+│       │   ├── lib/              # Utilities, auth, API clients
+│       │   ├── layout/           # AppSidebar, AppHeader, Backdrop
+│       │   └── i18n/             # PT-PT translations
+│       ├── __tests__/            # Vitest test files
+│       └── package.json
 ├── packages/
 │   ├── auth/             # Better Auth configuration (@festas/auth)
 │   ├── db/               # Prisma schema & database client (@festas/db)
@@ -28,19 +40,19 @@ festas/
 └── PAGINAS.md            # Page descriptions and business rules
 ```
 
+**Pattern:** API Route → Service → Prisma (no controllers, no Express)
+
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 15 + React 19 + Tailwind CSS 4 + TanStack Query |
-| Backend | Express 5 + TypeScript + Prisma + Better Auth |
+| Fullstack | Next.js 15 (App Router) + React 19 + TypeScript |
 | Database | Neon PostgreSQL (serverless) via Prisma ORM |
-| Validation | Zod (both frontend and backend) |
+| Validation | Zod (frontend & API routes) |
 | Auth | Better Auth 1.3.x (email/password only) |
+| State Management | TanStack Query (React Query) |
 | i18n | i18next (locale: `pt-PT` only) |
-| Logging | Winston with daily rotate files |
 | Testing | Vitest |
-| Docs | Swagger UI via CDN at `/api/docs` |
 
 ## Database
 
@@ -66,19 +78,52 @@ festas/
 - `TipoCampanha`: `EMAIL`, `SMS`
 - `EstadoCampanha`: `RASCUNHO`, `AGENDADA`, `ENVIADA`, `CANCELADA`
 
-## Backend Architecture (apps/server)
+## API Architecture (apps/web/src)
 
-### 3-Layer Pattern — ALL endpoints MUST follow this:
+### Pattern — ALL endpoints MUST follow this:
 
 ```
-Route → Controller → Service
+API Route → Service → Prisma
 ```
 
 | Layer | File | Responsibility |
 |-------|------|---------------|
-| **Route** | `src/routes/*.routes.ts` | URL mapping + `requireAuth` middleware |
-| **Controller** | `src/controllers/*.controller.ts` | Extract params, call service, format response |
+| **API Route** | `src/app/api/[resource]/route.ts` | HTTP methods (GET, POST, PATCH, DELETE) + auth checks |
 | **Service** | `src/services/*.service.ts` | Business logic, DB queries, authorization |
+
+### API Route Pattern
+
+Every API route follows this structure:
+```typescript
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth";
+import * as service from "@/services/reserva.service";
+
+export async function GET(req: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  try {
+    const result = await service.getAllReservas();
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const session = await requireAuth();
+  if (!session) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  const body = await req.json();
+  try {
+    const result = await service.createReserva(body, session.user);
+    return NextResponse.json(result, { status: 201 });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}
+```
 
 ### Error Handling Pattern
 
@@ -89,73 +134,55 @@ if (!reserva) throw new Error("NOT_FOUND");
 if (!salaAvailable) throw new Error("SALA_UNAVAILABLE");
 ```
 
-**Controllers** map codes → i18n keys + HTTP status via `createErrorHandler`:
+**API Routes** map codes → i18n keys + HTTP status:
 ```typescript
-const ERROR_MAP: Record<string, string> = {
-  NOT_FOUND: "reserva.notFound",
-  SALA_UNAVAILABLE: "reserva.salaUnavailable",
+const ERROR_MAP: Record<string, { key: string; status: number }> = {
+  NOT_FOUND: { key: "reserva.notFound", status: 404 },
+  SALA_UNAVAILABLE: { key: "reserva.salaUnavailable", status: 409 },
 };
-const STATUS_MAP: Record<string, number> = {
-  NOT_FOUND: 404,
-  SALA_UNAVAILABLE: 409,
-};
-const handleError = createErrorHandler({ errorMap: ERROR_MAP, statusMap: STATUS_MAP, serviceName: "Reserva" });
-```
 
-### Controller Pattern
-
-Every controller follows this structure:
-```typescript
-export const getResource = async (req: Request, res: Response) => {
-  try {
-    const user = req.user;
-    if (!user) return res.status(401).json({ error: req.t("auth.unauthorized") });
-    // ... validate params
-    const result = await serviceMethod(...params);
-    res.status(200).json(result);
-  } catch (error) {
-    handleError(error, req, res);
-  }
-};
+// In the catch block
+if (error.message in ERROR_MAP) {
+  const { key, status } = ERROR_MAP[error.message];
+  return NextResponse.json({ error: t(key) }, { status });
+}
 ```
 
 ### API Modules
 
 | Module | Routes | Service |
 |--------|--------|---------|
-| Dashboard | `/api/dashboard/*` | `dashboard.service.ts` |
-| Reservas | `/api/reservas/*` | `reserva.service.ts` |
-| Cacifos | `/api/cacifos/*` | `cacifo.service.ts` |
-| Configuração Cacifos | `/api/configuracoes/cacifos/*` | `configuracaoCacifo.service.ts` |
-| Menus | `/api/menus/*` | `menu.service.ts` |
-| Locais | `/api/locais/*` | `local.service.ts` |
-| Clientes | `/api/clientes/*` | `cliente.service.ts` |
-| Monitores | `/api/monitores/*` | `monitor.service.ts` |
-| Extras | `/api/extras/*` | `extra.service.ts` |
-| Etapas de Festa | `/api/etapas-festa/*` | `etapaFesta.service.ts` |
-| Participantes | `/api/participantes/*` | `participante.service.ts` |
-| Campanhas | `/api/campanhas/*` | `campanha.service.ts` |
-| Utilizadores | `/api/utilizadores/*` | `utilizador.service.ts` |
-| Permissões | `/api/permissoes/*` | `permissoes.service.ts` |
-| Upload | `/api/upload/*` | `upload.service.ts` |
+| Dashboard | `/api/dashboard/*` | `src/services/dashboard.service.ts` |
+| Reservas | `/api/reservas/*` | `src/services/reserva.service.ts` |
+| Cacifos | `/api/cacifos/*` | `src/services/cacifo.service.ts` |
+| Configuração Cacifos | `/api/configuracoes/cacifos/*` | `src/services/configuracaoCacifo.service.ts` |
+| Menus | `/api/menus/*` | `src/services/menu.service.ts` |
+| Locais | `/api/locais/*` | `src/services/local.service.ts` |
+| Clientes | `/api/clientes/*` | `src/services/cliente.service.ts` |
+| Monitores | `/api/monitores/*` | `src/services/monitor.service.ts` |
+| Extras | `/api/extras/*` | `src/services/extra.service.ts` |
+| Etapas de Festa | `/api/etapas-festa/*` | `src/services/etapaFesta.service.ts` |
+| Participantes | `/api/participantes/*` | `src/services/participante.service.ts` |
+| Campanhas | `/api/campanhas/*` | `src/services/campanha.service.ts` |
+| Utilizadores | `/api/utilizadores/*` | `src/services/utilizador.service.ts` |
+| Permissões | `/api/permissoes/*` | `src/services/permissoes.service.ts` |
+| Upload | `/api/upload/*` | `src/services/upload.service.ts` |
+| Aloc. Monitores | `/api/alocacao-monitores/*` | `src/services/alocacaoMonitor.service.ts` |
+| Entrada Livre | `/api/entrada-livre/*` | `src/services/entradaLivre.service.ts` |
+| Relatórios | `/api/relatorios/*` | `src/services/relatorio.service.ts` |
 
-### Auth Middleware
+### Auth
 
-- `requireAuth` from `src/middlewares/authMiddleware.ts` validates session
-- Sets `req.user` (type: `User` from `@festas/auth/types`)
-- Apply to all protected routes: `router.get("/path", requireAuth, controller)`
-
-### Role Middleware
-
-- `requireFuncao` from `src/middlewares/roleMiddleware.ts` checks user role
-- Roles: `ADMINISTRADOR`, `GESTOR`, `RECECAO`, `MARKETING`
-- Usage: `router.post("/reservas", requireAuth, requireFuncao("ADMINISTRADOR", "GESTOR"), createReserva)`
+- `requireAuth()` from `src/lib/auth.ts` validates session
+- Returns `session` object with `session.user` or `null`
+- Apply at start of all protected API routes
+- Roles are checked in services: `if (session.user.funcao !== "ADMINISTRADOR") throw new Error("UNAUTHORIZED")`
 
 ### i18n
 
-- Use `req.t("key")` for ALL user-facing messages
+- Use `t("key")` from `src/i18n/` for ALL user-facing messages
 - Only `pt-PT` locale is supported
-- Translation file: `src/i18n/locales/pt-PT/messages.json`
+- Translation file: `src/locales/pt-PT/messages.json`
 
 ## Frontend Architecture (apps/web)
 
@@ -241,11 +268,11 @@ Default configurations for: extras, menus, locais, menu-templates.
 ## Testing
 
 - **Framework:** Vitest
-- **Config:** `apps/server/vitest.config.ts`
+- **Config:** `apps/web/vitest.config.ts`
 - **Test schema:** `test` (isolated PostgreSQL schema in same Neon database)
-- **Setup:** `apps/server/__tests__/setup-db.ts` creates `test` schema and pushes tables
-- **Test helpers:** `apps/server/__tests__/helpers/seed.ts` provides `seedTestData()` and `cleanTestData()`
-- **Test client:** `apps/server/__tests__/helpers/test-prisma.ts` provides PrismaClient configured for `test` schema
+- **Setup:** `apps/web/__tests__/setup.ts` creates `test` schema and pushes tables
+- **Test helpers:** `apps/web/__tests__/helpers/seed.ts` provides `seedTestData()` and `cleanTestData()`
+- **Test client:** `apps/web/__tests__/helpers/test-prisma.ts` provides PrismaClient configured for `test` schema
 
 ### Test Files
 
@@ -289,15 +316,12 @@ describe("ServiceName", () => {
 - RESTful, plural resource names
 - Response format: `{ error: "msg" }` for errors, `{ message: "msg", data }` for success
 - Status codes: 200, 201, 400, 401, 403, 404, 409, 500
-- Swagger UI: `http://localhost:5555/api/docs`
 
 ## Commands
 
 ```bash
-npm run dev              # Start all apps in dev mode
-npm run dev:server       # Start backend only
-npm run dev:web          # Start frontend only
-npm run build            # Build everything
+npm run dev              # Start Next.js in dev mode
+npm run build            # Build Next.js application
 npm run build:shared     # Build shared packages only
 npm run check-types      # TypeScript type checking
 npm run db:push          # Push Prisma schema to DB
@@ -306,7 +330,7 @@ npm run db:studio        # Open Prisma Studio
 npm run db:reset         # Reset database (drop + push + generate)
 npm run db:clean         # Clean database (wipe migrations + drop stale enums + push:force + generate)
 npm run db:seed:dev      # Seed dev data (festas schema)
-npm run test             # Run tests (server) — setup + vitest
+npm run test             # Run tests (Vitest)
 ```
 
 ### Database Scripts (`packages/db/scripts/db.js`)
@@ -315,15 +339,11 @@ The `db:clean` and `db:reset` commands automatically clean stale enum types (`_o
 
 ## Environment Variables
 
-**Frontend** (`apps/web/.env`):
-- `NEXT_PUBLIC_APP_URL` — Frontend URL (http://localhost:4444)
-- `NEXT_PUBLIC_SERVER_URL` — Backend API URL (http://localhost:5555)
-
-**Backend** (`apps/server/.env`):
+**App** (`apps/web/.env`):
 - `DATABASE_URL` — Neon PostgreSQL connection string (includes `?schema=festas`)
 - `BETTER_AUTH_SECRET` — Auth secret key
-- `BETTER_AUTH_URL` — Backend URL
-- `CORS_ORIGIN` — Frontend URL for CORS
+- `BETTER_AUTH_URL` — Backend URL (same as app URL)
+- `NEXT_PUBLIC_APP_URL` — Frontend URL (http://localhost:3000)
 - `MAILJET_API_KEY`, `MAILJET_API_SECRET`, `MAILJET_SENDER_EMAIL`, `MAILJET_SENDER_NAME` — Email config
 
 ## Critical Rules

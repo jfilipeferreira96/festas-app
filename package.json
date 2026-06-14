@@ -32,8 +32,13 @@
   },
   "devDependencies": {
     "@types/node": "^22.18.11",
+    "mysql2": "^3.22.5",
     "tsdown": "^0.15.5",
-    "turbo": "^2.9.7"
+    "turbo": "^2.9.7",
+    "vite": "^7.0.0"
+  },
+  "overrides": {
+    "vite": "^7.0.0"
   },
   "packageManager": "npm@9.6.4"
 }

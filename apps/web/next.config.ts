@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Produce a self-contained .next/standalone build for cPanel/Phusion Passenger
@@ -9,7 +10,8 @@ const nextConfig: NextConfig = {
   compiler: {
     styledComponents: true,
   },
-  outputFileTracingRoot: __dirname,
+  // Monorepo root so standalone output traces workspace packages (@festas/*, @saas/*)
+  outputFileTracingRoot: path.join(__dirname, "..", ".."),
   images: {
     remotePatterns: [
       {

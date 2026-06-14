@@ -131,14 +131,27 @@ Quando `emAtraso === true` (tempo restante negativo), o card da festa deve:
 
 ## WebSocket (fase futura)
 
-Se implementado, usar a biblioteca `socket.io` no servidor Node.js.
-Eventos a emitir pelo servidor:
+Se implementado, usar uma solução compatível com Next.js como:
+- Server-Sent Events (SSE) via Next.js API routes
+- Pusher / Ably (serviços externos)
+- Socket.io com Next.js custom server (não recomendado)
 
-```ts
-// Servidor emite:
-socket.emit('reserva:actualizada', { reservaId, estado, fimReal })
-socket.emit('cacifo:actualizado', { cacifosActualizados: Cacifo[] })
-socket.emit('reserva:em_atraso', { reservaId, minutosAtraso })
+Para Next.js App Router, SSE é a opção mais simples:
+
+```tsx
+// app/api/reservas/stream/route.ts
+export async function GET(req: Request) {
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      // Emitir eventos
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+    }
+  })
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/event-stream' }
+  })
+}
 ```
 
 O cliente subscreve por sala para não receber eventos de outros espaços.

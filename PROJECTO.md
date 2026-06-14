@@ -1,6 +1,6 @@
 # Gestão de Festas Infantis — Documentação do Projecto
 
-> Documento de referência para desenvolvimento com Next.js 15 + Express 5 + TypeScript (PT-PT).  
+> Documento de referência para desenvolvimento com Next.js 15 (Fullstack) + TypeScript (PT-PT).  
 > Destinado a agentes de IA, developers e designers que trabalhem neste projecto.
 
 ---

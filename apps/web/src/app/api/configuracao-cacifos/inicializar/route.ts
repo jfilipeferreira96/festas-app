@@ -16,7 +16,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "ConfiguracaoCacifo",
 });
 
-// POST /api/configuracoes/cacifos/inicializar
+// POST /api/configuracao-cacifos/inicializar (ADMINISTRADOR, GESTOR)
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { config } from "dotenv";
 import { resolve } from "path";
 import { fileURLToPath } from "url";
@@ -37,12 +38,16 @@ function getServerUrl(url: string): string {
   return url.replace(/\/[^/]*$/, "");
 }
 
+const baseUrl = process.env.DATABASE_URL;
+if (!baseUrl) {
+  console.error("DATABASE_URL is not set");
+  process.exit(1);
+}
+
 const testUrl = getTestDatabaseUrl();
 const testDbName = getDbName(testUrl);
 
 console.log("Test database name:", testDbName);
-
-const { execSync } = await import("child_process");
 
 // Step 1: Create the test database (MySQL) if it doesn't exist.
 // NOTE: In cPanel, databases are usually created via the UI (prefixed with the
@@ -51,8 +56,10 @@ const { execSync } = await import("child_process");
 // when the database already exists.
 console.log("Creating test database in MySQL...");
 try {
-  const serverUrl = getServerUrl(testUrl);
-  execSync(`npx prisma db execute --url "${serverUrl}" --stdin`, {
+  // Connect via baseUrl (main DATABASE_URL, an existing user DB) to run the
+  // CREATE statement — avoids Prisma P3004 ("mysql is a system database"),
+  // which fires when the connection URL has no database path.
+  execSync(`npx prisma db execute --url "${baseUrl}" --stdin`, {
     input: `CREATE DATABASE IF NOT EXISTS \`${testDbName}\`;`,
     cwd: resolve(__dirname),
     stdio: ["pipe", "inherit", "inherit"],
@@ -70,7 +77,7 @@ try {
 console.log("Pushing Prisma schema to test database...");
 try {
   execSync(
-    `npx prisma db push --schema ../../../packages/db/prisma/schema.prisma --accept-data-loss`,
+    `npx prisma db push --schema "${resolve(__dirname, "..", "..", "..", "packages", "db", "prisma", "schema.prisma")}" --accept-data-loss`,
     {
       cwd: resolve(__dirname),
       stdio: "inherit",

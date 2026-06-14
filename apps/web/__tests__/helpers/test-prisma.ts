@@ -1,9 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
-import { resolve } from "path";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
-// Load .env from the apps/web directory (resolve relative to this file's location)
-config({ path: resolve(import.meta.dirname, "../../.env") });
+// Load .env from the apps/web directory. fileURLToPath is used because
+// import.meta.dirname is undefined under tsx/vitest CJS transpilation.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__dirname, "../../.env") });
 
 /**
  * Prisma client configured for the TEST database.
