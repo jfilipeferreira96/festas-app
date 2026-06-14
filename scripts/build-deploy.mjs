@@ -16,7 +16,8 @@
  *        - .env    -> variáveis de PRODUÇÃO
  *        - README-DEPLOY.md -> instruções cPanel
  *   3. valida que a engine Prisma para Linux está presente no bundle.
- *   4. cria deploy.zip (usa 7z se disponível, senão Compress-Archive do Windows).
+ *   4. cria deploy.tar.gz com `tar` (formato Unix nativo — extração fiável no
+ *      cPanel) E deploy.zip com `archiver` (alternativa, forward-slash).
  *
  * VANTAGEM: o servidor cPanel NÃO precisa de correr `npm install` nem `npm run
  * build` — o node_modules já vem dentro do bundle (apenas o estritamente
@@ -60,7 +61,7 @@
  */
 
 import { execSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync, createWriteStream } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -78,6 +79,7 @@ const PUBLIC_DIR = join(ROOT, "apps", "web", "public");
 const ENV_PROD = join(ROOT, "apps", "web", ".env.production");
 const DEPLOY = join(ROOT, "deploy");
 const DEPLOY_ZIP = join(ROOT, "deploy.zip");
+const DEPLOY_TARGZ = join(ROOT, "deploy.tar.gz");
 
 // --- helpers ----------------------------------------------------------------
 const log = (...a) => console.log("›", ...a);
@@ -132,6 +134,7 @@ ok("Bundle standalone encontrado.");
 log("A limpar ./deploy/ anterior...");
 rmSync(DEPLOY, { recursive: true, force: true });
 rmSync(DEPLOY_ZIP, { force: true });
+rmSync(DEPLOY_TARGZ, { force: true });
 mkdirSync(DEPLOY, { recursive: true });
 
 // 2a. servidor standalone (server.js + .next + node_modules + packages)
@@ -246,10 +249,18 @@ deploy/
 - Clicar **Create Application**
 
 ### 2. Enviar os ficheiros
-- Por **FTP**: envia o conteúdo de \`deploy/\` (ou extrai \`deploy.zip\`) para a
-  pasta da aplicação (Application root), de modo a que \`app.js\` fique na raiz.
-- Ou pelo **File Manager** do cPanel: fazer upload do \`deploy.zip\`, clicar com o
-  botão direito → **Extract**, e mover os ficheiros para a raiz da app.
+
+**⚠️ LIMPAR a pasta antes de extrair!** Apaga TODOS os ficheiros e pastas
+existentes na Application root (incluindo extrações anteriores falhadas).
+Deixar ficheiros antigos causa erros "Permission denied" na extração.
+
+**Recomendado: deploy.tar.gz** (formato Unix nativo):
+- Faz upload do \`deploy.tar.gz\` para a pasta da aplicação.
+- No File Manager: botão direito → **Extract**.
+- O tar.gz é extraído SEM erros de permissão (formato nativo Linux/cPanel).
+
+**Alternativa: FTP**:
+- Extrai localmente e envia o conteúdo de \`deploy/\` por FTP (FileZilla).
 
 ### 3. Variáveis de ambiente
 O \`app.js\` carrega \`apps/web/.env\` automaticamente. Confirma/edita:
@@ -309,39 +320,66 @@ if (!linuxEngine) {
 const size = dirSize(DEPLOY);
 ok(`Tamanho do bundle (descomprimido): ${human(size)}`);
 
-// 5. ZIP ---------------------------------------------------------------------
+// 5. EMPACOTAR (TAR.GZ + ZIP) ------------------------------------------------
 if (DO_ZIP) {
-  log("A criar deploy.zip...");
-  let zipped = false;
+  // ────────────────────────────────────────────────────────────────────────
+  // 5a. deploy.tar.gz — FORMATO UNIX NATIVO (recomendado para cPanel)
+  // ────────────────────────────────────────────────────────────────────────
+  // O cPanel extrai tar.gz de forma MUITO mais fiável do que zip:
+  //   • tar armazena permissões Unix nativas (755 dirs / 644 files)
+  //   • separadores forward-slash por definição
+  //   • o extractor nativo do cPanel (baseado em GNU tar) é robusto
+  // Isto resolve o erro "checkdir error: cannot create... Permission denied"
+  // que ocorre ao extrair zips grandes no File Manager do cPanel.
+  log("A criar deploy.tar.gz (formato Unix nativo — recomendado para cPanel)...");
+  const { create: tarCreate } = await import("tar");
+  if (existsSync(DEPLOY_TARGZ)) rmSync(DEPLOY_TARGZ);
 
-  // tenta 7z (mais rápido) primeiro
-  try {
-    execSync("7z >nul 2>&1", { stdio: "ignore", shell: "cmd.exe" });
-    execSync(`7z a -tzip -mx=7 deploy.zip ./deploy/*`, {
-      cwd: ROOT,
-      stdio: "inherit",
-      shell: "cmd.exe",
-    });
-    zipped = true;
-    ok("deploy.zip criado com 7z.");
-  } catch {
-    log("7z não disponível — a usar PowerShell Compress-Archive (mais lento)...");
+  await tarCreate(
+    {
+      gzip: true,
+      file: DEPLOY_TARGZ,
+      cwd: DEPLOY,
+      dmode: 0o755, // permissões de diretórios (rwxr-xr-x)
+      fmode: 0o644, // permissões de ficheiros (rw-r--r--)
+      portable: true, // normaliza uid/gid/mtime (compatível cross-platform)
+    },
+    readdirSync(DEPLOY), // entradas directas de deploy/ (sem prefixo ".")
+  );
+
+  if (existsSync(DEPLOY_TARGZ)) {
+    ok(`deploy.tar.gz final: ${human(statSync(DEPLOY_TARGZ).size)}`);
   }
 
-  // fallback: PowerShell Compress-Archive (sempre presente no Windows 10)
-  if (!zipped) {
-    try {
-      execSync(`powershell -NoProfile -Command "Compress-Archive -Path 'deploy\\*' -DestinationPath 'deploy.zip' -Force"`, { cwd: ROOT, stdio: "inherit", shell: "cmd.exe" });
-      zipped = true;
-      ok("deploy.zip criado com Compress-Archive.");
-    } catch (e) {
-      err("Falhou a criação do zip:", e.message);
-    }
-  }
+  // ────────────────────────────────────────────────────────────────────────
+  // 5b. deploy.zip — ALTERNATIVA (com archiver, forward-slash)
+  // ────────────────────────────────────────────────────────────────────────
+  // Mantido como fallback para hosts que só aceitam zip.
+  log("A criar deploy.zip com archiver (alternativa, forward-slash)...");
+  const { default: archiver } = await import("archiver");
+  if (existsSync(DEPLOY_ZIP)) rmSync(DEPLOY_ZIP);
+
+  const output = createWriteStream(DEPLOY_ZIP);
+  const archive = archiver("zip", { zlib: { level: 7 } });
+
+  archive.on("warning", (e) => {
+    if (e.code !== "ENOENT") err("zip warning:", e);
+  });
+  archive.on("error", (e) => err("Erro ao criar zip:", e));
+
+  archive.pipe(output);
+  // false = conteúdo de deploy/ vai para a RAIZ do zip (sem pasta "deploy/" encapsulante)
+  archive.directory(DEPLOY, false);
+  await archive.finalize();
+
+  // aguarda o fecho do stream de escrita
+  await new Promise((resolve, reject) => {
+    output.on("close", resolve);
+    output.on("error", reject);
+  });
 
   if (existsSync(DEPLOY_ZIP)) {
-    const zipSize = statSync(DEPLOY_ZIP).size;
-    ok(`deploy.zip final: ${human(zipSize)}`);
+    ok(`deploy.zip final: ${human(statSync(DEPLOY_ZIP).size)}`);
   }
 }
 
@@ -349,6 +387,7 @@ if (DO_ZIP) {
 console.log("\n──────────────────────────────────────────────────────────");
 console.log("📦 DEPLOY PRONTO\n");
 console.log(`   Pasta: ${relative(ROOT, DEPLOY)}/`);
-if (existsSync(DEPLOY_ZIP)) console.log(`   ZIP:   ${relative(ROOT, DEPLOY_ZIP)}`);
+if (existsSync(DEPLOY_TARGZ)) console.log(`   TAR.GZ: ${relative(ROOT, DEPLOY_TARGZ)}  ← RECOMENDADO para cPanel`);
+if (existsSync(DEPLOY_ZIP)) console.log(`   ZIP:    ${relative(ROOT, DEPLOY_ZIP)}`);
 console.log("\n   Próximos passos (cPanel) — ver deploy/README-DEPLOY.md");
 console.log("──────────────────────────────────────────────────────────\n");

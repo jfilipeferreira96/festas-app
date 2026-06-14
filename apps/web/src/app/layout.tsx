@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Gestão de Festas Infantis",
   description: "Plataforma de gestão para espaços de festas infantis",
   icons: {
-    icon: "/favicon.ico?v=2",
+    icon: "/favicon.ico?v=3",
   },
 };
 

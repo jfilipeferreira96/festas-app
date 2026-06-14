@@ -37,7 +37,9 @@
   },
   "devDependencies": {
     "@types/node": "^22.18.11",
+    "archiver": "^7.0.1",
     "mysql2": "^3.22.5",
+    "tar": "^7.4.3",
     "tsdown": "^0.15.5",
     "vite": "^7.0.0"
   },
