@@ -165,6 +165,28 @@ log("A renomear node_modules -> node_modules_deps (compatibilidade CloudLinux)..
 }
 ok("node_modules renomeado para node_modules_deps.");
 
+// 2a2. Substituir package.json raiz por um minimalista --------------------
+// O package.json que vem do standalone é o do monorepo (com "workspaces").
+// No cPanel/CloudLinux, isso faria o `npm install` tentar resolver workspaces
+// e falhar. Substituímos por um package.json minimalista sem workspaces nem
+// dependências (tudo já está em node_modules_deps).
+log("A substituir package.json raiz (minimalista, sem workspaces)...");
+writeFileSync(
+  join(DEPLOY, "package.json"),
+  JSON.stringify(
+    {
+      name: "festas-standalone",
+      version: "1.0.0",
+      private: true,
+      type: "module",
+      scripts: { start: "node app.js" },
+    },
+    null,
+    2,
+  ) + "\n",
+);
+ok("package.json minimalista criado.");
+
 // 2b. .next/static (assets do cliente — NÃO vêm no standalone)
 const webNext = join(DEPLOY, "apps", "web", ".next");
 mkdirSync(webNext, { recursive: true });
