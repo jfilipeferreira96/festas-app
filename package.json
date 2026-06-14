@@ -21,7 +21,9 @@
     "db:studio": "npm run db:studio --workspace=@festas/db",
     "db:clean": "npm run db:clean --workspace=@festas/db",
     "db:reset": "npm run db:reset --workspace=@festas/db",
-    "db:seed:dev": "npm run db:seed:dev --workspace=@festas/db"
+    "db:seed:dev": "npm run db:seed:dev --workspace=@festas/db",
+    "deploy": "node scripts/build-deploy.mjs --build",
+    "deploy:bundle": "node scripts/build-deploy.mjs"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",

@@ -1,5 +1,9 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Gerar engines para dev (Windows = native) E para o servidor cPanel (Linux/AlmaLinux).
+  // Isto garante que o bundle standalone inclui a engine correta para cada plataforma.
+  // Para confirmar o alvo exato no servidor: `npx prisma -v` (mostra o "Binary Types").
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.1.x"]
 }
 
 datasource db {

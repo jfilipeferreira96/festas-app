@@ -11,6 +11,11 @@ build/
 .next/
 out/
 
+# Deploy artifacts (gerados por scripts/build-deploy.mjs)
+deploy/
+deploy.zip
+node_modules_garbage/
+
 # Environment variables
 .env
 .env*.local
