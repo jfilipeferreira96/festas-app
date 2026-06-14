@@ -20,6 +20,8 @@ const envConfig = {
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   CORS_ORIGIN: process.env.CORS_ORIGIN,
+  COOKIE_SECURE: process.env.COOKIE_SECURE,
+  COOKIE_SAMESITE: process.env.COOKIE_SAMESITE,
   NODE_ENV: process.env.NODE_ENV || "development",
 } as const;
 
@@ -41,7 +43,29 @@ export const auth = betterAuth({
     provider: "mysql",
   }),
   secret: envConfig.BETTER_AUTH_SECRET!,
-  trustedOrigins: [envConfig.CORS_ORIGIN || "http://localhost:4444"],
+  trustedOrigins: (() => {
+    const rawOrigins = [
+      envConfig.BETTER_AUTH_URL,
+      envConfig.NEXT_PUBLIC_APP_URL,
+      envConfig.CORS_ORIGIN,
+      "http://localhost:4444",
+      "http://localhost:5555",
+      "http://localhost:3000",
+    ].filter(Boolean) as string[];
+
+    // Para cada URL, adicionar também a variante com protocolo alternativo
+    const expanded = new Set<string>(rawOrigins);
+    for (const url of rawOrigins) {
+      try {
+        const parsed = new URL(url);
+        const altProto = parsed.protocol === "https:" ? "http:" : "https:";
+        expanded.add(`${altProto}//${parsed.host}`);
+      } catch {
+        // URL inválida — ignorar
+      }
+    }
+    return [...expanded];
+  })(),
   baseURL: envConfig.BETTER_AUTH_URL || "http://localhost:5555",
   user: {
     additionalFields: {
@@ -80,17 +104,20 @@ export const auth = betterAuth({
   },
   advanced: {
     defaultCookieAttributes: {
-      sameSite: envConfig.NODE_ENV === "production" ? "none" : "lax",
-      secure: envConfig.NODE_ENV === "production",
+      // sameSite="none" + secure=true só funciona com HTTPS. Se o cPanel serve
+      // via HTTP (sem SSL), usar sameSite="lax" + secure=false para que os
+      // cookies funcionem. A variável COOKIE_SECURE permite override.
+      sameSite: (envConfig.COOKIE_SAMESITE as "none" | "lax") || (envConfig.NODE_ENV === "production" && envConfig.COOKIE_SECURE !== "false" ? "none" : "lax"),
+      secure: envConfig.COOKIE_SECURE === undefined ? (envConfig.NODE_ENV === "production") : envConfig.COOKIE_SECURE === "true",
       httpOnly: true,
     },
     cors: {
-      origin: envConfig.CORS_ORIGIN || "http://localhost:4444",
+      origin: envConfig.CORS_ORIGIN || envConfig.NEXT_PUBLIC_APP_URL || "http://localhost:4444",
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],
     },
-    useSecureCookies: envConfig.NODE_ENV === "production",
+    useSecureCookies: envConfig.COOKIE_SECURE === undefined ? (envConfig.NODE_ENV === "production") : envConfig.COOKIE_SECURE === "true",
   },
   plugins: [
     localization({
