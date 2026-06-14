@@ -1,7 +1,6 @@
 "use client";
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "sonner";
 import { queryClient } from "@/lib/query-client";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -24,8 +23,7 @@ export function Providers({ children, initialUser }: ProvidersProps) {
           </AuthProvider>
         </ThemeProvider>
       </I18nProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-      <Toaster 
+      <Toaster
         richColors 
         position="top-right"
         expand={false}

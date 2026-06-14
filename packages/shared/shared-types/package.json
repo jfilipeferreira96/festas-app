@@ -1,40 +1,26 @@
 {
   "name": "@saas/shared-types",
   "version": "1.0.0",
-  "description": "Shared types for SaaS monorepo",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "type": "module",
+  "description": "Shared TypeScript types for the Festas platform",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "default": "./src/index.ts"
     },
-    "./industries": {
-      "types": "./dist/industries.d.ts",
-      "import": "./dist/industries.mjs",
-      "require": "./dist/industries.js"
-    },
-    "./currencies": {
-      "types": "./dist/data/currencies.d.ts",
-      "import": "./dist/data/currencies.mjs",
-      "require": "./dist/data/currencies.js"
-    },
-    "./timezones": {
-      "types": "./dist/data/timezones.d.ts",
-      "import": "./dist/data/timezones.mjs",
-      "require": "./dist/data/timezones.js"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./src/*.ts"
     }
   },
   "files": [
     "dist/**/*"
   ],
   "scripts": {
-    "build": "tsup",
-    "clean": "rm -rf dist"
+    "build": "tsdown"
   },
   "devDependencies": {
-    "tsup": "^8.5.1",
+    "tsdown": "^0.15.5",
     "typescript": "^5"
   },
   "repository": {
@@ -45,7 +31,7 @@
   "keywords": [
     "typescript",
     "types",
-    "saas",
+    "festas",
     "monorepo"
   ],
   "author": "Filipe Ferreira",

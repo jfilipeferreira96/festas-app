@@ -1,5 +1,5 @@
 import { auth } from "@festas/auth";
-import { toNextJsHandler } from "better-auth/nextjs";
+import { toNextJsHandler } from "better-auth/next-js";
 
 /**
  * Better Auth catch-all route handler.
