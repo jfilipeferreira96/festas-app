@@ -178,7 +178,6 @@ writeFileSync(
       name: "festas-standalone",
       version: "1.0.0",
       private: true,
-      type: "module",
       scripts: { start: "node app.js" },
     },
     null,
@@ -222,37 +221,37 @@ if (existsSync(ENV_PROD)) {
 }
 
 // 2f. app.js — entry point do Phusion Passenger -----------------------------
-//    (root package.json é "type":"module", por isso app.js é ESM).
-//    Carrega .env manualmente (sem depender do package dotenv no root) para
-//    garantir que DATABASE_URL está disponível antes de qualquer import.
+//    CommonJS (require) para máxima compatibilidade com todas as versões do
+//    Passenger. Carrega .env manualmente e define NODE_PATH para node_modules_deps.
 const APP_JS = `// app.js — entry point do Phusion Passenger (cPanel Node.js App)
 // Auto-gerado por scripts/build-deploy.mjs — NÃO EDITAR À MÃO (regenerar no próximo deploy).
 //
 // Em cPanel: "Application startup file" = app.js
 //
-import { readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
-import Module from "node:module";
+// CommonJS (require) para máxima compatibilidade com Phusion Passenger.
+var fs = require("fs");
+var path = require("path");
+var Module = require("module");
 
-// --- carregar .env de produção manualmente (robusto, sem dependências) -----
-const here = dirname(fileURLToPath(import.meta.url));
+var here = __dirname;
 
 // --- NODE_PATH: resolver módulos de node_modules_deps (compat. CloudLinux) ---
 // O CloudLinux Node.js Selector exige que "node_modules" seja um symlink para
 // um virtualenv, não uma pasta real na raiz da app. As dependências foram
 // renomeadas para "node_modules_deps" e NODE_PATH garante a resolução.
-process.env.NODE_PATH = join(here, "node_modules_deps");
+process.env.NODE_PATH = path.join(here, "node_modules_deps");
 Module._initPaths();
 
-const envPath = join(here, "apps", "web", ".env");
-if (existsSync(envPath)) {
-  for (const line of readFileSync(envPath, "utf8").split("\\n")) {
-    const m = line.match(/^\\s*([\\w.-]+)\\s*=\\s*(.*)\\s*$/);
+// --- carregar .env de produção manualmente (robusto, sem dependências) -----
+var envPath = path.join(here, "apps", "web", ".env");
+if (fs.existsSync(envPath)) {
+  var lines = fs.readFileSync(envPath, "utf8").split("\\n");
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(/^\\s*([\\w.-]+)\\s*=\\s*(.*)\\s*$/);
     if (!m) continue;
-    if (process.env[m[1]] !== undefined) continue; // não sobrescrever vars já definidas
-    let v = m[2].trim();
-    if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    if (process.env[m[1]] !== undefined) continue;
+    var v = m[2].trim();
+    if ((v.charAt(0) === '"' && v.charAt(v.length - 1) === '"') || (v.charAt(0) === "'" && v.charAt(v.length - 1) === "'")) {
       v = v.slice(1, -1);
     }
     process.env[m[1]] = v;
@@ -264,7 +263,7 @@ process.env.HOSTNAME = process.env.HOSTNAME || "0.0.0.0";
 process.env.PORT = process.env.PORT || 3000;
 
 // --- arrancar o servidor Next.js standalone (self-contained) ---------------
-await import("./apps/web/server.js");
+require("./apps/web/server.js");
 `;
 writeFileSync(join(DEPLOY, "app.js"), APP_JS);
 ok("app.js (entry Passenger) criado.");

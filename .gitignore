@@ -14,6 +14,7 @@ out/
 # Deploy artifacts (gerados por scripts/build-deploy.mjs)
 deploy/
 deploy.zip
+deploy.tar.gz
 node_modules_garbage/
 
 # Environment variables
