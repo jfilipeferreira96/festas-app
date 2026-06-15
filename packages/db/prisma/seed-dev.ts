@@ -27,12 +27,12 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
 
-config({ path: "../../apps/server/.env" });
+config({ path: "../../apps/web/.env" });
 
 const prisma = new PrismaClient();
 
 const seedAuth = betterAuth({
-  database: prismaAdapter(prisma, { provider: "postgresql" }),
+  database: prismaAdapter(prisma, { provider: "mysql" }),
   secret: process.env.BETTER_AUTH_SECRET!,
   trustedOrigins: [process.env.CORS_ORIGIN || "http://localhost:3000"],
   emailAndPassword: { enabled: true },

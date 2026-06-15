@@ -170,21 +170,27 @@ ok("node_modules renomeado para node_modules_deps.");
 // No cPanel/CloudLinux, isso faria o `npm install` tentar resolver workspaces
 // e falhar. Substituímos por um package.json minimalista sem workspaces nem
 // dependências (tudo já está em node_modules_deps).
-log("A substituir package.json raiz (minimalista, sem workspaces)...");
+log("A substituir package.json raiz (minimalista + scripts de BD para cPanel)...");
 writeFileSync(
   join(DEPLOY, "package.json"),
   JSON.stringify(
     {
-      name: "festas-standalone",
+      name: "festas-cpanel",
       version: "1.0.0",
       private: true,
-      scripts: { start: "node app.js" },
+      scripts: {
+        start: "node app.js",
+        "db:seed": "node scripts/db.js seed",
+        "db:truncate": "node scripts/db.js truncate",
+        "db:reset": "node scripts/db.js reset",
+        "db:verify": "node scripts/db.js verify",
+      },
     },
     null,
     2,
   ) + "\n",
 );
-ok("package.json minimalista criado.");
+ok("package.json criado (start + scripts db:* para cPanel).");
 
 // 2b. .next/static (assets do cliente — NÃO vêm no standalone)
 const webNext = join(DEPLOY, "apps", "web", ".next");
@@ -342,6 +348,23 @@ Se ainda não o fizeste, cria as tabelas no MySQL de produção. Podes:
 - Na UI do cPanel Node.js App, clicar **Restart** (ou **Start**).
 - Abrir o **Application URL** — a app deve arrancar.
 
+## 🗄️ Comandos de BD no servidor (cPanel)
+
+O bundle traz um seed mínimo e utilitários de BD que usam só o \`@prisma/client\`
+(sem precisar do CLI Prisma). Corre no terminal SSH do cPanel ou via "Run NPM
+Script" da aplicação:
+
+| Comando | O que faz |
+|---|---|
+| \`npm run db:seed\` | Cria admin + permissões RBAC + config de cacifos (idempotente). |
+| \`npm run db:verify\` | Lista todas as tabelas e a contagem de linhas. |
+| \`npm run db:truncate\` | Apaga TODOS os dados (mantém as tabelas). Com \`--keep-auth\` preserva utilizadores. |
+| \`npm run db:reset\` | \`truncate\` + \`seed\` (limpa tudo e recria o admin). |
+
+Para CRIAR as tabelas pela 1ª vez continua a fazer-se \`db:push\` a partir do PC
+local contra a BD remota (ver DEPLOY-CPANEL.md). Os comandos acima assumem que as
+tabelas já existem.
+
 ## Resolução de problemas
 
 | Sintoma | Causa / Solução |
@@ -361,6 +384,40 @@ node scripts/build-deploy.mjs --build   # regenera Prisma + build + bundle + zip
 `;
 writeFileSync(join(DEPLOY, "README-DEPLOY.md"), README);
 ok("README-DEPLOY.md criado.");
+
+// 2h. Comandos de BD para cPanel (seed/truncate/reset/verify)
+log("A gerar comandos de BD para o bundle (cPanel)...");
+mkdirSync(join(DEPLOY, "prisma"), { recursive: true });
+cpSync(join(ROOT, "packages", "db", "prisma", "schema.prisma"), join(DEPLOY, "prisma", "schema.prisma"));
+ok("prisma/schema.prisma copiado.");
+
+mkdirSync(join(DEPLOY, "scripts"), { recursive: true });
+{
+  const SEED_SRC = join(ROOT, "packages", "db", "prisma", "seed-prod.ts");
+  const SEED_OUT = join(DEPLOY, "scripts", "seed-prod.js");
+  if (!existsSync(SEED_SRC)) err("packages/db/prisma/seed-prod.ts nao existe.");
+  let esbuild;
+  try {
+    esbuild = await import("esbuild");
+  } catch {
+    err("esbuild indisponivel. Corre: npm install (vem via tsx) ou npm i -D esbuild");
+  }
+  log("A fazer bundle do seed-prod via esbuild...");
+  await esbuild.build({
+    entryPoints: [SEED_SRC],
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    target: "node20",
+    outfile: SEED_OUT,
+    external: ["@prisma/client", "better-auth", "better-auth/adapters/prisma", "dotenv"],
+    banner: { js: "// seed minimo de producao (cPanel) - auto-gerado" },
+    logLevel: "warning",
+  });
+  ok("scripts/seed-prod.js (bundle CJS) gerado.");
+}
+cpSync(join(__dirname, "deploy-db.js"), join(DEPLOY, "scripts", "db.js"));
+ok("scripts/db.js (launcher de BD) copiado.");
 
 // 3. VALIDAR ENGINE PRISMA LINUX --------------------------------------------
 const prismaClientDir = join(DEPLOY, "node_modules_deps", ".prisma", "client");

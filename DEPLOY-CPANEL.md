@@ -105,7 +105,7 @@ A app precisa da base de dados **`baselandia_prod`** com as tabelas criadas.
   ```
   E opcionalmente mete dados iniciais:
   ```powershell
-  npm run db:seed:dev
+  npm run db:seed:prod
   ```
 
 ### Passo 5 — Reiniciar a aplicação
@@ -119,6 +119,27 @@ Testa:
 - Dashboard
 - Reservas, Cacifos, Menus, etc.
 - Upload de foto de perfil
+
+## 🗄️ Comandos de BD no servidor (cPanel)
+
+Depois das tabelas criadas (Passo 4), podes gerir a BD **diretamente no cPanel**
+(terminal SSH ou "Run NPM Script" da aplicação). O bundle traz um seed mínimo e
+utilitários que usam só o `@prisma/client` (sem precisar do CLI Prisma):
+
+| Comando | O que faz |
+|---|---|
+| `npm run db:seed` | Cria admin + permissões RBAC + config de cacifos (idempotente). Credenciais por defeito: `admin@baselandia.pt` / `Alterar!2025`. |
+| `npm run db:verify` | Lista todas as tabelas e a contagem de linhas. |
+| `npm run db:truncate` | Apaga TODOS os dados (mantém as tabelas). `--keep-auth` preserva utilizadores. |
+| `npm run db:reset` | `truncate` + `seed` (limpa tudo e recria o admin). |
+
+> Os comandos assumem que as tabelas já existem (Passo 4). Para CRIAR tabelas
+> usa `db:push` a partir do PC local contra a BD remota.
+
+### Alterar as credenciais do admin
+Define `SEED_ADMIN_EMAIL` e `SEED_ADMIN_PASSWORD` como variáveis de ambiente
+(no `apps/web/.env` ou na UI do cPanel: Environment variables) antes de correr
+`db:seed`. Depois, altera a palavra-passe no primeiro login.
 
 ---
 

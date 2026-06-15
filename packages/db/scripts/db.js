@@ -2,8 +2,8 @@
  * Cross-platform database operations script for Prisma.
  * Works identically on Windows and Linux/macOS.
  *
- * Usage: node scripts/db.js <command>
- * Commands: generate, push, push:force, migrate, studio, reset, clean, seed
+ * Usage: node scripts/db.js <command> [--target=prod|test]
+ * Commands: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev, seed:prod
  */
 
 import { execSync } from "node:child_process";
@@ -27,6 +27,28 @@ if (existsSync(ENV_FILE)) {
   console.warn("   Falling back to system environment variables.");
 }
 
+// --- Target DB selection ----------------------------------------------------
+// Choose which database to operate on:
+//   --target=prod|test   (CLI arg)   OR   DB_TARGET env var.   Default: prod.
+//   prod  → DATABASE_URL        (ex.: baselandia_prod)
+//   test  → DATABASE_URL_TEST   (ex.: baselandia_test)
+// Done BEFORE spawning tsx so the chosen DATABASE_URL propagates to the seed.
+function resolveTarget() {
+  const arg = process.argv.find((a) => a.startsWith("--target="));
+  const target = (arg ? arg.split("=")[1] : process.env.DB_TARGET || "prod").toLowerCase();
+  if (target === "test") {
+    if (!process.env.DATABASE_URL_TEST) {
+      console.error("❌ --target=test (ou DB_TARGET=test), mas DATABASE_URL_TEST não está definido em apps/web/.env.");
+      process.exit(1);
+    }
+    process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
+    console.log("🎯 BD alvo: test (DATABASE_URL_TEST)\n");
+  } else {
+    console.log("🎯 BD alvo: prod (DATABASE_URL)\n");
+  }
+}
+resolveTarget();
+
 if (!process.env.DATABASE_URL) {
   console.error("❌ Error: DATABASE_URL is not set.");
   console.error("   Make sure it exists in apps/web/.env or in your environment.");
@@ -36,8 +58,9 @@ if (!process.env.DATABASE_URL) {
 const command = process.argv[2];
 
 if (!command) {
-  console.error("❌ Usage: node scripts/db.js <command>");
-  console.error("   Commands: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev");
+  console.error("❌ Usage: node scripts/db.js <command> [--target=prod|test]");
+  console.error("   Commands: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev, seed:prod");
+  console.error("   Target:   --target=prod|test (ou env DB_TARGET) — escolhe a BD (default: prod)");
   process.exit(1);
 }
 
@@ -189,19 +212,28 @@ switch (command) {
   }
 
   case "seed": {
-    const seedPath = join(DB_ROOT, "prisma", "seed.ts");
-    run(`npx tsx --env-file="${ENV_FILE}" "${seedPath}"`);
+    // Alias do seed:dev (dataset demo completo).
+    const seedPath = join(DB_ROOT, "prisma", "seed-dev.ts");
+    run(`npx tsx "${seedPath}"`);
     break;
   }
 
   case "seed:dev": {
     const seedPath = join(DB_ROOT, "prisma", "seed-dev.ts");
-    run(`npx tsx --env-file="${ENV_FILE}" "${seedPath}"`);
+    run(`npx tsx "${seedPath}"`);
+    break;
+  }
+
+  case "seed:prod": {
+    // Seed MÍNIMO de produção: admin + RBAC + cacifos (sem dados fictícios).
+    const seedPath = join(DB_ROOT, "prisma", "seed-prod.ts");
+    run(`npx tsx "${seedPath}"`);
     break;
   }
 
   default:
     console.error(`❌ Unknown command: ${command}`);
-    console.error("   Available: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev");
+    console.error("   Available: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev, seed:prod");
+    console.error("   Target:    --target=prod|test (ou env DB_TARGET) — escolhe a BD (default: prod)");
     process.exit(1);
 }
