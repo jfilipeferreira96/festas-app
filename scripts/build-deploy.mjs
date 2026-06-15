@@ -184,6 +184,7 @@ writeFileSync(
         "db:truncate": "node scripts/db.js truncate",
         "db:reset": "node scripts/db.js reset",
         "db:verify": "node scripts/db.js verify",
+        diagnose: "node scripts/diagnose.js",
       },
     },
     null,
@@ -418,6 +419,9 @@ mkdirSync(join(DEPLOY, "scripts"), { recursive: true });
 }
 cpSync(join(__dirname, "deploy-db.js"), join(DEPLOY, "scripts", "db.js"));
 ok("scripts/db.js (launcher de BD) copiado.");
+
+cpSync(join(__dirname, "diagnose.js"), join(DEPLOY, "scripts", "diagnose.js"));
+ok("scripts/diagnose.js (diagnóstico de deployment) copiado.");
 
 // 3. VALIDAR ENGINE PRISMA LINUX --------------------------------------------
 const prismaClientDir = join(DEPLOY, "node_modules_deps", ".prisma", "client");
