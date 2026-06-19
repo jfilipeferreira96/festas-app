@@ -1282,7 +1282,48 @@ async function seedEntradasLivres() {
     });
   }
 
+  // ─── Backfill: ligar encarregados das entradas livres a Clientes ──────
+  // Garante que todos os encarregados entram na base de contactos (marketing).
+  const semCliente = await prisma.entradaLivre.findMany({
+    where: { clienteId: null },
+    select: { id: true, encarregadoNome: true, encarregadoTelefone: true, encarregadoEmail: true },
+  });
+
+  for (const el of semCliente) {
+    let clienteId: string | null = null;
+
+    // 1. Procurar por email (unique)
+    if (el.encarregadoEmail) {
+      const byEmail = await prisma.cliente.findFirst({ where: { email: el.encarregadoEmail } });
+      if (byEmail) clienteId = byEmail.id;
+    }
+    // 2. Procurar por telefone
+    if (!clienteId && el.encarregadoTelefone) {
+      const byTel = await prisma.cliente.findFirst({ where: { telefone: el.encarregadoTelefone } });
+      if (byTel) clienteId = byTel.id;
+    }
+    // 3. Criar novo cliente
+    if (!clienteId && el.encarregadoNome && el.encarregadoTelefone) {
+      const novo = await prisma.cliente.create({
+        data: {
+          nome: el.encarregadoNome,
+          telefone: el.encarregadoTelefone,
+          email: el.encarregadoEmail || null,
+        },
+      });
+      clienteId = novo.id;
+    }
+
+    if (clienteId) {
+      await prisma.entradaLivre.update({
+        where: { id: el.id },
+        data: { clienteId },
+      });
+    }
+  }
+
   console.log("  ✓ 3 configurações, 30 entradas livres (7 ativas, 16 concluídas, 4 canceladas — 4 concluídas hoje)\n");
+  console.log(`  ✓ ${semCliente.length} encarregados de entradas livres ligados à base de clientes (marketing)\n`);
 }
 
 // ─── Alocações de Monitores (escalonamento) ──────────────────
