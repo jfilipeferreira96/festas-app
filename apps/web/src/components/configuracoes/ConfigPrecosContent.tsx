@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { BadgeEuro, Save, PartyPopper, DoorOpen, Info } from "lucide-react";
+import { BadgeEuro, Save, PartyPopper, DoorOpen, Timer, Info } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/button/Button";
 import InputField from "@/components/form/input/InputField";
@@ -17,6 +17,7 @@ export default function ConfigPrecosContent() {
   const [precoFestaFimSemana, setPrecoFestaFimSemana] = useState("");
   const [precoEntradaHoraSemana, setPrecoEntradaHoraSemana] = useState("");
   const [precoEntradaHoraFimSemana, setPrecoEntradaHoraFimSemana] = useState("");
+  const [precoExcessoFixo, setPrecoExcessoFixo] = useState("");
 
   useEffect(() => {
     if (config) {
@@ -24,6 +25,7 @@ export default function ConfigPrecosContent() {
       setPrecoFestaFimSemana(String(Number(config.precoFestaFimSemana)));
       setPrecoEntradaHoraSemana(String(Number(config.precoEntradaHoraSemana)));
       setPrecoEntradaHoraFimSemana(String(Number(config.precoEntradaHoraFimSemana)));
+      setPrecoExcessoFixo(String(Number(config.precoExcessoFixo)));
     }
   }, [config]);
 
@@ -34,12 +36,13 @@ export default function ConfigPrecosContent() {
         precoFestaFimSemana: parseFloat(precoFestaFimSemana) || 0,
         precoEntradaHoraSemana: parseFloat(precoEntradaHoraSemana) || 0,
         precoEntradaHoraFimSemana: parseFloat(precoEntradaHoraFimSemana) || 0,
+        precoExcessoFixo: parseFloat(precoExcessoFixo) || 0,
       });
       success("Tarifário atualizado com sucesso");
     } catch {
       error("Erro ao atualizar tarifário");
     }
-  }, [precoFestaSemana, precoFestaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, updateMutation, success, error]);
+  }, [precoFestaSemana, precoFestaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoExcessoFixo, updateMutation, success, error]);
 
   if (isLoading) {
     return (
@@ -161,6 +164,44 @@ export default function ConfigPrecosContent() {
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€/h</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Excesso de Tempo card */}
+      <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-accent-orange-100 flex items-center justify-center">
+            <Timer className="w-5 h-5 text-accent-orange-600" />
+          </div>
+          <div>
+            <h3 className="font-poppins text-lg font-semibold text-text-primary">Excesso de Tempo</h3>
+            <p className="text-xs text-text-muted">Valor sugerido ao concluir festas/entradas com atraso</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">
+              Preço de excesso (fixo)
+            </label>
+            <div className="relative">
+              <InputField
+                type="number"
+                min="0"
+                step={0.01}
+                value={precoExcessoFixo}
+                onChange={(e) => setPrecoExcessoFixo(e.target.value)}
+                placeholder="5"
+                className="pr-8"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€</span>
+            </div>
+          </div>
+          <div className="sm:col-span-1 flex items-end">
+            <p className="text-xs text-text-muted leading-relaxed">
+              Quando uma festa ou entrada livre ultrapassa o tempo previsto, este valor é usado como
+              <strong> sugestão </strong>no resumo de conclusão. O utilizador pode ajustá-lo livremente (incluindo 0 €).
+            </p>
           </div>
         </div>
       </div>

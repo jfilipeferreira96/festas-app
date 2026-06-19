@@ -365,6 +365,100 @@ describe("Reserva Service", () => {
         "NOT_IN_PROGRESS"
       );
     });
+
+    it("should calculate excesso cost when finalizing past fimPrevisto", async () => {
+      // Reserva started 120 min ago with 60 min duration → ~60 min excess
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+      const fimPrevisto = new Date(inicio.getTime() + 60 * 60 * 1000);
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(),
+          horario: "08:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "EM_CURSO",
+          inicioEm: inicio,
+          fimPrevisto,
+          valorPago: 100,
+          pago: true,
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      const finalized = await reservaService.finalizar(reserva.id);
+
+      expect(finalized.estado).toBe("CONCLUIDA");
+      expect(finalized.excessoMinutos).toBeGreaterThanOrEqual(60);
+      // custoExcesso uses the fixed excesso price from tarifário (default 5)
+      const custoExcesso = Number(finalized.custoExcesso);
+      expect(custoExcesso).toBeGreaterThan(0);
+      expect(Number(finalized.custoTotalFinal)).toBe(100 + custoExcesso);
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+    });
+
+    it("should use manual custoExcesso when finalizing (overrides suggestion)", async () => {
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+      const fimPrevisto = new Date(inicio.getTime() + 60 * 60 * 1000);
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(),
+          horario: "08:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "EM_CURSO",
+          inicioEm: inicio,
+          fimPrevisto,
+          valorPago: 100,
+          pago: true,
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      const finalized = await reservaService.finalizar(reserva.id, { custoExcessoManual: 10 });
+
+      expect(finalized.estado).toBe("CONCLUIDA");
+      expect(finalized.excessoMinutos).toBeGreaterThanOrEqual(60);
+      expect(Number(finalized.custoExcesso)).toBe(10);
+      expect(Number(finalized.custoTotalFinal)).toBe(110); // 100 + 10
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+    });
+
+    it("should allow manual custoExcesso of 0 when finalizing", async () => {
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+      const fimPrevisto = new Date(inicio.getTime() + 60 * 60 * 1000);
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(),
+          horario: "08:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "EM_CURSO",
+          inicioEm: inicio,
+          fimPrevisto,
+          valorPago: 100,
+          pago: true,
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+
+      const finalized = await reservaService.finalizar(reserva.id, { custoExcessoManual: 0 });
+
+      expect(Number(finalized.custoExcesso)).toBe(0);
+      expect(Number(finalized.custoTotalFinal)).toBe(100); // 100 + 0
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+    });
   });
 
   // ── alocarMonitor / removerMonitor ────────────────────────────

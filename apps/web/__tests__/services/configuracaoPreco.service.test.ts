@@ -39,6 +39,7 @@ describe("ConfiguracaoPreco Service", () => {
       expect(Number(config.precoFestaFimSemana)).toBe(200);
       expect(Number(config.precoEntradaHoraSemana)).toBe(10);
       expect(Number(config.precoEntradaHoraFimSemana)).toBe(12);
+      expect(Number(config.precoExcessoFixo)).toBe(5);
     });
 
     it("should return existing config on second call (singleton)", async () => {
@@ -83,6 +84,13 @@ describe("ConfiguracaoPreco Service", () => {
       const config = await configuracaoPrecoService.getConfig();
       expect(Number(config.precoEntradaHoraSemana)).toBe(9);
       expect(Number(config.precoFestaSemana)).toBe(160);
+    });
+
+    it("should update precoExcessoFixo", async () => {
+      const updated = await configuracaoPrecoService.updateConfig({
+        precoExcessoFixo: 7.5,
+      });
+      expect(Number(updated.precoExcessoFixo)).toBe(7.5);
     });
   });
 
@@ -165,6 +173,21 @@ describe("ConfiguracaoPreco Service", () => {
       const quarta = new Date("2025-01-15T00:00:00");
       const preco = await configuracaoPrecoService.calcularPrecoEntrada(0, quarta);
       expect(preco).toBe(0);
+    });
+  });
+
+  // ── getPrecoExcesso ───────────────────────────────────────────
+  describe("getPrecoExcesso()", () => {
+    it("should return the configured fixed excesso price", async () => {
+      // precoExcessoFixo was set to 7.5 in the updateConfig test
+      const preco = await configuracaoPrecoService.getPrecoExcesso();
+      expect(preco).toBe(7.5);
+    });
+
+    it("should return the default (5) when config is freshly created", async () => {
+      await testPrisma.configuracaoPreco.deleteMany({});
+      const preco = await configuracaoPrecoService.getPrecoExcesso();
+      expect(preco).toBe(5);
     });
   });
 });

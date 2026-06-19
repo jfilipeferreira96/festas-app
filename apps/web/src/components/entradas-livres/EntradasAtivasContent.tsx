@@ -18,6 +18,7 @@ import {
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import {
@@ -85,7 +86,7 @@ export default function EntradasAtivasContent() {
   const cancelar = useCancelarEntradaLivre();
   const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
 
-  const [confirmConcluir, setConfirmConcluir] = useState<string | null>(null);
+  const [confirmConcluir, setConfirmConcluir] = useState<EntradaLivre | null>(null);
   const [confirmCancelar, setConfirmCancelar] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
@@ -97,11 +98,12 @@ export default function EntradasAtivasContent() {
   );
 
   const handleConcluir = useCallback(
-    async (id: string) => {
-      await concluir.mutateAsync(id);
+    async (custoExcesso?: number) => {
+      if (!confirmConcluir) return;
+      await concluir.mutateAsync({ id: confirmConcluir.id, custoExcesso });
       setConfirmConcluir(null);
     },
-    [concluir]
+    [concluir, confirmConcluir]
   );
 
   const handleCancelar = useCallback(
@@ -158,17 +160,22 @@ export default function EntradasAtivasContent() {
         />
       </div>
 
-      {/* Confirm Concluir */}
-      <ConfirmActionModal
-        isOpen={!!confirmConcluir}
-        onClose={() => setConfirmConcluir(null)}
-        onConfirm={() => handleConcluir(confirmConcluir!)}
-        title="Concluir Entrada"
-        message="Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente."
-        confirmText="Concluir"
-        variant="success"
-        isConfirming={concluir.isPending}
-      />
+      {/* Concluir Resumo Modal */}
+      {confirmConcluir && (
+        <ConcluirResumoModal
+          isOpen={!!confirmConcluir}
+          onClose={() => setConfirmConcluir(null)}
+          onConfirm={handleConcluir}
+          isConfirming={concluir.isPending}
+          titulo="Concluir Entrada"
+          entidadeNome={confirmConcluir.criancas?.[0]?.nome ?? confirmConcluir.encarregadoNome}
+          localNome={confirmConcluir.local?.nome}
+          inicioEm={confirmConcluir.inicioEm}
+          fimPrevisto={confirmConcluir.fimPrevisto}
+          duracaoMinutos={confirmConcluir.duracaoMinutos}
+          custoBase={Number(confirmConcluir.custoTotal ?? 0)}
+        />
+      )}
 
       {/* Confirm Cancelar */}
       <ConfirmActionModal
@@ -214,7 +221,7 @@ function EmCursoTab({
 }: {
   entradas?: EntradaLivre[];
   isLoading: boolean;
-  onConcluir: (id: string) => void;
+  onConcluir: (entrada: EntradaLivre) => void;
   onCancelar: (id: string) => void;
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
@@ -272,7 +279,7 @@ function EntradaAtivaCard({
   pagamentoPending,
 }: {
   entrada: EntradaLivre;
-  onConcluir: (id: string) => void;
+  onConcluir: (entrada: EntradaLivre) => void;
   onCancelar: (id: string) => void;
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
@@ -374,7 +381,7 @@ function EntradaAtivaCard({
                 <li className="my-1 border-t border-gray-100" />
                 <li>
                   <DropdownItem
-                    onItemClick={() => { onConcluir(entrada.id); setIsDropdownOpen(false); }}
+                    onItemClick={() => { onConcluir(entrada); setIsDropdownOpen(false); }}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-accent-green-700 hover:bg-accent-green-50 rounded-md transition-colors w-full text-left"
                   >
                     <CheckCircle size={14} />
@@ -450,7 +457,7 @@ function EntradaAtivaCard({
             <Eye size={13} /> Ver detalhes
           </button>
           <button
-            onClick={() => onConcluir(entrada.id)}
+            onClick={() => onConcluir(entrada)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors ml-auto"
           >
             <CheckCircle size={13} /> Concluir

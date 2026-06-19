@@ -9,7 +9,6 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=web",
-    "dev:web": "npm run dev --workspace=web",
     "build": "npm run build --workspace=@saas/shared-types && npm run build --workspace=@saas/shared-defaults && npm run build --workspace=@festas/db && npm run build --workspace=@festas/auth && npm run build --workspace=web",
     "build:shared": "npm run build --workspace=@saas/shared-types && npm run build --workspace=@saas/shared-defaults",
     "build:web": "npm run build --workspace=web",
@@ -17,7 +16,7 @@
     "check-types": "npm exec --workspace=web -- tsc --noEmit",
     "db:generate": "npm run db:generate --workspace=@festas/db",
     "db:push": "npm run db:push --workspace=@festas/db",
-    "db:migrate": "npm run db:migrate --workspace=@festas/db",
+    "db:push:force": "npm run db:push:force --workspace=@festas/db",
     "db:studio": "npm run db:studio --workspace=@festas/db",
     "db:clean": "npm run db:clean --workspace=@festas/db",
     "db:reset": "npm run db:reset --workspace=@festas/db",

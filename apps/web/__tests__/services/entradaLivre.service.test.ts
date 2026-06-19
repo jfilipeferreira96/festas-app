@@ -283,7 +283,7 @@ describe("Entrada Livre Service", () => {
 
       expect(concluida.estado).toBe("CONCLUIDA");
       expect(concluida.excessoMinutos).toBe(30);
-      expect(concluida.custoExcesso).toBe(5.0); // 30min * €10/h = €5 (using custoHora from entrada)
+      expect(concluida.custoExcesso).toBe(5.0); // fixed excesso price from tarifário (default 5)
       expect(concluida.custoTotalFinal).toBe(17.0); // 12 + 5
 
       // Cleanup
@@ -292,6 +292,68 @@ describe("Entrada Livre Service", () => {
 
     it("should throw NOT_FOUND for non-existent entrada", async () => {
       await expect(entradaLivreService.concluir("non-existent-id")).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should use manual custoExcesso when provided (overrides fixed suggestion)", async () => {
+      // Entrada with 30 min excess → suggestion would be precoExcessoFixo (default 5)
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          id: "test-concluir-manual",
+          encarregadoNome: "Teste Manual",
+          encarregadoTelefone: "999999999",
+          localId: TEST_IDS.LOCAL_1,
+          inicioEm: inicio,
+          duracaoMinutos: 90,
+          custoHora: 10.0,
+          custoTotal: 12.0,
+          estado: "ATIVA",
+          fimPrevisto: new Date(inicio.getTime() + 90 * 60 * 1000),
+          criancas: { create: [{ nome: "Criança" }] },
+        },
+      });
+
+      // Manual value of 7.50 overrides the fixed suggestion
+      const concluida = await entradaLivreService.concluir(entrada.id, { custoExcessoManual: 7.5 });
+
+      expect(concluida.estado).toBe("CONCLUIDA");
+      expect(concluida.excessoMinutos).toBe(30);
+      expect(concluida.custoExcesso).toBe(7.5);
+      expect(concluida.custoTotalFinal).toBe(19.5); // 12 + 7.5
+
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should allow manual custoExcesso of 0 (no charge even with excess)", async () => {
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          id: "test-concluir-manual-zero",
+          encarregadoNome: "Teste Zero",
+          encarregadoTelefone: "999999999",
+          localId: TEST_IDS.LOCAL_1,
+          inicioEm: inicio,
+          duracaoMinutos: 90,
+          custoHora: 10.0,
+          custoTotal: 12.0,
+          estado: "ATIVA",
+          fimPrevisto: new Date(inicio.getTime() + 90 * 60 * 1000),
+          criancas: { create: [{ nome: "Criança" }] },
+        },
+      });
+
+      const concluida = await entradaLivreService.concluir(entrada.id, { custoExcessoManual: 0 });
+
+      expect(concluida.estado).toBe("CONCLUIDA");
+      expect(concluida.excessoMinutos).toBe(30);
+      expect(concluida.custoExcesso).toBe(0);
+      expect(concluida.custoTotalFinal).toBe(12.0); // 12 + 0
+
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
 
     it("should free cacifo when concluding", async () => {
@@ -546,7 +608,7 @@ describe("Entrada Livre Service", () => {
       });
 
       // Entrada should have clienteId and cliente populated
-      expect(entrada.clienteId).toBeDefined();
+      expect(entrada.cliente?.id).toBeDefined();
       expect(entrada.cliente).toBeDefined();
       expect(entrada.cliente!.nome).toBe("Novo Encarregado Teste");
       expect(entrada.cliente!.email).toBe("novo-enc-teste@test.com");
@@ -556,7 +618,7 @@ describe("Entrada Livre Service", () => {
       expect(countAfter).toBe(countBefore + 1);
 
       // Cleanup
-      const clienteId = entrada.clienteId;
+      const clienteId = entrada.cliente?.id;
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
       if (clienteId) await testPrisma.cliente.delete({ where: { id: clienteId } });
     });
@@ -575,7 +637,7 @@ describe("Entrada Livre Service", () => {
       });
 
       // Should reuse CLIENTE_1, not create a new one
-      expect(entrada.clienteId).toBe(TEST_IDS.CLIENTE_1);
+      expect(entrada.cliente?.id).toBe(TEST_IDS.CLIENTE_1);
       const countAfter = await testPrisma.cliente.count();
       expect(countAfter).toBe(countBefore);
 
@@ -597,7 +659,7 @@ describe("Entrada Livre Service", () => {
       });
 
       // Should reuse CLIENTE_2, not create a new one
-      expect(entrada.clienteId).toBe(TEST_IDS.CLIENTE_2);
+      expect(entrada.cliente?.id).toBe(TEST_IDS.CLIENTE_2);
       const countAfter = await testPrisma.cliente.count();
       expect(countAfter).toBe(countBefore);
 
