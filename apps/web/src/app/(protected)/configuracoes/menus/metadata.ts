@@ -2,6 +2,6 @@ import { Metadata } from "next";
 import { createPageMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createPageMetadata({
-  title: "Menus",
-  description: "Gestão de menus e lanches para festas",
+  title: "Menus & Extras",
+  description: "Gestão de itens de menu e extras disponíveis para reservas",
 });

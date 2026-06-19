@@ -99,12 +99,6 @@ const mainNavItems: NavItem[] = [
     modulo: "reservas",
   },
   {
-    name: "Menus",
-    icon: <UtensilsCrossed className="w-5 h-5" />,
-    path: "/menus",
-    modulo: "menus",
-  },
-  {
     name: "Clientes",
     icon: <BookUser className="w-5 h-5" />,
     path: "/clientes",
@@ -147,9 +141,9 @@ const configItems: NavItem = {
       modulo: "configuracoes",
     },
     {
-      name: "Extras",
-      path: "/configuracoes/extras",
-      icon: <Sparkles className="w-4 h-4" />,
+      name: "Menus & Extras",
+      path: "/configuracoes/menus",
+      icon: <UtensilsCrossed className="w-4 h-4" />,
       modulo: "configuracoes",
     },
     {

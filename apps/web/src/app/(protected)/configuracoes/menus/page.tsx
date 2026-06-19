@@ -2,6 +2,6 @@
 
 import MenusContent from "@/components/menus/MenusContent";
 
-export default function MenusPage() {
+export default function MenusConfigPage() {
   return <MenusContent />;
 }

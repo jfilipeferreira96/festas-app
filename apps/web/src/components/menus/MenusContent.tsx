@@ -50,7 +50,7 @@ export default function MenusContent() {
 
   const formatCurrency = useCallback(
     (value: number) =>
-      new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value / 100),
+      new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value),
     []
   );
 
@@ -67,7 +67,7 @@ export default function MenusContent() {
   const handleEdit = useCallback((extra: Extra) => {
     setEditingExtra(extra);
     setFormNome(extra.nome);
-    setFormPreco(String(Number(extra.precoUnitario) / 100));
+    setFormPreco(String(Number(extra.precoUnitario)));
     setFormCategoria(extra.categoria as "MENU" | "EXTRA");
     setFormSubcategoria(extra.subcategoria ?? "");
     setFormRequerTexto(extra.requerTexto ?? false);
@@ -77,11 +77,11 @@ export default function MenusContent() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      const precoCentavos = Math.round(parseFloat(formPreco.replace(",", ".")) * 100) || 0;
+      const preco = parseFloat(formPreco.replace(",", ".")) || 0;
 
       const commonData = {
         nome: formNome,
-        precoUnitario: precoCentavos,
+        precoUnitario: preco,
         categoria: formCategoria,
         subcategoria: formSubcategoria.trim() || undefined,
         requerTexto: formRequerTexto,
