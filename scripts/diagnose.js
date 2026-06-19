@@ -142,62 +142,121 @@ try {
   allOk = false;
 }
 
-// ─── 6. Prisma DB connection ───────────────────────────────────────────────
+// ─── 6. Conexão à base de dados (TCP + mysql2 se disponível) ───────────────
+// NOTA: não usamos o engine Prisma aqui porque em ambientes cPanel/CloudLinux
+// o subprocesso do "Executar script JS" pode fazer o engine Rust entrar em pânico
+// ("timer has gone away"). A app em si funciona bem sob Phusion Passenger.
 section("6. Conexão à base de dados");
-if (PrismaClient && process.env.DATABASE_URL) {
-  var prisma = new PrismaClient({ log: ["error", "warn"] });
-  // Test 1: raw query
-  prisma.user
-    .count()
-    .then(function (count) {
-      check("SELECT COUNT(*) FROM user", true, "user: " + count + " registos");
-      // Test 2: find admin
-      return prisma.user.findFirst({ where: { email: "admin@festas.pt" } });
+
+var parsedDb = null;
+if (process.env.DATABASE_URL) {
+  var m = process.env.DATABASE_URL.match(/^mysql:\/\/([^:]+):([^@]*)@([^:]+):(\d+)\/(.+)$/);
+  if (m) {
+    parsedDb = { user: m[1], password: m[2], host: m[3], port: parseInt(m[4], 10), database: m[5] };
+  }
+}
+
+if (parsedDb) {
+  // 6a. TCP connectivity test (sem Prisma engine)
+  var net = require("net");
+  var socket = new net.Socket();
+  socket.setTimeout(5000);
+  var tcpDone = false;
+  socket.on("connect", function () {
+    if (tcpDone) return;
+    tcpDone = true;
+    check("MySQL " + parsedDb.host + ":" + parsedDb.port + " reachable", true);
+    socket.destroy();
+    testDbQuery();
+  });
+  socket.on("error", function (err) {
+    if (tcpDone) return;
+    tcpDone = true;
+    check("MySQL " + parsedDb.host + ":" + parsedDb.port + " reachable", false, err.message);
+    allOk = false;
+    testAuth();
+  });
+  socket.on("timeout", function () {
+    if (tcpDone) return;
+    tcpDone = true;
+    check("MySQL " + parsedDb.host + ":" + parsedDb.port + " reachable", false, "timeout (5s)");
+    allOk = false;
+    socket.destroy();
+    testAuth();
+  });
+  socket.connect(parsedDb.port, parsedDb.host);
+} else {
+  check("Parse DATABASE_URL", false, "Formato inválido");
+  allOk = false;
+  testAuth();
+}
+
+// 6b. MySQL query test via mysql2 (se disponível no bundle)
+function testDbQuery() {
+  var mysql2 = null;
+  try {
+    mysql2 = require("mysql2/promise");
+  } catch (e) {
+    /* não disponível */
+  }
+
+  if (!mysql2) {
+    console.log("   ℹ️  mysql2 não está no bundle — a saltar query directa.");
+    console.log("   (A app usa o engine Prisma, que funciona sob Passenger.)");
+    testAuth();
+    return;
+  }
+
+  mysql2
+    .createConnection({
+      host: parsedDb.host,
+      port: parsedDb.port,
+      user: parsedDb.user,
+      password: parsedDb.password,
+      database: parsedDb.database,
     })
-    .then(function (admin) {
-      if (admin) {
-        check("admin@festas.pt encontrado", true, "id=" + admin.id + " funcao=" + admin.funcao + " verified=" + admin.emailVerified);
-      } else {
-        check("admin@festas.pt encontrado", false, "User não existe na BD");
-        allOk = false;
-      }
-      // Test 3: account with password
-      return prisma.account.findFirst({ where: { userId: admin ? admin.id : undefined } });
-    })
-    .then(function (account) {
-      if (account) {
-        check("Account (credential) encontrada", !!account.password, "providerId=" + account.providerId + " hasPassword=" + !!account.password);
-      } else {
-        check("Account (credential) encontrada", false, "Sem account para o user");
-        allOk = false;
-      }
-      return prisma.$disconnect();
+    .then(function (conn) {
+      return conn
+        .query("SELECT COUNT(*) AS c FROM user")
+        .then(function (r) {
+          check("SELECT COUNT(*) FROM user", true, r[0][0].c + " registos");
+          return conn.query("SELECT email, funcao, emailVerified FROM user WHERE email = 'admin@festas.pt'");
+        })
+        .then(function (r) {
+          if (r[0].length > 0) {
+            var u = r[0][0];
+            check("admin@festas.pt encontrado", true, "funcao=" + u.funcao + " verified=" + u.emailVerified);
+          } else {
+            check("admin@festas.pt encontrado", false, "Não existe na BD");
+            allOk = false;
+          }
+          return conn.end();
+        });
     })
     .then(function () {
-      // ─── 7. @festas/auth ──────────────────────────────────────────────
-      section("7. Carregar @festas/auth");
-      try {
-        var authMod = require("@festas/auth");
-        check("@festas/auth carregado", !!authMod.auth, "OK");
-        if (authMod.auth) {
-          check("auth.api disponível", !!authMod.auth.api, "OK");
-        }
-      } catch (e) {
-        check("@festas/auth carregado", false, e.message);
-        console.log("   Stack: " + (e.stack || "").split("\n").slice(0, 5).join("\n   "));
-        allOk = false;
-      }
-
-      finish();
+      testAuth();
     })
     .catch(function (err) {
-      check("Conexão à BD", false, err.code + ": " + err.message);
-      console.log("   Stack: " + (err.stack || "").split("\n").slice(0, 5).join("\n   "));
+      check("Query MySQL", false, err.code + ": " + err.message);
       allOk = false;
-      prisma.$disconnect().finally(finish);
+      testAuth();
     });
-} else {
-  console.log("   ⏭  Saltado (PrismaClient ou DATABASE_URL em falta)");
+}
+
+// ─── 7. @festas/auth ──────────────────────────────────────────────────────
+function testAuth() {
+  section("7. Carregar @festas/auth");
+  try {
+    var authMod = require("@festas/auth");
+    check("@festas/auth carregado", !!authMod.auth, "OK");
+    if (authMod.auth) {
+      check("auth.api disponível", !!authMod.auth.api, "OK");
+    }
+  } catch (e) {
+    check("@festas/auth carregado", false, e.message);
+    console.log("   Stack: " + (e.stack || "").split("\n").slice(0, 5).join("\n   "));
+    allOk = false;
+  }
   finish();
 }
 
