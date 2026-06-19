@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Trash2, CreditCard, AlertTriangle, User, Cake, MapPin,
-  Clock, Package, Users, Check, FileText, MessageSquare,
+  Clock, Package, Users, Check, FileText, MessageSquare, Search, CheckCircle,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -19,17 +19,17 @@ import Switch from "@/components/form/switch/Switch";
 import MultiSelect from "@/components/form/MultiSelect";
 import Checkbox from "@/components/form/input/Checkbox";
 import { FormStepper } from "@/components/ui/stepper/FormStepper";
-import { useCreateReserva, useUpdateReserva } from "@/hooks/use-reservas";
+import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useExtras } from "@/hooks/use-extras";
 import { useMonitores } from "@/hooks/use-monitores";
 import { useEtapasFesta } from "@/hooks/use-etapasFesta";
 import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
-import type { Reserva, MetodoPagamento } from "@/lib/api/reservas";
+import type { Reserva, MetodoPagamento, DisponibilidadeResult } from "@/lib/api/reservas";
 
 // ── Types ──────────────────────────────────────────────────────
 interface AniversarianteInput { nome: string; dataNascimento: string; }
-interface CriancaInput { nome: string; cacifoId: string; }
+interface CriancaInput { nome: string; cacifoId: string; edited?: boolean; }
 interface EncarregadoInput { nome: string; contacto: string; email: string; codigoPostal: string; }
 
 interface ExtraItem {
@@ -180,6 +180,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const [encarregadosAdicionais, setEncarregadosAdicionais] = useState<EncarregadoInput[]>([]);
   const [criancas, setCriancas] = useState<CriancaInput[]>([]);
   const [cacifoAssignments, setCacifoAssignments] = useState<Record<string, string>>({});
+  const [showAniversarianteError, setShowAniversarianteError] = useState(false);
 
   const defaultValues = useMemo<ReservaFormData>(() => ({
     tema: reserva?.tema ?? "", data: reserva?.data ?? "", horario: reserva?.horario ?? "",
@@ -209,18 +210,37 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   });
 
   const watchedData = watch("data");
+  const watchedHorario = watch("horario");
+  const watchedDuracao = watch("duracaoMinutos");
+  const watchedLocalId = watch("localId");
   const pago = watch("pago") ?? false;
   const currentMonitoresIds = watch("monitoresIds") ?? [];
   const currentEtapasIds = watch("etapasIds") ?? [];
   const previsaoCriancas = watch("previsaoCriancas");
 
+  // ── Verificação de disponibilidade (aviso apenas, não bloqueia) ──
+  const disponibilidade = useCheckDisponibilidade({
+    data: watchedData,
+    horario: watchedHorario,
+    duracaoMinutos: watchedDuracao,
+    localId: watchedLocalId,
+    excludeId: reserva?.id,
+  });
+
   React.useEffect(() => {
     const count = previsaoCriancas ?? 0;
     const anivNames = aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome);
     setCriancas((prev) => {
-      if (prev.length >= count) return prev.slice(0, count).map((c, i) => (!c.nome.trim() && anivNames[i] ? { ...c, nome: anivNames[i] } : c));
-      const next = [...prev];
-      for (let i = prev.length; i < count; i++) next.push({ nome: anivNames[i] ?? "", cacifoId: "" });
+      const next: CriancaInput[] = [];
+      for (let i = 0; i < count; i++) {
+        const existing = prev[i];
+        const autoName = anivNames[i] ?? "";
+        // Preserva nomes editados manualmente; caso contrário sincroniza
+        // sempre com o nome do aniversariante (ou limpa). Isto evita o bug
+        // em que a 1ª tecla "trancava" o nome da criança numa só letra.
+        if (existing && existing.edited) next.push(existing);
+        else next.push({ nome: autoName, cacifoId: existing?.cacifoId ?? "", edited: false });
+      }
       return next;
     });
   }, [previsaoCriancas, aniversariantes]);
@@ -249,6 +269,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const removeAniversariante = useCallback((i: number) => setAniversariantes((p) => p.filter((_, idx) => idx !== i)), []);
   const updateAniversariante = useCallback((i: number, field: keyof AniversarianteInput, value: string) => {
     setAniversariantes((p) => { const n = [...p]; n[i] = { ...n[i], [field]: value }; return n; });
+    if (field === "nome" && value.trim()) setShowAniversarianteError(false);
   }, []);
   const addEncarregadoAdicional = useCallback(() => setEncarregadosAdicionais((p) => [...p, { nome: "", contacto: "", email: "", codigoPostal: "" }]), []);
   const removeEncarregadoAdicional = useCallback((i: number) => setEncarregadosAdicionais((p) => p.filter((_, idx) => idx !== i)), []);
@@ -256,10 +277,10 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     setEncarregadosAdicionais((p) => { const n = [...p]; n[i] = { ...n[i], [field]: value }; return n; });
   }, []);
   const updateCrianca = useCallback((i: number, nome: string) => {
-    setCriancas((p) => { const n = [...p]; n[i] = { ...n[i], nome }; return n; });
+    setCriancas((p) => { const n = [...p]; n[i] = { ...n[i], nome, edited: true }; return n; });
   }, []);
   const addCrianca = useCallback(() => {
-    setCriancas((p) => [...p, { nome: "", cacifoId: "" }]);
+    setCriancas((p) => [...p, { nome: "", cacifoId: "", edited: false }]);
     setValue("previsaoCriancas", (previsaoCriancas ?? 0) + 1);
   }, [previsaoCriancas, setValue]);
   const removeCrianca = useCallback((i: number) => {
@@ -270,7 +291,9 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const validateStep = useCallback(async (): Promise<boolean> => {
     if (currentStep === 0) {
       const valid = await trigger(["data", "horario", "duracaoMinutos", "localId", "encarregadoNome", "encarregadoContacto", "encarregadoEmail"]);
-      return valid && aniversariantes.some((a) => a.nome.trim().length > 0);
+      const hasAniversariante = aniversariantes.some((a) => a.nome.trim().length > 0);
+      setShowAniversarianteError(!hasAniversariante);
+      return valid && hasAniversariante;
     }
     if (currentStep === 1) return (await trigger(["previsaoCriancas"]));
     return true;
@@ -344,6 +367,10 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
               extraItems={extraItems} extraGroups={extraGroups} selectedExtrasIds={selectedExtrasIds}
               handleExtrasChange={handleExtrasChange} extrasTexto={extrasTexto} setExtrasTexto={setExtrasTexto}
               totalEstimado={totalEstimado} watchedData={watchedData} corOptions={corOptions} menuOptions={menuOptions}
+              showAniversarianteError={showAniversarianteError}
+              disponibilidade={disponibilidade.data}
+              disponibilidadeLoading={disponibilidade.isLoading}
+              onVerificarDisponibilidade={() => disponibilidade.refetch()}
             />
           )}
           {currentStep === 1 && (
@@ -411,6 +438,10 @@ interface Step1Props {
   watchedData: string;
   corOptions: { value: string; label: string; color?: string }[];
   menuOptions: { value: string; label: string }[];
+  showAniversarianteError: boolean;
+  disponibilidade?: DisponibilidadeResult;
+  disponibilidadeLoading: boolean;
+  onVerificarDisponibilidade: () => void;
 }
 
 function Step1Geral({
@@ -421,6 +452,7 @@ function Step1Geral({
   etapaOptions, currentEtapasIds, handleEtapasChange,
   extraItems, extraGroups, selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto,
   totalEstimado, watchedData, corOptions, menuOptions,
+  showAniversarianteError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade,
 }: Step1Props) {
   const currentCor = defaultValues.cor || "";
 
@@ -462,7 +494,7 @@ function Step1Geral({
         {aniversariantes.map((aniv, i) => (
           <div key={i} className="flex items-end gap-3">
             <div className="w-3/5">
-              <InputField value={aniv.nome} onChange={(e) => updateAniversariante(i, "nome", e.target.value)} placeholder="Nome da criança" />
+              <InputField value={aniv.nome} onChange={(e) => updateAniversariante(i, "nome", e.target.value)} placeholder="Nome da criança" error={showAniversarianteError && !aniv.nome.trim()} />
             </div>
             <div className="w-2/5">
               <DatePicker
@@ -482,6 +514,9 @@ function Step1Geral({
             )}
           </div>
         ))}
+        {showAniversarianteError && (
+          <p className="text-xs text-error-500">É obrigatório indicar pelo menos um aniversariante.</p>
+        )}
       </div>
 
       {/* ── Encarregado Principal ── */}
@@ -557,6 +592,37 @@ function Step1Geral({
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
         </div>
       </div>
+
+      {/* ── Verificação de disponibilidade (aviso apenas) ── */}
+      {watch("data") && watch("horario") && watch("duracaoMinutos") && watch("localId") && (
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={onVerificarDisponibilidade}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-700 bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg transition-colors">
+            <Search size={14} /> Verificar disponibilidade
+          </button>
+          {disponibilidadeLoading && <span className="text-xs text-text-muted">A verificar...</span>}
+          {disponibilidade && !disponibilidadeLoading && (
+            disponibilidade.disponivel ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success-50 border border-success-200 text-success-700 text-xs font-medium">
+                <CheckCircle size={14} /> Sala disponível neste horário
+              </span>
+            ) : (
+              <div className="flex-1 min-w-full rounded-lg bg-accent-orange-50 border border-accent-orange-200 p-2.5">
+                <div className="flex items-center gap-1.5 text-accent-orange-700 text-xs font-semibold">
+                  <AlertTriangle size={14} /> Sala ocupada neste horário
+                </div>
+                <div className="mt-1 space-y-0.5">
+                  {disponibilidade.conflitos.map((c) => (
+                    <p key={c.id} className="text-xs text-accent-orange-700">
+                      {c.horario} ({c.duracaoMinutos}min){c.tema ? ` · ${c.tema}` : ""}{c.aniversarianteNome ? ` · ${c.aniversarianteNome}` : ""}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )}
 
       {/* ── Tema · Cor · Menu · Bolo ── */}
       <div className="flex gap-4">
@@ -746,9 +812,10 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5"><FileText size={14} className="text-brand-500" /> Resumo</h3>
-        <div className="p-4 rounded-lg bg-surface border border-border space-y-2">
-          <div className="flex items-start gap-2"><Cake size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Aniversariante(s)</p><p className="text-sm font-medium text-text-primary">{aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome).join(", ") || "—"}</p></div></div>
+        <div className="p-4 rounded-lg bg-surface border border-border">
+          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5 mb-3"><FileText size={14} className="text-brand-500" /> Resumo</h3>
+          <div className="space-y-2">
+            <div className="flex items-start gap-2"><Cake size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Aniversariante(s)</p><p className="text-sm font-medium text-text-primary">{aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome).join(", ") || "—"}</p></div></div>
           <div className="flex items-start gap-2"><User size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Encarregado</p><p className="text-sm text-text-primary">{watch("encarregadoNome") || "—"}</p><p className="text-xs text-text-muted">{watch("encarregadoContacto")} · {watch("encarregadoEmail")}{watch("encarregadoCodigoPostal") ? ` · ${watch("encarregadoCodigoPostal")}` : ""}</p></div></div>
           {encarregadosAdicionais.filter((e) => e.nome.trim()).length > 0 && (
             <div className="flex items-start gap-2"><Users size={14} className="text-primary-400 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Outros Encarregados</p>{encarregadosAdicionais.filter((e) => e.nome.trim()).map((enc, i) => (<div key={i}><p className="text-sm text-text-primary">{enc.nome}</p><p className="text-xs text-text-muted">{[enc.contacto, enc.email].filter(Boolean).join(" · ")}</p></div>))}</div></div>
@@ -756,7 +823,8 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
           <div className="flex items-start gap-2"><Clock size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Data & Hora</p><p className="text-sm text-text-primary">{watch("data") ? format(parseISO(watch("data")), "d 'de' MMMM 'de' yyyy", { locale: pt }) : "—"} às {watch("horario") || "—"} ({watch("duracaoMinutos")} min)</p></div></div>
           <div className="flex items-start gap-2"><MapPin size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Sala</p><p className="text-sm text-text-primary">{sala?.label ?? "—"}</p></div></div>
           <div className="flex items-start gap-2"><Users size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Crianças</p><p className="text-sm text-text-primary">{namedCriancas.length > 0 ? `${namedCriancas.length} — ${namedCriancas.slice(0, 5).map((c) => c.nome).join(", ")}${namedCriancas.length > 5 ? "..." : ""}` : `${watch("previsaoCriancas")} previstas`}</p></div></div>
-          <div className="flex items-start gap-2"><Package size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Cacifos</p><p className="text-sm text-text-primary">{Object.values(cacifoAssignments).filter(Boolean).length > 0 ? cacifosDisponiveis?.filter((c) => Object.values(cacifoAssignments).includes(c.id)).map((c) => `#${c.numero}`).join(", ") ?? "Nenhum" : "Nenhum"}</p></div></div>
+            <div className="flex items-start gap-2"><Package size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Cacifos</p><p className="text-sm text-text-primary">{Object.values(cacifoAssignments).filter(Boolean).length > 0 ? cacifosDisponiveis?.filter((c) => Object.values(cacifoAssignments).includes(c.id)).map((c) => `#${c.numero}`).join(", ") ?? "Nenhum" : "Nenhum"}</p></div></div>
+          </div>
         </div>
         {(watch("tema") || watch("cor")) && (
           <div className="p-3 rounded-lg bg-surface border border-border flex items-center gap-3">
@@ -798,12 +866,31 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
             <label className="text-xs font-medium text-text-secondary">Pago</label>
             <Switch checked={pago} onChange={(checked) => setValue("pago", checked)} label={pago ? "Sim" : "Não"} />
           </div>
-          {totalEstimado > 0 && (
-            <div className="flex items-center justify-between pt-2 border-t border-border">
-              <span className="text-xs text-text-muted">Total Extras</span>
-              <span className="text-sm font-bold text-primary-500">{formatEuro(totalEstimado / 100)}</span>
+          {/* ── Discriminação de totais ── */}
+          <div className="pt-2 border-t border-border space-y-1.5">
+            {totalEstimado > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted">Extras</span>
+                <span className="text-xs text-text-primary">{formatEuro(totalEstimado / 100)}</span>
+              </div>
+            )}
+            {watch("valorCaucao") ? (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted">Caução</span>
+                <span className="text-xs text-text-primary">{formatEuro(Number(watch("valorCaucao")))}</span>
+              </div>
+            ) : null}
+            {watch("descontoPercentagem") ? (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted">Desconto</span>
+                <span className="text-xs text-success-600">−{watch("descontoPercentagem")}%</span>
+              </div>
+            ) : null}
+            <div className="flex items-center justify-between pt-1.5 border-t border-border">
+              <span className="text-sm font-semibold text-text-primary">Total a pagar</span>
+              <span className="text-base font-bold text-primary-500">{formatEuro(Number(watch("valorPago")) || 0)}</span>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

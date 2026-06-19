@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Trash2, CreditCard, User, Users, MapPin,
-  Clock, Package, MessageSquare,
+  Clock, Package, MessageSquare, AlertTriangle, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
@@ -17,6 +17,7 @@ import {
   useCriarEntradaLivre,
   useAtualizarEntradaLivre,
   useEntradasLivresConfiguracoes,
+  useCheckOcupacaoLocal,
 } from "@/hooks/use-entrada-livre";
 import { useLocais } from "@/hooks/use-locais";
 import { useCacifos } from "@/hooks/use-cacifos";
@@ -114,6 +115,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const [selectedExtrasIds, setSelectedExtrasIds] = React.useState<string[]>(
     entrada?.extras?.map((e) => e.extraId) ?? []
   );
+  const [showCriancasError, setShowCriancasError] = React.useState(false);
+  // Controla se o utilizador editou manualmente o custo (para não sobrescrever)
+  const [custoEdited, setCustoEdited] = React.useState(false);
 
   const defaultValues = useMemo<EntradaLivreFormData>(
     () => ({
@@ -151,6 +155,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const config = configuracoes?.find((c) => c.localId === localId);
 
+  // Capacidade do local agora (warn-only) — conta as crianças do formulário
+  const numCriancasForm = criancas.filter((c) => c.nome.trim()).length;
+  const ocupacao = useCheckOcupacaoLocal(localId || undefined, numCriancasForm, entrada?.id);
+
   // Custo calculado a partir da configuração do local (precoHora * duração).
   // Usado como valor por defeito no input editável.
   const custoCalculado = useMemo(() => {
@@ -159,12 +167,18 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   }, [config, duracaoMinutos]);
 
   // Sync do custoTotal quando o local/duração mudem (auto-preenchimento).
-  // O utilizador pode sempre reescrever o valor manualmente no input.
+  // Respeita edições manuais do utilizador (não sobrescreve se já editou).
   React.useEffect(() => {
+    if (custoEdited) return;
     if (custoCalculado > 0) {
       setValue("custoTotal", Number(custoCalculado.toFixed(2)));
     }
-  }, [custoCalculado, setValue]);
+  }, [custoCalculado, setValue, custoEdited]);
+
+  // Reset do flag de edição quando o local muda (configuração diferente)
+  React.useEffect(() => {
+    setCustoEdited(false);
+  }, [localId]);
 
   const custoTotalWatched = watch("custoTotal");
   const custoFinal = custoTotalWatched ?? custoCalculado;
@@ -243,6 +257,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const updateCrianca = useCallback((index: number, field: "nome" | "idade", value: string) => {
     setCriancas((prev) => prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)));
+    if (field === "nome" && value.trim()) setShowCriancasError(false);
   }, []);
 
   const toggleExtra = useCallback((extraId: string) => {
@@ -253,6 +268,12 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const onSubmit = useCallback(
     async (data: EntradaLivreFormData) => {
+      // "Crianças" é obrigatório: impedir submissão sem pelo menos um nome.
+      if (!criancas.some((c) => c.nome.trim())) {
+        setShowCriancasError(true);
+        return;
+      }
+      setShowCriancasError(false);
       const payload = {
         criancas: criancas
           .filter((c) => c.nome.trim())
@@ -335,6 +356,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                       value={crianca.nome}
                       onChange={(e) => updateCrianca(index, "nome", e.target.value)}
                       placeholder={`Nome da criança ${index + 1}`}
+                      error={showCriancasError && !crianca.nome.trim()}
                     />
                   </div>
                   <div className="w-24">
@@ -359,6 +381,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                 </div>
               ))}
             </div>
+            {showCriancasError && (
+              <p className="text-xs text-error-500">É obrigatório indicar pelo menos uma criança.</p>
+            )}
           </div>
 
           {/* ── Encarregado ── */}
@@ -453,6 +478,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                     }
                     onChange={(e) => {
                       const v = e.target.value;
+                      setCustoEdited(true);
                       setValue(
                         "custoTotal",
                         v === "" ? undefined : Number(v),
@@ -467,6 +493,32 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               </div>
             )}
           </div>
+
+          {/* ── Aviso de capacidade do local (warn-only) ── */}
+          {localId && ocupacao.data && (
+            <div>
+              {ocupacao.data.excedeCapacidade ? (
+                <div className="rounded-lg bg-accent-orange-50 border border-accent-orange-200 p-3 space-y-1">
+                  <div className="flex items-center gap-1.5 text-accent-orange-700 text-xs font-semibold">
+                    <AlertTriangle size={14} /> Capacidade do local excedida
+                  </div>
+                  <p className="text-xs text-accent-orange-700 pl-5">
+                    {ocupacao.data.ocupacaoAtual} na sala + {ocupacao.data.novasCriancas} novas ={" "}
+                    <strong>{ocupacao.data.totalPrevisto}</strong> crianças
+                    (capacidade máx. {ocupacao.data.capacidade}).
+                  </p>
+                  <p className="text-[11px] text-accent-orange-600 pl-5">
+                    Pode continuar mesmo assim (aviso apenas).
+                  </p>
+                </div>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success-50 border border-success-200 text-success-700 text-xs font-medium">
+                  <CheckCircle2 size={14} /> Dentro da capacidade — {ocupacao.data.totalPrevisto}/
+                  {ocupacao.data.capacidade} crianças
+                </span>
+              )}
+            </div>
+          )}
 
           {/* ── Cacifo ── */}
           {cacifoOptions.length > 1 && (
@@ -551,11 +603,11 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             </div>
           </div>
 
-          {/* ── Pagamento ── */}
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          {/* ── Pagamento (cartão de resumo) ── */}
+          <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
               <CreditCard size={14} className="text-brand-500" /> Pagamento
-            </label>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">
@@ -576,14 +628,25 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                 />
               </div>
             </div>
-            {custoFinal > 0 && (
+            {/* ── Resumo de valores ── */}
+            <div className="border-t border-border pt-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-text-muted">Custo base</span>
+                <span className="text-xs text-text-secondary">{formatEuro(custoFinal)}</span>
+              </div>
+              {totalExtras > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-text-muted">Extras</span>
+                  <span className="text-xs text-text-secondary">{formatEuro(totalExtras / 100)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between pt-1">
-                <span className="text-xs text-text-muted">Total a pagar</span>
-                <span className="text-sm font-bold text-primary-500">
+                <span className="text-sm font-semibold text-text-primary">Total a pagar</span>
+                <span className="text-base font-bold text-primary-500">
                   {formatEuro(custoFinal + totalExtras / 100)}
                 </span>
               </div>
-            )}
+            </div>
           </div>
         </div>
 

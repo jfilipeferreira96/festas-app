@@ -40,7 +40,13 @@
     "notConfirmed": "A reserva não está confirmada",
     "alreadyInProgress": "A reserva já está em curso",
     "notInProgress": "A reserva não está em curso",
-    "etapaNotFound": "Etapa não encontrada para esta reserva"
+    "etapaNotFound": "Etapa não encontrada para esta reserva",
+    "duracaoRequired": "Duração da reserva é obrigatória",
+    "checkAvailability": "Verificar disponibilidade",
+    "checkingAvailability": "A verificar...",
+    "available": "Sala disponível neste horário",
+    "notAvailableOverlap": "Sala ocupada neste horário",
+    "aniversarianteNomeRequired": "É obrigatório indicar pelo menos um aniversariante"
   },
   "cacifo": {
     "notFound": "Cacifo não encontrado",

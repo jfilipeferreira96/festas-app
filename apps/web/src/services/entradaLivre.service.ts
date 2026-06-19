@@ -23,6 +23,32 @@ interface CriarEntradaLivreDTO {
   observacoesLesoes?: string;
 }
 
+// ── Helper: encontrar ou criar Cliente a partir do encarregado ──
+// Garante que todos os encarregados entram na base de contactos (marketing).
+async function findOrCreateCliente(
+  nome: string,
+  telefone: string,
+  email?: string
+): Promise<string> {
+  // 1. Procurar por email (se fornecido) — email é @unique
+  if (email && email.trim()) {
+    const byEmail = await prisma.cliente.findFirst({ where: { email: email.trim() } });
+    if (byEmail) return byEmail.id;
+  }
+  // 2. Procurar por telefone
+  const byTel = await prisma.cliente.findFirst({ where: { telefone } });
+  if (byTel) return byTel.id;
+  // 3. Criar novo cliente
+  const novo = await prisma.cliente.create({
+    data: {
+      nome,
+      telefone,
+      email: email && email.trim() ? email.trim() : null,
+    },
+  });
+  return novo.id;
+}
+
 export const entradaLivreService = {
   // ── Listar entradas livres ──────────────────────
   async list(filtros?: {
@@ -154,6 +180,13 @@ export const entradaLivreService = {
     const inicioEm = new Date();
     const fimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
 
+    // Garantir que o encarregado existe como Cliente (base de contactos/marketing)
+    const clienteId = await findOrCreateCliente(
+      data.encarregadoNome,
+      data.encarregadoTelefone,
+      data.encarregadoEmail
+    );
+
     // Criar entrada
     const entrada = await prisma.entradaLivre.create({
       data: {
@@ -165,11 +198,13 @@ export const entradaLivreService = {
         fimPrevisto,
         localId,
         cacifoId: cacifoId || null,
+        clienteId,
         ...rest,
       },
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -541,6 +576,65 @@ export const entradaLivreService = {
       ...config,
       precoHora: Number(config.precoHora),
       precoHoraExcesso: Number(config.precoHoraExcesso),
+    };
+  },
+
+  // ── Verificar ocupação do local AGORA ───────────
+  // Aviso apenas (warn-only): nunca bloqueia a criação/edição.
+
+  async checkOcupacaoLocal(localId: string, numCriancas = 0, excludeId?: string) {
+    if (!localId) throw new Error("LOCAL_REQUIRED");
+
+    const agora = new Date();
+
+    // Capacidade do local
+    const local = await prisma.local.findUnique({
+      where: { id: localId },
+      select: { id: true, nome: true, capacidade: true },
+    });
+    if (!local) throw new Error("LOCAL_NOT_FOUND");
+    const capacidade = local.capacidade ?? 0;
+
+    // Festas (reservas) a decorrer neste local — contar crianças previstas
+    const festas = await prisma.reserva.findMany({
+      where: { localId, estado: "EM_CURSO" },
+      select: { id: true, previsaoCriancas: true, numCriancas: true },
+    });
+    const criancasFestas = festas.reduce(
+      (sum: number, f: { previsaoCriancas: number | null; numCriancas: number | null }) =>
+        sum + (f.previsaoCriancas ?? f.numCriancas ?? 0),
+      0
+    );
+
+    // Entradas livres ativas neste local — contar crianças (JSON array)
+    const entradas = await prisma.entradaLivre.findMany({
+      where: {
+        localId,
+        estado: "ATIVA",
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { id: true, criancas: true },
+    });
+    const criancasEntradas = entradas.reduce((sum: number, e: { criancas: unknown }) => {
+      const arr = Array.isArray(e.criancas) ? e.criancas : [];
+      return sum + arr.length;
+    }, 0);
+
+    const ocupacaoAtual = criancasFestas + criancasEntradas;
+    const novasCriancas = numCriancas;
+    const totalPrevisto = ocupacaoAtual + novasCriancas;
+    const excedeCapacidade = capacidade > 0 && totalPrevisto > capacidade;
+
+    return {
+      localId,
+      localNome: local.nome,
+      capacidade,
+      ocupacaoAtual,
+      novasCriancas,
+      totalPrevisto,
+      excedeCapacidade,
+      disponivel: !excedeCapacidade,
+      verificadoEm: agora.toISOString(),
     };
   },
 };

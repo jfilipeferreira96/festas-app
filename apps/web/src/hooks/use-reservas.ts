@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { reservasApi } from "@/lib/api/reservas";
-import type { CreateReservaData, UpdateReservaData, EstadoReserva } from "@/lib/api/reservas";
+import type { CreateReservaData, UpdateReservaData, EstadoReserva, DisponibilidadeResult } from "@/lib/api/reservas";
 
 export function useReservas(filtros?: { estado?: EstadoReserva; data?: string; localId?: string; page?: number; pageSize?: number }) {
   return useQuery({
@@ -157,5 +157,32 @@ export function useReservasConcluidas(data?: string) {
   return useQuery({
     queryKey: ["reservas", "concluidas", data],
     queryFn: () => reservasApi.getConcluidas(data),
+  });
+}
+
+/**
+ * Verifica a disponibilidade de uma sala (sobreposição temporal).
+ * Só executa quando data, horário, duração e sala estão preenchidos.
+ * Aviso apenas — não bloqueia a submissão.
+ */
+export function useCheckDisponibilidade(params: {
+  data?: string;
+  horario?: string;
+  duracaoMinutos?: number;
+  localId?: string;
+  excludeId?: string;
+}) {
+  const enabled = !!(params.data && params.horario && params.duracaoMinutos && params.localId);
+  return useQuery<DisponibilidadeResult>({
+    queryKey: ["reservas", "disponibilidade", params],
+    queryFn: () =>
+      reservasApi.checkDisponibilidade({
+        data: params.data!,
+        horario: params.horario!,
+        duracaoMinutos: params.duracaoMinutos!,
+        localId: params.localId!,
+        excludeId: params.excludeId,
+      }),
+    enabled,
   });
 }

@@ -86,6 +86,18 @@ export interface ConfiguracaoEntradaLivre {
   updatedAt: string;
 }
 
+export interface OcupacaoLocalResult {
+  localId: string;
+  localNome: string;
+  capacidade: number;
+  ocupacaoAtual: number;
+  novasCriancas: number;
+  totalPrevisto: number;
+  excedeCapacidade: boolean;
+  disponivel: boolean;
+  verificadoEm: string;
+}
+
 export const entradaLivreApi = {
   list: (filtros?: { estado?: string; localId?: string; data?: string; dataInicio?: string; dataFim?: string; dataConclusao?: string; pesquisa?: string }) => {
     const params = new URLSearchParams();
@@ -144,4 +156,12 @@ export const entradaLivreApi = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  // Capacidade do local agora (warn-only)
+  checkOcupacao: (localId: string, numCriancas: number, excludeId?: string) => {
+    const params = new URLSearchParams({ localId });
+    params.set("numCriancas", String(numCriancas));
+    if (excludeId) params.set("excludeId", excludeId);
+    return api<OcupacaoLocalResult>(`/api/entradas-livres/ocupacao?${params.toString()}`);
+  },
 };

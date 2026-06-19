@@ -162,6 +162,7 @@ model Cliente {
 
   aniversariantes     Aniversariante[]
   reservas            Reserva[]
+  entradasLivres      EntradaLivre[]
   newsletterContacto  NewsletterContacto?
 
   @@map("cliente")
@@ -632,6 +633,10 @@ model EntradaLivre {
   encarregadoNome String
   encarregadoTelefone String
   encarregadoEmail String?
+
+  // ── Cliente (base de contactos / marketing) ──
+  clienteId String?
+  cliente   Cliente? @relation(fields: [clienteId], references: [id])
 
   // ── Duração e Custo ─────────────────
   duracaoMinutos  Int
