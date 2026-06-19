@@ -194,23 +194,31 @@ describe("Entrada Livre Service", () => {
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
 
-    it("should throw CONFIG_NOT_FOUND if local has no config", async () => {
-      // Create local without config
+    it("should create entrada using global pricing config for any local", async () => {
+      // Create a local — pricing is now global, not per-local
       const localSemConfig = await testPrisma.local.create({
         data: { id: "local-no-config", nome: "Sem Config", capacidade: 10 },
       });
 
-      await expect(
-        entradaLivreService.create({
-          encarregadoNome: "Teste",
-          encarregadoTelefone: "912345678",
-          localId: localSemConfig.id,
-          duracaoMinutos: 60,
-          criancas: [{ nome: "Criança" }],
-        })
-      ).rejects.toThrow("CONFIG_NOT_FOUND");
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Global",
+        encarregadoTelefone: "912345678",
+        localId: localSemConfig.id,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+      });
+
+      // Deve usar o tarifário global (10€/h dia de semana, 12€/h fim de semana)
+      const hoje = new Date();
+      const isFimSemana = hoje.getDay() === 0 || hoje.getDay() === 6;
+      const esperado = isFimSemana ? 12 : 10;
+
+      expect(entrada).toBeDefined();
+      expect(Number(entrada.custoHora)).toBe(esperado);
+      expect(Number(entrada.custoTotal)).toBe(esperado); // 60 min = 1h
 
       // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
       await testPrisma.local.delete({ where: { id: localSemConfig.id } });
     });
   });
@@ -275,8 +283,8 @@ describe("Entrada Livre Service", () => {
 
       expect(concluida.estado).toBe("CONCLUIDA");
       expect(concluida.excessoMinutos).toBe(30);
-      expect(concluida.custoExcesso).toBe(6.0); // 30min * €12/h = €6 (using precoHoraExcesso from config)
-      expect(concluida.custoTotalFinal).toBe(18.0); // 12 + 6
+      expect(concluida.custoExcesso).toBe(5.0); // 30min * €10/h = €5 (using custoHora from entrada)
+      expect(concluida.custoTotalFinal).toBe(17.0); // 12 + 5
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
@@ -466,40 +474,6 @@ describe("Entrada Livre Service", () => {
     });
   });
 
-  // ── configuracoes ────────────────────────────────────────────
-  describe("listarConfiguracoes()", () => {
-    it("should return configuracoes for all locais", async () => {
-      const configs = await entradaLivreService.listarConfiguracoes();
-      expect(configs.length).toBeGreaterThanOrEqual(1);
-      expect(configs.some((c: any) => c.localId === TEST_IDS.LOCAL_1)).toBe(true);
-    });
-  });
-
-  describe("upsertConfiguracao()", () => {
-    it("should create configuracao for local", async () => {
-      const config = await entradaLivreService.upsertConfiguracao({
-        localId: TEST_IDS.LOCAL_2,
-        precoHora: 15.0,
-        precoHoraExcesso: 20.0,
-      });
-
-      expect(config.localId).toBe(TEST_IDS.LOCAL_2);
-      expect(config.precoHora).toBe(15.0);
-      expect(config.precoHoraExcesso).toBe(20.0);
-    });
-
-    it("should update existing configuracao", async () => {
-      const updated = await entradaLivreService.upsertConfiguracao({
-        localId: TEST_IDS.LOCAL_1,
-        precoHora: 25.0,
-        precoHoraExcesso: 30.0,
-      });
-
-      expect(updated.precoHora).toBe(25.0);
-      expect(updated.precoHoraExcesso).toBe(30.0);
-    });
-  });
-
   // ── contadores ───────────────────────────────────────────────
   describe("getContadores()", () => {
     it("should return counters", async () => {
@@ -508,6 +482,127 @@ describe("Entrada Livre Service", () => {
       expect(contadores).toHaveProperty("concluidasHoje");
       expect(contadores).toHaveProperty("totalHoje");
       expect(contadores.ativas).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  // ── checkOcupacaoLocal (capacity-based) ───────────────────────
+  describe("checkOcupacaoLocal()", () => {
+    // LOCAL_1 has capacidade 25; seed has ENTRADA_LIVRE_1 (ATIVA, 2 crianças)
+
+    it("should return disponivel=true when within capacity", async () => {
+      const result = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 5);
+      expect(result.capacidade).toBe(25);
+      expect(result.disponivel).toBe(true);
+      expect(result.excedeCapacidade).toBe(false);
+      expect(result.totalPrevisto).toBeLessThanOrEqual(result.capacidade);
+    });
+
+    it("should detect when capacity is exceeded", async () => {
+      // 2 existing + 30 new = 32 > 25 capacity
+      const result = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 30);
+      expect(result.excedeCapacidade).toBe(true);
+      expect(result.disponivel).toBe(false);
+      expect(result.totalPrevisto).toBeGreaterThan(result.capacidade);
+    });
+
+    it("should exclude self when excludeId is provided", async () => {
+      // Count with ENTRADA_LIVRE_1 included
+      const resultWith = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 0);
+      // Count without ENTRADA_LIVRE_1 (excluded)
+      const resultWithout = await entradaLivreService.checkOcupacaoLocal(
+        TEST_IDS.LOCAL_1,
+        0,
+        TEST_IDS.ENTRADA_LIVRE_1,
+      );
+      // Excluding the entry should reduce ocupacaoAtual
+      expect(resultWithout.ocupacaoAtual).toBeLessThan(resultWith.ocupacaoAtual);
+    });
+
+    it("should throw LOCAL_REQUIRED if localId is empty", async () => {
+      await expect(
+        entradaLivreService.checkOcupacaoLocal("", 5),
+      ).rejects.toThrow("LOCAL_REQUIRED");
+    });
+
+    it("should throw LOCAL_NOT_FOUND for non-existent local", async () => {
+      await expect(
+        entradaLivreService.checkOcupacaoLocal("non-existent-local", 5),
+      ).rejects.toThrow("LOCAL_NOT_FOUND");
+    });
+  });
+
+  // ── create() — Cliente creation (marketing base de contactos) ─
+  describe("create() — Cliente creation", () => {
+    it("should create a new Cliente when encarregado is new", async () => {
+      const countBefore = await testPrisma.cliente.count();
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Novo Encarregado Teste",
+        encarregadoTelefone: "9555444333",
+        encarregadoEmail: "novo-enc-teste@test.com",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança Nova" }],
+      });
+
+      // Entrada should have clienteId and cliente populated
+      expect(entrada.clienteId).toBeDefined();
+      expect(entrada.cliente).toBeDefined();
+      expect(entrada.cliente!.nome).toBe("Novo Encarregado Teste");
+      expect(entrada.cliente!.email).toBe("novo-enc-teste@test.com");
+
+      // A new cliente was created
+      const countAfter = await testPrisma.cliente.count();
+      expect(countAfter).toBe(countBefore + 1);
+
+      // Cleanup
+      const clienteId = entrada.clienteId;
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+      if (clienteId) await testPrisma.cliente.delete({ where: { id: clienteId } });
+    });
+
+    it("should reuse existing Cliente by email", async () => {
+      // CLIENTE_1: email "teste1@email.pt", telefone "911111111"
+      const countBefore = await testPrisma.cliente.count();
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Cliente Existente",
+        encarregadoTelefone: "911111111",
+        encarregadoEmail: "teste1@email.pt",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança Reuso" }],
+      });
+
+      // Should reuse CLIENTE_1, not create a new one
+      expect(entrada.clienteId).toBe(TEST_IDS.CLIENTE_1);
+      const countAfter = await testPrisma.cliente.count();
+      expect(countAfter).toBe(countBefore);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should reuse existing Cliente by telefone when email is absent", async () => {
+      // CLIENTE_2: telefone "922222222"
+      const countBefore = await testPrisma.cliente.count();
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Cliente Por Telefone",
+        encarregadoTelefone: "922222222",
+        // No email → should match by telefone
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança Tel" }],
+      });
+
+      // Should reuse CLIENTE_2, not create a new one
+      expect(entrada.clienteId).toBe(TEST_IDS.CLIENTE_2);
+      const countAfter = await testPrisma.cliente.count();
+      expect(countAfter).toBe(countBefore);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
   });
 });

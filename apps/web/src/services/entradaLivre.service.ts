@@ -1,6 +1,7 @@
 import prisma from "@festas/db";
 import { Prisma } from "@prisma/client";
 import type { MetodoPagamento } from "@prisma/client";
+import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 
 interface CriancaInput {
   nome: string;
@@ -21,6 +22,32 @@ interface CriarEntradaLivreDTO {
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
+}
+
+// ── Helper: encontrar ou criar Cliente a partir do encarregado ──
+// Garante que todos os encarregados entram na base de contactos (marketing).
+async function findOrCreateCliente(
+  nome: string,
+  telefone: string,
+  email?: string
+): Promise<string> {
+  // 1. Procurar por email (se fornecido) — email é @unique
+  if (email && email.trim()) {
+    const byEmail = await prisma.cliente.findFirst({ where: { email: email.trim() } });
+    if (byEmail) return byEmail.id;
+  }
+  // 2. Procurar por telefone
+  const byTel = await prisma.cliente.findFirst({ where: { telefone } });
+  if (byTel) return byTel.id;
+  // 3. Criar novo cliente
+  const novo = await prisma.cliente.create({
+    data: {
+      nome,
+      telefone,
+      email: email && email.trim() ? email.trim() : null,
+    },
+  });
+  return novo.id;
 }
 
 export const entradaLivreService = {
@@ -76,6 +103,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -116,6 +144,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -137,15 +166,16 @@ export const entradaLivreService = {
   async create(data: CriarEntradaLivreDTO) {
     const { criancas, duracaoMinutos, localId, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
-    // Buscar configuração do local
-    const config = await prisma.configuracaoEntradaLivre.findUnique({
-      where: { localId },
-    });
-    if (!config) throw new Error("CONFIG_NOT_FOUND");
+    // Tarifário global: calcular preço/hora a partir da data atual (semana vs fim de semana)
+    const configPreco = await configuracaoPrecoService.getConfig();
+    const hoje = new Date();
+    const isFimSemana = hoje.getDay() === 0 || hoje.getDay() === 6;
+    const custoHora = isFimSemana
+      ? Number(configPreco.precoEntradaHoraFimSemana)
+      : Number(configPreco.precoEntradaHoraSemana);
 
     // Preço: usa valor manual do utilizador se fornecido, senão calcula a partir
-    // da configuração do local (precoHora × duração).
-    const custoHora = Number(config.precoHora);
+    // do tarifário global (precoHora × duração).
     const custoTotal =
       typeof custoTotalInput === "number" && custoTotalInput >= 0
         ? custoTotalInput
@@ -154,22 +184,31 @@ export const entradaLivreService = {
     const inicioEm = new Date();
     const fimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
 
+    // Garantir que o encarregado existe como Cliente (base de contactos/marketing)
+    const clienteId = await findOrCreateCliente(
+      data.encarregadoNome,
+      data.encarregadoTelefone,
+      data.encarregadoEmail
+    );
+
     // Criar entrada
     const entrada = await prisma.entradaLivre.create({
       data: {
         criancas: criancas as unknown as Prisma.InputJsonValue,
         duracaoMinutos,
-        custoHora: config.precoHora,
+        custoHora,
         custoTotal,
         inicioEm,
         fimPrevisto,
         localId,
         cacifoId: cacifoId || null,
+        clienteId,
         ...rest,
       },
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -201,7 +240,7 @@ export const entradaLivreService = {
   },
 
   // ── Concluir entrada livre ──────────────────────
-  async concluir(id: string) {
+  async concluir(id: string, options?: { custoExcessoManual?: number }) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
     if (entrada.estado !== "ATIVA") throw new Error("NOT_ACTIVE");
@@ -217,11 +256,13 @@ export const entradaLivreService = {
 
     if (duracaoRealMs > duracaoPrevistaMs) {
       excessoMinutos = Math.floor((duracaoRealMs - duracaoPrevistaMs) / (1000 * 60));
-      const config = await prisma.configuracaoEntradaLivre.findUnique({
-        where: { localId: entrada.localId },
-      });
-      const precoHoraExcesso = config ? Number(config.precoHoraExcesso) : Number(entrada.custoHora);
-      custoExcesso = (precoHoraExcesso / 60) * excessoMinutos;
+      // Sugere o preço fixo de excesso do tarifário global
+      custoExcesso = await configuracaoPrecoService.getPrecoExcesso();
+    }
+
+    // Valor manual do utilizador prevalece sobre o sugerido
+    if (options?.custoExcessoManual !== undefined) {
+      custoExcesso = options.custoExcessoManual;
     }
 
     const custoTotalFinal = Number(entrada.custoTotal) + custoExcesso;
@@ -238,6 +279,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -274,6 +316,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -309,6 +352,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -364,13 +408,11 @@ export const entradaLivreService = {
       novoCustoTotal = custoTotalInput;
     }
     if (duracaoMinutos !== undefined && duracaoMinutos !== entrada.duracaoMinutos) {
-      const config = await prisma.configuracaoEntradaLivre.findUnique({
-        where: { localId: entrada.localId },
-      });
       const inicioEm = new Date(entrada.inicioEm);
       novoFimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
       if (novoCustoTotal === undefined) {
-        const custoHora = config ? Number(config.precoHora) : Number(entrada.custoHora);
+        // Recalcula o custo com a taxa horária registada na entrada
+        const custoHora = Number(entrada.custoHora);
         novoCustoTotal = (custoHora / 60) * duracaoMinutos;
       }
     }
@@ -432,6 +474,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -490,57 +533,62 @@ export const entradaLivreService = {
     return { ativas, concluidasHoje, totalHoje };
   },
 
-  // ── Configuração ────────────────────────────────
-  async getConfiguracao(localId: string) {
-    const config = await prisma.configuracaoEntradaLivre.findUnique({
-      where: { localId },
-      include: { local: { select: { id: true, nome: true } } },
-    });
-    if (!config) throw new Error("CONFIG_NOT_FOUND");
-    
-    // Convert Decimal fields to numbers
-    return {
-      ...config,
-      precoHora: Number(config.precoHora),
-      precoHoraExcesso: Number(config.precoHoraExcesso),
-    };
-  },
+  // ── Verificar ocupação do local AGORA ───────────
+  // Aviso apenas (warn-only): nunca bloqueia a criação/edição.
 
-  async listarConfiguracoes() {
-    const configs = await prisma.configuracaoEntradaLivre.findMany({
-      include: { local: { select: { id: true, nome: true } } },
-    });
-    
-    // Convert Decimal fields to numbers
-    return configs.map((c: any) => ({
-      ...c,
-      precoHora: Number(c.precoHora),
-      precoHoraExcesso: Number(c.precoHoraExcesso),
-    }));
-  },
+  async checkOcupacaoLocal(localId: string, numCriancas = 0, excludeId?: string) {
+    if (!localId) throw new Error("LOCAL_REQUIRED");
 
-  async upsertConfiguracao(data: { localId: string; precoHora: number; precoHoraExcesso: number; activo?: boolean }) {
-    const config = await prisma.configuracaoEntradaLivre.upsert({
-      where: { localId: data.localId },
-      create: {
-        precoHora: data.precoHora,
-        precoHoraExcesso: data.precoHoraExcesso,
-        localId: data.localId,
-        activo: data.activo ?? true,
-      },
-      update: {
-        precoHora: data.precoHora,
-        precoHoraExcesso: data.precoHoraExcesso,
-        activo: data.activo ?? true,
-      },
-      include: { local: { select: { id: true, nome: true } } },
+    const agora = new Date();
+
+    // Capacidade do local
+    const local = await prisma.local.findUnique({
+      where: { id: localId },
+      select: { id: true, nome: true, capacidade: true },
     });
-    
-    // Convert Decimal fields to numbers
+    if (!local) throw new Error("LOCAL_NOT_FOUND");
+    const capacidade = local.capacidade ?? 0;
+
+    // Festas (reservas) a decorrer neste local — contar crianças previstas
+    const festas = await prisma.reserva.findMany({
+      where: { localId, estado: "EM_CURSO" },
+      select: { id: true, previsaoCriancas: true, numCriancas: true },
+    });
+    const criancasFestas = festas.reduce(
+      (sum: number, f: { previsaoCriancas: number | null; numCriancas: number | null }) =>
+        sum + (f.previsaoCriancas ?? f.numCriancas ?? 0),
+      0
+    );
+
+    // Entradas livres ativas neste local — contar crianças (JSON array)
+    const entradas = await prisma.entradaLivre.findMany({
+      where: {
+        localId,
+        estado: "ATIVA",
+        ...(excludeId ? { id: { not: excludeId } } : {}),
+      },
+      select: { id: true, criancas: true },
+    });
+    const criancasEntradas = entradas.reduce((sum: number, e: { criancas: unknown }) => {
+      const arr = Array.isArray(e.criancas) ? e.criancas : [];
+      return sum + arr.length;
+    }, 0);
+
+    const ocupacaoAtual = criancasFestas + criancasEntradas;
+    const novasCriancas = numCriancas;
+    const totalPrevisto = ocupacaoAtual + novasCriancas;
+    const excedeCapacidade = capacidade > 0 && totalPrevisto > capacidade;
+
     return {
-      ...config,
-      precoHora: Number(config.precoHora),
-      precoHoraExcesso: Number(config.precoHoraExcesso),
+      localId,
+      localNome: local.nome,
+      capacidade,
+      ocupacaoAtual,
+      novasCriancas,
+      totalPrevisto,
+      excedeCapacidade,
+      disponivel: !excedeCapacidade,
+      verificadoEm: agora.toISOString(),
     };
   },
 };

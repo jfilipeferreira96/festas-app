@@ -29,6 +29,7 @@ import {
   BookUser,
   LockKeyhole,
   DoorOpen,
+  BadgeEuro,
 } from "lucide-react";
 
 type NavItem = {
@@ -162,6 +163,12 @@ const configItems: NavItem = {
       path: "/configuracoes/cacifos",
       icon: <LockKeyhole className="w-4 h-4" />,
       modulo: "cacifos",
+    },
+    {
+      name: "Preços",
+      path: "/configuracoes/precos",
+      icon: <BadgeEuro className="w-4 h-4" />,
+      modulo: "configuracoes",
     },
   ],
 };

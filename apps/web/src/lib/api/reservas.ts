@@ -71,6 +71,20 @@ export interface PaginatedReservas {
   totalPages: number;
 }
 
+export interface ConflitoInfo {
+  id: string;
+  horario: string;
+  duracaoMinutos: number;
+  tema?: string | null;
+  aniversarianteNome: string;
+  estado: string;
+}
+
+export interface DisponibilidadeResult {
+  disponivel: boolean;
+  conflitos: ConflitoInfo[];
+}
+
 // API calls
 export const reservasApi = {
   list: (filtros?: { estado?: EstadoReserva; data?: string; localId?: string; page?: number; pageSize?: number }) => {
@@ -93,6 +107,23 @@ export const reservasApi = {
     if (data) params.set("data", data);
     const query = params.toString();
     return api<Reserva[]>(`/api/reservas/concluidas${query ? `?${query}` : ""}`);
+  },
+
+  checkDisponibilidade: (params: {
+    data: string;
+    horario: string;
+    duracaoMinutos: number;
+    localId: string;
+    excludeId?: string;
+  }) => {
+    const qs = new URLSearchParams({
+      data: params.data,
+      horario: params.horario,
+      duracaoMinutos: String(params.duracaoMinutos),
+      localId: params.localId,
+    });
+    if (params.excludeId) qs.set("excludeId", params.excludeId);
+    return api<DisponibilidadeResult>(`/api/reservas/disponibilidade?${qs.toString()}`);
   },
 
   create: (data: CreateReservaData) =>
@@ -124,9 +155,10 @@ export const reservasApi = {
       method: "POST",
     }),
 
-  finalizar: (id: string) =>
+  finalizar: (id: string, custoExcesso?: number) =>
     api<Reserva>(`/api/reservas/${id}/finalizar`, {
       method: "POST",
+      body: JSON.stringify(custoExcesso !== undefined ? { custoExcesso } : {}),
     }),
 
   alocarMonitor: (id: string, monitorId: string) =>

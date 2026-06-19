@@ -36,6 +36,7 @@ import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { Dropdown } from "@/components/ui/dropdown/Dropdown";
 import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservasAtivas, useFinalizarReserva, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
 import { useCacifos } from "@/hooks/use-cacifos";
 import { useParticipantes, useConfirmarPresenca, useAdicionarParticipante } from "@/hooks/use-participantes";
@@ -50,7 +51,7 @@ export default function FestasContent() {
   const { data: festas, isLoading } = useReservasAtivas();
   const finalizarFesta = useFinalizarReserva();
 
-  const [confirmFinalizar, setConfirmFinalizar] = useState<string | null>(null);
+  const [confirmFinalizar, setConfirmFinalizar] = useState<Reserva | null>(null);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
@@ -61,11 +62,12 @@ export default function FestasContent() {
   }, []);
 
   const handleFinalizar = useCallback(
-    async (id: string) => {
-      await finalizarFesta.mutateAsync(id);
+    async (custoExcesso?: number) => {
+      if (!confirmFinalizar) return;
+      await finalizarFesta.mutateAsync({ id: confirmFinalizar.id, custoExcesso });
       setConfirmFinalizar(null);
     },
-    [finalizarFesta]
+    [finalizarFesta, confirmFinalizar]
   );
 
   const todayStr = useMemo(
@@ -85,7 +87,7 @@ export default function FestasContent() {
       <EmCursoTab
         festas={festas}
         isLoading={isLoading}
-        onFinalizar={setConfirmFinalizar}
+        onFinalizar={(reserva) => setConfirmFinalizar(reserva)}
         onEdit={(reserva) => {
           setEditingReserva(reserva);
           setShowForm(true);
@@ -94,17 +96,22 @@ export default function FestasContent() {
       />
       </div>
 
-      {/* Confirm Finalize Modal */}
-      <ConfirmActionModal
-        isOpen={!!confirmFinalizar}
-        onClose={() => setConfirmFinalizar(null)}
-        onConfirm={() => handleFinalizar(confirmFinalizar!)}
-        title="Finalizar Festa"
-        message="Tem a certeza que deseja finalizar esta festa? Esta acção é irreversível."
-        confirmText="Finalizar"
-        variant="success"
-        isConfirming={finalizarFesta.isPending}
-      />
+      {/* Concluir Resumo Modal */}
+      {confirmFinalizar && (
+        <ConcluirResumoModal
+          isOpen={!!confirmFinalizar}
+          onClose={() => setConfirmFinalizar(null)}
+          onConfirm={handleFinalizar}
+          isConfirming={finalizarFesta.isPending}
+          titulo="Finalizar Festa"
+          entidadeNome={getAniversarianteNome(confirmFinalizar)}
+          localNome={confirmFinalizar.local?.nome}
+          inicioEm={confirmFinalizar.inicioEm}
+          fimPrevisto={confirmFinalizar.fimPrevisto}
+          duracaoMinutos={confirmFinalizar.duracaoMinutos}
+          custoBase={Number(confirmFinalizar.valorPago ?? 0)}
+        />
+      )}
 
       {/* Edit Reserva Modal */}
       {showForm && (
@@ -137,7 +144,7 @@ function EmCursoTab({
 }: {
   festas?: Reserva[];
   isLoading: boolean;
-  onFinalizar: (id: string) => void;
+  onFinalizar: (reserva: Reserva) => void;
   onEdit: (reserva: Reserva) => void;
   onView: (reserva: Reserva) => void;
 }) {
@@ -175,7 +182,7 @@ function EmCursoTab({
         <FestaCard
           key={festa.id}
           festa={festa}
-          onFinalizar={() => onFinalizar(festa.id)}
+          onFinalizar={() => onFinalizar(festa)}
           onEdit={() => onEdit(festa)}
           onView={() => onView(festa)}
         />

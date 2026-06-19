@@ -25,6 +25,12 @@ export interface Reserva {
   fimReal?: string;
   cacifosHistorico?: CacifoHistoricoEntry[];
 
+  // Excesso (filled when finalizing)
+  excessoMinutos?: number;
+  custoExcesso?: number;
+  custoTotalFinal?: number;
+  pagoExcesso?: boolean;
+
   // Festa fields
   tema?: string;
   previsaoCriancas?: number;

@@ -1,4 +1,5 @@
 import prisma from "@festas/db";
+import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 
 interface AniversarianteInput {
   nome: string;
@@ -126,6 +127,77 @@ async function findOrCreateCliente(input: AniversarianteInput): Promise<string> 
   return cliente.id;
 }
 
+// ── Disponibilidade / conflitos de horário ──────────────────────
+export interface ConflitoInfo {
+  id: string;
+  horario: string;
+  duracaoMinutos: number;
+  tema?: string | null;
+  aniversarianteNome: string;
+  estado: string;
+}
+
+export interface DisponibilidadeResult {
+  disponivel: boolean;
+  conflitos: ConflitoInfo[];
+}
+
+/** Converte "HH:MM" para minutos desde a meia-noite. */
+function horarioParaMinutos(horario: string): number {
+  const [h, m] = horario.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+/**
+ * Procura reservas que se sobrepõem no tempo (considerando a duração)
+ * para um dado local + data. Duas reservas conflituam se os seus
+ * intervalos [início, fim] se intercetam.
+ */
+async function findConflitos(params: {
+  data: string | Date;
+  horario: string;
+  duracaoMinutos: number;
+  localId: string;
+  excludeId?: string;
+}): Promise<ConflitoInfo[]> {
+  const reservaDate = typeof params.data === "string" ? new Date(params.data) : params.data;
+  const nextDay = new Date(reservaDate);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  const candidatos = await prisma.reserva.findMany({
+    where: {
+      localId: params.localId,
+      data: { gte: reservaDate, lt: nextDay },
+      estado: { in: ["RESERVA", "CONFIRMADO", "EM_CURSO"] },
+      ...(params.excludeId ? { NOT: { id: params.excludeId } } : {}),
+    },
+    include: {
+      aniversariantes: { include: { aniversariante: true } },
+    },
+  });
+
+  const novoInicio = horarioParaMinutos(params.horario);
+  const novoFim = novoInicio + (params.duracaoMinutos || 0);
+
+  const conflitos: ConflitoInfo[] = [];
+  for (const r of candidatos) {
+    const existInicio = horarioParaMinutos(r.horario);
+    const existFim = existInicio + (r.duracaoMinutos || 0);
+    // Sobreposição temporal: novoInicio < existFim && existInicio < novoFim
+    if (novoInicio < existFim && existInicio < novoFim) {
+      conflitos.push({
+        id: r.id,
+        horario: r.horario,
+        duracaoMinutos: r.duracaoMinutos,
+        tema: r.tema,
+        aniversarianteNome: r.aniversariantes?.[0]?.aniversariante?.nome ?? "",
+        estado: r.estado,
+      });
+    }
+  }
+  return conflitos;
+}
+
 export const reservaService = {
   async list(filters?: { estado?: string; data?: string; localId?: string; pesquisa?: string; page?: number; pageSize?: number }) {
     const where: Record<string, unknown> = {};
@@ -190,6 +262,27 @@ export const reservaService = {
     return reserva;
   },
 
+  /**
+   * Verifica a disponibilidade de um local para uma data/horário/duração,
+   * considerando sobreposição temporal (não apenas match exato de horário).
+   * Não bloqueia — serve apenas para alertar o utilizador antes de gravar.
+   */
+  async checkDisponibilidade(params: {
+    data: string;
+    horario: string;
+    duracaoMinutos: number;
+    localId: string;
+    excludeId?: string;
+  }): Promise<DisponibilidadeResult> {
+    if (!params.data) throw new Error("DATA_REQUIRED");
+    if (!params.horario) throw new Error("HORARIO_REQUIRED");
+    if (!params.localId) throw new Error("LOCAL_REQUIRED");
+    if (!params.duracaoMinutos) throw new Error("DURACAO_REQUIRED");
+
+    const conflitos = await findConflitos(params);
+    return { disponivel: conflitos.length === 0, conflitos };
+  },
+
   async create(data: CreateReservaData) {
     if (!data.data) throw new Error("DATA_REQUIRED");
     if (!data.horario) throw new Error("HORARIO_REQUIRED");
@@ -227,24 +320,18 @@ export const reservaService = {
       throw new Error("CAPACITY_EXCEEDED");
     }
 
-    // Check for conflicts
-    const reservaDate = new Date(data.data);
-    const nextDay = new Date(reservaDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-
-    const existingReserva = await prisma.reserva.findFirst({
-      where: {
-        localId: data.localId,
-        data: { gte: reservaDate, lt: nextDay },
-        horario: data.horario,
-        estado: { in: ["RESERVA", "CONFIRMADO", "EM_CURSO"] },
-      },
+    // Check for conflicts (duration overlap)
+    const conflitosCriacao = await findConflitos({
+      data: data.data,
+      horario: data.horario,
+      duracaoMinutos: data.duracaoMinutos,
+      localId: data.localId,
     });
-    if (existingReserva) throw new Error("LOCAL_NOT_AVAILABLE");
+    if (conflitosCriacao.length > 0) throw new Error("LOCAL_NOT_AVAILABLE");
 
     return prisma.reserva.create({
       data: {
-        data: reservaDate,
+        data: new Date(data.data),
         horario: data.horario,
         duracaoMinutos: data.duracaoMinutos,
         localId: data.localId,
@@ -318,23 +405,14 @@ export const reservaService = {
     }
 
     if (data.localId || data.data || data.horario) {
-      const localId = data.localId || reserva.localId;
-      const checkData = data.data ? new Date(data.data) : reserva.data;
-      const checkHorario = data.horario || reserva.horario;
-
-      const nextDay = new Date(checkData);
-      nextDay.setDate(nextDay.getDate() + 1);
-
-      const existingReserva = await prisma.reserva.findFirst({
-        where: {
-          localId,
-          data: { gte: checkData, lt: nextDay },
-          horario: checkHorario,
-          estado: { in: ["RESERVA", "CONFIRMADO", "EM_CURSO"] },
-          NOT: { id },
-        },
+      const conflitosUpdate = await findConflitos({
+        data: data.data ?? reserva.data,
+        horario: data.horario ?? reserva.horario,
+        duracaoMinutos: data.duracaoMinutos ?? reserva.duracaoMinutos,
+        localId: data.localId ?? reserva.localId,
+        excludeId: id,
       });
-      if (existingReserva) throw new Error("LOCAL_NOT_AVAILABLE");
+      if (conflitosUpdate.length > 0) throw new Error("LOCAL_NOT_AVAILABLE");
     }
 
     if (data.extrasIds) {
@@ -447,7 +525,7 @@ export const reservaService = {
         where: { activo: true },
         select: { id: true },
       });
-      etapasData.create = activeEtapas.map((etapa) => ({
+      etapasData.create = activeEtapas.map((etapa: { id: string }) => ({
         etapaId: etapa.id,
         concluida: false,
       }));
@@ -473,11 +551,30 @@ export const reservaService = {
     });
   },
 
-  async finalizar(id: string) {
+  async finalizar(id: string, options?: { custoExcessoManual?: number }) {
     const reserva = await this.getById(id);
     if (reserva.estado !== "EM_CURSO") throw new Error("NOT_IN_PROGRESS");
 
     const fimReal = new Date();
+
+    // ── Calcular excesso de tempo ──────────────────
+    let excessoMinutos = 0;
+    let custoExcesso = 0;
+
+    if (reserva.fimPrevisto && fimReal > new Date(reserva.fimPrevisto)) {
+      excessoMinutos = Math.floor(
+        (fimReal.getTime() - new Date(reserva.fimPrevisto).getTime()) / (1000 * 60),
+      );
+      // Sugere o preço fixo de excesso do tarifário global
+      custoExcesso = await configuracaoPrecoService.getPrecoExcesso();
+    }
+
+    // Valor manual do utilizador prevalece sobre o sugerido
+    if (options?.custoExcessoManual !== undefined) {
+      custoExcesso = options.custoExcessoManual;
+    }
+
+    const custoTotalFinal = Number(reserva.valorPago ?? 0) + custoExcesso;
 
     // Save cacifos snapshot before releasing
     const cacifos = await prisma.cacifo.findMany({
@@ -485,12 +582,14 @@ export const reservaService = {
       select: { numero: true, estado: true, notas: true, criancas: true },
       orderBy: { numero: "asc" },
     });
-    const cacifosHistorico = cacifos.map((c) => ({
-      numero: c.numero,
-      estado: c.estado,
-      notas: c.notas,
-      criancas: c.criancas,
-    }));
+    const cacifosHistorico = cacifos.map(
+      (c: { numero: number; estado: string; notas: string | null; criancas: string | null }) => ({
+        numero: c.numero,
+        estado: c.estado,
+        notas: c.notas,
+        criancas: c.criancas,
+      })
+    );
 
     // Release all cacifos
     await prisma.cacifo.updateMany({
@@ -500,7 +599,14 @@ export const reservaService = {
 
     return prisma.reserva.update({
       where: { id },
-      data: { estado: "CONCLUIDA", fimReal, cacifosHistorico },
+      data: {
+        estado: "CONCLUIDA",
+        fimReal,
+        cacifosHistorico,
+        excessoMinutos,
+        custoExcesso,
+        custoTotalFinal,
+      },
       include: {
         local: true,
         cliente: true,

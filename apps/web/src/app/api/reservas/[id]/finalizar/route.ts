@@ -12,7 +12,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
-    const reserva = await reservaService.finalizar(id);
+    const body = await request.json().catch(() => ({}));
+    const reserva = await reservaService.finalizar(id, {
+      custoExcessoManual: typeof body.custoExcesso === "number" ? body.custoExcesso : undefined,
+    });
     return NextResponse.json(reserva);
   } catch (error) {
     return handleError(error);

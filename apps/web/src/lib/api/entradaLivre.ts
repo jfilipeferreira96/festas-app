@@ -31,6 +31,8 @@ export interface EntradaLivre {
   excessoMinutos: number;
   localId: string;
   local?: { id: string; nome: string };
+  clienteId?: string;
+  cliente?: { id: string; nome: string; email: string | null; telefone: string };
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
   metodoPagamento?: string;
   pago: boolean;
@@ -75,15 +77,16 @@ export interface AtualizarEntradaLivreDTO {
   observacoesLesoes?: string;
 }
 
-export interface ConfiguracaoEntradaLivre {
-  id: string;
-  precoHora: number;
-  precoHoraExcesso: number;
+export interface OcupacaoLocalResult {
   localId: string;
-  local?: { id: string; nome: string };
-  activo: boolean;
-  createdAt: string;
-  updatedAt: string;
+  localNome: string;
+  capacidade: number;
+  ocupacaoAtual: number;
+  novasCriancas: number;
+  totalPrevisto: number;
+  excedeCapacidade: boolean;
+  disponivel: boolean;
+  verificadoEm: string;
 }
 
 export const entradaLivreApi = {
@@ -108,8 +111,11 @@ export const entradaLivreApi = {
       body: JSON.stringify(data),
     }),
 
-  concluir: (id: string) =>
-    api<EntradaLivre>(`/api/entradas-livres/${id}/concluir`, { method: "PATCH" }),
+  concluir: (id: string, custoExcesso?: number) =>
+    api<EntradaLivre>(`/api/entradas-livres/${id}/concluir`, {
+      method: "PATCH",
+      body: JSON.stringify(custoExcesso !== undefined ? { custoExcesso } : {}),
+    }),
 
   cancelar: (id: string) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/cancelar`, { method: "PATCH" }),
@@ -132,16 +138,11 @@ export const entradaLivreApi = {
   getContadores: () =>
     api<{ ativas: number; concluidasHoje: number; totalHoje: number }>("/api/entradas-livres/contadores"),
 
-  // Configuração
-  listarConfiguracoes: () =>
-    api<ConfiguracaoEntradaLivre[]>("/api/entradas-livres/configuracao"),
-
-  getConfiguracao: (localId: string) =>
-    api<ConfiguracaoEntradaLivre>(`/api/entradas-livres/configuracao/local/${localId}`),
-
-  upsertConfiguracao: (data: { localId: string; precoHora: number; precoHoraExcesso: number; activo?: boolean }) =>
-    api<ConfiguracaoEntradaLivre>("/api/entradas-livres/configuracao", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
+  // Capacidade do local agora (warn-only)
+  checkOcupacao: (localId: string, numCriancas: number, excludeId?: string) => {
+    const params = new URLSearchParams({ localId });
+    params.set("numCriancas", String(numCriancas));
+    if (excludeId) params.set("excludeId", excludeId);
+    return api<OcupacaoLocalResult>(`/api/entradas-livres/ocupacao?${params.toString()}`);
+  },
 };

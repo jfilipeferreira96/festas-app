@@ -48,10 +48,13 @@ export function useEntradasLivresConcluidasHoje() {
   });
 }
 
-export function useEntradasLivresConfiguracoes() {
+// Capacidade do local agora (warn-only) — só executa quando há localId
+export function useCheckOcupacaoLocal(localId: string | undefined, numCriancas: number, excludeId?: string) {
   return useQuery({
-    queryKey: ["entradas-livres", "configuracao"],
-    queryFn: () => entradaLivreApi.listarConfiguracoes(),
+    queryKey: ["entradas-livres", "ocupacao", localId, numCriancas, excludeId],
+    queryFn: () => entradaLivreApi.checkOcupacao(localId!, numCriancas, excludeId),
+    enabled: !!localId,
+    refetchInterval: 30000,
   });
 }
 
@@ -70,7 +73,8 @@ export function useCriarEntradaLivre() {
 export function useConcluirEntradaLivre() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => entradaLivreApi.concluir(id),
+    mutationFn: ({ id, custoExcesso }: { id: string; custoExcesso?: number }) =>
+      entradaLivreApi.concluir(id, custoExcesso),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entradas-livres"] });
     },
@@ -115,17 +119,6 @@ export function useAtualizarEntradaLivre() {
       entradaLivreApi.atualizar(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entradas-livres"] });
-    },
-  });
-}
-
-export function useUpsertConfiguracaoEntradaLivre() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: { localId: string; precoHora: number; precoHoraExcesso: number; activo?: boolean }) =>
-      entradaLivreApi.upsertConfiguracao(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["entradas-livres", "configuracao"] });
     },
   });
 }
