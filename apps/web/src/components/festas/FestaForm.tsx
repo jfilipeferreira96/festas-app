@@ -26,6 +26,8 @@ import { useMonitores } from "@/hooks/use-monitores";
 import { useEtapasFesta } from "@/hooks/use-etapasFesta";
 import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
 import { useConfigPreco } from "@/hooks/use-precos";
+import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
+import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva, MetodoPagamento, DisponibilidadeResult } from "@/lib/api/reservas";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -182,6 +184,8 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const [criancas, setCriancas] = useState<CriancaInput[]>([]);
   const [cacifoAssignments, setCacifoAssignments] = useState<Record<string, string>>({});
   const [showAniversarianteError, setShowAniversarianteError] = useState(false);
+  // Controla a modal de pesquisa de cliente existente
+  const [showClienteSearch, setShowClienteSearch] = useState(false);
 
   const defaultValues = useMemo<ReservaFormData>(() => ({
     tema: reserva?.tema ?? "", data: reserva?.data ?? "", horario: reserva?.horario ?? "",
@@ -286,6 +290,34 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const handleExtrasChange = useCallback((selected: string[]) => setSelectedExtrasIds(selected), []);
   const handleMonitoresChange = useCallback((selected: string[]) => setValue("monitoresIds", selected), [setValue]);
   const handleEtapasChange = useCallback((selected: string[]) => setValue("etapasIds", selected), [setValue]);
+
+  // ── Pesquisa de cliente existente: preenche encarregado + aniversariantes ──
+  const handleClienteSelected = useCallback(
+    (cliente: Cliente, filhosSelecionados: ClienteFilho[]) => {
+      setValue("encarregadoNome", cliente.nome, { shouldDirty: true });
+      setValue("encarregadoContacto", cliente.telefone, { shouldDirty: true });
+      if (cliente.email) {
+        setValue("encarregadoEmail", cliente.email, { shouldDirty: true });
+      }
+      if (cliente.codigoPostal) {
+        setValue("encarregadoCodigoPostal", cliente.codigoPostal, { shouldDirty: true });
+      }
+      // Como o cliente já existe, desmarca a opção de adicionar aos clientes
+      setValue("adicionarCliente", false, { shouldDirty: true });
+
+      // Pré-preenche aniversariantes com os filhos seleccionados (se houver)
+      if (filhosSelecionados.length > 0) {
+        setAniversariantes(
+          filhosSelecionados.map((filho) => ({
+            nome: filho.nome,
+            dataNascimento: filho.dataNascimento ? filho.dataNascimento.split("T")[0] : "",
+          }))
+        );
+        setShowAniversarianteError(false);
+      }
+    },
+    [setValue]
+  );
   const addAniversariante = useCallback(() => setAniversariantes((p) => [...p, { nome: "", dataNascimento: "" }]), []);
   const removeAniversariante = useCallback((i: number) => setAniversariantes((p) => p.filter((_, idx) => idx !== i)), []);
   const updateAniversariante = useCallback((i: number, field: keyof AniversarianteInput, value: string) => {
@@ -392,6 +424,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
               disponibilidade={disponibilidade.data}
               disponibilidadeLoading={disponibilidade.isLoading}
               onVerificarDisponibilidade={() => disponibilidade.refetch()}
+              onOpenSearchCliente={() => setShowClienteSearch(true)}
             />
           )}
           {currentStep === 1 && (
@@ -422,6 +455,13 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
           }
         </div>
       </form>
+
+      {/* ── Modal: Pesquisar cliente existente ── */}
+      <ClienteSearchModal
+        isOpen={showClienteSearch}
+        onClose={() => setShowClienteSearch(false)}
+        onSelect={handleClienteSelected}
+      />
     </div>
   );
 }
@@ -464,6 +504,7 @@ interface Step1Props {
   disponibilidade?: DisponibilidadeResult;
   disponibilidadeLoading: boolean;
   onVerificarDisponibilidade: () => void;
+  onOpenSearchCliente: () => void;
 }
 
 function Step1Geral({
@@ -474,7 +515,7 @@ function Step1Geral({
   etapaOptions, currentEtapasIds, handleEtapasChange,
   extraItems, extraGroups, selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto,
   totalEstimado, watchedData, corOptions, menuOptions,
-  showAniversarianteError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade,
+  showAniversarianteError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
 }: Step1Props) {
   const currentCor = defaultValues.cor || "";
 
@@ -547,10 +588,16 @@ function Step1Geral({
           <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
             <User size={14} className="text-brand-500" /> Encarregado de Educação *
           </label>
-          <button type="button" onClick={addEncarregadoAdicional}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
-            <Plus size={13} /> Adicionar encarregado
-          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onOpenSearchCliente}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
+              <Search size={13} /> Pesquisar Cliente
+            </button>
+            <button type="button" onClick={addEncarregadoAdicional}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
+              <Plus size={13} /> Adicionar encarregado
+            </button>
+          </div>
         </div>
         <div className="flex gap-4">
           <div className="flex-1">

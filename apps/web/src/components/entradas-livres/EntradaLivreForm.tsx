@@ -6,13 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Trash2, CreditCard, User, Users, MapPin,
-  Clock, Package, MessageSquare, AlertTriangle, CheckCircle2,
+  Clock, Package, MessageSquare, AlertTriangle, CheckCircle2, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
 import { Select } from "@/components/ui/select";
 import Switch from "@/components/form/switch/Switch";
+import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
+import type { Cliente } from "@/lib/api/clientes";
 import {
   useCriarEntradaLivre,
   useAtualizarEntradaLivre,
@@ -117,6 +119,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const [showCriancasError, setShowCriancasError] = React.useState(false);
   // Controla se o utilizador editou manualmente o custo (para não sobrescrever)
   const [custoEdited, setCustoEdited] = React.useState(false);
+  // Controla a modal de pesquisa de cliente existente
+  const [showClienteSearch, setShowClienteSearch] = React.useState(false);
 
   const defaultValues = useMemo<EntradaLivreFormData>(
     () => ({
@@ -272,6 +276,37 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     );
   }, []);
 
+  // ── Pesquisa de cliente existente: preenche encarregado + filhos ──
+  const handleClienteSelected = useCallback(
+    (cliente: Cliente, filhosSelecionados: ClienteFilho[]) => {
+      setValue("encarregadoNome", cliente.nome, { shouldDirty: true });
+      setValue("encarregadoTelefone", cliente.telefone, { shouldDirty: true });
+      if (cliente.email) {
+        setValue("encarregadoEmail", cliente.email, { shouldDirty: true });
+      }
+
+      // Pré-preenche crianças com os filhos seleccionados (se houver)
+      if (filhosSelecionados.length > 0) {
+        const novasCriancas = filhosSelecionados.map((filho) => {
+          // Calcula idade a partir da data de nascimento
+          let idade = "";
+          if (filho.dataNascimento) {
+            const nasc = new Date(filho.dataNascimento);
+            const agora = new Date();
+            let anos = agora.getFullYear() - nasc.getFullYear();
+            const m = agora.getMonth() - nasc.getMonth();
+            if (m < 0 || (m === 0 && agora.getDate() < nasc.getDate())) anos--;
+            idade = String(Math.max(0, anos));
+          }
+          return { nome: filho.nome, idade };
+        });
+        setCriancas(novasCriancas);
+        setShowCriancasError(false);
+      }
+    },
+    [setValue]
+  );
+
   const onSubmit = useCallback(
     async (data: EntradaLivreFormData) => {
       // "Crianças" é obrigatório: impedir submissão sem pelo menos um nome.
@@ -394,9 +429,18 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
           {/* ── Encarregado ── */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-              <User size={14} className="text-brand-500" /> Encarregado de Educação *
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                <User size={14} className="text-brand-500" /> Encarregado de Educação *
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowClienteSearch(true)}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+              >
+                <Search size={13} /> Pesquisar Cliente
+              </button>
+            </div>
             <div className="flex gap-4">
               <div className="flex-1">
                 <InputField
@@ -621,7 +665,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               </div>
               <div className="flex items-end justify-end pb-1">
                 <Switch
-                  checked={pago}
+ 
+                 checked={pago}
                   onChange={(checked) => setValue("pago", checked)}
                   label={pago ? "Pago" : "Não pago"}
                 />
@@ -663,6 +708,13 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
           </Button>
         </div>
       </form>
+
+      {/* ── Modal: Pesquisar cliente existente ── */}
+      <ClienteSearchModal
+        isOpen={showClienteSearch}
+        onClose={() => setShowClienteSearch(false)}
+        onSelect={handleClienteSelected}
+      />
     </div>
   );
 }
