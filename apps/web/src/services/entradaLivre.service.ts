@@ -102,6 +102,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -142,6 +143,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -273,6 +275,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -309,6 +312,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -344,6 +348,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },
@@ -467,6 +472,7 @@ export const entradaLivreService = {
       include: {
         local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
+        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
         },

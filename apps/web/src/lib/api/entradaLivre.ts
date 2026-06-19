@@ -31,6 +31,8 @@ export interface EntradaLivre {
   excessoMinutos: number;
   localId: string;
   local?: { id: string; nome: string };
+  clienteId?: string;
+  cliente?: { id: string; nome: string; email: string | null; telefone: string };
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
   metodoPagamento?: string;
   pago: boolean;

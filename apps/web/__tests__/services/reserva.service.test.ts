@@ -532,4 +532,174 @@ describe("Reserva Service", () => {
       expect(active.every((r: { estado: string }) => r.estado === "EM_CURSO")).toBe(true);
     });
   });
+
+  // ── checkDisponibilidade (overlap detection) ──────────────────
+  describe("checkDisponibilidade()", () => {
+    // Use a far-future date with no seed data to avoid interference
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 30);
+    const futureStr = futureDate.toISOString().split("T")[0]!;
+
+    it("should return disponivel=true when slot is free", async () => {
+      const result = await reservaService.checkDisponibilidade({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+      });
+      expect(result.disponivel).toBe(true);
+      expect(result.conflitos.length).toBe(0);
+    });
+
+    it("should detect overlapping time slot as conflict", async () => {
+      // Create a reserva at 10:00–12:00
+      const reserva = await reservaService.create({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      // Check 11:00–13:00 → overlaps with 10:00–12:00
+      const result = await reservaService.checkDisponibilidade({
+        data: futureStr,
+        horario: "11:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+      });
+      expect(result.disponivel).toBe(false);
+      expect(result.conflitos.length).toBeGreaterThanOrEqual(1);
+
+      // Cleanup
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should NOT conflict when slots are adjacent (end = start)", async () => {
+      // Create a reserva at 10:00–12:00
+      const reserva = await reservaService.create({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      // Check 12:00–14:00 → starts exactly when the other ends
+      const result = await reservaService.checkDisponibilidade({
+        data: futureStr,
+        horario: "12:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+      });
+      expect(result.disponivel).toBe(true);
+      expect(result.conflitos.length).toBe(0);
+
+      // Cleanup
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should NOT conflict when same time but different room", async () => {
+      // Create a reserva on LOCAL_1 at 10:00–12:00
+      const reserva = await reservaService.create({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      // Check LOCAL_2 at 10:00–12:00 → different room, no conflict
+      const result = await reservaService.checkDisponibilidade({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_2,
+      });
+      expect(result.disponivel).toBe(true);
+      expect(result.conflitos.length).toBe(0);
+
+      // Cleanup
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should exclude self when excludeId is provided", async () => {
+      // Create a reserva at 10:00–12:00
+      const reserva = await reservaService.create({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      // Check same slot with excludeId → should not conflict with itself
+      const result = await reservaService.checkDisponibilidade({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        excludeId: reserva.id,
+      });
+      expect(result.disponivel).toBe(true);
+      expect(result.conflitos.length).toBe(0);
+
+      // Cleanup
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should ignore CONCLUIDA and CANCELADA reservas", async () => {
+      // Create a CONCLUIDA reserva at 10:00–12:00 directly
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(futureStr),
+          horario: "10:00",
+          duracaoMinutos: 120,
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+          numCriancas: 10,
+          estado: "CONCLUIDA",
+        },
+      });
+
+      // Check same slot → should be available (CONCLUIDA is ignored)
+      const result = await reservaService.checkDisponibilidade({
+        data: futureStr,
+        horario: "10:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+      });
+      expect(result.disponivel).toBe(true);
+      expect(result.conflitos.length).toBe(0);
+
+      // Cleanup
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("should throw DATA_REQUIRED if data is empty", async () => {
+      await expect(
+        reservaService.checkDisponibilidade({
+          data: "",
+          horario: "10:00",
+          duracaoMinutos: 120,
+          localId: TEST_IDS.LOCAL_1,
+        }),
+      ).rejects.toThrow("DATA_REQUIRED");
+    });
+
+    it("should throw LOCAL_REQUIRED if localId is empty", async () => {
+      await expect(
+        reservaService.checkDisponibilidade({
+          data: futureStr,
+          horario: "10:00",
+          duracaoMinutos: 120,
+          localId: "",
+        }),
+      ).rejects.toThrow("LOCAL_REQUIRED");
+    });
+  });
 });

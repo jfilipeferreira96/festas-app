@@ -510,4 +510,125 @@ describe("Entrada Livre Service", () => {
       expect(contadores.ativas).toBeGreaterThanOrEqual(0);
     });
   });
+
+  // ── checkOcupacaoLocal (capacity-based) ───────────────────────
+  describe("checkOcupacaoLocal()", () => {
+    // LOCAL_1 has capacidade 25; seed has ENTRADA_LIVRE_1 (ATIVA, 2 crianças)
+
+    it("should return disponivel=true when within capacity", async () => {
+      const result = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 5);
+      expect(result.capacidade).toBe(25);
+      expect(result.disponivel).toBe(true);
+      expect(result.excedeCapacidade).toBe(false);
+      expect(result.totalPrevisto).toBeLessThanOrEqual(result.capacidade);
+    });
+
+    it("should detect when capacity is exceeded", async () => {
+      // 2 existing + 30 new = 32 > 25 capacity
+      const result = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 30);
+      expect(result.excedeCapacidade).toBe(true);
+      expect(result.disponivel).toBe(false);
+      expect(result.totalPrevisto).toBeGreaterThan(result.capacidade);
+    });
+
+    it("should exclude self when excludeId is provided", async () => {
+      // Count with ENTRADA_LIVRE_1 included
+      const resultWith = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 0);
+      // Count without ENTRADA_LIVRE_1 (excluded)
+      const resultWithout = await entradaLivreService.checkOcupacaoLocal(
+        TEST_IDS.LOCAL_1,
+        0,
+        TEST_IDS.ENTRADA_LIVRE_1,
+      );
+      // Excluding the entry should reduce ocupacaoAtual
+      expect(resultWithout.ocupacaoAtual).toBeLessThan(resultWith.ocupacaoAtual);
+    });
+
+    it("should throw LOCAL_REQUIRED if localId is empty", async () => {
+      await expect(
+        entradaLivreService.checkOcupacaoLocal("", 5),
+      ).rejects.toThrow("LOCAL_REQUIRED");
+    });
+
+    it("should throw LOCAL_NOT_FOUND for non-existent local", async () => {
+      await expect(
+        entradaLivreService.checkOcupacaoLocal("non-existent-local", 5),
+      ).rejects.toThrow("LOCAL_NOT_FOUND");
+    });
+  });
+
+  // ── create() — Cliente creation (marketing base de contactos) ─
+  describe("create() — Cliente creation", () => {
+    it("should create a new Cliente when encarregado is new", async () => {
+      const countBefore = await testPrisma.cliente.count();
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Novo Encarregado Teste",
+        encarregadoTelefone: "9555444333",
+        encarregadoEmail: "novo-enc-teste@test.com",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança Nova" }],
+      });
+
+      // Entrada should have clienteId and cliente populated
+      expect(entrada.clienteId).toBeDefined();
+      expect(entrada.cliente).toBeDefined();
+      expect(entrada.cliente!.nome).toBe("Novo Encarregado Teste");
+      expect(entrada.cliente!.email).toBe("novo-enc-teste@test.com");
+
+      // A new cliente was created
+      const countAfter = await testPrisma.cliente.count();
+      expect(countAfter).toBe(countBefore + 1);
+
+      // Cleanup
+      const clienteId = entrada.clienteId;
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+      if (clienteId) await testPrisma.cliente.delete({ where: { id: clienteId } });
+    });
+
+    it("should reuse existing Cliente by email", async () => {
+      // CLIENTE_1: email "teste1@email.pt", telefone "911111111"
+      const countBefore = await testPrisma.cliente.count();
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Cliente Existente",
+        encarregadoTelefone: "911111111",
+        encarregadoEmail: "teste1@email.pt",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança Reuso" }],
+      });
+
+      // Should reuse CLIENTE_1, not create a new one
+      expect(entrada.clienteId).toBe(TEST_IDS.CLIENTE_1);
+      const countAfter = await testPrisma.cliente.count();
+      expect(countAfter).toBe(countBefore);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should reuse existing Cliente by telefone when email is absent", async () => {
+      // CLIENTE_2: telefone "922222222"
+      const countBefore = await testPrisma.cliente.count();
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Cliente Por Telefone",
+        encarregadoTelefone: "922222222",
+        // No email → should match by telefone
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança Tel" }],
+      });
+
+      // Should reuse CLIENTE_2, not create a new one
+      expect(entrada.clienteId).toBe(TEST_IDS.CLIENTE_2);
+      const countAfter = await testPrisma.cliente.count();
+      expect(countAfter).toBe(countBefore);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+  });
 });
