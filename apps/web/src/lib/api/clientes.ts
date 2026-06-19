@@ -44,6 +44,14 @@ export interface UpdateClienteData {
   optOut?: boolean;
 }
 
+export interface ClienteListResponse {
+  items: Cliente[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export const clientesApi = {
   list: (params?: { page?: number; limit?: number; search?: string }) => {
     const query = new URLSearchParams();
@@ -51,16 +59,16 @@ export const clientesApi = {
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.search) query.set("search", params.search);
     const qs = query.toString();
-    return api<{ data: Cliente[]; total: number }>(`/api/clientes${qs ? `?${qs}` : ""}`);
+    return api<ClienteListResponse>(`/api/clientes${qs ? `?${qs}` : ""}`);
   },
-  getById: (id: string) => api<{ data: Cliente }>(`/api/clientes/${id}`),
+  getById: (id: string) => api<Cliente>(`/api/clientes/${id}`),
   create: (data: CreateClienteData) =>
-    api<{ data: Cliente; message: string }>("/api/clientes", {
+    api<Cliente>("/api/clientes", {
       method: "POST",
       body: JSON.stringify(data),
     }),
   update: (id: string, data: UpdateClienteData) =>
-    api<{ data: Cliente; message: string }>(`/api/clientes/${id}`, {
+    api<Cliente>(`/api/clientes/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     }),
@@ -68,5 +76,5 @@ export const clientesApi = {
     api<{ message: string }>(`/api/clientes/${id}`, {
       method: "DELETE",
     }),
-  search: (query: string) => api<{ data: Cliente[] }>(`/api/clientes/search?q=${encodeURIComponent(query)}`),
+  search: (query: string) => api<Cliente[]>(`/api/clientes/search?q=${encodeURIComponent(query)}`),
 };

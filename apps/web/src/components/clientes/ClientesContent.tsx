@@ -130,7 +130,7 @@ export default function ClientesContent() {
     },
   });
 
-  const clientes = data?.data || [];
+  const clientes = data?.items || [];
 
   const handleCreate = useCallback(() => {
     setEditingCliente(null);
