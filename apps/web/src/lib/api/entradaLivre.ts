@@ -77,17 +77,6 @@ export interface AtualizarEntradaLivreDTO {
   observacoesLesoes?: string;
 }
 
-export interface ConfiguracaoEntradaLivre {
-  id: string;
-  precoHora: number;
-  precoHoraExcesso: number;
-  localId: string;
-  local?: { id: string; nome: string };
-  activo: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface OcupacaoLocalResult {
   localId: string;
   localNome: string;
@@ -145,19 +134,6 @@ export const entradaLivreApi = {
 
   getContadores: () =>
     api<{ ativas: number; concluidasHoje: number; totalHoje: number }>("/api/entradas-livres/contadores"),
-
-  // Configuração
-  listarConfiguracoes: () =>
-    api<ConfiguracaoEntradaLivre[]>("/api/entradas-livres/configuracao"),
-
-  getConfiguracao: (localId: string) =>
-    api<ConfiguracaoEntradaLivre>(`/api/entradas-livres/configuracao/local/${localId}`),
-
-  upsertConfiguracao: (data: { localId: string; precoHora: number; precoHoraExcesso: number; activo?: boolean }) =>
-    api<ConfiguracaoEntradaLivre>("/api/entradas-livres/configuracao", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
 
   // Capacidade do local agora (warn-only)
   checkOcupacao: (localId: string, numCriancas: number, excludeId?: string) => {

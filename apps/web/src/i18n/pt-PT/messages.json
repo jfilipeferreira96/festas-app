@@ -62,6 +62,9 @@
     "initialized": "Configuração de cacifos inicializada com sucesso",
     "updated": "Configuração de cacifos atualizada com sucesso"
   },
+  "configuracaoPreco": {
+    "updated": "Tarifário atualizado com sucesso"
+  },
   "participante": {
     "notFound": "Participante não encontrado",
     "maxParticipantes": "Número máximo de participantes por festa atingido (20)",

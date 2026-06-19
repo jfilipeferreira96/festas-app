@@ -985,6 +985,19 @@ async function seedEntradasLivres() {
     create: { localId: "local-003", precoHora: 12.0, precoHoraExcesso: 15.0, activo: true },
   });
 
+  // ─── Tarifário global (singleton) ────────────────────────────────
+  await prisma.configuracaoPreco.upsert({
+    where: { id: "config-preco-001" },
+    update: {},
+    create: {
+      id: "config-preco-001",
+      precoFestaSemana: 150.0,
+      precoFestaFimSemana: 200.0,
+      precoEntradaHoraSemana: 10.0,
+      precoEntradaHoraFimSemana: 12.0,
+    },
+  });
+
   const now = new Date();
   const todayDate = today();
   const todayStr = toDateStr(todayDate);

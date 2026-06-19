@@ -48,13 +48,6 @@ export function useEntradasLivresConcluidasHoje() {
   });
 }
 
-export function useEntradasLivresConfiguracoes() {
-  return useQuery({
-    queryKey: ["entradas-livres", "configuracao"],
-    queryFn: () => entradaLivreApi.listarConfiguracoes(),
-  });
-}
-
 // Capacidade do local agora (warn-only) — só executa quando há localId
 export function useCheckOcupacaoLocal(localId: string | undefined, numCriancas: number, excludeId?: string) {
   return useQuery({
@@ -125,17 +118,6 @@ export function useAtualizarEntradaLivre() {
       entradaLivreApi.atualizar(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entradas-livres"] });
-    },
-  });
-}
-
-export function useUpsertConfiguracaoEntradaLivre() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: { localId: string; precoHora: number; precoHoraExcesso: number; activo?: boolean }) =>
-      entradaLivreApi.upsertConfiguracao(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["entradas-livres", "configuracao"] });
     },
   });
 }

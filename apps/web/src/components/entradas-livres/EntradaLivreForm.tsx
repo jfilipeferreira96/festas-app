@@ -16,12 +16,12 @@ import Switch from "@/components/form/switch/Switch";
 import {
   useCriarEntradaLivre,
   useAtualizarEntradaLivre,
-  useEntradasLivresConfiguracoes,
   useCheckOcupacaoLocal,
 } from "@/hooks/use-entrada-livre";
 import { useLocais } from "@/hooks/use-locais";
 import { useCacifos } from "@/hooks/use-cacifos";
 import { useExtras } from "@/hooks/use-extras";
+import { useConfigPreco } from "@/hooks/use-precos";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 
 // ── Zod Schema ─────────────────────────────────────────────────
@@ -97,7 +97,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const criar = useCriarEntradaLivre();
   const atualizar = useAtualizarEntradaLivre();
 
-  const { data: configuracoes } = useEntradasLivresConfiguracoes();
   const { data: locais } = useLocais();
   // ── Cacifos: usa filtro server-side para só trazer cacifos LIVRE.
   // Em modo edição, o cacifo actualmente associado vem do objeto `entrada`
@@ -153,18 +152,25 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const pago = watch("pago") ?? false;
   const cacifoIdWatched = watch("cacifoId");
 
-  const config = configuracoes?.find((c) => c.localId === localId);
+  // Tarifário global (singleton) — usado para auto-preenchimento do custo
+  const { data: configPreco } = useConfigPreco();
 
   // Capacidade do local agora (warn-only) — conta as crianças do formulário
   const numCriancasForm = criancas.filter((c) => c.nome.trim()).length;
   const ocupacao = useCheckOcupacaoLocal(localId || undefined, numCriancasForm, entrada?.id);
 
-  // Custo calculado a partir da configuração do local (precoHora * duração).
-  // Usado como valor por defeito no input editável.
+  // Custo calculado a partir do tarifário global (precoHora * duração).
+  // Distingue dia de semana vs fim de semana.
   const custoCalculado = useMemo(() => {
-    if (!config) return 0;
-    return (config.precoHora / 60) * (duracaoMinutos || 0);
-  }, [config, duracaoMinutos]);
+    if (!configPreco) return 0;
+    const hoje = new Date();
+    const dia = hoje.getDay();
+    const isFimSemana = dia === 0 || dia === 6;
+    const precoHora = isFimSemana
+      ? Number(configPreco.precoEntradaHoraFimSemana)
+      : Number(configPreco.precoEntradaHoraSemana);
+    return (precoHora / 60) * (duracaoMinutos || 0);
+  }, [configPreco, duracaoMinutos]);
 
   // Sync do custoTotal quando o local/duração mudem (auto-preenchimento).
   // Respeita edições manuais do utilizador (não sobrescreve se já editou).
@@ -455,43 +461,36 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                 />
               </div>
             </div>
-            {localId && !config && (
-              <p className="text-xs text-accent-red-500">
-                Sem configuração de preço para este local.
-              </p>
-            )}
-            {config && (
-              <div className="space-y-1">
-                <label className="block text-xs font-medium text-text-secondary">
-                  Custo total (€) — editável
-                </label>
-                <div className="flex items-center gap-2">
-                  <InputField
-                    type="number"
-                    step={0.01}
-                    min={0}
-                    placeholder="0.00"
-                    value={
-                      custoTotalWatched != null
-                        ? String(custoTotalWatched)
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setCustoEdited(true);
-                      setValue(
-                        "custoTotal",
-                        v === "" ? undefined : Number(v),
-                        { shouldDirty: true }
-                      );
-                    }}
-                  />
-                  <span className="text-xs text-text-muted whitespace-nowrap">
-                    ≈ {formatEuro(custoCalculado)}
-                  </span>
-                </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-text-secondary">
+                Custo total (€) — editável
+              </label>
+              <div className="flex items-center gap-2">
+                <InputField
+                  type="number"
+                  step={0.01}
+                  min={0}
+                  placeholder="0.00"
+                  value={
+                    custoTotalWatched != null
+                      ? String(custoTotalWatched)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCustoEdited(true);
+                    setValue(
+                      "custoTotal",
+                      v === "" ? undefined : Number(v),
+                      { shouldDirty: true }
+                    );
+                  }}
+                />
+                <span className="text-xs text-text-muted whitespace-nowrap">
+                  ≈ {formatEuro(custoCalculado)}
+                </span>
               </div>
-            )}
+            </div>
           </div>
 
           {/* ── Aviso de capacidade do local (warn-only) ── */}

@@ -198,7 +198,6 @@ model Local {
   reservas      Reserva[]
   extras        ExtraLocal[]
   entradasLivres EntradaLivre[]
-  configuracaoEntradaLivre ConfiguracaoEntradaLivre?
   alocacoes     AlocacaoMonitor[]
 
   @@map("local")
@@ -297,6 +296,25 @@ model ConfiguracaoCacifo {
   cacifos      Cacifo[]
 
   @@map("configuracao_cacifo")
+}
+
+// ============================================
+// CONFIGURAÇÃO DE PREÇOS (singleton global)
+// ============================================
+// Um único tarifário para toda a aplicação.
+// Distingue dia de semana vs fim de semana.
+// Festa = preço fixo; Entrada Livre = preço por hora.
+
+model ConfiguracaoPreco {
+  id                        String   @id @default(cuid())
+  precoFestaSemana          Decimal  @db.Decimal(10, 2) @default(150)
+  precoFestaFimSemana       Decimal  @db.Decimal(10, 2) @default(200)
+  precoEntradaHoraSemana    Decimal  @db.Decimal(10, 2) @default(10)
+  precoEntradaHoraFimSemana Decimal  @db.Decimal(10, 2) @default(12)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@map("configuracao_preco")
 }
 
 // ============================================
@@ -690,17 +708,4 @@ model EntradaLivreExtra {
 
   @@unique([entradaLivreId, extraId])
   @@map("entrada_livre_extra")
-}
-
-model ConfiguracaoEntradaLivre {
-  id                String   @id @default(cuid())
-  precoHora         Decimal  @db.Decimal(10, 2)
-  precoHoraExcesso  Decimal  @db.Decimal(10, 2)
-  localId           String   @unique
-  local             Local    @relation(fields: [localId], references: [id])
-  activo            Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@map("configuracao_entrada_livre")
 }

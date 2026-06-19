@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -25,6 +25,7 @@ import { useExtras } from "@/hooks/use-extras";
 import { useMonitores } from "@/hooks/use-monitores";
 import { useEtapasFesta } from "@/hooks/use-etapasFesta";
 import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
+import { useConfigPreco } from "@/hooks/use-precos";
 import type { Reserva, MetodoPagamento, DisponibilidadeResult } from "@/lib/api/reservas";
 
 // ── Types ──────────────────────────────────────────────────────
@@ -227,6 +228,26 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     excludeId: reserva?.id,
   });
 
+  // ── Tarifário global (auto-preenchimento do valor) ──
+  const { data: configPreco } = useConfigPreco();
+  const valorPagoEditedRef = useRef(false);
+
+  React.useEffect(() => {
+    // Não auto-preencher se o utilizador já editou manualmente
+    if (valorPagoEditedRef.current) return;
+    // Não auto-preencher em modo edição se já existe valor definido
+    if (reserva?.valorPago && reserva.valorPago > 0) return;
+    if (!watchedData || !configPreco) return;
+
+    const dataObj = new Date(watchedData + "T00:00:00");
+    const dia = dataObj.getDay();
+    const isFimSemana = dia === 0 || dia === 6;
+    const preco = isFimSemana
+      ? Number(configPreco.precoFestaFimSemana)
+      : Number(configPreco.precoFestaSemana);
+    setValue("valorPago", preco);
+  }, [watchedData, configPreco, setValue, reserva?.valorPago]);
+
   React.useEffect(() => {
     const count = previsaoCriancas ?? 0;
     const anivNames = aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome);
@@ -388,6 +409,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
               aniversariantes={aniversariantes} criancas={criancas} cacifoAssignments={cacifoAssignments}
               cacifosDisponiveis={cacifosDisponiveis} totalEstimado={totalEstimado} pago={pago}
               salaOptions={salaOptions} encarregadosAdicionais={encarregadosAdicionais}
+              valorPagoEditedRef={valorPagoEditedRef}
             />
           )}
         </div>
@@ -804,9 +826,10 @@ interface Step4Props {
   totalEstimado: number; pago: boolean;
   salaOptions: { value: string; label: string }[];
   encarregadosAdicionais: EncarregadoInput[];
+  valorPagoEditedRef: React.MutableRefObject<boolean>;
 }
 
-function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes, criancas, cacifoAssignments, cacifosDisponiveis, totalEstimado, pago, salaOptions, encarregadosAdicionais }: Step4Props) {
+function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes, criancas, cacifoAssignments, cacifosDisponiveis, totalEstimado, pago, salaOptions, encarregadosAdicionais, valorPagoEditedRef }: Step4Props) {
   const namedCriancas = criancas.filter((c) => c.nome.trim());
   const sala = salaOptions.find((s) => s.value === watch("localId"));
   return (
@@ -849,7 +872,7 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Método</label>
               <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="Método" value={defaultValues.metodoPagamento ?? "NONE"} onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)} />
             </div>
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Total (€)</label><InputField type="number" step={0.01} min={0} {...register("valorPago", { valueAsNumber: true })} placeholder="0,00" /></div>
+            <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Total (€)</label><InputField type="number" step={0.01} min={0} value={watch("valorPago") as number} onChange={(e) => { valorPagoEditedRef.current = true; setValue("valorPago", e.target.value === "" ? 0 : parseFloat(e.target.value)); }} placeholder="0,00" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Caução</label>

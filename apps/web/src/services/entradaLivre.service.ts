@@ -1,6 +1,7 @@
 import prisma from "@festas/db";
 import { Prisma } from "@prisma/client";
 import type { MetodoPagamento } from "@prisma/client";
+import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 
 interface CriancaInput {
   nome: string;
@@ -165,15 +166,16 @@ export const entradaLivreService = {
   async create(data: CriarEntradaLivreDTO) {
     const { criancas, duracaoMinutos, localId, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
-    // Buscar configuração do local
-    const config = await prisma.configuracaoEntradaLivre.findUnique({
-      where: { localId },
-    });
-    if (!config) throw new Error("CONFIG_NOT_FOUND");
+    // Tarifário global: calcular preço/hora a partir da data atual (semana vs fim de semana)
+    const configPreco = await configuracaoPrecoService.getConfig();
+    const hoje = new Date();
+    const isFimSemana = hoje.getDay() === 0 || hoje.getDay() === 6;
+    const custoHora = isFimSemana
+      ? Number(configPreco.precoEntradaHoraFimSemana)
+      : Number(configPreco.precoEntradaHoraSemana);
 
     // Preço: usa valor manual do utilizador se fornecido, senão calcula a partir
-    // da configuração do local (precoHora × duração).
-    const custoHora = Number(config.precoHora);
+    // do tarifário global (precoHora × duração).
     const custoTotal =
       typeof custoTotalInput === "number" && custoTotalInput >= 0
         ? custoTotalInput
@@ -194,7 +196,7 @@ export const entradaLivreService = {
       data: {
         criancas: criancas as unknown as Prisma.InputJsonValue,
         duracaoMinutos,
-        custoHora: config.precoHora,
+        custoHora,
         custoTotal,
         inicioEm,
         fimPrevisto,
@@ -254,10 +256,8 @@ export const entradaLivreService = {
 
     if (duracaoRealMs > duracaoPrevistaMs) {
       excessoMinutos = Math.floor((duracaoRealMs - duracaoPrevistaMs) / (1000 * 60));
-      const config = await prisma.configuracaoEntradaLivre.findUnique({
-        where: { localId: entrada.localId },
-      });
-      const precoHoraExcesso = config ? Number(config.precoHoraExcesso) : Number(entrada.custoHora);
+      // O excesso é cobrado à mesma taxa horária registada na entrada
+      const precoHoraExcesso = Number(entrada.custoHora);
       custoExcesso = (precoHoraExcesso / 60) * excessoMinutos;
     }
 
@@ -404,13 +404,11 @@ export const entradaLivreService = {
       novoCustoTotal = custoTotalInput;
     }
     if (duracaoMinutos !== undefined && duracaoMinutos !== entrada.duracaoMinutos) {
-      const config = await prisma.configuracaoEntradaLivre.findUnique({
-        where: { localId: entrada.localId },
-      });
       const inicioEm = new Date(entrada.inicioEm);
       novoFimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
       if (novoCustoTotal === undefined) {
-        const custoHora = config ? Number(config.precoHora) : Number(entrada.custoHora);
+        // Recalcula o custo com a taxa horária registada na entrada
+        const custoHora = Number(entrada.custoHora);
         novoCustoTotal = (custoHora / 60) * duracaoMinutos;
       }
     }
@@ -529,60 +527,6 @@ export const entradaLivreService = {
     ]);
 
     return { ativas, concluidasHoje, totalHoje };
-  },
-
-  // ── Configuração ────────────────────────────────
-  async getConfiguracao(localId: string) {
-    const config = await prisma.configuracaoEntradaLivre.findUnique({
-      where: { localId },
-      include: { local: { select: { id: true, nome: true } } },
-    });
-    if (!config) throw new Error("CONFIG_NOT_FOUND");
-    
-    // Convert Decimal fields to numbers
-    return {
-      ...config,
-      precoHora: Number(config.precoHora),
-      precoHoraExcesso: Number(config.precoHoraExcesso),
-    };
-  },
-
-  async listarConfiguracoes() {
-    const configs = await prisma.configuracaoEntradaLivre.findMany({
-      include: { local: { select: { id: true, nome: true } } },
-    });
-    
-    // Convert Decimal fields to numbers
-    return configs.map((c: any) => ({
-      ...c,
-      precoHora: Number(c.precoHora),
-      precoHoraExcesso: Number(c.precoHoraExcesso),
-    }));
-  },
-
-  async upsertConfiguracao(data: { localId: string; precoHora: number; precoHoraExcesso: number; activo?: boolean }) {
-    const config = await prisma.configuracaoEntradaLivre.upsert({
-      where: { localId: data.localId },
-      create: {
-        precoHora: data.precoHora,
-        precoHoraExcesso: data.precoHoraExcesso,
-        localId: data.localId,
-        activo: data.activo ?? true,
-      },
-      update: {
-        precoHora: data.precoHora,
-        precoHoraExcesso: data.precoHoraExcesso,
-        activo: data.activo ?? true,
-      },
-      include: { local: { select: { id: true, nome: true } } },
-    });
-    
-    // Convert Decimal fields to numbers
-    return {
-      ...config,
-      precoHora: Number(config.precoHora),
-      precoHoraExcesso: Number(config.precoHoraExcesso),
-    };
   },
 
   // ── Verificar ocupação do local AGORA ───────────
