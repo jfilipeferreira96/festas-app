@@ -33,6 +33,7 @@ export const configuracaoPrecoService = {
     precoFestaFimSemana?: number;
     precoEntradaHoraSemana?: number;
     precoEntradaHoraFimSemana?: number;
+    precoExcessoFixo?: number;
   }) {
     const existing = await prisma.configuracaoPreco.findFirst();
 
@@ -43,6 +44,7 @@ export const configuracaoPrecoService = {
           precoFestaFimSemana: data.precoFestaFimSemana ?? 200,
           precoEntradaHoraSemana: data.precoEntradaHoraSemana ?? 10,
           precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana ?? 12,
+          precoExcessoFixo: data.precoExcessoFixo ?? 5,
         },
       });
     }
@@ -54,6 +56,7 @@ export const configuracaoPrecoService = {
         ...(data.precoFestaFimSemana !== undefined && { precoFestaFimSemana: data.precoFestaFimSemana }),
         ...(data.precoEntradaHoraSemana !== undefined && { precoEntradaHoraSemana: data.precoEntradaHoraSemana }),
         ...(data.precoEntradaHoraFimSemana !== undefined && { precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana }),
+        ...(data.precoExcessoFixo !== undefined && { precoExcessoFixo: data.precoExcessoFixo }),
       },
     });
   },
@@ -82,5 +85,14 @@ export const configuracaoPrecoService = {
       ? Number(config.precoEntradaHoraFimSemana)
       : Number(config.precoEntradaHoraSemana);
     return (precoHora / 60) * duracaoMinutos;
+  },
+
+  /**
+   * Retorna o preço fixo de excesso sugerido pelo tarifário global.
+   * Usado quando uma festa ou entrada livre ultrapassa o tempo previsto.
+   */
+  async getPrecoExcesso(): Promise<number> {
+    const config = await this.getConfig();
+    return Number(config.precoExcessoFixo);
   },
 };

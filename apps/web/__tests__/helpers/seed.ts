@@ -275,16 +275,17 @@ export async function seedTestData(): Promise<void> {
     create: { id: TEST_IDS.SEGMENTO_1, nome: "Segmento Teste", descricao: "Para testes" },
   });
 
-  // ── Configuração Entrada Livre ──────────────────────────────
-  await testPrisma.configuracaoEntradaLivre.upsert({
-    where: { localId: TEST_IDS.LOCAL_1 },
+  // ── Configuração Preço Global (singleton) ───────────────────
+  await testPrisma.configuracaoPreco.upsert({
+    where: { id: "config-preco-test" },
     update: {},
-    create: { localId: TEST_IDS.LOCAL_1, precoHora: 10.0, precoHoraExcesso: 12.0, activo: true },
-  });
-  await testPrisma.configuracaoEntradaLivre.upsert({
-    where: { localId: TEST_IDS.LOCAL_2 },
-    update: {},
-    create: { localId: TEST_IDS.LOCAL_2, precoHora: 8.0, precoHoraExcesso: 10.0, activo: true },
+    create: {
+      id: "config-preco-test",
+      precoFestaSemana: 150,
+      precoFestaFimSemana: 200,
+      precoEntradaHoraSemana: 10,
+      precoEntradaHoraFimSemana: 12,
+    },
   });
 
   // ── Entradas Livres ─────────────────────────────────────────
@@ -382,7 +383,6 @@ export async function seedTestData(): Promise<void> {
 export async function cleanTestData(): Promise<void> {
   await testPrisma.entradaLivreExtra.deleteMany().catch(() => {});
   await testPrisma.entradaLivre.deleteMany().catch(() => {});
-  await testPrisma.configuracaoEntradaLivre.deleteMany().catch(() => {});
 
   await testPrisma.envioCampanha.deleteMany().catch(() => {});
   await testPrisma.campanha.deleteMany().catch(() => {});

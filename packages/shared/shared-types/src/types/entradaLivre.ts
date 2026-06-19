@@ -58,17 +58,6 @@ export interface CriarEntradaLivreDTO {
   pago?: boolean;
   cacifoId?: string;
   extrasIds?: string[];
-  observacoes?: string;
+    observacoes?: string;
   observacoesLesoes?: string;
-}
-
-export interface ConfiguracaoEntradaLivre {
-  id: string;
-  precoHora: number;
-  precoHoraExcesso: number;
-  localId: string;
-  local?: { id: string; nome: string };
-  activo: boolean;
-  createdAt: string;
-  updatedAt: string;
 }

@@ -73,7 +73,8 @@ export function useCriarEntradaLivre() {
 export function useConcluirEntradaLivre() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => entradaLivreApi.concluir(id),
+    mutationFn: ({ id, custoExcesso }: { id: string; custoExcesso?: number }) =>
+      entradaLivreApi.concluir(id, custoExcesso),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entradas-livres"] });
     },

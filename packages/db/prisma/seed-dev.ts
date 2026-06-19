@@ -968,23 +968,6 @@ async function seedMarketing() {
 async function seedEntradasLivres() {
   console.log("  Creating entrada livre data...");
 
-  // Configuração para os locais
-  await prisma.configuracaoEntradaLivre.upsert({
-    where: { localId: "local-001" },
-    update: {},
-    create: { localId: "local-001", precoHora: 10.0, precoHoraExcesso: 12.0, activo: true },
-  });
-  await prisma.configuracaoEntradaLivre.upsert({
-    where: { localId: "local-002" },
-    update: {},
-    create: { localId: "local-002", precoHora: 8.0, precoHoraExcesso: 10.0, activo: true },
-  });
-  await prisma.configuracaoEntradaLivre.upsert({
-    where: { localId: "local-003" },
-    update: {},
-    create: { localId: "local-003", precoHora: 12.0, precoHoraExcesso: 15.0, activo: true },
-  });
-
   // ─── Tarifário global (singleton) ────────────────────────────────
   await prisma.configuracaoPreco.upsert({
     where: { id: "config-preco-001" },

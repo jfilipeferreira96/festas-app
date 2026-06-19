@@ -111,8 +111,11 @@ export const entradaLivreApi = {
       body: JSON.stringify(data),
     }),
 
-  concluir: (id: string) =>
-    api<EntradaLivre>(`/api/entradas-livres/${id}/concluir`, { method: "PATCH" }),
+  concluir: (id: string, custoExcesso?: number) =>
+    api<EntradaLivre>(`/api/entradas-livres/${id}/concluir`, {
+      method: "PATCH",
+      body: JSON.stringify(custoExcesso !== undefined ? { custoExcesso } : {}),
+    }),
 
   cancelar: (id: string) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/cancelar`, { method: "PATCH" }),

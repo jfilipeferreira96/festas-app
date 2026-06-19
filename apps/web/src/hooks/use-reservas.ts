@@ -88,7 +88,8 @@ export function useIniciarReserva() {
 export function useFinalizarReserva() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => reservasApi.finalizar(id),
+    mutationFn: ({ id, custoExcesso }: { id: string; custoExcesso?: number }) =>
+      reservasApi.finalizar(id, custoExcesso),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });

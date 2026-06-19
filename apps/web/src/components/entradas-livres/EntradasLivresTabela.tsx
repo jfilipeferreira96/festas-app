@@ -5,6 +5,7 @@ import { Plus, Eye, Trash2, Check, CheckCircle, XCircle, Users, Clock, Pencil, C
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useEntradasLivres, useEliminarEntradaLivre, useConcluirEntradaLivre, useCancelarEntradaLivre, useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
 import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
@@ -46,7 +47,7 @@ export default function EntradasLivresTabela() {
   const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
   const [viewingEntradaId, setViewingEntradaId] = useState<string | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
-  const [concluirModal, setConcluirModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
+  const [concluirModal, setConcluirModal] = useState<EntradaLivre | null>(null);
   const [cancelarModal, setCancelarModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
 
   const isFormOpen = showForm || !!editingEntrada;
@@ -97,10 +98,14 @@ export default function EntradasLivresTabela() {
     setDeleteModal({ isOpen: false, id: "" });
   }, [eliminar, deleteModal.id]);
 
-  const handleConcluir = useCallback(async () => {
-    await concluir.mutateAsync(concluirModal.id);
-    setConcluirModal({ isOpen: false, id: "" });
-  }, [concluir, concluirModal.id]);
+  const handleConcluir = useCallback(
+    async (custoExcesso?: number) => {
+      if (!concluirModal) return;
+      await concluir.mutateAsync({ id: concluirModal.id, custoExcesso });
+      setConcluirModal(null);
+    },
+    [concluir, concluirModal],
+  );
 
   const handleCancelar = useCallback(async () => {
     await cancelar.mutateAsync(cancelarModal.id);
@@ -286,7 +291,7 @@ export default function EntradasLivresTabela() {
             {r.estado === "ATIVA" && (
               <Tooltip content="Concluir entrada" position="top" theme="dark">
                 <button
-                  onClick={() => setConcluirModal({ isOpen: true, id: r.id })}
+                  onClick={() => setConcluirModal(r)}
                   className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
                 >
                   <CheckCircle size={15} />
@@ -374,17 +379,22 @@ export default function EntradasLivresTabela() {
         isConfirming={eliminar.isPending}
       />
 
-      {/* Confirm Concluir Modal */}
-      <ConfirmActionModal
-        isOpen={concluirModal.isOpen}
-        onClose={() => setConcluirModal({ isOpen: false, id: "" })}
-        onConfirm={handleConcluir}
-        title="Concluir Entrada"
-        message="Tem a certeza que deseja concluir esta entrada? O tempo de excesso será calculado automaticamente."
-        confirmText="Concluir"
-        variant="success"
-        isConfirming={concluir.isPending}
-      />
+      {/* Concluir Resumo Modal */}
+      {concluirModal && (
+        <ConcluirResumoModal
+          isOpen={!!concluirModal}
+          onClose={() => setConcluirModal(null)}
+          onConfirm={handleConcluir}
+          isConfirming={concluir.isPending}
+          titulo="Concluir Entrada"
+          entidadeNome={concluirModal.criancas?.[0]?.nome ?? concluirModal.encarregadoNome}
+          localNome={concluirModal.local?.nome}
+          inicioEm={concluirModal.inicioEm}
+          fimPrevisto={concluirModal.fimPrevisto}
+          duracaoMinutos={concluirModal.duracaoMinutos}
+          custoBase={Number(concluirModal.custoTotal ?? 0)}
+        />
+      )}
 
       {/* Confirm Cancelar Modal */}
       <ConfirmActionModal

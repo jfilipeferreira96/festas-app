@@ -240,7 +240,7 @@ export const entradaLivreService = {
   },
 
   // ── Concluir entrada livre ──────────────────────
-  async concluir(id: string) {
+  async concluir(id: string, options?: { custoExcessoManual?: number }) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
     if (entrada.estado !== "ATIVA") throw new Error("NOT_ACTIVE");
@@ -256,9 +256,13 @@ export const entradaLivreService = {
 
     if (duracaoRealMs > duracaoPrevistaMs) {
       excessoMinutos = Math.floor((duracaoRealMs - duracaoPrevistaMs) / (1000 * 60));
-      // O excesso é cobrado à mesma taxa horária registada na entrada
-      const precoHoraExcesso = Number(entrada.custoHora);
-      custoExcesso = (precoHoraExcesso / 60) * excessoMinutos;
+      // Sugere o preço fixo de excesso do tarifário global
+      custoExcesso = await configuracaoPrecoService.getPrecoExcesso();
+    }
+
+    // Valor manual do utilizador prevalece sobre o sugerido
+    if (options?.custoExcessoManual !== undefined) {
+      custoExcesso = options.custoExcessoManual;
     }
 
     const custoTotalFinal = Number(entrada.custoTotal) + custoExcesso;

@@ -6,6 +6,7 @@ export interface ConfiguracaoPreco {
   precoFestaFimSemana: number;
   precoEntradaHoraSemana: number;
   precoEntradaHoraFimSemana: number;
+  precoExcessoFixo: number;
   createdAt: string;
   updatedAt: string;
 }

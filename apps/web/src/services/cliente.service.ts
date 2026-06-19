@@ -138,6 +138,9 @@ export const clienteService = {
       },
       take: 10,
       orderBy: { nome: "asc" },
+      include: {
+        aniversariantes: { orderBy: { nome: "asc" } },
+      },
     });
   },
 };

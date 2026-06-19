@@ -12,7 +12,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
-    const entrada = await entradaLivreService.concluir(id);
+    const body = await request.json().catch(() => ({}));
+    const entrada = await entradaLivreService.concluir(id, {
+      custoExcessoManual: typeof body.custoExcesso === "number" ? body.custoExcesso : undefined,
+    });
     return NextResponse.json(entrada);
   } catch (error) {
     return handleError(error);

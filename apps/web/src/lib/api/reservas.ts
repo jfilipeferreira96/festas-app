@@ -155,9 +155,10 @@ export const reservasApi = {
       method: "POST",
     }),
 
-  finalizar: (id: string) =>
+  finalizar: (id: string, custoExcesso?: number) =>
     api<Reserva>(`/api/reservas/${id}/finalizar`, {
       method: "POST",
+      body: JSON.stringify(custoExcesso !== undefined ? { custoExcesso } : {}),
     }),
 
   alocarMonitor: (id: string, monitorId: string) =>

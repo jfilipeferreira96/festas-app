@@ -1,4 +1,5 @@
 import prisma from "@festas/db";
+import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 
 interface AniversarianteInput {
   nome: string;
@@ -550,11 +551,30 @@ export const reservaService = {
     });
   },
 
-  async finalizar(id: string) {
+  async finalizar(id: string, options?: { custoExcessoManual?: number }) {
     const reserva = await this.getById(id);
     if (reserva.estado !== "EM_CURSO") throw new Error("NOT_IN_PROGRESS");
 
     const fimReal = new Date();
+
+    // ── Calcular excesso de tempo ──────────────────
+    let excessoMinutos = 0;
+    let custoExcesso = 0;
+
+    if (reserva.fimPrevisto && fimReal > new Date(reserva.fimPrevisto)) {
+      excessoMinutos = Math.floor(
+        (fimReal.getTime() - new Date(reserva.fimPrevisto).getTime()) / (1000 * 60),
+      );
+      // Sugere o preço fixo de excesso do tarifário global
+      custoExcesso = await configuracaoPrecoService.getPrecoExcesso();
+    }
+
+    // Valor manual do utilizador prevalece sobre o sugerido
+    if (options?.custoExcessoManual !== undefined) {
+      custoExcesso = options.custoExcessoManual;
+    }
+
+    const custoTotalFinal = Number(reserva.valorPago ?? 0) + custoExcesso;
 
     // Save cacifos snapshot before releasing
     const cacifos = await prisma.cacifo.findMany({
@@ -579,7 +599,14 @@ export const reservaService = {
 
     return prisma.reserva.update({
       where: { id },
-      data: { estado: "CONCLUIDA", fimReal, cacifosHistorico },
+      data: {
+        estado: "CONCLUIDA",
+        fimReal,
+        cacifosHistorico,
+        excessoMinutos,
+        custoExcesso,
+        custoTotalFinal,
+      },
       include: {
         local: true,
         cliente: true,

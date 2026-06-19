@@ -5,12 +5,14 @@ import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserChec
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva } from "@/hooks/use-reservas";
 import FestaForm from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
 import CheckInModal from "./CheckInModal";
 import HistoricoModal from "./HistoricoModal";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
+import { getAniversarianteNome } from "@/lib/api/reservas";
 import DataTable from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
@@ -44,7 +46,7 @@ export default function FestasTabela() {
   const [historicoReserva, setHistoricoReserva] = useState<Reserva | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
-  const [finalizarModal, setFinalizarModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
+  const [finalizarModal, setFinalizarModal] = useState<Reserva | null>(null);
   const [iniciarFestaReserva, setIniciarFestaReserva] = useState<Reserva | null>(null);
 
   const todayStr = useMemo(
@@ -113,14 +115,18 @@ export default function FestasTabela() {
     setCancelModal({ isOpen: false, id: "" });
   }, [updateStatus, cancelModal.id]);
 
-  const handleFinalizar = useCallback((id: string) => {
-    setFinalizarModal({ isOpen: true, id });
+  const handleFinalizar = useCallback((reserva: Reserva) => {
+    setFinalizarModal(reserva);
   }, []);
 
-  const confirmFinalizar = useCallback(async () => {
-    await finalizarReserva.mutateAsync(finalizarModal.id);
-    setFinalizarModal({ isOpen: false, id: "" });
-  }, [finalizarReserva, finalizarModal.id]);
+  const confirmFinalizar = useCallback(
+    async (custoExcesso?: number) => {
+      if (!finalizarModal) return;
+      await finalizarReserva.mutateAsync({ id: finalizarModal.id, custoExcesso });
+      setFinalizarModal(null);
+    },
+    [finalizarReserva, finalizarModal],
+  );
 
   const handleIniciarFesta = useCallback(async () => {
     if (!iniciarFestaReserva) return;
@@ -339,7 +345,7 @@ export default function FestasTabela() {
             {r.estado === "EM_CURSO" && (
               <Tooltip content="Finalizar festa" position="top" theme="dark">
                 <button
-                  onClick={() => handleFinalizar(r.id)}
+                  onClick={() => handleFinalizar(r)}
                   className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
                 >
                   <SquareCheck size={15} />
@@ -462,17 +468,22 @@ export default function FestasTabela() {
         isConfirming={updateStatus.isPending}
       />
 
-      {/* Finalizar Confirmation Modal */}
-      <ConfirmActionModal
-        isOpen={finalizarModal.isOpen}
-        onClose={() => setFinalizarModal({ isOpen: false, id: "" })}
-        onConfirm={confirmFinalizar}
-        title="Finalizar Festa"
-        message="Tem a certeza que deseja finalizar esta festa? Esta acção é irreversível."
-        confirmText="Finalizar"
-        variant="success"
-        isConfirming={finalizarReserva.isPending}
-      />
+      {/* Finalizar Resumo Modal */}
+      {finalizarModal && (
+        <ConcluirResumoModal
+          isOpen={!!finalizarModal}
+          onClose={() => setFinalizarModal(null)}
+          onConfirm={confirmFinalizar}
+          isConfirming={finalizarReserva.isPending}
+          titulo="Finalizar Festa"
+          entidadeNome={getAniversarianteNome(finalizarModal)}
+          localNome={finalizarModal.local?.nome}
+          inicioEm={finalizarModal.inicioEm}
+          fimPrevisto={finalizarModal.fimPrevisto}
+          duracaoMinutos={finalizarModal.duracaoMinutos}
+          custoBase={Number(finalizarModal.valorPago ?? 0)}
+        />
+      )}
 
       {/* Iniciar Festa Confirmation Modal */}
       {iniciarFestaReserva && (
