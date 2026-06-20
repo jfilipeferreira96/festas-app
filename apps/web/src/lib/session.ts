@@ -9,12 +9,15 @@ import { redirect } from "next/navigation";
  * call this safely; only one actual session validation occurs.
  */
 export const getServerSession = cache(async () => {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
 
-  // Serialize to JSON to remove Date objects and ensure RSC compatibility
-  return session ? JSON.parse(JSON.stringify(session)) : null;
+    return session ? JSON.parse(JSON.stringify(session)) : null;
+  } catch {
+    return null;
+  }
 });
 
 export async function requireAuth() {

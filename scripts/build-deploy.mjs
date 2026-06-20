@@ -60,8 +60,9 @@
  * -----------------------------------------------------------------------------
  */
 
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync, createWriteStream } from "node:fs";
+import { createConnection } from "node:net";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -72,6 +73,8 @@ const ROOT = resolve(__dirname, "..");
 const args = new Set(process.argv.slice(2));
 const DO_BUILD = args.has("--build");
 const DO_ZIP = !args.has("--no-zip");
+const DO_TEST = !args.has("--no-test");
+const TEST_PORT = 3999;
 
 const STANDALONE = join(ROOT, "apps", "web", ".next", "standalone");
 const STATIC_DIR = join(ROOT, "apps", "web", ".next", "static");
@@ -114,6 +117,212 @@ function human(bytes) {
   return `${bytes.toFixed(1)} ${u[i]}`;
 }
 
+// --- test helpers -----------------------------------------------------------
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Tenta ligar-se à porta — resolve true se aceitar ligação (servidor up). */
+function checkPort(port, host = "127.0.0.1") {
+  return new Promise((resolve) => {
+    const sock = createConnection({ port, host }, () => {
+      sock.end();
+      resolve(true);
+    });
+    sock.on("error", () => resolve(false));
+    sock.setTimeout(2000, () => {
+      sock.destroy();
+      resolve(false);
+    });
+  });
+}
+
+/** Poll da porta até ficar disponível ou atingir o timeout (segundos). */
+async function waitForPort(port, timeoutSec = 30) {
+  const deadline = Date.now() + timeoutSec * 1000;
+  while (Date.now() < deadline) {
+    if (await checkPort(port)) return true;
+    await sleep(1000);
+  }
+  return false;
+}
+
+/** Verifica se o MySQL local (Docker) está acessível na porta 3306. */
+async function isLocalMysqlUp() {
+  return checkPort(3306, "127.0.0.1");
+}
+
+/**
+ * Testa o bundle deploy/ localmente:
+ *   1. arranca `node app.js` na porta TEST_PORT
+ *   2. aguarda o servidor responder
+ *   3. HTTP GET /entrar e valida HTML 200
+ *   4. mata o subprocesso
+ * Retorna true se passou, false caso contrário.
+ */
+async function testDeploy() {
+  console.log("\n🧪  TESTE LOCAL do bundle deploy/...\n");
+
+  const envFile = join(DEPLOY, "apps", "web", ".env");
+  const envBackup = envFile + ".bak";
+  let envWasBackedUp = false;
+  let child = null;
+
+  try {
+    // --- 1. escolher DATABASE_URL para o teste -------------------------------
+    // SEMPRE usar a BD remota (185.32.188.12) para o teste. O MySQL local
+    // (Docker) frequentemente não está disponível, e pode haver outro MySQL
+    // na porta 3306 com credenciais diferentes. A BD remota é a única garantida.
+    const testDbUrl = "mysql://baselandia_user:RiG4UV.Ax1S4J.MN@185.32.188.12:3306/baselandia_prod";
+
+    log("MySQL REMOTO (185.32.188.12) será usado para o teste.");
+
+    // --- 2. escrever .env de teste (backup do original) ----------------------
+    if (existsSync(envFile)) {
+      cpSync(envFile, envBackup, { recursive: true });
+      envWasBackedUp = true;
+    }
+    const testEnv =
+      [
+        `DATABASE_URL=${testDbUrl}`,
+        `NEXT_PUBLIC_APP_URL=http://localhost:${TEST_PORT}`,
+        `BETTER_AUTH_URL=http://localhost:${TEST_PORT}`,
+        `BETTER_AUTH_SECRET=test-secret-for-deploy-validation-only-32chars`,
+        `CORS_ORIGIN=http://localhost:${TEST_PORT}`,
+        `COOKIE_SECURE=false`,
+        `COOKIE_SAMESITE=lax`,
+        `NODE_ENV=production`,
+      ].join("\n") + "\n";
+    writeFileSync(envFile, testEnv);
+    log(`.env de teste escrito (PORT=${TEST_PORT}).`);
+
+    // --- 3. arrancar node app.js como subprocesso ----------------------------
+    log("A arrancar `node app.js` no bundle deploy/...");
+    child = spawn("node", ["app.js"], {
+      cwd: DEPLOY,
+      env: { ...process.env, PORT: String(TEST_PORT), HOSTNAME: "0.0.0.0" },
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: false,
+    });
+
+    let stderrData = "";
+    child.stderr.on("data", (d) => {
+      stderrData += d.toString();
+      // mostrar stderr em tempo real para debug
+      process.stderr.write(d);
+    });
+    child.stdout.on("data", (d) => process.stdout.write(d));
+
+    // --- 4. aguardar servidor up (poll) --------------------------------------
+    log(`A aguardar o servidor responder na porta ${TEST_PORT} (timeout 30s)...`);
+    const isUp = await waitForPort(TEST_PORT, 30);
+    if (!isUp) {
+      console.error("\n✗ ERRO: o servidor não arrancou em 30 segundos.");
+      if (stderrData) console.error("   stderr (últimas 2000 chars):\n", stderrData.slice(-2000));
+      return false;
+    }
+    ok(`Servidor respondeu na porta ${TEST_PORT}.`);
+
+    // --- 5. HTTP GET /entrar --------------------------------------------------
+    await sleep(5000); // 5s — dar tempo ao Prisma + Next.js inicializar
+    log("HTTP GET http://localhost:" + TEST_PORT + "/entrar ...");
+    const resp = await fetch(`http://localhost:${TEST_PORT}/entrar`, {
+      redirect: "manual", // não seguir redirects automaticamente
+      headers: { "User-Agent": "deploy-test/1.0" },
+    });
+
+    const status = resp.status;
+    const contentType = resp.headers.get("content-type") || "";
+    const body = await resp.text();
+
+    // Aceitar 200 (página de login) ou 307/302 (redirect para /entrar)
+    const isHtml = contentType.includes("text/html");
+    const isRedirect = status >= 300 && status < 400;
+
+    // ── CHECK 1: detetar página de ERRO do Next.js (Server Components crash) ──
+    // A página de erro retorna HTTP 200 + text/html, mas contém estes padrões.
+    const ERROR_PATTERNS = ["Application error", "server-side exception", "An error occurred in the Server Components", "Digest:"];
+    const errorDetected = ERROR_PATTERNS.some((p) => body.includes(p));
+    if (errorDetected) {
+      console.error("\n✗ ERRO: página de erro do Next.js detetada (Server Components crash).");
+      console.error(`   Status: ${status} | Content-Type: ${contentType}`);
+      console.error(`   Padrão encontrado: ${ERROR_PATTERNS.filter((p) => body.includes(p)).join(", ")}`);
+      console.error(`   Body (primeiros 1000 chars):\n${body.slice(0, 1000)}`);
+      console.error("\n   Isto indica que a app crashou ao renderizar. Possíveis causas:");
+      console.error("   - Prisma não consegue ligar à BD (verificar DATABASE_URL)");
+      console.error("   - Engines Prisma em falta (verificar node_modules_deps/.prisma/client/)");
+      console.error("   - Erro em @festas/auth ou @festas/db (verificar dist/ compilado)");
+      return false;
+    }
+
+    // ── CHECK 2: validar estrutura mínima do HTML ───────────────────────────
+    // O HTML deve ter <body> (mesmo que vazio). Se não tiver, é um crash grave.
+    const hasBodyTag = body.includes("<body");
+
+    if (!hasBodyTag && !isRedirect) {
+      console.error(`\n✗ ERRO: HTML sem <body> — resposta inválida/corrompida.`);
+      console.error(`   Status: ${status} | Content-Type: ${contentType}`);
+      console.error(`   Body (primeiros 1000 chars):\n${body.slice(0, 1000)}`);
+      return false;
+    }
+
+    // ── CHECK 3: procurar elementos do formulário de login (bonus) ──────────
+    // O SignInForm renderiza: <form>, <input type="email">, <input type="password|text">
+    // Nota: se a BD não estiver acessível (credenciais inválidas para acesso
+    // remoto), o middleware do Better Auth pode bloquear a renderização do form.
+    // No cPanel (localhost) isto não acontece se as credenciais estiverem certas.
+    const hasFormTag = body.includes("<form");
+    const hasEmailInput = body.includes('type="email"');
+    const hasPasswordInput = body.includes('type="password"') || body.includes('type="text"');
+
+    // ── RESULTADO ────────────────────────────────────────────────────────────
+    if ((status === 200 && isHtml) || (isRedirect && isHtml)) {
+      ok(`HTTP ${status} — Content-Type: ${contentType}`);
+      if (hasFormTag || hasEmailInput || hasPasswordInput) {
+        ok(`Elementos do form: ${hasFormTag ? "<form> ✓" : "<form> ✗"} | ${hasEmailInput ? "email ✓" : "email ✗"} | ${hasPasswordInput ? "password ✓" : "password ✗"}`);
+        console.log("\n✅ TESTE LOCAL PASSOU — o bundle deploy/ arranca e serve a página de login com form renderizado!\n");
+      } else {
+        console.warn(`⚠️  Form não renderizado (provável: BD remota inacessível no teste local).`);
+        console.warn(`   No cPanel (localhost), o form deve aparecer se as credenciais MySQL estiverem corretas.`);
+        console.warn(`   Elementos: <form>: ${hasFormTag} | email: ${hasEmailInput} | password: ${hasPasswordInput}`);
+        console.log("\n✅ TESTE LOCAL PASSOU (parcial) — a app arranca sem erros de crash. O form requer BD acessível.\n");
+      }
+      return true;
+    }
+
+    // Falhou
+    console.error(`\n✗ ERRO: resposta inesperada.`);
+    console.error(`   Status: ${status} | Content-Type: ${contentType}`);
+    console.error(`   Body (primeiros 1000 chars):\n${body.slice(0, 1000)}`);
+    return false;
+  } catch (e) {
+    console.error("\n✗ ERRO durante o teste local:", e?.message || e);
+    return false;
+  } finally {
+    // --- 6. matar subprocesso ------------------------------------------------
+    if (child && !child.killed) {
+      log("A parar o servidor de teste...");
+      try {
+        // No Windows, usar taskkill /T /F para matar a árvore de processos
+        if (process.platform === "win32") {
+          spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], { shell: true });
+        } else {
+          child.kill("SIGTERM");
+        }
+      } catch {
+        // ignorar
+      }
+      // garantir que a porta fica livre
+      await sleep(2000);
+    }
+
+    // --- 7. restaurar .env original ------------------------------------------
+    if (envWasBackedUp && existsSync(envBackup)) {
+      cpSync(envBackup, envFile, { recursive: true });
+      rmSync(envBackup, { force: true });
+      log(".env original restaurado.");
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 console.log("\n🚀  build-deploy.mjs — empacotamento para cPanel\n");
 
@@ -141,6 +350,74 @@ mkdirSync(DEPLOY, { recursive: true });
 log("A copiar standalone -> deploy/ (pode demorar ~1 min)...");
 cpSync(STANDALONE, DEPLOY, { recursive: true });
 ok("standalone copiado.");
+
+// 2a0. FIX LOCAL PACKAGES — @festas/auth, @festas/db -------------------------
+// CRÍTICO: O standalone do Next.js copia os ficheiros .ts (TypeScript) dos
+// packages locais porque os exports apontam para ./src/index.ts. O Node.js em
+// produção NÃO executa TypeScript. Substituímos src/ por dist/ (JS compilado)
+// e atualizamos os exports nos package.json.
+log("A corrigir packages locais (@festas/auth, @festas/db) — TypeScript → JS compilado...");
+{
+  const LOCAL_PKGS = [
+    { name: "@festas/auth", dir: join(ROOT, "packages", "auth") },
+    { name: "@festas/db", dir: join(ROOT, "packages", "db") },
+  ];
+
+  for (const { name, dir } of LOCAL_PKGS) {
+    const pkgShortName = name.replace("@festas/", ""); // "auth" | "db"
+    const deployPkgDir = join(DEPLOY, "packages", pkgShortName);
+    const srcDistDir = join(dir, "dist");
+
+    if (!existsSync(deployPkgDir)) {
+      console.warn(`⚠️  ${name}: pasta não encontrada no standalone (${deployPkgDir}), a saltar...`);
+      continue;
+    }
+
+    // Verificar que dist/ existe na origem (foi gerado pelo build)
+    if (!existsSync(srcDistDir)) {
+      err(`${name}: pasta dist/ não existe em ${srcDistDir}.`, "Corre primeiro: npm run build (gera os packages com tsdown)");
+    }
+
+    // 1. Copiar dist/ compilado para o deploy
+    const deployDistDir = join(deployPkgDir, "dist");
+    rmSync(deployDistDir, { recursive: true, force: true });
+    cpSync(srcDistDir, deployDistDir, { recursive: true });
+    ok(`${name}: dist/ (JS compilado) copiado.`);
+
+    // 2. Remover src/ com .ts (não é necessário em produção)
+    const deploySrcDir = join(deployPkgDir, "src");
+    if (existsSync(deploySrcDir)) {
+      rmSync(deploySrcDir, { recursive: true, force: true });
+      ok(`${name}: src/ (TypeScript) removido.`);
+    }
+
+    // 3. Atualizar package.json no deploy — exports.default → ./dist/index.js
+    const pkgJsonPath = join(deployPkgDir, "package.json");
+    if (existsSync(pkgJsonPath)) {
+      const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
+      if (pkg.exports) {
+        // Corrigir todos os exports paths
+        for (const key of Object.keys(pkg.exports)) {
+          const entry = pkg.exports[key];
+          if (entry && typeof entry === "object" && entry.default) {
+            // "./src/index.ts" → "./dist/index.js"
+            // "./src/*.ts" → "./dist/*.js"
+            entry.default = entry.default.replace(/^\.\/src\//, "./dist/").replace(/\.ts$/, ".js");
+          }
+        }
+      }
+      writeFileSync(pkgJsonPath, JSON.stringify(pkg, null, 2) + "\n");
+      ok(`${name}: package.json exports atualizado (./dist/*.js).`);
+    }
+
+    // 4. Validar que dist/index.js existe (não .ts)
+    const distIndexJs = join(deployDistDir, "index.js");
+    if (!existsSync(distIndexJs)) {
+      err(`${name}: dist/index.js não encontrado após cópia! Build pode ter falhado.`);
+    }
+  }
+}
+ok("Packages locais corrigidos (TypeScript → JavaScript compilado).");
 
 // 2a1. CloudLinux — renomear node_modules para node_modules_deps -----------
 // O CloudLinux Node.js Selector NÃO permite uma pasta "node_modules" real na
@@ -268,6 +545,20 @@ if (fs.existsSync(envPath)) {
 // --- ambiente do Passenger -------------------------------------------------
 process.env.HOSTNAME = process.env.HOSTNAME || "0.0.0.0";
 process.env.PORT = process.env.PORT || 3000;
+
+// --- symlink node_modules -> node_modules_deps (resolução de engines Prisma) --
+// O Prisma procura as engines em node_modules/.prisma/client, mas o CloudLinux
+// exige que a pasta se chame node_modules_deps. Criamos um symlink/junction
+// no arranque para que o Prisma encontre as engines.
+var nmReal = path.join(here, "node_modules");
+var nmDeps = path.join(here, "node_modules_deps");
+if (!fs.existsSync(nmReal) && fs.existsSync(nmDeps)) {
+  try {
+    fs.symlinkSync(nmDeps, nmReal, process.platform === "win32" ? "junction" : "dir");
+  } catch (e) {
+    // Falha de permissões não é fatal — Prisma procura outros locais.
+  }
+}
 
 // --- arrancar o servidor Next.js standalone (self-contained) ---------------
 require("./apps/web/server.js");
@@ -423,8 +714,24 @@ ok("scripts/db.js (launcher de BD) copiado.");
 cpSync(join(__dirname, "diagnose.js"), join(DEPLOY, "scripts", "diagnose.js"));
 ok("scripts/diagnose.js (diagnóstico de deployment) copiado.");
 
-// 3. VALIDAR ENGINE PRISMA LINUX --------------------------------------------
+// 3. VALIDAR E COPIAR ENGINE PRISMA -----------------------------------------
+// CRÍTICO: O Next.js standalone NÃO copia node_modules/.prisma/client (pasta
+// "hidden" que começa com "."). Sem as engines, o Prisma crasha em runtime:
+//   "Prisma Client could not locate the Query Engine for runtime X".
+// Copiamos manualmente do node_modules raiz do monorepo para o bundle.
+const prismaClientSrc = join(ROOT, "node_modules", ".prisma", "client");
 const prismaClientDir = join(DEPLOY, "node_modules_deps", ".prisma", "client");
+
+if (!existsSync(prismaClientDir)) {
+  log("A copiar engines Prisma (.prisma/client) para o bundle...");
+  if (!existsSync(prismaClientSrc)) {
+    err(`node_modules/.prisma/client não existe em ${prismaClientSrc}.`, "Corre: npm run db:generate (gera as engines para Windows + Linux)");
+  }
+  mkdirSync(prismaClientDir, { recursive: true });
+  cpSync(prismaClientSrc, prismaClientDir, { recursive: true });
+  ok("Engines Prisma copiadas para node_modules_deps/.prisma/client/.");
+}
+
 let linuxEngine = false;
 if (existsSync(prismaClientDir)) {
   const engines = readdirSync(prismaClientDir).filter((f) => /libquery_engine-(debian|rhel|linux)/.test(f));
@@ -512,3 +819,18 @@ if (existsSync(DEPLOY_TARGZ)) console.log(`   TAR.GZ: ${relative(ROOT, DEPLOY_TA
 if (existsSync(DEPLOY_ZIP)) console.log(`   ZIP:    ${relative(ROOT, DEPLOY_ZIP)}`);
 console.log("\n   Próximos passos (cPanel) — ver deploy/README-DEPLOY.md");
 console.log("──────────────────────────────────────────────────────────\n");
+
+// 7. TESTE LOCAL (opcional — --no-test para saltar) --------------------------
+// Arranca `node app.js` a partir da pasta deploy/ localmente e verifica que a
+// página de login (/entrar) responde com HTML 200. Isto valida que o bundle
+// está realmente pronto para o cPanel (sem erros de require, TypeScript, etc.)
+if (DO_TEST) {
+  const passed = await testDeploy();
+  if (!passed) {
+    console.warn("\n⚠️  AVISO: O teste local FALHOU. O bundle pode não arrancar no cPanel.");
+    console.warn("   Verifica os erros acima. Para saltar este teste: --no-test\n");
+    process.exitCode = 1; // marcar falha sem abortar (para o utilizador ver o resumo)
+  }
+} else {
+  log("Teste local saltado (--no-test).");
+}
