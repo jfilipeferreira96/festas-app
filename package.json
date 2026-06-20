@@ -9,6 +9,9 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=web",
+    "dev:prod": "cross-env DB_TARGET=local-prod npm run dev --workspace=web",
+    "dev:test": "cross-env DB_TARGET=local-test npm run dev --workspace=web",
+    "dev:remote": "cross-env DB_TARGET=remote-prod npm run dev --workspace=web",
     "build": "npm run build --workspace=@saas/shared-types && npm run build --workspace=@saas/shared-defaults && npm run build --workspace=@festas/db && npm run build --workspace=@festas/auth && npm run build --workspace=web",
     "build:shared": "npm run build --workspace=@saas/shared-types && npm run build --workspace=@saas/shared-defaults",
     "build:web": "npm run build --workspace=web",
@@ -38,6 +41,7 @@
   "devDependencies": {
     "@types/node": "^22.18.11",
     "archiver": "^7.0.1",
+    "cross-env": "^10.1.0",
     "mysql2": "^3.22.5",
     "tar": "^7.4.3",
     "tsdown": "^0.15.5",
