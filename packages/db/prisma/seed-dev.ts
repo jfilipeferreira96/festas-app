@@ -71,6 +71,9 @@ function addMin(d: Date, min: number): Date {
   r.setMinutes(r.getMinutes() + min);
   return r;
 }
+function toTimeStr(d: Date): string {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
 
 // Portuguese children's names pool
 const NOMES_FEM = ["Ana", "Rita", "Sofia", "Carolina", "Inês", "Laura", "Maria", "Clara", "Luísa", "Joana", "Catarina", "Filipa", "Diana", "Mariana", "Teresa", "Eva", "Madalena", "Leonor", "Matilde", "Beatriz"];
@@ -395,7 +398,7 @@ async function seedReservas() {
       const concluida = i < concluidas;
       await prisma.reservaEtapa.upsert({
         where: { id: `re-${reservaId}-${i + 1}` },
-        update: {},
+        update: { concluida, concluidaEm: concluida ? addMin(baseTime, i * 20) : null },
         create: {
           id: `re-${reservaId}-${i + 1}`,
           reservaId,
@@ -600,17 +603,22 @@ async function seedReservas() {
 
   // ═══════════════════════════════════════════════════════════
   // TODAY — EM_CURSO (Marta, Princesa, Sala Azul)
+  // Começou há 90 min, dura 150 min → 60 min restantes, 4/6 etapas
   // ═══════════════════════════════════════════════════════════
-  const tEmCurso = dateAt(todayDate, 10, 0);
+  const tEmCurso = addMin(now, -90);
+  const fimPrevEmCurso = addMin(tEmCurso, 150);
   await prisma.reserva.upsert({
     where: { id: "reserva-001" },
-    update: {},
+    update: {
+      estado: "EM_CURSO", inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso, fimReal: null,
+      horario: toTimeStr(tEmCurso),
+    },
     create: {
       id: "reserva-001",
       data: new Date(todayStr),
-      horario: "10:00", duracaoMinutos: 150, numCriancas: 18, previsaoCriancas: 20,
+      horario: toTimeStr(tEmCurso), duracaoMinutos: 150, numCriancas: 18, previsaoCriancas: 20,
       estado: "EM_CURSO",
-      inicioEm: tEmCurso, fimPrevisto: addMin(tEmCurso, 150),
+      inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso,
       tema: "Princesa", cor: "#FF69B4",
       bolo: "Bolo de chocolate com coroa dourada",
       observacoesGerais: "Marta faz 8 anos. Gosta de cor-de-rosa. Sem restrições alimentares.",
@@ -767,24 +775,28 @@ async function seedReservas() {
   // Cacifos 1-15 já usados pela reserva-001. Restantes: 16-40 (25 cacifos)
   // Distribuir sem sobreposição: a=16-23 (8 pres), b=24-27 (4 pres), c=28-32 (5 pres), d=33-36 (4 pres)
   const emCursoExtras = [
-    { id: "reserva-em-curso-a", hora: 14, min: 0, dur: 120, n: 10, p: 12, tema: "Galáxia", cor: "#1E3A8A", local: "local-002", cli: "cliente-003", aniv: "aniv-004", mons: ["monitor-002", "monitor-005"], cacifoStart: 16, etapasConc: 3, obs: "Decoração espacial com estrelas e planetas.", bolo: "Bolo galáxia com planetas", menuNome: "Menu Galáxia", menuPreco: 9.00, menuNotas: "Pizza, pipocas, sumo, bolo" },
-    { id: "reserva-em-curso-b", hora: 15, min: 30, dur: 90, n: 6, p: 8, tema: "Frozen", cor: "#0EA5E9", local: "local-003", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-004"], cacifoStart: 24, etapasConc: 1, obs: "Elsa e Anna. Tudo azul e branco.", bolo: "Bolo Frozen com Elsa", menuNome: "Menu Frozen", menuPreco: 7.50, menuNotas: "Croissants, sumo, bolo" },
-    { id: "reserva-em-curso-c", hora: 16, min: 0, dur: 150, n: 8, p: 10, tema: "Marvel", cor: "#DC2626", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-006"], cacifoStart: 28, etapasConc: 0, obs: "Super-heróis Marvel. Crianças muito animadas!", bolo: "Bolo Vingadores", menuNome: "Menu Marvel", menuPreco: 10.00, menuNotas: "Pizza, nuggets, sumo, bolo" },
-    { id: "reserva-em-curso-d", hora: 11, min: 30, dur: 60, n: 6, p: 8, tema: "Patrulha Pata", cor: "#F59E0B", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-003"], cacifoStart: 33, etapasConc: 4, obs: "Crianças pequenas, 3-4 anos.", bolo: "Bolo Patrulha Pata", menuNome: "Menu Pequeno", menuPreco: 6.00, menuNotas: "Croissants, sumo" },
+    { id: "reserva-em-curso-a", minAtras: 20, dur: 120, n: 10, p: 12, tema: "Galáxia", cor: "#1E3A8A", local: "local-002", cli: "cliente-003", aniv: "aniv-004", mons: ["monitor-002", "monitor-005"], cacifoStart: 16, etapasConc: 1, obs: "Decoração espacial com estrelas e planetas.", bolo: "Bolo galáxia com planetas", menuNome: "Menu Galáxia", menuPreco: 9.00, menuNotas: "Pizza, pipocas, sumo, bolo" },
+    { id: "reserva-em-curso-b", minAtras: 45, dur: 90, n: 6, p: 8, tema: "Frozen", cor: "#0EA5E9", local: "local-003", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-004"], cacifoStart: 24, etapasConc: 3, obs: "Elsa e Anna. Tudo azul e branco.", bolo: "Bolo Frozen com Elsa", menuNome: "Menu Frozen", menuPreco: 7.50, menuNotas: "Croissants, sumo, bolo" },
+    { id: "reserva-em-curso-c", minAtras: 60, dur: 150, n: 8, p: 10, tema: "Marvel", cor: "#DC2626", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-006"], cacifoStart: 28, etapasConc: 2, obs: "Super-heróis Marvel. Crianças muito animadas!", bolo: "Bolo Vingadores", menuNome: "Menu Marvel", menuPreco: 10.00, menuNotas: "Pizza, nuggets, sumo, bolo" },
+    { id: "reserva-em-curso-d", minAtras: 15, dur: 60, n: 6, p: 8, tema: "Patrulha Pata", cor: "#F59E0B", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-003"], cacifoStart: 33, etapasConc: 1, obs: "Crianças pequenas, 3-4 anos.", bolo: "Bolo Patrulha Pata", menuNome: "Menu Pequeno", menuPreco: 6.00, menuNotas: "Croissants, sumo" },
   ];
 
   for (const e of emCursoExtras) {
-    const start = dateAt(todayDate, e.hora, e.min);
+    const start = addMin(now, -e.minAtras);
+    const fim = addMin(start, e.dur);
     await prisma.reserva.upsert({
       where: { id: e.id },
-      update: {},
+      update: {
+        estado: "EM_CURSO", inicioEm: start, fimPrevisto: fim, fimReal: null,
+        horario: toTimeStr(start),
+      },
       create: {
         id: e.id,
         data: new Date(todayStr),
-        horario: `${String(e.hora).padStart(2, "0")}:${String(e.min).padStart(2, "0")}`,
+        horario: toTimeStr(start),
         duracaoMinutos: e.dur, numCriancas: e.n, previsaoCriancas: e.p,
         estado: "EM_CURSO",
-        inicioEm: start, fimPrevisto: addMin(start, e.dur),
+        inicioEm: start, fimPrevisto: fim,
         tema: e.tema, cor: e.cor, bolo: e.bolo,
         observacoesGerais: e.obs,
         metodoPagamento: "MBWAY", valorPago: e.dur * 1.5, pago: true,
