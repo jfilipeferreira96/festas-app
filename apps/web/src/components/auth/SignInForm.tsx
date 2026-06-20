@@ -115,6 +115,7 @@ export default function SignInForm() {
               </div>
             </form>
 
+            {/* Criação de conta pública desativada — todas as contas são criadas internamente (Utilizadores).
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
                 {t("auth.signIn.dontHaveAccount")} {""}
@@ -123,6 +124,7 @@ export default function SignInForm() {
                 </Link>
               </p>
             </div>
+            */}
           </div>
         </div>
       </div>
