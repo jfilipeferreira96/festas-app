@@ -105,7 +105,7 @@ const { info: dbInfo } = resolveDatabaseUrl();
 
 // ─── Startup Log ─────────────────────────────────────────────
 function printDbBanner(info: DbInfo) {
-  const colors: Record<string, string> = {
+  const colors = {
     green: "\x1b[32m",
     yellow: "\x1b[33m",
     red: "\x1b[31m",
