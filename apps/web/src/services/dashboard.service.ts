@@ -55,7 +55,10 @@ export const dashboardService = {
       }),
     ]);
 
-    const totalCacifos = await prisma.cacifo.count();
+    const [totalCacifos, totalCriancasNoParque] = await Promise.all([
+      prisma.cacifo.count(),
+      this.getTotalCriancasNoParque(),
+    ]);
 
     return {
       festasHoje,
@@ -64,7 +67,38 @@ export const dashboardService = {
       cacifosOcupados,
       cacifosReservados,
       cacifosTotal: totalCacifos,
+      totalCriancasNoParque,
     };
+  },
+
+  /**
+   * Total de crianças atualmente no parque:
+   * - soma de numCriancas das reservas EM_CURSO
+   * - soma do nº de crianças (JSON) das entradas livres ATIVA
+   */
+  async getTotalCriancasNoParque(): Promise<number> {
+    const [reservasEmCurso, entradasAtivas] = await Promise.all([
+      prisma.reserva.findMany({
+        where: { estado: "EM_CURSO" },
+        select: { numCriancas: true },
+      }),
+      prisma.entradaLivre.findMany({
+        where: { estado: "ATIVA" },
+        select: { criancas: true },
+      }),
+    ]);
+
+    const criancasFestas = reservasEmCurso.reduce(
+      (sum, r) => sum + (r.numCriancas ?? 0),
+      0
+    );
+
+    const criancasEntradas = entradasAtivas.reduce((sum, e) => {
+      const lista = e.criancas as unknown;
+      return sum + (Array.isArray(lista) ? lista.length : 0);
+    }, 0);
+
+    return criancasFestas + criancasEntradas;
   },
 
   async getFestasEmCurso() {

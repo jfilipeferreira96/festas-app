@@ -1,4 +1,6 @@
 import prisma from "@festas/db";
+import { Prisma } from "@prisma/client";
+import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 
 /**
  * Verifica se uma data cai num fim de semana (sábado ou domingo).
@@ -6,6 +8,11 @@ import prisma from "@festas/db";
 function isFimSemana(data: Date): boolean {
   const dia = data.getDay();
   return dia === 0 || dia === 6; // 0 = domingo, 6 = sábado
+}
+
+interface MinimoConfig {
+  aniversariantes: number;
+  minimo: number;
 }
 
 export const configuracaoPrecoService = {
@@ -17,9 +24,7 @@ export const configuracaoPrecoService = {
     let config = await prisma.configuracaoPreco.findFirst();
 
     if (!config) {
-      config = await prisma.configuracaoPreco.create({
-        data: {},
-      });
+      config = await prisma.configuracaoPreco.create({ data: {} });
     }
 
     return config;
@@ -33,7 +38,11 @@ export const configuracaoPrecoService = {
     precoCriancaFimSemana?: number;
     precoEntradaHoraSemana?: number;
     precoEntradaHoraFimSemana?: number;
+    minimosCriancasPorAniversariante?: MinimoConfig[];
+    precoMeias?: number;
     precoExcessoFixo?: number;
+    duracaoDefaultFestaMin?: number;
+    duracaoExcessoBlocoMin?: number;
   }) {
     const existing = await prisma.configuracaoPreco.findFirst();
 
@@ -44,7 +53,11 @@ export const configuracaoPrecoService = {
           precoCriancaFimSemana: data.precoCriancaFimSemana ?? 20,
           precoEntradaHoraSemana: data.precoEntradaHoraSemana ?? 10,
           precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana ?? 12,
+          minimosCriancasPorAniversariante: data.minimosCriancasPorAniversariante as unknown as Prisma.InputJsonValue,
+          precoMeias: data.precoMeias ?? 2,
           precoExcessoFixo: data.precoExcessoFixo ?? 5,
+          duracaoDefaultFestaMin: data.duracaoDefaultFestaMin ?? 135,
+          duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin ?? 30,
         },
       });
     }
@@ -56,35 +69,101 @@ export const configuracaoPrecoService = {
         ...(data.precoCriancaFimSemana !== undefined && { precoCriancaFimSemana: data.precoCriancaFimSemana }),
         ...(data.precoEntradaHoraSemana !== undefined && { precoEntradaHoraSemana: data.precoEntradaHoraSemana }),
         ...(data.precoEntradaHoraFimSemana !== undefined && { precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana }),
+        ...(data.minimosCriancasPorAniversariante !== undefined && {
+          minimosCriancasPorAniversariante: data.minimosCriancasPorAniversariante as unknown as Prisma.InputJsonValue,
+        }),
+        ...(data.precoMeias !== undefined && { precoMeias: data.precoMeias }),
         ...(data.precoExcessoFixo !== undefined && { precoExcessoFixo: data.precoExcessoFixo }),
+        ...(data.duracaoDefaultFestaMin !== undefined && { duracaoDefaultFestaMin: data.duracaoDefaultFestaMin }),
+        ...(data.duracaoExcessoBlocoMin !== undefined && { duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin }),
       },
     });
   },
 
   /**
-   * Calcula o preço de uma festa para uma determinada data.
-   * Distingue dia de semana vs fim de semana.
+   * Retorna o preço por criança aplicável a uma data.
+   * Feriados e fins-de-semana usam tarifa de fim-de-semana.
    */
-  async calcularPrecoFesta(data: Date): Promise<number> {
+  async getPrecoCrianca(data: Date): Promise<number> {
     const config = await this.getConfig();
-    const fimSemana = isFimSemana(data);
-    const preco = fimSemana
-      ? Number(config.precoCriancaFimSemana)
-      : Number(config.precoCriancaSemana);
-    return preco;
+    const feriado = await excecaoCalendarioService.isFeriado(data);
+    const aplicarFimSemana = feriado || isFimSemana(data);
+    return Number(aplicarFimSemana ? config.precoCriancaFimSemana : config.precoCriancaSemana);
+  },
+
+  /**
+   * Retorna o mínimo de crianças para um nº de aniversariantes.
+   * Usa a tabela configurável minimosCriancasPorAniversariante.
+   * Default: 1→10, 2→15, 3→20.
+   */
+  async getMinimoCriancas(numAniversariantes: number): Promise<number> {
+    const config = await this.getConfig();
+    const minimos = (config.minimosCriancasPorAniversariante ?? []) as unknown as MinimoConfig[];
+
+    if (minimos.length === 0) {
+      // Defaults hard-coded
+      if (numAniversariantes >= 3) return 20;
+      if (numAniversariantes === 2) return 15;
+      return 10;
+    }
+
+    // Procurar entrada que melhor corresponde (>= aniversariantes, menor limiar)
+    const ordenados = [...minimos].sort((a, b) => a.aniversariantes - b.aniversariantes);
+    let minimo = ordenados[0]?.minimo ?? 10;
+    for (const m of ordenados) {
+      if (numAniversariantes >= m.aniversariantes) {
+        minimo = m.minimo;
+      }
+    }
+    return minimo;
+  },
+
+  /**
+   * Calcula o preço de uma festa.
+   *
+   * 1. Feriado → tarifa fim-semana; senão fim-semana/semana
+   * 2. minimo = minimosCriancasPorAniversariante[numAniv]
+   * 3. criancasFaturadas = max(numCriancas, minimo)
+   * 4. valor = precoCrianca × criancasFaturadas
+   *
+   * Retorna { precoCrianca, minimoCriancas, criancasFaturadas, total }
+   */
+  async calcularPrecoFesta(
+    data: Date,
+    numCriancas: number,
+    numAniversariantes: number
+  ): Promise<{
+    precoCrianca: number;
+    minimoCriancas: number;
+    criancasFaturadas: number;
+    total: number;
+  }> {
+    const precoCrianca = await this.getPrecoCrianca(data);
+    const minimoCriancas = await this.getMinimoCriancas(numAniversariantes);
+    const criancasFaturadas = Math.max(numCriancas, minimoCriancas);
+    const total = +(precoCrianca * criancasFaturadas).toFixed(2);
+
+    return { precoCrianca, minimoCriancas, criancasFaturadas, total };
+  },
+
+  /**
+   * Calcula o custo das meias (compra obrigatória no parque).
+   */
+  async calcularCustoMeias(quantidade: number): Promise<number> {
+    const config = await this.getConfig();
+    return +(Number(config.precoMeias) * quantidade).toFixed(2);
   },
 
   /**
    * Calcula o preço de uma entrada livre para uma determinada duração e data.
-   * Distingue dia de semana vs fim de semana.
+   * Feriados e fins-de-semana usam tarifa de fim-de-semana.
    */
   async calcularPrecoEntrada(duracaoMinutos: number, data: Date): Promise<number> {
     const config = await this.getConfig();
-    const fimSemana = isFimSemana(data);
-    const precoHora = fimSemana
-      ? Number(config.precoEntradaHoraFimSemana)
-      : Number(config.precoEntradaHoraSemana);
-    return (precoHora / 60) * duracaoMinutos;
+    const feriado = await excecaoCalendarioService.isFeriado(data);
+    const aplicarFimSemana = feriado || isFimSemana(data);
+    const precoHora = Number(aplicarFimSemana ? config.precoEntradaHoraFimSemana : config.precoEntradaHoraSemana);
+    return +((precoHora / 60) * duracaoMinutos).toFixed(2);
   },
 
   /**

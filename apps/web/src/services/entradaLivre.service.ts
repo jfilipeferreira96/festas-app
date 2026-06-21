@@ -2,6 +2,7 @@ import prisma from "@festas/db";
 import { Prisma } from "@prisma/client";
 import type { MetodoPagamento } from "@prisma/client";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
+import { cacifoService } from "@/services/cacifo.service";
 
 interface CriancaInput {
   nome: string;
@@ -22,6 +23,12 @@ interface CriarEntradaLivreDTO {
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
+  // Pagamento dividido (até 2 métodos)
+  metodoPagamento2?: MetodoPagamento;
+  valorPago2?: number;
+  // Meias (compra obrigatória)
+  meiasQuantidade?: number;
+  meiasPrecoUnit?: number;
 }
 
 // ── Helper: encontrar ou criar Cliente a partir do encarregado ──
@@ -385,6 +392,12 @@ export const entradaLivreService = {
       extrasIds?: string[];
       observacoes?: string;
       observacoesLesoes?: string;
+      // Pagamento dividido (até 2 métodos)
+      metodoPagamento2?: MetodoPagamento;
+      valorPago2?: number;
+      // Meias (compra obrigatória)
+      meiasQuantidade?: number;
+      meiasPrecoUnit?: number;
     }
   ) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
@@ -419,12 +432,9 @@ export const entradaLivreService = {
 
     // Reatribuir cacifo se tiver mudado
     if (cacifoId !== undefined) {
-      // Libertar cacifo antigo
+      // Libertar cacifo antigo (preservando histórico)
       if (entrada.cacifoId && entrada.cacifoId !== cacifoId) {
-        await prisma.cacifo.update({
-          where: { id: entrada.cacifoId },
-          data: { estado: "LIVRE", criancas: null },
-        });
+        await cacifoService.libertar(entrada.cacifoId);
       }
       // Ocupar novo cacifo
       if (cacifoId && cacifoId !== entrada.cacifoId) {

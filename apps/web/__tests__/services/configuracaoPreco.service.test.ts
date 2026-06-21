@@ -100,35 +100,101 @@ describe("ConfiguracaoPreco Service", () => {
       await configuracaoPrecoService.updateConfig({
         precoCriancaSemana: 15,
         precoCriancaFimSemana: 20,
+        precoMeias: 2,
       });
     });
 
-    it("should return weekday price for a Wednesday", async () => {
+    it("should use weekday per-child price for a Wednesday", async () => {
       // 2025-01-15 é uma quarta-feira
       const quarta = new Date("2025-01-15T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoFesta(quarta);
-      expect(preco).toBe(15);
+      const result = await configuracaoPrecoService.calcularPrecoFesta(quarta, 12, 1);
+      // precoCrianca = 15 (semana), minimo = 10, criancasFaturadas = 12
+      expect(result.precoCrianca).toBe(15);
+      expect(result.minimoCriancas).toBe(10);
+      expect(result.criancasFaturadas).toBe(12);
+      expect(result.total).toBe(180);
     });
 
-    it("should return weekend price for a Saturday", async () => {
+    it("should use weekend per-child price for a Saturday", async () => {
       // 2025-01-18 é um sábado
       const sabado = new Date("2025-01-18T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoFesta(sabado);
-      expect(preco).toBe(20);
+      const result = await configuracaoPrecoService.calcularPrecoFesta(sabado, 12, 1);
+      // precoCrianca = 20 (fim-semana), criancasFaturadas = 12
+      expect(result.precoCrianca).toBe(20);
+      expect(result.total).toBe(240);
     });
 
-    it("should return weekend price for a Sunday", async () => {
+    it("should use weekend per-child price for a Sunday", async () => {
       // 2025-01-19 é um domingo
       const domingo = new Date("2025-01-19T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoFesta(domingo);
+      const result = await configuracaoPrecoService.calcularPrecoFesta(domingo, 5, 1);
+      expect(result.precoCrianca).toBe(20);
+    });
+
+    it("should use weekday per-child price for a Monday", async () => {
+      // 2025-01-13 é uma segunda-feira
+      const segunda = new Date("2025-01-13T00:00:00");
+      const result = await configuracaoPrecoService.calcularPrecoFesta(segunda, 5, 1);
+      expect(result.precoCrianca).toBe(15);
+    });
+
+    it("should bill the minimum children when below minimum (1 aniversariante → min 10)", async () => {
+      const quarta = new Date("2025-01-15T00:00:00");
+      const result = await configuracaoPrecoService.calcularPrecoFesta(quarta, 5, 1);
+      // precoCrianca = 15, minimo = 10, criancasFaturadas = 10
+      expect(result.criancasFaturadas).toBe(10);
+      expect(result.total).toBe(150);
+    });
+
+    it("should use higher minimum for 2 aniversariantes (min 15)", async () => {
+      const quarta = new Date("2025-01-15T00:00:00");
+      const result = await configuracaoPrecoService.calcularPrecoFesta(quarta, 8, 2);
+      expect(result.minimoCriancas).toBe(15);
+      expect(result.criancasFaturadas).toBe(15);
+      expect(result.total).toBe(225);
+    });
+
+    it("should use higher minimum for 3+ aniversariantes (min 20)", async () => {
+      const quarta = new Date("2025-01-15T00:00:00");
+      const result = await configuracaoPrecoService.calcularPrecoFesta(quarta, 8, 3);
+      expect(result.minimoCriancas).toBe(20);
+      expect(result.criancasFaturadas).toBe(20);
+      expect(result.total).toBe(300);
+    });
+  });
+
+  // ── getPrecoCrianca / getMinimoCriancas ───────────────────────
+  describe("getPrecoCrianca() & getMinimoCriancas()", () => {
+    it("should return weekday per-child price for a Wednesday", async () => {
+      const quarta = new Date("2025-01-15T00:00:00");
+      const preco = await configuracaoPrecoService.getPrecoCrianca(quarta);
+      expect(preco).toBe(15);
+    });
+
+    it("should return weekend per-child price for a Saturday", async () => {
+      const sabado = new Date("2025-01-18T00:00:00");
+      const preco = await configuracaoPrecoService.getPrecoCrianca(sabado);
       expect(preco).toBe(20);
     });
 
-    it("should return weekday price for a Monday", async () => {
-      // 2025-01-13 é uma segunda-feira
-      const segunda = new Date("2025-01-13T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoFesta(segunda);
-      expect(preco).toBe(15);
+    it("should return correct minimums for aniversariantes counts", async () => {
+      expect(await configuracaoPrecoService.getMinimoCriancas(1)).toBe(10);
+      expect(await configuracaoPrecoService.getMinimoCriancas(2)).toBe(15);
+      expect(await configuracaoPrecoService.getMinimoCriancas(3)).toBe(20);
+      expect(await configuracaoPrecoService.getMinimoCriancas(5)).toBe(20);
+    });
+  });
+
+  // ── calcularCustoMeias ────────────────────────────────────────
+  describe("calcularCustoMeias()", () => {
+    it("should calculate cost for a given quantity", async () => {
+      const custo = await configuracaoPrecoService.calcularCustoMeias(5);
+      expect(custo).toBe(10);
+    });
+
+    it("should return 0 for 0 meias", async () => {
+      const custo = await configuracaoPrecoService.calcularCustoMeias(0);
+      expect(custo).toBe(0);
     });
   });
 

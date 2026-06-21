@@ -1,5 +1,7 @@
 import prisma from "@festas/db";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
+import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
+import { cacifoService } from "@/services/cacifo.service";
 
 interface AniversarianteInput {
   nome: string;
@@ -40,6 +42,12 @@ interface CreateReservaData {
   descontoPercentagem?: number;
   descontoMotivo?: string;
   boloQuantidade?: number;
+  // Pagamento dividido (até 2 métodos)
+  metodoPagamento2?: string;
+  valorPago2?: number;
+  // Meias (compra obrigatória)
+  meiasQuantidade?: number;
+  meiasPrecoUnit?: number;
   // Related
   extrasIds?: string[];
   extrasTexto?: Record<string, string>;
@@ -82,6 +90,12 @@ interface UpdateReservaData {
   valorCaucao?: number;
   descontoPercentagem?: number;
   descontoMotivo?: string;
+  // Pagamento dividido (até 2 métodos)
+  metodoPagamento2?: string;
+  valorPago2?: number;
+  // Meias (compra obrigatória)
+  meiasQuantidade?: number;
+  meiasPrecoUnit?: number;
   extrasIds?: string[];
   extrasTexto?: Record<string, string>;
   monitoresIds?: string[];
@@ -288,6 +302,10 @@ export const reservaService = {
     if (!data.horario) throw new Error("HORARIO_REQUIRED");
     if (!data.localId) throw new Error("LOCAL_REQUIRED");
 
+    // Verificar dia bloqueado no calendário
+    const bloqueado = await excecaoCalendarioService.isBloqueado(new Date(data.data));
+    if (bloqueado) throw new Error("DAY_BLOCKED");
+
     let clienteId = data.clienteId;
 
     // Process aniversariantes if provided
@@ -329,6 +347,20 @@ export const reservaService = {
     });
     if (conflitosCriacao.length > 0) throw new Error("LOCAL_NOT_AVAILABLE");
 
+    // ── Cálculo de preço por criança (com mínimos por aniversariante) ──
+    const numAniversariantes = aniversarianteIds.length;
+    const calculo = await configuracaoPrecoService.calcularPrecoFesta(
+      new Date(data.data),
+      data.numCriancas || 0,
+      numAniversariantes
+    );
+
+    // ── Cálculo de custo de meias (auto-preencher preço unitário do tarifário) ──
+    let meiasPrecoUnit = data.meiasPrecoUnit;
+    if (data.meiasQuantidade && meiasPrecoUnit === undefined) {
+      meiasPrecoUnit = Number((await configuracaoPrecoService.getConfig()).precoMeias);
+    }
+
     return prisma.reserva.create({
       data: {
         data: new Date(data.data),
@@ -337,6 +369,8 @@ export const reservaService = {
         localId: data.localId,
         clienteId,
         numCriancas: data.numCriancas || 0,
+        precoCriancaAplicado: calculo.precoCrianca,
+        minimoCriancas: calculo.minimoCriancas,
         notas: data.notas,
         tema: data.tema,
         previsaoCriancas: data.previsaoCriancas,
@@ -347,7 +381,9 @@ export const reservaService = {
         observacoesBrindes: data.observacoesBrindes,
         outrosExtras: data.outrosExtras,
         metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
+        metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
         valorPago: data.valorPago,
+        valorPago2: data.valorPago2,
         pago: data.pago ?? false,
         referenciaPagamento: data.referenciaPagamento,
         caucao: (data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA") ?? "NAO_PAGA",
@@ -355,6 +391,8 @@ export const reservaService = {
         descontoPercentagem: data.descontoPercentagem,
         descontoMotivo: data.descontoMotivo,
         boloQuantidade: data.boloQuantidade,
+        meiasQuantidade: data.meiasQuantidade,
+        meiasPrecoUnit,
         estado: "RESERVA",
         extras: data.extrasIds
           ? { create: data.extrasIds.map((extraId) => ({ extraId, textoPersonalizado: data.extrasTexto?.[extraId] })) }
@@ -404,6 +442,12 @@ export const reservaService = {
       }
     }
 
+    // Verificar dia bloqueado se a data foi alterada
+    if (data.data) {
+      const bloqueado = await excecaoCalendarioService.isBloqueado(new Date(data.data));
+      if (bloqueado) throw new Error("DAY_BLOCKED");
+    }
+
     if (data.localId || data.data || data.horario) {
       const conflitosUpdate = await findConflitos({
         data: data.data ?? reserva.data,
@@ -448,7 +492,9 @@ export const reservaService = {
         observacoesBrindes: data.observacoesBrindes,
         outrosExtras: data.outrosExtras,
         metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
+        metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
         valorPago: data.valorPago,
+        valorPago2: data.valorPago2,
         pago: data.pago,
         referenciaPagamento: data.referenciaPagamento,
         caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
@@ -456,6 +502,8 @@ export const reservaService = {
         descontoPercentagem: data.descontoPercentagem,
         descontoMotivo: data.descontoMotivo,
         boloQuantidade: data.boloQuantidade,
+        meiasQuantidade: data.meiasQuantidade,
+        meiasPrecoUnit: data.meiasPrecoUnit,
         extras: data.extrasIds
           ? { create: data.extrasIds.map((extraId) => ({ extraId, textoPersonalizado: data.extrasTexto?.[extraId] })) }
           : undefined,
@@ -574,7 +622,11 @@ export const reservaService = {
       custoExcesso = options.custoExcessoManual;
     }
 
-    const custoTotalFinal = Number(reserva.valorPago ?? 0) + custoExcesso;
+    // ── Custo das meias (compra obrigatória) ──
+    const custoMeias =
+      (reserva.meiasQuantidade ?? 0) * Number(reserva.meiasPrecoUnit ?? 0);
+
+    const custoTotalFinal = Number(reserva.valorPago ?? 0) + custoExcesso + custoMeias;
 
     // Save cacifos snapshot before releasing
     const cacifos = await prisma.cacifo.findMany({
@@ -591,11 +643,8 @@ export const reservaService = {
       })
     );
 
-    // Release all cacifos
-    await prisma.cacifo.updateMany({
-      where: { reservaId: id },
-      data: { estado: "LIVRE", reservaId: null, notas: null, criancas: null },
-    });
+    // Release all cacifos (preservando histórico de ocupação)
+    await cacifoService.libertarCacifosDaReserva(id);
 
     return prisma.reserva.update({
       where: { id },

@@ -1,4 +1,26 @@
 import prisma from "@festas/db";
+import { Prisma } from "@prisma/client";
+
+/**
+ * Entrada do histórico de ocupação de um cacifo.
+ */
+interface HistoricoEntry {
+  reservaId?: string;
+  entradaLivreId?: string;
+  estadoAnterior: string;
+  notas?: string;
+  criancas?: string;
+  ocupadoEm?: string | null;
+  libertadoEm: string;
+}
+
+/**
+ * Adiciona uma entrada ao histórico JSON de um cacifo.
+ */
+function adicionarAoHistorico(historicoAtual: unknown, entry: HistoricoEntry): Prisma.InputJsonValue {
+  const lista = Array.isArray(historicoAtual) ? (historicoAtual as HistoricoEntry[]) : [];
+  return [...lista, entry] as unknown as Prisma.InputJsonValue;
+}
 
 export const cacifoService = {
   async list(filtros?: { estado?: string; reservaId?: string }) {
@@ -34,6 +56,19 @@ export const cacifoService = {
     });
   },
 
+  /**
+   * Cacifos disponíveis (LIVRE) ou já atribuídos à reserva indicada,
+   * para permitir re-edição sem perder a atribuição atual.
+   */
+  async getDisponiveisParaFesta(reservaId?: string) {
+    return prisma.cacifo.findMany({
+      where: reservaId
+        ? { OR: [{ estado: "LIVRE" }, { estado: { in: ["RESERVADO", "OCUPADO"] }, reservaId }] }
+        : { estado: "LIVRE" },
+      orderBy: { numero: "asc" },
+    });
+  },
+
   async marcarOcupado(id: string, reservaId: string, dados?: { notas?: string; criancas?: string }) {
     const cacifo = await this.getById(id);
     if (cacifo.estado === "OCUPADO") throw new Error("ALREADY_OCCUPIED");
@@ -49,9 +84,23 @@ export const cacifoService = {
     });
   },
 
+  /**
+   * Liberta o cacifo PRESERVANDO o histórico de ocupação.
+   * Os dados da ocupação (notas, criancas, reserva) são movidos para o JSON `historico`.
+   */
   async libertar(id: string) {
     const cacifo = await this.getById(id);
     if (cacifo.estado === "LIVRE") throw new Error("CANNOT_RELEASE_FREE");
+
+    // Preservar histórico antes de limpar
+    const entry: HistoricoEntry = {
+      reservaId: cacifo.reservaId ?? undefined,
+      estadoAnterior: cacifo.estado,
+      notas: cacifo.notas ?? undefined,
+      criancas: cacifo.criancas ?? undefined,
+      ocupadoEm: null, // campo opcional para registo futuro
+      libertadoEm: new Date().toISOString(),
+    };
 
     return prisma.cacifo.update({
       where: { id },
@@ -60,6 +109,7 @@ export const cacifoService = {
         reservaId: null,
         notas: null,
         criancas: null,
+        historico: adicionarAoHistorico(cacifo.historico, entry),
       },
     });
   },
@@ -112,16 +162,47 @@ export const cacifoService = {
     return results;
   },
 
+  /**
+   * Liberta todos os cacifos de uma reserva, preservando histórico.
+   */
   async libertarCacifosDaReserva(reservaId: string) {
-    return prisma.cacifo.updateMany({
-      where: { reservaId },
-      data: {
-        estado: "LIVRE",
-        reservaId: null,
-        notas: null,
-        criancas: null,
-      },
-    });
+    const cacifos = await prisma.cacifo.findMany({ where: { reservaId } });
+
+    await Promise.all(
+      cacifos.map(async (cacifo) => {
+        const entry: HistoricoEntry = {
+          reservaId: cacifo.reservaId ?? undefined,
+          estadoAnterior: cacifo.estado,
+          notas: cacifo.notas ?? undefined,
+          criancas: cacifo.criancas ?? undefined,
+          ocupadoEm: null,
+          libertadoEm: new Date().toISOString(),
+        };
+        await prisma.cacifo.update({
+          where: { id: cacifo.id },
+          data: {
+            estado: "LIVRE",
+            reservaId: null,
+            notas: null,
+            criancas: null,
+            historico: adicionarAoHistorico(cacifo.historico, entry),
+          },
+        });
+      })
+    );
+
+    return { count: cacifos.length };
+  },
+
+  /**
+   * Retorna o histórico de ocupação de um cacifo (JSON preservado).
+   */
+  async getHistorico(id: string): Promise<HistoricoEntry[]> {
+    const cacifo = await this.getById(id);
+    if (!cacifo.historico) return [];
+    return Array.isArray(cacifo.historico)
+      ? (cacifo.historico as unknown as HistoricoEntry[])
+      : [];
   },
 
   async getContadores() {
