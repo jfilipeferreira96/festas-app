@@ -7,6 +7,7 @@ export const TEST_IDS = {
   // Users
   USER_ADMIN: "test-user-admin-001",
   USER_LANCHE: "test-user-lanche-001",
+  USER_CACIFOS: "test-user-cacifos-001",
 
   // Locais
   LOCAL_1: "test-local-001",
@@ -195,7 +196,7 @@ export async function seedTestData(): Promise<void> {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Reserva confirmada (today, 10:00)
+  // Reserva confirmada (today, 10:00) — com meias + split payment demo
   await testPrisma.reserva.upsert({
     where: { id: TEST_IDS.RESERVA_CONFIRMADA },
     update: {},
@@ -209,6 +210,17 @@ export async function seedTestData(): Promise<void> {
       estado: "CONFIRMADO",
       clienteId: TEST_IDS.CLIENTE_1,
       localId: TEST_IDS.LOCAL_1,
+      // Preço por criança (cálculo aplicado)
+      precoCriancaAplicado: 15,
+      minimoCriancas: 10,
+      // Meias (compra obrigatória)
+      meiasQuantidade: 18,
+      meiasPrecoUnit: 2,
+      // Split payment (caução MBWAY + resto multibanco)
+      metodoPagamento: "MBWAY",
+      valorPago: 50,
+      metodoPagamento2: "MULTIBANCO",
+      valorPago2: 240,
     },
   });
   // Link aniversariante via pivot
@@ -285,8 +297,51 @@ export async function seedTestData(): Promise<void> {
       precoCriancaFimSemana: 20,
       precoEntradaHoraSemana: 10,
       precoEntradaHoraFimSemana: 12,
+      minimosCriancasPorAniversariante: [
+        { aniversariantes: 1, minimo: 10 },
+        { aniversariantes: 2, minimo: 15 },
+        { aniversariantes: 3, minimo: 20 },
+      ],
+      precoMeias: 2,
+      precoExcessoFixo: 5,
+      duracaoDefaultFestaMin: 135,
+      duracaoExcessoBlocoMin: 30,
     },
   });
+
+  // ── User CACIFOS ────────────────────────────────────────────
+  await testPrisma.user.upsert({
+    where: { id: TEST_IDS.USER_CACIFOS },
+    update: {},
+    create: { id: TEST_IDS.USER_CACIFOS, name: "Cacifos Teste", email: "cacifos-teste@festas.pt", funcao: "CACIFOS", activo: true, emailVerified: true },
+  });
+
+  // ── Exceções de Calendário (demo) ───────────────────────────
+  const feriadoDemo = new Date(today);
+  feriadoDemo.setDate(feriadoDemo.getDate() + 30);
+  await testPrisma.excecaoCalendario.upsert({
+    where: { data: feriadoDemo },
+    update: {},
+    create: { data: feriadoDemo, tipo: "FERIADO", nome: "Feriado Demo", afectaPreco: true, bloqueiaReserva: false, recorrenciaAnual: false },
+  });
+  const bloqueadoDemo = new Date(today);
+  bloqueadoDemo.setDate(bloqueadoDemo.getDate() + 45);
+  await testPrisma.excecaoCalendario.upsert({
+    where: { data: bloqueadoDemo },
+    update: {},
+    create: { data: bloqueadoDemo, tipo: "BLOQUEADO", nome: "Dia Bloqueado Demo", afectaPreco: false, bloqueiaReserva: true, recorrenciaAnual: false },
+  });
+
+  // ── Slots Horários (demo) ───────────────────────────────────
+  for (const slot of [
+    { horaInicio: "10:00", duracaoMin: 135, ordem: 1 },
+    { horaInicio: "14:00", duracaoMin: 135, ordem: 2 },
+  ]) {
+    const existing = await testPrisma.slotHorario.findFirst({ where: { horaInicio: slot.horaInicio } });
+    if (!existing) {
+      await testPrisma.slotHorario.create({ data: slot });
+    }
+  }
 
   // ── Entradas Livres ─────────────────────────────────────────
   const entradaInicio = new Date(today);

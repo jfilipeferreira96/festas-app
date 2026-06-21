@@ -94,6 +94,9 @@ async function main() {
   await seedExtras();
   await seedMonitores();
   await seedCacifos();
+  await seedConfiguracaoPreco();
+  await seedExcecoesCalendario();
+  await seedSlotsHorario();
   await seedClientes();
   await seedEtapasFestaConfig();
   await seedReservas();
@@ -218,6 +221,115 @@ async function seedCacifos() {
     });
   }
   console.log("  ✓ 40 cacifos (all LIVRE)\n");
+}
+
+// ─── Configuração de Preços (singleton) ───────────────────────
+async function seedConfiguracaoPreco() {
+  console.log("  Creating pricing config...");
+
+  const minimos = [
+    { aniversariantes: 1, minimo: 10 },
+    { aniversariantes: 2, minimo: 15 },
+    { aniversariantes: 3, minimo: 20 },
+  ];
+
+  const existing = await prisma.configuracaoPreco.findFirst();
+  if (!existing) {
+    await prisma.configuracaoPreco.create({
+      data: {
+        precoCriancaSemana: 15,
+        precoCriancaFimSemana: 20,
+        precoEntradaHoraSemana: 10,
+        precoEntradaHoraFimSemana: 12,
+        minimosCriancasPorAniversariante: minimos,
+        precoMeias: 2,
+        precoExcessoFixo: 5,
+        duracaoDefaultFestaMin: 135,
+        duracaoExcessoBlocoMin: 30,
+      },
+    });
+  } else {
+    await prisma.configuracaoPreco.update({
+      where: { id: existing.id },
+      data: { minimosCriancasPorAniversariante: minimos },
+    });
+  }
+
+  console.log("  ✓ Pricing config (preço por criança + mínimos + meias)\n");
+}
+
+// ─── Exceções de Calendário (feriados PT + demo bloqueado) ────
+async function seedExcecoesCalendario() {
+  console.log("  Creating calendar exceptions...");
+
+  const anoAtual = new Date().getFullYear();
+  const feriadosFixos: [string, string, string][] = [
+    ["01", "01", "Ano Novo"],
+    ["05", "01", "Dia do Trabalhador"],
+    ["06", "10", "Dia de Portugal"],
+    ["08", "15", "Assunção de Nossa Senhora"],
+    ["12", "08", "Imaculada Conceição"],
+    ["12", "25", "Natal"],
+  ];
+
+  for (const ano of [anoAtual, anoAtual + 1]) {
+    for (const [mes, dia, nome] of feriadosFixos) {
+      const data = new Date(`${ano}-${mes}-${dia}T00:00:00Z`);
+      await prisma.excecaoCalendario.upsert({
+        where: { data },
+        update: {},
+        create: {
+          data,
+          tipo: "FERIADO",
+          nome,
+          afectaPreco: true,
+          bloqueiaReserva: false,
+          recorrenciaAnual: true,
+        },
+      });
+    }
+  }
+
+  // Demo: um dia bloqueado (manutenção) daqui a 20 dias
+  const dataBloqueio = daysFromNow(20);
+  dataBloqueio.setHours(0, 0, 0, 0);
+  await prisma.excecaoCalendario.upsert({
+    where: { data: dataBloqueio },
+    update: {},
+    create: {
+      data: dataBloqueio,
+      tipo: "BLOQUEADO",
+      nome: "Manutenção (demo)",
+      afectaPreco: false,
+      bloqueiaReserva: true,
+      recorrenciaAnual: false,
+    },
+  });
+
+  console.log(`  ✓ ${feriadosFixos.length} feriados × 2 anos + 1 dia bloqueado (demo)\n`);
+}
+
+// ─── Slots Horários (festa default 2h15m) ─────────────────────
+async function seedSlotsHorario() {
+  console.log("  Creating time slots...");
+
+  const slots = [
+    { horaInicio: "10:00", duracaoMin: 135, ordem: 1 },
+    { horaInicio: "14:00", duracaoMin: 135, ordem: 2 },
+    { horaInicio: "16:30", duracaoMin: 135, ordem: 3 },
+    { horaInicio: "18:30", duracaoMin: 135, ordem: 4 },
+  ];
+
+  for (const s of slots) {
+    const existing = await prisma.slotHorario.findFirst({
+      where: { horaInicio: s.horaInicio },
+    });
+    if (!existing) {
+      await prisma.slotHorario.create({ data: s });
+    }
+  }
+
+  console.log(`  ✓ ${slots.length} slots horários (default 2h15m)\n`);
 }
 
 // ─── Clientes & Aniversariantes ───────────────────────────────
