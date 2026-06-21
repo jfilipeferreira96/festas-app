@@ -39,6 +39,11 @@ const entradaLivreSchema = z.object({
   cacifoId: z.string().optional(),
   observacoes: z.string().optional(),
   observacoesLesoes: z.string().optional(),
+  // Pagamento dividido (2º método)
+  metodoPagamento2: z.string().optional(),
+  valorPago2: z.number().min(0).optional(),
+  // Meias (compra obrigatória no parque)
+  meiasQuantidade: z.number().min(0).optional(),
 });
 
 type EntradaLivreFormData = z.infer<typeof entradaLivreSchema>;
@@ -135,6 +140,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       cacifoId: entrada?.cacifoId ?? "",
       observacoes: entrada?.observacoes ?? "",
       observacoesLesoes: entrada?.observacoesLesoes ?? "",
+      metodoPagamento2: entrada?.metodoPagamento2 ?? "",
+      valorPago2: entrada?.valorPago2 ?? 0,
+      meiasQuantidade: entrada?.meiasQuantidade ?? 0,
     }),
     [entrada]
   );
@@ -334,6 +342,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
         observacoes: data.observacoes || undefined,
         observacoesLesoes: data.observacoesLesoes || undefined,
+        metodoPagamento2: data.metodoPagamento2 && data.metodoPagamento2 !== "NONE" ? data.metodoPagamento2 : undefined,
+        valorPago2: data.valorPago2 || undefined,
+        meiasQuantidade: data.meiasQuantidade || undefined,
       };
 
       if (isEdit && entrada) {
@@ -670,6 +681,30 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                   onChange={(checked) => setValue("pago", checked)}
                   label={pago ? "Pago" : "Não pago"}
                 />
+              </div>
+            </div>
+            {/* ── Meias (compra obrigatória no parque) ── */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1">Meias (quantidade)</label>
+                <InputField type="number" min={0} {...register("meiasQuantidade", { valueAsNumber: true })} placeholder="0" />
+              </div>
+              <div className="flex items-end"><p className="text-xs text-text-muted">Preço por par aplicado automaticamente na conclusão.</p></div>
+            </div>
+            {/* ── Pagamento dividido (2º método) ── */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
+                <Select
+                  options={METODO_PAGAMENTO_OPTIONS}
+                  placeholder="2º método"
+                  value={watch("metodoPagamento2") ?? "NONE"}
+                  onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label>
+                <InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" />
               </div>
             </div>
             {/* ── Resumo de valores ── */}

@@ -12,6 +12,7 @@ import {
   Package,
   Lock,
   Clock,
+  Users,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
 import {
@@ -204,7 +205,7 @@ const KPIGrid = React.memo(function KPIGrid() {
         title="Entradas Livres"
         icon={<DoorOpen size={20} />}
         iconColor={palette.entradas.fg}
-        columns={2}
+        columns={3}
       >
         <MiniStat
           label="Ativas"
@@ -223,6 +224,14 @@ const KPIGrid = React.memo(function KPIGrid() {
               : undefined
           }
           icon={<CheckCircle2 size={16} />}
+          color={palette.entradas.fg}
+          bgColor={palette.entradas.bg}
+        />
+        <MiniStat
+          label="Crianças no Parque"
+          value={kpis?.totalCriancasNoParque ?? 0}
+          hint="Festas + Entradas"
+          icon={<Users size={16} />}
           color={palette.entradas.fg}
           bgColor={palette.entradas.bg}
         />

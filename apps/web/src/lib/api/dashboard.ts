@@ -12,6 +12,7 @@ export interface DashboardKPIs {
   cacifosOcupados: number;
   cacifosReservados: number;
   cacifosTotal: number;
+  totalCriancasNoParque: number;
 }
 
 export interface ReservaEmCurso {

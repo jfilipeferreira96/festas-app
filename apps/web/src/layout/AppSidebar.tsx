@@ -29,6 +29,9 @@ import {
   LockKeyhole,
   DoorOpen,
   BadgeEuro,
+  Sandwich,
+  CalendarX,
+  Clock,
 } from "lucide-react";
 
 type NavItem = {
@@ -90,6 +93,12 @@ const mainNavItems: NavItem[] = [
     icon: <Package className="w-5 h-5" />,
     path: "/cacifos",
     modulo: "cacifos",
+  },
+  {
+    name: "Lanche",
+    icon: <Sandwich className="w-5 h-5" />,
+    path: "/lanche",
+    modulo: "lanche",
   },
   {
     name: "Monitores",
@@ -155,6 +164,18 @@ const configItems: NavItem = {
       name: "Preços",
       path: "/configuracoes/precos",
       icon: <BadgeEuro className="w-4 h-4" />,
+      modulo: "configuracoes",
+    },
+    {
+      name: "Exceções",
+      path: "/configuracoes/excecoes-calendario",
+      icon: <CalendarX className="w-4 h-4" />,
+      modulo: "configuracoes",
+    },
+    {
+      name: "Slots Horário",
+      path: "/configuracoes/slots-horario",
+      icon: <Clock className="w-4 h-4" />,
       modulo: "configuracoes",
     },
   ],

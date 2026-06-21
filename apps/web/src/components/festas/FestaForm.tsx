@@ -74,6 +74,11 @@ const reservaSchema = z.object({
   metodoPagamento: z.string().optional(),
   valorPago: z.number().min(0).optional(),
   pago: z.boolean().optional(),
+  // Pagamento dividido (2º método)
+  metodoPagamento2: z.string().optional(),
+  valorPago2: z.number().min(0).optional(),
+  // Meias (compra obrigatória no parque)
+  meiasQuantidade: z.number().min(0).optional(),
   observacoesGerais: z.string().optional(),
   observacoesLesoes: z.string().optional(),
   observacoesBrindes: z.string().optional(),
@@ -201,6 +206,8 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     previsaoCriancas: reserva?.numCriancas ?? reserva?.previsaoCriancas ?? 10,
     metodoPagamento: reserva?.metodoPagamento ?? "", valorPago: reserva?.valorPago ?? 0,
     pago: reserva?.pago ?? false,
+    metodoPagamento2: reserva?.metodoPagamento2 ?? "", valorPago2: reserva?.valorPago2 ?? 0,
+    meiasQuantidade: reserva?.meiasQuantidade ?? 0,
     observacoesGerais: reserva?.observacoesGerais ?? "", observacoesLesoes: reserva?.observacoesLesoes ?? "",
     observacoesBrindes: reserva?.observacoesBrindes ?? "", outrosExtras: reserva?.outrosExtras ?? "",
     caucao: reserva?.caucao ?? "", referenciaPagamento: reserva?.referenciaPagamento ?? "",
@@ -246,11 +253,18 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     const dataObj = new Date(watchedData + "T00:00:00");
     const dia = dataObj.getDay();
     const isFimSemana = dia === 0 || dia === 6;
-    const preco = isFimSemana
-      ? Number(configPreco.precoFestaFimSemana)
-      : Number(configPreco.precoFestaSemana);
-    setValue("valorPago", preco);
-  }, [watchedData, configPreco, setValue, reserva?.valorPago]);
+    // Preço por criança (preenchimento automático: preço × nº crianças faturadas)
+    const precoCrianca = isFimSemana
+      ? Number(configPreco.precoCriancaFimSemana)
+      : Number(configPreco.precoCriancaSemana);
+    const numAniversariantes = aniversariantes.filter((a) => a.nome.trim()).length || 1;
+    const minimos = configPreco.minimosCriancasPorAniversariante ?? [];
+    const minimoAplicavel = minimos
+      .filter((m) => m.aniversariantes <= numAniversariantes)
+      .sort((a, b) => b.aniversariantes - a.aniversariantes)[0]?.minimo ?? 10;
+    const criancasFaturadas = Math.max(previsaoCriancas ?? 10, minimoAplicavel);
+    setValue("valorPago", precoCrianca * criancasFaturadas);
+  }, [watchedData, configPreco, setValue, reserva?.valorPago, previsaoCriancas, aniversariantes]);
 
   React.useEffect(() => {
     const count = previsaoCriancas ?? 0;
@@ -378,6 +392,9 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
       cor: data.cor || undefined, menuId: data.menuId || undefined,
       metodoPagamento: (data.metodoPagamento || undefined) as MetodoPagamento | undefined,
       valorPago: data.valorPago || undefined, pago: data.pago, notas: obsGerais,
+      metodoPagamento2: (data.metodoPagamento2 || undefined) as MetodoPagamento | undefined,
+      valorPago2: data.valorPago2 || undefined,
+      meiasQuantidade: data.meiasQuantidade || undefined,
       observacoesGerais: data.observacoesGerais || undefined,
       observacoesLesoes: data.observacoesLesoes || undefined,
       observacoesBrindes: data.observacoesBrindes || undefined,
@@ -926,6 +943,18 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
               <Select options={[{ value: "NONE", label: "Não definido" }, { value: "NAO_PAGA", label: "Não paga" }, { value: "PAGA", label: "Paga" }, { value: "PAGA_NO_DIA", label: "Paga no dia" }]} placeholder="Caução" value={defaultValues.caucao ?? "NONE"} onChange={(val) => setValue("caucao", val === "NONE" ? undefined : val)} />
             </div>
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Caução (€)</label><InputField type="number" step={0.01} min={0} {...register("valorCaucao", { valueAsNumber: true })} placeholder="0,00" /></div>
+          </div>
+          {/* ── Meias (compra obrigatória no parque) ── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-xs font-medium text-text-secondary mb-1">Meias (quantidade)</label><InputField type="number" min={0} {...register("meiasQuantidade", { valueAsNumber: true })} placeholder="0" /></div>
+            <div className="flex items-end"><p className="text-xs text-text-muted">Preço por par aplicado automaticamente na finalização.</p></div>
+          </div>
+          {/* ── Pagamento dividido (2º método) ── */}
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
+              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="2º método" value={defaultValues.metodoPagamento2 ?? "NONE"} onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)} />
+            </div>
+            <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label><InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Desconto Menu (%)</label><InputField type="number" min={0} max={100} {...register("descontoPercentagem", { valueAsNumber: true })} placeholder="0" /></div>
