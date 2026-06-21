@@ -99,7 +99,7 @@ export const lancheService = {
         cor: r.cor ?? undefined,
         numCriancas: r.numCriancas,
         previsaoCriancas: r.previsaoCriancas ?? undefined,
-        numConfirmados: r.participantes.length,
+        numConfirmados: r.participantes.filter((p) => p.presente).length,
         idadeAniversariante,
         menu,
         notasLanche: r.menu?.notasLanche ?? undefined,
@@ -184,11 +184,18 @@ export const lancheService = {
     const reserva = await prisma.reserva.findUnique({ where: { id: data.reservaId } });
     if (!reserva) throw new Error("NOT_FOUND");
 
-    // Atualizar observações de lesões na própria reserva
+    // Atualizar observações de lesões + hora do lanche na própria reserva
+    const reservaUpdates: Record<string, unknown> = {};
     if (data.observacoesLesoes !== undefined) {
+      reservaUpdates.observacoesLesoes = data.observacoesLesoes;
+    }
+    if (data.horaLanche !== undefined) {
+      reservaUpdates.horaLanche = data.horaLanche;
+    }
+    if (Object.keys(reservaUpdates).length > 0) {
       await prisma.reserva.update({
         where: { id: data.reservaId },
-        data: { observacoesLesoes: data.observacoesLesoes },
+        data: reservaUpdates,
       });
     }
 

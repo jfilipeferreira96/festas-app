@@ -1,7 +1,21 @@
-"use client";
-
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/session";
+import { hasAccess, getHomeRoute } from "@/lib/permissoes";
 import FestasTabela from "@/components/festas/FestasTabela";
+import type { FuncaoUtilizador } from "@saas/shared-types";
 
-export default function FestasPage() {
-  return <FestasTabela />;
+export default async function FestasPage() {
+  const session = await requireAuth();
+  if (!session?.user) redirect("/entrar");
+
+  const userFuncao = (session.user as Record<string, unknown>).funcao as FuncaoUtilizador | undefined;
+  // Only roles with reservas read access can see /festas
+  if (!hasAccess(userFuncao, "reservas", "leitura")) {
+    redirect(getHomeRoute(userFuncao));
+  }
+
+  // CACIFOS gets a toned-down (read-only, simplified) view
+  const mode = userFuncao === "CACIFOS" ? "cacifos" : "full";
+
+  return <FestasTabela mode={mode} />;
 }

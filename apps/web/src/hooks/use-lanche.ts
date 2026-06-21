@@ -25,7 +25,7 @@ export function useAtualizarNotasLanche() {
       data,
     }: {
       reservaId: string;
-      data: { notasLanche?: string; itensLanche?: unknown; observacoesLesoes?: string };
+      data: { notasLanche?: string; itensLanche?: unknown; observacoesLesoes?: string; horaLanche?: string | null };
     }) => lancheApi.atualizarNotas(reservaId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lanches"] });

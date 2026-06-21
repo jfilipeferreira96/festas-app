@@ -13,7 +13,7 @@ import CheckInModal from "./CheckInModal";
 import HistoricoModal from "./HistoricoModal";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
 import { getAniversarianteNome } from "@/lib/api/reservas";
-import DataTable from "@/components/ui/table/DataTable";
+import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { formatDate, formatDuration } from "@/utils/date";
@@ -37,7 +37,8 @@ const FILTER_OPTIONS = [
   { value: "CONCLUIDA", label: "Concluídas" },
 ];
 
-export default function FestasTabela() {
+export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacifos" }) {
+  const isCacifos = mode === "cacifos";
   const [filtro, setFiltro] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
@@ -162,11 +163,13 @@ export default function FestasTabela() {
           </div>
         </div>
 
-        {/* Right: Action button */}
-        <Button onClick={handleCreate} className="flex items-center gap-2">
-          <Plus size={16} />
-          Nova Festa
-        </Button>
+        {/* Right: Action button (hidden in CACIFOS read-only mode) */}
+        {!isCacifos && (
+          <Button onClick={handleCreate} className="flex items-center gap-2">
+            <Plus size={16} />
+            Nova Festa
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -174,7 +177,7 @@ export default function FestasTabela() {
         data={reservas?.items || []}
         itemLabel="festas"
         defaultSort={{ key: "data", direction: "desc" }}
-        columns={[
+        columns={([
           {
             key: "aniversariante",
             label: "Aniversariante",
@@ -297,7 +300,7 @@ export default function FestasTabela() {
               </StatusBadge>
             ),
           },
-        ]}
+        ] as Column<Reserva>[]).filter((c) => !(isCacifos && (c.key === "contacto" || c.key === "temaMenu")))}
         loading={isLoading}
         searchable
         searchPlaceholder="Pesquisar por nome, contacto, email..."
@@ -317,7 +320,20 @@ export default function FestasTabela() {
         pageSize={10}
         onView={handleView}
         onEdit={handleEdit}
-        renderActions={(r) => (
+        renderActions={(r) => {
+          // CACIFOS read-only: apenas "Ver detalhes"
+          if (isCacifos) {
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <Tooltip content="Ver detalhes" position="top" theme="dark">
+                  <button onClick={() => handleView(r)} className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors">
+                    <Eye size={15} />
+                  </button>
+                </Tooltip>
+              </div>
+            );
+          }
+          return (
           <div className="flex items-center justify-end gap-1">
             {/* Quick action: Confirmar (RESERVA) */}
             {r.estado === "RESERVA" && (
@@ -403,11 +419,12 @@ export default function FestasTabela() {
               </button>
             </Tooltip>
           </div>
-        )}
+          );
+        }}
         emptyState={{
           title: "Nenhuma festa encontrada",
-          description: "Comece por criar uma nova festa.",
-          action: (
+          description: isCacifos ? "Não há festas para mostrar." : "Comece por criar uma nova festa.",
+          action: isCacifos ? undefined : (
             <Button onClick={handleCreate} className="flex items-center gap-2">
               <Plus size={16} />
               Nova Festa

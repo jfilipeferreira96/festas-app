@@ -1019,8 +1019,44 @@ async function seedReservas() {
     await prisma.menu.upsert({ where: { id: `menu-${c.id}` }, update: {}, create: { id: `menu-${c.id}`, nome: `Menu ${c.tema}`, preco: c.menuPreco, notas: "Sumo, pipocas, bolo", reservaId: c.id } });
   }
 
+  // ─── Preencher horaLanche (45 min após início) + observacoesBrindesPais ───
+  const todasReservas = await prisma.reserva.findMany({
+    select: { id: true, horario: true, observacoesBrindes: true },
+  });
+  for (const r of todasReservas) {
+    let horaLanche: string | null = null;
+    if (r.horario) {
+      const [h, m] = r.horario.split(":").map(Number);
+      if (!Number.isNaN(h) && !Number.isNaN(m)) {
+        const total = h * 60 + m + 45;
+        const hh = String(Math.floor((total % 1440) / 60)).padStart(2, "0");
+        const mm = String(total % 60).padStart(2, "0");
+        horaLanche = `${hh}:${mm}`;
+      }
+    }
+    await prisma.reserva.update({
+      where: { id: r.id },
+      data: {
+        horaLanche,
+        observacoesBrindesPais: r.observacoesBrindes
+          ? "Sacos-lembrança para os pais com foto da festa."
+          : "Oferecer café e fatia de bolo aos pais durante a festa.",
+      },
+    });
+  }
+
+  // horaLanche para entradas livres (45 min após início)
+  const entradas = await prisma.entradaLivre.findMany({ select: { id: true, inicioEm: true } });
+  for (const e of entradas) {
+    if (!e.inicioEm) continue;
+    const d = new Date(e.inicioEm);
+    d.setMinutes(d.getMinutes() + 45);
+    const horaLanche = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    await prisma.entradaLivre.update({ where: { id: e.id }, data: { horaLanche } });
+  }
+
   console.log("  ✓ 27 reservas (10 originais + 4 em curso + 5 esta semana + 5 semana passada + 3 confirmadas hoje)");
-  console.log("  ✓ Menus, extras, participantes, etapas para todas\n");
+  console.log("  ✓ Menus, extras, participantes, etapas, horaLanche e brindes-pais para todas\n");
 }
 
 // ─── Marketing ────────────────────────────────────────────────

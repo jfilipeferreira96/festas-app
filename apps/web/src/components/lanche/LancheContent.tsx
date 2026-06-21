@@ -42,6 +42,7 @@ export default function LancheContent() {
   const [editingFesta, setEditingFesta] = useState<LancheFesta | null>(null);
   const [notasEdit, setNotasEdit] = useState("");
   const [lesoesEdit, setLesoesEdit] = useState("");
+  const [horaLancheEdit, setHoraLancheEdit] = useState<string>("");
 
   const { data: lanches, isLoading } = useLanchesDoDia(dataSel);
   const { data: alergias } = useAlergias(dataSel);
@@ -65,16 +66,21 @@ export default function LancheContent() {
     setEditingFesta(festa);
     setNotasEdit(festa.notasLanche ?? "");
     setLesoesEdit(festa.observacoesLesoes ?? "");
+    setHoraLancheEdit(festa.horaLanche ?? "");
   }, []);
 
   const handleSaveNotas = useCallback(async () => {
     if (!editingFesta) return;
     await atualizarNotas.mutateAsync({
       reservaId: editingFesta.reservaId,
-      data: { notasLanche: notasEdit, observacoesLesoes: lesoesEdit },
+      data: {
+        notasLanche: notasEdit,
+        observacoesLesoes: lesoesEdit,
+        horaLanche: horaLancheEdit || null,
+      },
     });
     setEditingFesta(null);
-  }, [editingFesta, notasEdit, lesoesEdit, atualizarNotas]);
+  }, [editingFesta, notasEdit, lesoesEdit, horaLancheEdit, atualizarNotas]);
 
   const handleEstadoChange = useCallback(
     (reservaId: string, estado: string) => {
@@ -303,6 +309,20 @@ export default function LancheContent() {
                   onChange={(v) => setNotasEdit(v)}
                   rows={4}
                 />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-text-primary mb-1.5 block">
+                  Hora do Lanche
+                </label>
+                <InputField
+                  type="time"
+                  value={horaLancheEdit}
+                  onChange={(e) => setHoraLancheEdit(e.target.value)}
+                  className="w-40"
+                />
+                <p className="text-xs text-text-muted mt-1">
+                  Define a hora a que o lanche deve ser servido (opcional).
+                </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-text-primary mb-1.5 block">

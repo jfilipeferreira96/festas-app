@@ -4,6 +4,7 @@ export interface AtualizarNotasInput {
   notasLanche?: string;
   itensLanche?: unknown;
   observacoesLesoes?: string;
+  horaLanche?: string | null;
 }
 
 export const lancheApi = {

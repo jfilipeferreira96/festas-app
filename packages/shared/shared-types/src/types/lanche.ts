@@ -50,6 +50,7 @@ export interface AtualizarNotasLancheDTO {
   notasLanche?: string;
   itensLanche?: unknown;
   observacoesLesoes?: string;
+  horaLanche?: string | null;
 }
 
 export interface AtualizarLancheEntradaDTO {

@@ -44,6 +44,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       notasLanche: body.notasLanche,
       itensLanche: body.itensLanche,
       observacoesLesoes: body.observacoesLesoes,
+      horaLanche: body.horaLanche,
     });
     return NextResponse.json(menu);
   } catch (error) {
