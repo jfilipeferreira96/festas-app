@@ -11,6 +11,7 @@ export interface User {
   name?: string | null;
   image?: string | null;
   role?: string;
+  funcao?: string;
   createdAt?: Date;
   updatedAt?: Date;
   emailVerified?: boolean;

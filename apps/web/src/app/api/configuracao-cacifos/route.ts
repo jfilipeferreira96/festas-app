@@ -35,7 +35,7 @@ export async function PUT(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const denied = checkFuncao(auth.user, "ADMINISTRADOR", "GESTOR");
+    const denied = checkFuncao(auth.user, "ADMINISTRADOR");
     if (denied) return denied;
 
     const { totalCacifos, nomes } = await request.json();

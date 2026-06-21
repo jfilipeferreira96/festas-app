@@ -29,8 +29,8 @@ export const configuracaoPrecoService = {
    * Atualiza (ou cria) a configuração de preços global.
    */
   async updateConfig(data: {
-    precoFestaSemana?: number;
-    precoFestaFimSemana?: number;
+    precoCriancaSemana?: number;
+    precoCriancaFimSemana?: number;
     precoEntradaHoraSemana?: number;
     precoEntradaHoraFimSemana?: number;
     precoExcessoFixo?: number;
@@ -40,8 +40,8 @@ export const configuracaoPrecoService = {
     if (!existing) {
       return prisma.configuracaoPreco.create({
         data: {
-          precoFestaSemana: data.precoFestaSemana ?? 150,
-          precoFestaFimSemana: data.precoFestaFimSemana ?? 200,
+          precoCriancaSemana: data.precoCriancaSemana ?? 15,
+          precoCriancaFimSemana: data.precoCriancaFimSemana ?? 20,
           precoEntradaHoraSemana: data.precoEntradaHoraSemana ?? 10,
           precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana ?? 12,
           precoExcessoFixo: data.precoExcessoFixo ?? 5,
@@ -52,8 +52,8 @@ export const configuracaoPrecoService = {
     return prisma.configuracaoPreco.update({
       where: { id: existing.id },
       data: {
-        ...(data.precoFestaSemana !== undefined && { precoFestaSemana: data.precoFestaSemana }),
-        ...(data.precoFestaFimSemana !== undefined && { precoFestaFimSemana: data.precoFestaFimSemana }),
+        ...(data.precoCriancaSemana !== undefined && { precoCriancaSemana: data.precoCriancaSemana }),
+        ...(data.precoCriancaFimSemana !== undefined && { precoCriancaFimSemana: data.precoCriancaFimSemana }),
         ...(data.precoEntradaHoraSemana !== undefined && { precoEntradaHoraSemana: data.precoEntradaHoraSemana }),
         ...(data.precoEntradaHoraFimSemana !== undefined && { precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana }),
         ...(data.precoExcessoFixo !== undefined && { precoExcessoFixo: data.precoExcessoFixo }),
@@ -69,8 +69,8 @@ export const configuracaoPrecoService = {
     const config = await this.getConfig();
     const fimSemana = isFimSemana(data);
     const preco = fimSemana
-      ? Number(config.precoFestaFimSemana)
-      : Number(config.precoFestaSemana);
+      ? Number(config.precoCriancaFimSemana)
+      : Number(config.precoCriancaSemana);
     return preco;
   },
 

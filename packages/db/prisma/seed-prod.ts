@@ -2,7 +2,7 @@
  * Production seed — MINIMUM data to bring the app online.
  *
  * Creates ONLY:
- *   - 1 admin user (via Better Auth) + RBAC permissions (FuncaoPermissao)
+ *   - 1 admin user (via Better Auth)
  *   - Cacifos config (40 cacifos LIVRE)
  *
  * NO reservas, clientes, extras, monitores, marketing, entradas livres, etc.
@@ -49,7 +49,6 @@ async function main() {
   console.log("🌱 Production seed (minimum)...\n");
 
   await seedAdmin();
-  await seedRBAC();
   await seedCacifos();
 
   console.log("\n✅ Production seed complete!");
@@ -80,47 +79,6 @@ async function seedAdmin() {
 
   console.log(`  ✓ Admin: ${email} / ${password}`);
   console.log("  ⚠️  Altera a palavra-passe após o primeiro login!\n");
-}
-
-// ─── RBAC (FuncaoPermissao) ───────────────────────────────────
-async function seedRBAC() {
-  console.log("  Creating RBAC permissions...");
-
-  const perms = [
-    { funcao: "ADMINISTRADOR" as const, modulo: "reservas", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "cacifos", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "menus", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "relatorios", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "divulgacoes", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "configuracoes", nivelAcesso: "administracao" },
-    { funcao: "GESTOR" as const, modulo: "reservas", nivelAcesso: "escrita" },
-    { funcao: "GESTOR" as const, modulo: "cacifos", nivelAcesso: "escrita" },
-    { funcao: "GESTOR" as const, modulo: "menus", nivelAcesso: "escrita" },
-    { funcao: "GESTOR" as const, modulo: "relatorios", nivelAcesso: "leitura" },
-    { funcao: "GESTOR" as const, modulo: "divulgacoes", nivelAcesso: "leitura" },
-    { funcao: "GESTOR" as const, modulo: "configuracoes", nivelAcesso: "leitura" },
-    { funcao: "RECECAO" as const, modulo: "reservas", nivelAcesso: "escrita" },
-    { funcao: "RECECAO" as const, modulo: "cacifos", nivelAcesso: "escrita" },
-    { funcao: "RECECAO" as const, modulo: "menus", nivelAcesso: "leitura" },
-    { funcao: "RECECAO" as const, modulo: "relatorios", nivelAcesso: "sem_acesso" },
-    { funcao: "RECECAO" as const, modulo: "divulgacoes", nivelAcesso: "sem_acesso" },
-    { funcao: "RECECAO" as const, modulo: "configuracoes", nivelAcesso: "sem_acesso" },
-    { funcao: "MARKETING" as const, modulo: "reservas", nivelAcesso: "leitura" },
-    { funcao: "MARKETING" as const, modulo: "cacifos", nivelAcesso: "sem_acesso" },
-    { funcao: "MARKETING" as const, modulo: "menus", nivelAcesso: "sem_acesso" },
-    { funcao: "MARKETING" as const, modulo: "relatorios", nivelAcesso: "leitura" },
-    { funcao: "MARKETING" as const, modulo: "divulgacoes", nivelAcesso: "escrita" },
-    { funcao: "MARKETING" as const, modulo: "configuracoes", nivelAcesso: "sem_acesso" },
-  ];
-
-  for (const perm of perms) {
-    await prisma.funcaoPermissao.upsert({
-      where: { funcao_modulo: { funcao: perm.funcao, modulo: perm.modulo } },
-      update: { nivelAcesso: perm.nivelAcesso },
-      create: perm,
-    });
-  }
-  console.log(`  ✓ ${perms.length} RBAC permissions\n`);
 }
 
 // ─── Cacifos ──────────────────────────────────────────────────

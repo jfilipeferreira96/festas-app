@@ -54,13 +54,13 @@ describe("Utilizador Service", () => {
         name: "Test User",
         email,
         password: "testPassword123",
-        funcao: "RECECAO",
+        funcao: "LANCHE",
       });
 
       expect(utilizador).toBeDefined();
       expect(utilizador.name).toBe("Test User");
       expect(utilizador.email).toBe(email);
-      expect(utilizador.funcao).toBe("RECECAO");
+      expect(utilizador.funcao).toBe("LANCHE");
       expect(utilizador.activo).toBe(true);
       expect(utilizador).not.toHaveProperty("password");
 
@@ -73,7 +73,7 @@ describe("Utilizador Service", () => {
           name: "",
           email: `test-${Date.now()}@test.com`,
           password: "testPassword123",
-          funcao: "RECECAO",
+          funcao: "LANCHE",
         })
       ).rejects.toThrow("NAME_REQUIRED");
     });
@@ -84,7 +84,7 @@ describe("Utilizador Service", () => {
           name: "Test User",
           email: "",
           password: "testPassword123",
-          funcao: "RECECAO",
+          funcao: "LANCHE",
         })
       ).rejects.toThrow("EMAIL_REQUIRED");
     });
@@ -104,26 +104,26 @@ describe("Utilizador Service", () => {
   describe("updateFuncao()", () => {
     it("should update user role", async () => {
       const updated = await utilizadorService.updateFuncao(
-        TEST_IDS.USER_RECECAO,
-        { funcao: "GESTOR" },
+        TEST_IDS.USER_LANCHE,
+        { funcao: "CACIFOS" },
         TEST_IDS.USER_ADMIN,
       );
 
-      expect(updated.funcao).toBe("GESTOR");
+      expect(updated.funcao).toBe("CACIFOS");
 
       // Restore
-      await utilizadorService.updateFuncao(TEST_IDS.USER_RECECAO, { funcao: "RECECAO" }, TEST_IDS.USER_ADMIN);
+      await utilizadorService.updateFuncao(TEST_IDS.USER_LANCHE, { funcao: "LANCHE" }, TEST_IDS.USER_ADMIN);
     });
 
     it("should throw NOT_FOUND for non-existent user", async () => {
       await expect(
-        utilizadorService.updateFuncao("non-existent-id", { funcao: "GESTOR" }, "admin-id")
+        utilizadorService.updateFuncao("non-existent-id", { funcao: "CACIFOS" }, "admin-id")
       ).rejects.toThrow("NOT_FOUND");
     });
 
     it("should throw CANNOT_CHANGE_OWN_FUNCAO if user tries to update own role", async () => {
       await expect(
-        utilizadorService.updateFuncao(TEST_IDS.USER_ADMIN, { funcao: "GESTOR" }, TEST_IDS.USER_ADMIN)
+        utilizadorService.updateFuncao(TEST_IDS.USER_ADMIN, { funcao: "CACIFOS" }, TEST_IDS.USER_ADMIN)
       ).rejects.toThrow("CANNOT_CHANGE_OWN_FUNCAO");
     });
   });
@@ -131,7 +131,7 @@ describe("Utilizador Service", () => {
   describe("updateActivo()", () => {
     it("should deactivate a user", async () => {
       const updated = await utilizadorService.updateActivo(
-        TEST_IDS.USER_RECECAO,
+        TEST_IDS.USER_LANCHE,
         { activo: false },
         TEST_IDS.USER_ADMIN,
       );
@@ -139,15 +139,15 @@ describe("Utilizador Service", () => {
       expect(updated.activo).toBe(false);
 
       // Restore
-      await utilizadorService.updateActivo(TEST_IDS.USER_RECECAO, { activo: true }, TEST_IDS.USER_ADMIN);
+      await utilizadorService.updateActivo(TEST_IDS.USER_LANCHE, { activo: true }, TEST_IDS.USER_ADMIN);
     });
 
     it("should activate a deactivated user", async () => {
       // First deactivate
-      await utilizadorService.updateActivo(TEST_IDS.USER_RECECAO, { activo: false }, TEST_IDS.USER_ADMIN);
+      await utilizadorService.updateActivo(TEST_IDS.USER_LANCHE, { activo: false }, TEST_IDS.USER_ADMIN);
 
       const updated = await utilizadorService.updateActivo(
-        TEST_IDS.USER_RECECAO,
+        TEST_IDS.USER_LANCHE,
         { activo: true },
         TEST_IDS.USER_ADMIN,
       );
@@ -175,7 +175,7 @@ describe("Utilizador Service", () => {
           id: `delete-test-${Date.now()}`,
           email: `delete-test-${Date.now()}@test.com`,
           name: "Delete Test User",
-          funcao: "RECECAO",
+          funcao: "LANCHE",
           activo: true,
           emailVerified: true,
         },

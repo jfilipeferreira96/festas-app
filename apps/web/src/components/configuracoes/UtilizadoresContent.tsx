@@ -37,22 +37,19 @@ type EditUserFormData = z.infer<typeof editUserSchema>;
 
 // --- Constants ---
 // Design tokens (see apps/web/src/app/globals.css @theme directive):
-//   brand-*      → primary blue family (GESTOR)
 //   accent-purple-* → ADMINISTRADOR
-//   accent-green-*  → RECECAO
-//   accent-orange-* → MARKETING
+//   accent-green-*  → LANCHE
+//   accent-orange-* → CACIFOS
 const roleColors: Record<FuncaoUtilizador, string> = {
   ADMINISTRADOR: "bg-accent-purple-50 text-accent-purple-700",
-  GESTOR: "bg-brand-50 text-brand-700",
-  RECECAO: "bg-accent-green-50 text-accent-green-700",
-  MARKETING: "bg-accent-orange-50 text-accent-orange-700",
+  LANCHE: "bg-accent-green-50 text-accent-green-700",
+  CACIFOS: "bg-accent-orange-50 text-accent-orange-700",
 };
 
 const roleLabels: Record<FuncaoUtilizador, string> = {
   ADMINISTRADOR: "Administrador",
-  GESTOR: "Gestor",
-  RECECAO: "Receção",
-  MARKETING: "Marketing",
+  LANCHE: "Lanche",
+  CACIFOS: "Cacifos",
 };
 
 const roleOptions = Object.entries(roleLabels).map(([value, label]) => ({ value, label }));

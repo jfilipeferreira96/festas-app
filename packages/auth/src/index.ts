@@ -69,7 +69,7 @@ export const auth = betterAuth({
   baseURL: envConfig.BETTER_AUTH_URL || "http://localhost:5555",
   user: {
     additionalFields: {
-      funcao: { type: "string", required: true, defaultValue: "RECECAO" },
+      funcao: { type: "string", required: true, defaultValue: "ADMINISTRADOR" },
       activo: { type: "boolean", required: true, defaultValue: true },
     },
   },

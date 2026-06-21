@@ -6,7 +6,7 @@ import testPrisma from "./test-prisma";
 export const TEST_IDS = {
   // Users
   USER_ADMIN: "test-user-admin-001",
-  USER_RECECAO: "test-user-rececao-001",
+  USER_LANCHE: "test-user-lanche-001",
 
   // Locais
   LOCAL_1: "test-local-001",
@@ -66,9 +66,9 @@ export async function seedTestData(): Promise<void> {
     create: { id: TEST_IDS.USER_ADMIN, name: "Admin Teste", email: "admin-teste@festas.pt", funcao: "ADMINISTRADOR", activo: true, emailVerified: true },
   });
   await testPrisma.user.upsert({
-    where: { id: TEST_IDS.USER_RECECAO },
+    where: { id: TEST_IDS.USER_LANCHE },
     update: {},
-    create: { id: TEST_IDS.USER_RECECAO, name: "Receção Teste", email: "rececao-teste@festas.pt", funcao: "RECECAO", activo: true, emailVerified: true },
+    create: { id: TEST_IDS.USER_LANCHE, name: "Lanche Teste", email: "lanche-teste@festas.pt", funcao: "LANCHE", activo: true, emailVerified: true },
   });
 
   // ── Locais ──────────────────────────────────────────────────
@@ -281,8 +281,8 @@ export async function seedTestData(): Promise<void> {
     update: {},
     create: {
       id: "config-preco-test",
-      precoFestaSemana: 150,
-      precoFestaFimSemana: 200,
+      precoCriancaSemana: 15,
+      precoCriancaFimSemana: 20,
       precoEntradaHoraSemana: 10,
       precoEntradaHoraFimSemana: 12,
     },
@@ -412,7 +412,6 @@ export async function cleanTestData(): Promise<void> {
   await testPrisma.extraLocal.deleteMany().catch(() => {});
   await testPrisma.extra.deleteMany().catch(() => {});
 
-  await testPrisma.funcaoPermissao.deleteMany().catch(() => {});
   await testPrisma.local.deleteMany().catch(() => {});
 
   await testPrisma.user.deleteMany().catch(() => {});

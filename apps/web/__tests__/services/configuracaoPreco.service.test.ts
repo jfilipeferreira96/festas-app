@@ -35,8 +35,8 @@ describe("ConfiguracaoPreco Service", () => {
     it("should auto-create config with defaults if none exists", async () => {
       const config = await configuracaoPrecoService.getConfig();
       expect(config).toBeDefined();
-      expect(Number(config.precoFestaSemana)).toBe(150);
-      expect(Number(config.precoFestaFimSemana)).toBe(200);
+      expect(Number(config.precoCriancaSemana)).toBe(15);
+      expect(Number(config.precoCriancaFimSemana)).toBe(20);
       expect(Number(config.precoEntradaHoraSemana)).toBe(10);
       expect(Number(config.precoEntradaHoraFimSemana)).toBe(12);
       expect(Number(config.precoExcessoFixo)).toBe(5);
@@ -53,11 +53,11 @@ describe("ConfiguracaoPreco Service", () => {
   describe("updateConfig()", () => {
     it("should update existing config", async () => {
       const updated = await configuracaoPrecoService.updateConfig({
-        precoFestaSemana: 180,
-        precoFestaFimSemana: 250,
+        precoCriancaSemana: 18,
+        precoCriancaFimSemana: 25,
       });
-      expect(Number(updated.precoFestaSemana)).toBe(180);
-      expect(Number(updated.precoFestaFimSemana)).toBe(250);
+      expect(Number(updated.precoCriancaSemana)).toBe(18);
+      expect(Number(updated.precoCriancaFimSemana)).toBe(25);
       // Campos não atualizados mantêm-se
       expect(Number(updated.precoEntradaHoraSemana)).toBe(10);
     });
@@ -65,14 +65,14 @@ describe("ConfiguracaoPreco Service", () => {
     it("should create config if none exists", async () => {
       await testPrisma.configuracaoPreco.deleteMany({});
       const created = await configuracaoPrecoService.updateConfig({
-        precoFestaSemana: 160,
-        precoFestaFimSemana: 220,
+        precoCriancaSemana: 16,
+        precoCriancaFimSemana: 22,
         precoEntradaHoraSemana: 11,
         precoEntradaHoraFimSemana: 14,
       });
       expect(created).toBeDefined();
-      expect(Number(created.precoFestaSemana)).toBe(160);
-      expect(Number(created.precoFestaFimSemana)).toBe(220);
+      expect(Number(created.precoCriancaSemana)).toBe(16);
+      expect(Number(created.precoCriancaFimSemana)).toBe(22);
       expect(Number(created.precoEntradaHoraSemana)).toBe(11);
       expect(Number(created.precoEntradaHoraFimSemana)).toBe(14);
     });
@@ -83,7 +83,7 @@ describe("ConfiguracaoPreco Service", () => {
       });
       const config = await configuracaoPrecoService.getConfig();
       expect(Number(config.precoEntradaHoraSemana)).toBe(9);
-      expect(Number(config.precoFestaSemana)).toBe(160);
+      expect(Number(config.precoCriancaSemana)).toBe(16);
     });
 
     it("should update precoExcessoFixo", async () => {
@@ -98,8 +98,8 @@ describe("ConfiguracaoPreco Service", () => {
   describe("calcularPrecoFesta()", () => {
     beforeAll(async () => {
       await configuracaoPrecoService.updateConfig({
-        precoFestaSemana: 150,
-        precoFestaFimSemana: 200,
+        precoCriancaSemana: 15,
+        precoCriancaFimSemana: 20,
       });
     });
 
@@ -107,28 +107,28 @@ describe("ConfiguracaoPreco Service", () => {
       // 2025-01-15 é uma quarta-feira
       const quarta = new Date("2025-01-15T00:00:00");
       const preco = await configuracaoPrecoService.calcularPrecoFesta(quarta);
-      expect(preco).toBe(150);
+      expect(preco).toBe(15);
     });
 
     it("should return weekend price for a Saturday", async () => {
       // 2025-01-18 é um sábado
       const sabado = new Date("2025-01-18T00:00:00");
       const preco = await configuracaoPrecoService.calcularPrecoFesta(sabado);
-      expect(preco).toBe(200);
+      expect(preco).toBe(20);
     });
 
     it("should return weekend price for a Sunday", async () => {
       // 2025-01-19 é um domingo
       const domingo = new Date("2025-01-19T00:00:00");
       const preco = await configuracaoPrecoService.calcularPrecoFesta(domingo);
-      expect(preco).toBe(200);
+      expect(preco).toBe(20);
     });
 
     it("should return weekday price for a Monday", async () => {
       // 2025-01-13 é uma segunda-feira
       const segunda = new Date("2025-01-13T00:00:00");
       const preco = await configuracaoPrecoService.calcularPrecoFesta(segunda);
-      expect(preco).toBe(150);
+      expect(preco).toBe(15);
     });
   });
 

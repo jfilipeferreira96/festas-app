@@ -46,7 +46,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const denied = checkFuncao(auth.user, "ADMINISTRADOR", "GESTOR");
+    const denied = checkFuncao(auth.user, "ADMINISTRADOR");
     if (denied) return denied;
 
     const { id } = await params;
@@ -71,7 +71,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const denied = checkFuncao(auth.user, "ADMINISTRADOR", "GESTOR");
+    const denied = checkFuncao(auth.user, "ADMINISTRADOR");
     if (denied) return denied;
 
     const { id } = await params;

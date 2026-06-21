@@ -3,8 +3,9 @@ import type { Session, User } from "@festas/auth/types";
 import { NextResponse } from "next/server";
 import { t } from "@/lib/i18n-server";
 import Logger from "@/lib/logger";
+import { hasAccess, type Modulo, type NivelAcesso } from "@/lib/permissoes";
 
-type FuncaoUtilizador = "ADMINISTRADOR" | "GESTOR" | "RECECAO" | "MARKETING";
+type FuncaoUtilizador = "ADMINISTRADOR" | "LANCHE" | "CACIFOS";
 
 /**
  * Resolves a Better Auth session from a Next.js Request (reads the session cookie).
@@ -48,7 +49,7 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
  * Returns `null` when allowed, or a 403 NextResponse when denied.
  *
  * Usage:
- *   const denied = checkFuncao(user, "ADMINISTRADOR", "GESTOR");
+ *   const denied = checkFuncao(user, "ADMINISTRADOR");
  *   if (denied) return denied;
  */
 export function checkFuncao(
@@ -69,6 +70,39 @@ export function checkFuncao(
       userId: user.id,
       userFuncao,
       requiredFuncoes: allowed,
+    });
+    return NextResponse.json(
+      { error: t("auth.insufficientPermissions") },
+      { status: 403 }
+    );
+  }
+
+  return null;
+}
+
+/**
+ * Checks the authenticated user's access to a module using the hardcoded
+ * permission matrix (`lib/permissoes`). Must be used AFTER `requireAuth`.
+ *
+ * Usage:
+ *   const denied = checkModulo(user, "cacifos", "escrita");
+ *   if (denied) return denied;
+ */
+export function checkModulo(
+  user: User,
+  modulo: Modulo,
+  minLevel: NivelAcesso = "leitura"
+): NextResponse | null {
+  const userFuncao = (user as Record<string, unknown>).funcao as
+    | FuncaoUtilizador
+    | undefined;
+
+  if (!hasAccess(userFuncao, modulo, minLevel)) {
+    Logger.info("Modulo access denied", {
+      userId: user.id,
+      userFuncao,
+      modulo,
+      minLevel,
     });
     return NextResponse.json(
       { error: t("auth.insufficientPermissions") },

@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { useSignOut } from "@/hooks/useSignOut";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
-import type { Modulo } from "@/lib/api/permissoes";
+import type { Modulo } from "@/lib/permissoes";
 
 import {
   LayoutDashboard,
@@ -18,7 +18,6 @@ import {
   UtensilsCrossed,
   BarChart2,
   Users,
-  ShieldCheck,
   UserCog,
   MapPin,
   LogOut,
@@ -120,12 +119,6 @@ const configItems: NavItem = {
       name: "Utilizadores",
       path: "/configuracoes/utilizadores",
       icon: <Users className="w-4 h-4" />,
-      modulo: "configuracoes",
-    },
-    {
-      name: "Permissões",
-      path: "/configuracoes/permissoes",
-      icon: <ShieldCheck className="w-4 h-4" />,
       modulo: "configuracoes",
     },
     {

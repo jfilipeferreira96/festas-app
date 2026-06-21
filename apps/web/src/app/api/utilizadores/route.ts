@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const denied = checkFuncao(auth.user, "ADMINISTRADOR", "GESTOR");
+    const denied = checkFuncao(auth.user, "ADMINISTRADOR");
     if (denied) return denied;
 
     const utilizadores = await utilizadorService.list();

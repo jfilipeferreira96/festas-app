@@ -104,16 +104,14 @@ async function main() {
   console.log("\n✅ Dev seed complete!");
 }
 
-// ─── Essential (Users + RBAC) ─────────────────────────────────
+// ─── Essential (Users) ────────────────────────────────────────
 async function seedEssential() {
   console.log("  Creating auth users...");
 
   const users = [
     { id: "admin-001", name: "Maria Silva", email: "admin@festas.pt", password: "admin123", funcao: "ADMINISTRADOR" as const },
-    { id: "gestor-001", name: "Ana Costa", email: "gestor@festas.pt", password: "gestor123", funcao: "GESTOR" as const },
-    { id: "rececao-001", name: "Joana Rodrigues", email: "rececao@festas.pt", password: "rececao123", funcao: "RECECAO" as const },
-    { id: "marketing-001", name: "Rui Fernandes", email: "marketing@festas.pt", password: "marketing123", funcao: "MARKETING" as const },
-    { id: "rececao-002", name: "Sandra Lopes", email: "rececao2@festas.pt", password: "rececao2123", funcao: "RECECAO" as const },
+    { id: "lanche-001", name: "Lanche Teste", email: "lanche@festas.pt", password: "lanche123", funcao: "LANCHE" as const },
+    { id: "cacifos-001", name: "Cacifos Teste", email: "cacifos@festas.pt", password: "cacifos123", funcao: "CACIFOS" as const },
   ];
 
   await prisma.account.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
@@ -131,43 +129,6 @@ async function seedEssential() {
     });
     console.log(`  ✓ ${user.email} / ${user.password}`);
   }
-
-  // RBAC
-  const perms = [
-    { funcao: "ADMINISTRADOR" as const, modulo: "reservas", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "cacifos", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "menus", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "relatorios", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "divulgacoes", nivelAcesso: "administracao" },
-    { funcao: "ADMINISTRADOR" as const, modulo: "configuracoes", nivelAcesso: "administracao" },
-    { funcao: "GESTOR" as const, modulo: "reservas", nivelAcesso: "escrita" },
-    { funcao: "GESTOR" as const, modulo: "cacifos", nivelAcesso: "escrita" },
-    { funcao: "GESTOR" as const, modulo: "menus", nivelAcesso: "escrita" },
-    { funcao: "GESTOR" as const, modulo: "relatorios", nivelAcesso: "leitura" },
-    { funcao: "GESTOR" as const, modulo: "divulgacoes", nivelAcesso: "leitura" },
-    { funcao: "GESTOR" as const, modulo: "configuracoes", nivelAcesso: "leitura" },
-    { funcao: "RECECAO" as const, modulo: "reservas", nivelAcesso: "escrita" },
-    { funcao: "RECECAO" as const, modulo: "cacifos", nivelAcesso: "escrita" },
-    { funcao: "RECECAO" as const, modulo: "menus", nivelAcesso: "leitura" },
-    { funcao: "RECECAO" as const, modulo: "relatorios", nivelAcesso: "sem_acesso" },
-    { funcao: "RECECAO" as const, modulo: "divulgacoes", nivelAcesso: "sem_acesso" },
-    { funcao: "RECECAO" as const, modulo: "configuracoes", nivelAcesso: "sem_acesso" },
-    { funcao: "MARKETING" as const, modulo: "reservas", nivelAcesso: "leitura" },
-    { funcao: "MARKETING" as const, modulo: "cacifos", nivelAcesso: "sem_acesso" },
-    { funcao: "MARKETING" as const, modulo: "menus", nivelAcesso: "sem_acesso" },
-    { funcao: "MARKETING" as const, modulo: "relatorios", nivelAcesso: "leitura" },
-    { funcao: "MARKETING" as const, modulo: "divulgacoes", nivelAcesso: "escrita" },
-    { funcao: "MARKETING" as const, modulo: "configuracoes", nivelAcesso: "sem_acesso" },
-  ];
-
-  for (const perm of perms) {
-    await prisma.funcaoPermissao.upsert({
-      where: { funcao_modulo: { funcao: perm.funcao, modulo: perm.modulo } },
-      update: { nivelAcesso: perm.nivelAcesso },
-      create: perm,
-    });
-  }
-  console.log("  ✓ RBAC permissions\n");
 }
 
 // ─── Locais ───────────────────────────────────────────────────
