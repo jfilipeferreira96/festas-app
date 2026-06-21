@@ -25,7 +25,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   // Party management specific fields
-  funcao        FuncaoUtilizador @default(RECECAO)
+  funcao        FuncaoUtilizador @default(ADMINISTRADOR)
   activo        Boolean          @default(true)
 
   sessions      Session[]
@@ -87,9 +87,8 @@ model Verification {
 
 enum FuncaoUtilizador {
   ADMINISTRADOR
-  GESTOR
-  RECECAO
-  MARKETING
+  LANCHE
+  CACIFOS
 }
 
 enum EstadoReserva {
@@ -142,6 +141,11 @@ enum EstadoEntradaLivre {
   ATIVA
   CONCLUIDA
   CANCELADA
+}
+
+enum TipoExcecaoCalendario {
+  FERIADO
+  BLOQUEADO
 }
 
 // ============================================
@@ -302,18 +306,30 @@ model ConfiguracaoCacifo {
 // CONFIGURAÇÃO DE PREÇOS (singleton global)
 // ============================================
 // Um único tarifário para toda a aplicação.
-// Distingue dia de semana vs fim de semana.
-// Festa = preço fixo; Entrada Livre = preço por hora.
+// Preço POR CRIANÇA (festa); Entrada Livre = preço por hora.
+// Distingue dia de semana vs fim de semana vs feriado (feriado usa tarifa fim-semana).
+// Mínimos de crianças por nº de aniversariantes (1→10, 2→15, 3→20).
 
 model ConfiguracaoPreco {
-  id                        String   @id @default(cuid())
-  precoFestaSemana          Decimal  @db.Decimal(10, 2) @default(150)
-  precoFestaFimSemana       Decimal  @db.Decimal(10, 2) @default(200)
-  precoEntradaHoraSemana    Decimal  @db.Decimal(10, 2) @default(10)
-  precoEntradaHoraFimSemana Decimal  @db.Decimal(10, 2) @default(12)
-  precoExcessoFixo          Decimal  @db.Decimal(10, 2) @default(5)
-  createdAt                 DateTime @default(now())
-  updatedAt                 DateTime @updatedAt
+  id                            String   @id @default(cuid())
+  // Preço POR CRIANÇA (festa)
+  precoCriancaSemana            Decimal  @db.Decimal(10, 2) @default(15)
+  precoCriancaFimSemana         Decimal  @db.Decimal(10, 2) @default(20)
+  // Entrada livre (preço por hora)
+  precoEntradaHoraSemana        Decimal  @db.Decimal(10, 2) @default(10)
+  precoEntradaHoraFimSemana     Decimal  @db.Decimal(10, 2) @default(12)
+  // Mínimos de crianças por nº de aniversariantes
+  // JSON: [{ "aniversariantes": 1, "minimo": 10 }, { "aniversariantes": 2, "minimo": 15 }, { "aniversariantes": 3, "minimo": 20 }]
+  minimosCriancasPorAniversariante Json?
+  // Meias (compra obrigatória no parque)
+  precoMeias                    Decimal  @db.Decimal(10, 2) @default(2)
+  // Excesso de tempo
+  precoExcessoFixo              Decimal  @db.Decimal(10, 2) @default(5)
+  // Durações default
+  duracaoDefaultFestaMin        Int      @default(135) // 2h15m
+  duracaoExcessoBlocoMin        Int      @default(30)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 
   @@map("configuracao_preco")
 }
@@ -358,6 +374,10 @@ model Reserva {
   pago                Boolean           @default(false)
   referenciaPagamento String?
 
+  // Pagamento dividido (até 2 métodos — o restante pode ser pago de outra forma)
+  metodoPagamento2    MetodoPagamento?
+  valorPago2          Decimal?          @db.Decimal(10, 2)
+
   // Caução
   caucao              EstadoCaucao      @default(NAO_PAGA)
   valorCaucao         Decimal?          @db.Decimal(10, 2)
@@ -371,6 +391,14 @@ model Reserva {
   // Desconto
   descontoPercentagem Int?
   descontoMotivo      String?
+
+  // ── Meias (compra obrigatória no parque) ──
+  meiasQuantidade     Int?
+  meiasPrecoUnit      Decimal?          @db.Decimal(10, 2)
+
+  // ── Preço por criança (cálculo aplicado) ──
+  precoCriancaAplicado Decimal?         @db.Decimal(10, 2)
+  minimoCriancas       Int?
 
   // ── Relações ──────────────────────────
   clienteId       String
@@ -492,6 +520,8 @@ model Cacifo {
   estado          EstadoCacifo      @default(LIVRE)
   notas           String?           @db.Text
   criancas        String?
+  // Histórico de ocupações (preservado quando o cacifo é libertado)
+  historico       Json?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -513,12 +543,16 @@ model Cacifo {
 // ============================================
 
 model Menu {
-  id        String   @id @default(cuid())
-  nome      String
-  preco     Decimal  @db.Decimal(10, 2) @default(0)
-  notas     String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  nome        String
+  preco       Decimal  @db.Decimal(10, 2) @default(0)
+  notas       String?  @db.Text
+  // Notas de lanche/alergias (visível à conta LANCHE)
+  notasLanche String?  @db.Text
+  // Itens do lanche (estruturado, opcional)
+  itensLanche Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   reservaId String   @unique
   reserva   Reserva  @relation(fields: [reservaId], references: [id], onDelete: Cascade)
@@ -629,17 +663,46 @@ model NotaRapida {
 }
 
 // ============================================
-// RBAC — Funções & Permissões
+// RBAC — Permissões HARDCODED (sem modelo na BD)
+// ============================================
+// As permissões são definidas em apps/web/src/lib/permissoes.ts
+// (matriz fixa por FuncaoUtilizador). Não há tabela na base de dados.
+
+// ============================================
+// EXCEÇÕES DE CALENDÁRIO (feriados + dias bloqueados)
+// ============================================
+// Uma exceção por data. FERIADO afecta o preço (tarifa fim-de-semana);
+// BLOQUEADO impede criar festas. Ambos podem coexistir (afectaPreco + bloqueiaReserva).
+
+model ExcecaoCalendario {
+  id               String                 @id @default(cuid())
+  data             DateTime               @db.Date
+  tipo             TipoExcecaoCalendario
+  nome             String
+  afectaPreco      Boolean                @default(true)
+  bloqueiaReserva  Boolean                @default(false)
+  recorrenciaAnual Boolean                @default(false)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  @@unique([data])
+  @@map("excecao_calendario")
+}
+
+// ============================================
+// SLOTS DE HORÁRIO (predefinidos para festas)
 // ============================================
 
-model FuncaoPermissao {
-  id          String   @id @default(cuid())
-  funcao      FuncaoUtilizador
-  modulo      String   // e.g., "reservas", "cacifos", "menus", "relatorios", "divulgacoes", "configuracoes"
-  nivelAcesso String   // "leitura", "escrita", "administracao"
+model SlotHorario {
+  id         String   @id @default(cuid())
+  horaInicio String   // HH:MM
+  duracaoMin Int      // default 135 (2h15m)
+  activo     Boolean  @default(true)
+  ordem      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@unique([funcao, modulo])
-  @@map("funcao_permissao")
+  @@map("slot_horario")
 }
 
 // ============================================
@@ -687,6 +750,14 @@ model EntradaLivre {
   metodoPagamento MetodoPagamento?
   pago            Boolean             @default(false)
   pagoExcesso     Boolean             @default(false)
+
+  // ── Pagamento dividido (até 2 métodos) ──
+  metodoPagamento2 MetodoPagamento?
+  valorPago2       Decimal?           @db.Decimal(10, 2)
+
+  // ── Meias (compra obrigatória no parque) ──
+  meiasQuantidade Int?
+  meiasPrecoUnit  Decimal?            @db.Decimal(10, 2)
 
   // ── Cacifo (opcional) ───────────────
   cacifoId        String?             @unique

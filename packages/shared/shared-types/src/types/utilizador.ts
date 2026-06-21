@@ -2,7 +2,7 @@
 // Utilizador — Types for user management
 // ===================================
 
-export type FuncaoUtilizador = "ADMINISTRADOR" | "GESTOR" | "RECECAO" | "MARKETING";
+export type FuncaoUtilizador = "ADMINISTRADOR" | "LANCHE" | "CACIFOS";
 
 export interface Utilizador {
   id: string;

@@ -16,7 +16,11 @@ export type { AlocacaoMonitor, CriarAlocacaoMonitorDTO, AtualizarAlocacaoMonitor
 export type { Extra, ExtraLocal } from "./types/extra";
 export type { TipoCampanha, EstadoCampanha, Campanha, EnvioCampanha, Segmento, NewsletterContacto, ContactoSegmento } from "./types/campanha";
 export type { EtapaFesta, ReservaEtapa as ReservaEtapaWithDetails } from "./types/etapaFesta";
-export type { Permissao, PermissaoInput } from "./types/permissao";
+export type { Modulo, NivelAcesso, MatrizPermissoes, Permissao } from "./types/permissao";
 export type { AuditLog } from "./types/audit";
 export type { CriancaInput, EntradaLivre, EntradaLivreExtraItem, CriarEntradaLivreDTO } from "./types/entradaLivre";
 export type { LinhaRelatorio, SecaoRelatorio, RelatorioFinanceiro } from "./types/relatorio";
+export type { TipoExcecaoCalendario, ExcecaoCalendario, CriarExcecaoCalendarioDTO } from "./types/excecaoCalendario";
+export type { SlotHorario, CriarSlotHorarioDTO } from "./types/slotHorario";
+export type { LancheFesta, LancheEntradaLivre, LancheDoDia, AtualizarNotasLancheDTO } from "./types/lanche";
+export type { MinimoCriancasPorAniversariante, ConfiguracaoPreco, AtualizarConfiguracaoPrecoDTO } from "./types/configuracaoPreco";

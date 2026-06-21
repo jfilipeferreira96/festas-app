@@ -28,6 +28,12 @@ export interface EntradaLivre {
   metodoPagamento?: string;
   pago: boolean;
   pagoExcesso: boolean;
+  // Pagamento dividido (até 2 métodos)
+  metodoPagamento2?: string;
+  valorPago2?: number;
+  // Meias
+  meiasQuantidade?: number;
+  meiasPrecoUnit?: number;
   cacifoId?: string;
   cacifo?: { id: string; numero: number; nome?: string };
   observacoes?: string;
@@ -58,6 +64,11 @@ export interface CriarEntradaLivreDTO {
   pago?: boolean;
   cacifoId?: string;
   extrasIds?: string[];
-    observacoes?: string;
+  observacoes?: string;
   observacoesLesoes?: string;
+  // Pagamento dividido (até 2 métodos)
+  metodoPagamento2?: string;
+  valorPago2?: number;
+  // Meias
+  meiasQuantidade?: number;
 }

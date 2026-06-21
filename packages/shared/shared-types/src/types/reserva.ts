@@ -50,6 +50,10 @@ export interface Reserva {
   pago: boolean;
   referenciaPagamento?: string;
 
+  // Pagamento dividido (até 2 métodos — restante pode ser pago de outra forma)
+  metodoPagamento2?: MetodoPagamento;
+  valorPago2?: number;
+
   // Caução
   caucao: EstadoCaucao;
   valorCaucao?: number;
@@ -57,6 +61,14 @@ export interface Reserva {
   // Desconto
   descontoPercentagem?: number;
   descontoMotivo?: string;
+
+  // Meias (compra obrigatória no parque)
+  meiasQuantidade?: number;
+  meiasPrecoUnit?: number;
+
+  // Preço por criança (cálculo aplicado)
+  precoCriancaAplicado?: number;
+  minimoCriancas?: number;
 
   createdAt: string;
   updatedAt: string;
@@ -125,6 +137,10 @@ export interface CriarReservaDTO {
   pago?: boolean;
   referenciaPagamento?: string;
 
+  // Pagamento dividido (até 2 métodos)
+  metodoPagamento2?: MetodoPagamento;
+  valorPago2?: number;
+
   // Caução
   caucao?: EstadoCaucao;
   valorCaucao?: number;
@@ -132,6 +148,9 @@ export interface CriarReservaDTO {
   // Desconto
   descontoPercentagem?: number;
   descontoMotivo?: string;
+
+  // Meias
+  meiasQuantidade?: number;
 
   // Related data
   extras?: { extraId: string; quantidade: number; textoPersonalizado?: string }[];
