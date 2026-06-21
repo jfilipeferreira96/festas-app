@@ -104,7 +104,13 @@ const mainNavItems: NavItem[] = [
     name: "Monitores",
     icon: <UserCog className="w-5 h-5" />,
     path: "/monitores",
-    modulo: "reservas",
+    modulo: "monitores",
+  },
+  {
+    name: "Festas a Acabar",
+    icon: <Clock className="w-5 h-5" />,
+    path: "/festas-acabar",
+    modulo: "festas_acabar",
   },
   {
     name: "Clientes",

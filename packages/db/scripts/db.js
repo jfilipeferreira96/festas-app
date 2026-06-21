@@ -145,6 +145,29 @@ function cleanStaleEnums() {
   }
 }
 
+/**
+ * Sanitize stale column data that references enum values removed from the schema.
+ * Prisma db push fails with "Data truncated for column X" when existing rows
+ * contain enum values that no longer exist (e.g. GESTOR, RECECAO, MARKETING).
+ */
+function sanitizeData() {
+  const sqlFile = join(DB_ROOT, "scripts", "fix-data.sql");
+  if (!existsSync(sqlFile)) return;
+
+  console.log("   Sanitizing stale column data...");
+  try {
+    execSync(prisma(`db execute --schema "${SCHEMA}" --file "${sqlFile}"`), {
+      stdio: "pipe",
+      cwd: DB_ROOT,
+      env: { ...process.env },
+      shell: process.platform === "win32" ? "cmd.exe" : undefined,
+    });
+    console.log("   ✅ Stale column data sanitized.\n");
+  } catch {
+    console.warn("   ⚠️  Could not sanitize data (non-critical, continuing...).\n");
+  }
+}
+
 // Execute the requested command
 switch (command) {
   case "generate":
@@ -180,6 +203,7 @@ switch (command) {
       console.log("   No valid migrations found. Using db push approach.\n");
       cleanMigrations();
       cleanStaleEnums();
+      sanitizeData();
       run(prisma(`db push --accept-data-loss --skip-generate --schema "${SCHEMA}"`));
     }
 
@@ -189,22 +213,26 @@ switch (command) {
   }
 
   case "clean": {
-    console.log("🧹 Cleaning database: wipe migrations → clean stale enums → push:force → generate\n");
+    console.log("🧹 Cleaning database: wipe migrations → clean stale enums → sanitize data → push:force → generate\n");
 
     // Step 1: Remove all migration directories
-    console.log("   Step 1/4: Removing old migrations...");
+    console.log("   Step 1/5: Removing old migrations...");
     cleanMigrations();
 
     // Step 2: Clean stale enum types that block db push
-    console.log("\n   Step 2/4: Cleaning stale enum types...");
+    console.log("\n   Step 2/5: Cleaning stale enum types...");
     cleanStaleEnums();
 
-    // Step 3: Push schema directly to DB (accepts data loss, skip auto-generate to avoid EPERM)
-    console.log("   Step 3/4: Pushing schema to database...");
+    // Step 3: Sanitize stale column data (enum values removed from schema)
+    console.log("\n   Step 3/5: Sanitizing stale column data...");
+    sanitizeData();
+
+    // Step 4: Push schema directly to DB (accepts data loss, skip auto-generate to avoid EPERM)
+    console.log("\n   Step 4/5: Pushing schema to database...");
     run(prisma(`db push --accept-data-loss --skip-generate --schema "${SCHEMA}"`));
 
-    // Step 4: Generate Prisma client
-    console.log("\n   Step 4/4: Generating Prisma client...");
+    // Step 5: Generate Prisma client
+    console.log("\n   Step 5/5: Generating Prisma client...");
     run(prisma(`generate --schema "${SCHEMA}"`));
 
     console.log("\n✅ Database cleaned successfully!");

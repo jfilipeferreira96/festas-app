@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-// PATCH /api/lanche/:reservaId — atualizar notas de lanche / itens
+// PATCH /api/lanche/:reservaId — atualizar notas de lanche / itens / observações lesões
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);
@@ -43,8 +43,30 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       reservaId,
       notasLanche: body.notasLanche,
       itensLanche: body.itensLanche,
+      observacoesLesoes: body.observacoesLesoes,
     });
     return NextResponse.json(menu);
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// PUT /api/lanche/:reservaId/estado — atualizar estado do lanche
+export async function PUT(request: NextRequest, { params }: Params) {
+  try {
+    const auth = await requireAuth(request);
+    if (!auth.ok) return auth.response;
+
+    const denied = checkModulo(auth.user, "lanche", "escrita");
+    if (denied) return denied;
+
+    const { reservaId } = await params;
+    const body = await request.json();
+    if (!body.estadoLanche || !["NAO_INICIADO", "A_DECORRER", "TERMINADO"].includes(body.estadoLanche)) {
+      return NextResponse.json({ error: "estadoLanche inválido" }, { status: 400 });
+    }
+    const result = await lancheService.atualizarEstadoLanche(reservaId, body.estadoLanche);
+    return NextResponse.json(result);
   } catch (error) {
     return handleError(error);
   }

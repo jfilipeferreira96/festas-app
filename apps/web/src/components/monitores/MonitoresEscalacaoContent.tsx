@@ -11,6 +11,7 @@ import { useLocais } from "@/hooks/use-locais";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import MonitorTimeline from "./MonitorTimeline";
 import AlocacaoMonitorForm from "./AlocacaoMonitorForm";
+import NotasDiariasPanel from "./NotasDiariasPanel";
 import { corPorId } from "@/lib/local-cores";
 import { formatarIntervalo } from "@/lib/api/alocacaoMonitor";
 import type { AlocacaoMonitor } from "@/lib/api/alocacaoMonitor";
@@ -139,6 +140,9 @@ export default function MonitoresEscalacaoContent() {
         loading={isLoading}
         onEdit={handleBarClick}
       />
+
+      {/* Notas Diárias (manhã / tarde) — admin escreve, monitor lê */}
+      <NotasDiariasPanel data={selectedDate} />
 
       {/* Modal de detalhe (ao clicar numa barra) */}
       {selectedAlocacao && (

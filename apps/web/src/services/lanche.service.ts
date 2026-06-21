@@ -4,6 +4,7 @@ import type {
   LancheEntradaLivre,
   LancheDoDia,
   AtualizarNotasLancheDTO,
+  EstadoLanche,
   Menu,
 } from "@saas/shared-types";
 
@@ -12,6 +13,13 @@ import type {
  * Permite ver os lanches a preparar no dia (festas + entradas livres)
  * e registar notas/alergias por festa.
  */
+
+function calcularIdade(dataNascimento: Date | null, dataFesta: Date): number | undefined {
+  if (!dataNascimento) return undefined;
+  const diff = dataFesta.getTime() - dataNascimento.getTime();
+  return Math.floor(diff / (365.25 * 24 * 60 * 60 * 1000));
+}
+
 export const lancheService = {
   /**
    * Lista todos os lanches a preparar hoje:
@@ -34,6 +42,9 @@ export const lancheService = {
           local: true,
           aniversariantes: { include: { aniversariante: true } },
           menu: true,
+          extras: { include: { extra: true } },
+          participantes: { where: { presente: true } },
+          cacifos: true,
         },
         orderBy: { horario: "asc" },
       }),
@@ -42,7 +53,7 @@ export const lancheService = {
           estado: "ATIVA",
           inicioEm: { gte: inicio, lt: fim },
         },
-        include: { local: true },
+        include: { local: true, extras: { include: { extra: true } } },
         orderBy: { inicioEm: "asc" },
       }),
     ]);
@@ -53,17 +64,51 @@ export const lancheService = {
         .filter(Boolean)
         .join(", ");
       const menu = r.menu ? (r.menu as unknown as Menu) : undefined;
+
+      // Calcular idade do primeiro aniversariante
+      const primeiroAniv = r.aniversariantes[0]?.aniversariante;
+      const idadeAniversariante = primeiroAniv
+        ? calcularIdade(primeiroAniv.dataNascimento, r.data)
+        : undefined;
+
+      // Extrair nomes dos extras
+      const extrasNomes = r.extras
+        .map((re) => re.extra?.nome)
+        .filter(Boolean) as string[];
+
+      // Extrair extras de lanche (categoria LANCHE ou nome contém "lanche")
+      const extrasLancheNomes = r.extras
+        .filter((re) => re.extra?.categoria === "EXTRA" && re.extra?.subcategoria?.toLowerCase().includes("lanche"))
+        .map((re) => re.extra?.nome)
+        .filter(Boolean) as string[];
+
+      // Notas do cacifo (primeiro cacifo com notas)
+      const observacoesCacifo = r.cacifos
+        .map((c) => c.notas)
+        .filter(Boolean)
+        .join("; ") || undefined;
+
       return {
         reservaId: r.id,
         tipo: "FESTA",
         nomeFesta: nomesAniv || "—",
         data: r.data.toISOString(),
         horario: r.horario,
+        horaLanche: r.horaLanche ?? undefined,
         localNome: r.local?.nome ?? "—",
+        cor: r.cor ?? undefined,
         numCriancas: r.numCriancas,
+        previsaoCriancas: r.previsaoCriancas ?? undefined,
+        numConfirmados: r.participantes.length,
+        idadeAniversariante,
         menu,
         notasLanche: r.menu?.notasLanche ?? undefined,
         itensLanche: r.menu?.itensLanche ?? undefined,
+        observacoesLesoes: r.observacoesLesoes ?? undefined,
+        observacoesCacifo,
+        extrasNomes,
+        extrasLancheNomes,
+        estadoLanche: (r.estadoLanche ?? "NAO_INICIADO") as EstadoLanche,
       };
     });
 
@@ -74,9 +119,11 @@ export const lancheService = {
         tipo: "ENTRADA_LIVRE",
         encarregadoNome: e.encarregadoNome,
         inicioEm: e.inicioEm.toISOString(),
+        horaLanche: e.horaLanche ?? undefined,
         localNome: e.local?.nome ?? "—",
         criancas,
         observacoesLesoes: e.observacoesLesoes ?? undefined,
+        estadoLanche: (e.estadoLanche ?? "NAO_INICIADO") as EstadoLanche,
       };
     });
 
@@ -104,27 +151,46 @@ export const lancheService = {
 
     const menu = reserva.menu ? (reserva.menu as unknown as Menu) : undefined;
 
+    const primeiroAniv = reserva.aniversariantes[0]?.aniversariante;
+    const idadeAniversariante = primeiroAniv
+      ? calcularIdade(primeiroAniv.dataNascimento, reserva.data)
+      : undefined;
+
     return {
       reservaId: reserva.id,
       tipo: "FESTA",
       nomeFesta: nomesAniv || "—",
       data: reserva.data.toISOString(),
       horario: reserva.horario,
+      horaLanche: reserva.horaLanche ?? undefined,
       localNome: reserva.local?.nome ?? "—",
+      cor: reserva.cor ?? undefined,
       numCriancas: reserva.numCriancas,
+      previsaoCriancas: reserva.previsaoCriancas ?? undefined,
+      idadeAniversariante,
       menu,
       notasLanche: reserva.menu?.notasLanche ?? undefined,
       itensLanche: reserva.menu?.itensLanche ?? undefined,
+      observacoesLesoes: reserva.observacoesLesoes ?? undefined,
+      estadoLanche: (reserva.estadoLanche ?? "NAO_INICIADO") as EstadoLanche,
     };
   },
 
   /**
-   * Atualiza as notas de lanche / itens de lanche de uma festa.
+   * Atualiza as notas de lanche / itens de lanche / observações de lesões de uma festa.
    * Cria o menu (vazio) se ainda não existir.
    */
   async atualizarNotasLanche(data: AtualizarNotasLancheDTO) {
     const reserva = await prisma.reserva.findUnique({ where: { id: data.reservaId } });
     if (!reserva) throw new Error("NOT_FOUND");
+
+    // Atualizar observações de lesões na própria reserva
+    if (data.observacoesLesoes !== undefined) {
+      await prisma.reserva.update({
+        where: { id: data.reservaId },
+        data: { observacoesLesoes: data.observacoesLesoes },
+      });
+    }
 
     const existing = await prisma.menu.findUnique({ where: { reservaId: data.reservaId } });
 
@@ -147,6 +213,32 @@ export const lancheService = {
         notasLanche: data.notasLanche,
         ...(data.itensLanche !== undefined && { itensLanche: data.itensLanche as object }),
       },
+    });
+  },
+
+  /**
+   * Atualiza o estado do lanche de uma festa (não iniciado / a decorrer / terminado).
+   */
+  async atualizarEstadoLanche(reservaId: string, estado: EstadoLanche) {
+    const reserva = await prisma.reserva.findUnique({ where: { id: reservaId } });
+    if (!reserva) throw new Error("NOT_FOUND");
+
+    return prisma.reserva.update({
+      where: { id: reservaId },
+      data: { estadoLanche: estado },
+    });
+  },
+
+  /**
+   * Atualiza o estado do lanche de uma entrada livre.
+   */
+  async atualizarEstadoLancheEntrada(entradaLivreId: string, estado: EstadoLanche) {
+    const entrada = await prisma.entradaLivre.findUnique({ where: { id: entradaLivreId } });
+    if (!entrada) throw new Error("NOT_FOUND");
+
+    return prisma.entradaLivre.update({
+      where: { id: entradaLivreId },
+      data: { estadoLanche: estado },
     });
   },
 

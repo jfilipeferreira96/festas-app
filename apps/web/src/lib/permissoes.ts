@@ -14,7 +14,9 @@ export type Modulo =
   | "lanche"
   | "relatorios"
   | "divulgacoes"
-  | "configuracoes";
+  | "configuracoes"
+  | "monitores"
+  | "festas_acabar";
 
 export type NivelAcesso = "sem_acesso" | "leitura" | "escrita" | "administracao";
 
@@ -26,6 +28,8 @@ export const MODULOS: Modulo[] = [
   "relatorios",
   "divulgacoes",
   "configuracoes",
+  "monitores",
+  "festas_acabar",
 ];
 
 export const NIVEIS_ACESSO: { value: NivelAcesso; label: string }[] = [
@@ -43,18 +47,32 @@ export const MODULO_LABELS: Record<Modulo, string> = {
   relatorios: "Relatórios",
   divulgacoes: "Marketing",
   configuracoes: "Configurações",
+  monitores: "Monitores",
+  festas_acabar: "Festas a Acabar",
 };
 
 export const FUNCAO_LABELS: Record<FuncaoUtilizador, string> = {
   ADMINISTRADOR: "Administrador",
   LANCHE: "Lanche",
   CACIFOS: "Cacifos",
+  MONITOR: "Monitor",
+  FESTAS_ACABAR: "Festas a Acabar",
 };
 
-export const FUNCOES: FuncaoUtilizador[] = ["ADMINISTRADOR", "LANCHE", "CACIFOS"];
+export const FUNCOES: FuncaoUtilizador[] = [
+  "ADMINISTRADOR",
+  "LANCHE",
+  "CACIFOS",
+  "MONITOR",
+  "FESTAS_ACABAR",
+];
 
 // ── Matriz papel → módulo → nível ────────────
-// ADMINISTRADOR: tudo. LANCHE: lanche (escrita) + menus (leitura). CACIFOS: cacifos (escrita).
+// ADMINISTRADOR: tudo.
+// LANCHE: lanche (escrita) + menus (leitura).
+// CACIFOS: cacifos (escrita) + reservas (leitura — ponto de vista festas/crianças).
+// MONITOR: monitores (leitura — vê Gantt + notas diárias).
+// FESTAS_ACABAR: festas_acabar (escrita — tabela de festas a acabar).
 export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAcesso>>> = {
   ADMINISTRADOR: {
     reservas: "administracao",
@@ -64,6 +82,8 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
     relatorios: "administracao",
     divulgacoes: "administracao",
     configuracoes: "administracao",
+    monitores: "administracao",
+    festas_acabar: "administracao",
   },
   LANCHE: {
     lanche: "escrita",
@@ -71,8 +91,32 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
   },
   CACIFOS: {
     cacifos: "escrita",
+    reservas: "leitura",
+  },
+  MONITOR: {
+    monitores: "leitura",
+  },
+  FESTAS_ACABAR: {
+    festas_acabar: "escrita",
   },
 };
+
+// ── Rota inicial por role ────────────────────
+/** Retorna a rota inicial (landing page) para um papel. */
+export function getHomeRoute(funcao: FuncaoUtilizador | undefined | null): string {
+  switch (funcao) {
+    case "LANCHE":
+      return "/lanche";
+    case "CACIFOS":
+      return "/festas";
+    case "MONITOR":
+      return "/monitores";
+    case "FESTAS_ACABAR":
+      return "/festas-acabar";
+    default:
+      return "/dashboard";
+  }
+}
 
 const LEVEL_ORDER: Record<NivelAcesso, number> = {
   sem_acesso: 0,

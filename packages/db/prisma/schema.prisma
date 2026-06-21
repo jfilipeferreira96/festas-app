@@ -89,6 +89,8 @@ enum FuncaoUtilizador {
   ADMINISTRADOR
   LANCHE
   CACIFOS
+  MONITOR
+  FESTAS_ACABAR
 }
 
 enum EstadoReserva {
@@ -141,6 +143,12 @@ enum EstadoEntradaLivre {
   ATIVA
   CONCLUIDA
   CANCELADA
+}
+
+enum EstadoLanche {
+  NAO_INICIADO
+  A_DECORRER
+  TERMINADO
 }
 
 enum TipoExcecaoCalendario {
@@ -363,10 +371,15 @@ model Reserva {
   boloQuantidade    Int?
 
   // Observações
-  observacoesGerais  String?  @db.Text
-  observacoesLesoes  String?  @db.Text
-  observacoesBrindes String?  @db.Text
-  outrosExtras       String?  @db.Text
+  observacoesGerais    String?  @db.Text
+  observacoesLesoes    String?  @db.Text
+  observacoesBrindes   String?  @db.Text
+  observacoesBrindesPais String?  @db.Text
+  outrosExtras         String?  @db.Text
+
+  // ── Lanche ──
+  estadoLanche         EstadoLanche  @default(NAO_INICIADO)
+  horaLanche           String?       // HH:MM — hora planeada do lanche
 
   // Pagamento
   metodoPagamento     MetodoPagamento?
@@ -764,8 +777,12 @@ model EntradaLivre {
   cacifo          Cacifo?             @relation(fields: [cacifoId], references: [id])
 
   // ── Observações ─────────────────────
-  observacoes     String?             @db.Text
+  observacoes     String?  @db.Text
   observacoesLesoes String?           @db.Text
+
+  // ── Lanche ──
+  estadoLanche    EstadoLanche       @default(NAO_INICIADO)
+  horaLanche      String?            // HH:MM — hora planeada do lanche
 
   // ── Extras (opcional) ───────────────
   extras          EntradaLivreExtra[]
@@ -786,4 +803,19 @@ model EntradaLivreExtra {
 
   @@unique([entradaLivreId, extraId])
   @@map("entrada_livre_extra")
+}
+
+// ============================================
+// NOTAS DIÁRIAS (manhã / tarde) — vista MONITOR
+// ============================================
+model NotaDiaria {
+  id         String   @id @default(cuid())
+  data       DateTime @unique
+  notasManha String?  @db.Text
+  notasTarde String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([data])
+  @@map("nota_diaria")
 }

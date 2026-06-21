@@ -415,7 +415,7 @@ Definidos em `packages/shared/shared-types/src/types/`:
 
 ```typescript
 // types/utilizador.ts
-export type FuncaoUtilizador = 'ADMINISTRADOR' | 'LANCHE' | 'CACIFOS';
+export type FuncaoUtilizador = 'ADMINISTRADOR' | 'LANCHE' | 'CACIFOS' | 'MONITOR' | 'FESTAS_ACABAR';
 
 export interface Utilizador {
   id: string;

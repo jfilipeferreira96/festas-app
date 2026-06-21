@@ -146,11 +146,41 @@ Ecrã dedicado à equipa de lanche (função `LANCHE`). Mostra o que tem de ser 
 
 **Alergias:** secção de alerta com festas que têm notas de lanche preenchidas (alergias, restrições alimentares).
 
-**Cards de festa:** cada festa do dia mostra nome, horário, sala, menu associado e notas de lanche. As notas são editáveis via modal (`useAtualizarNotasLanche`).
+**Tabela de festas** com colunas: Hora do lanche, Cor, Aniversariante, Confirmados, Total, Menu, Extras, Observações (lanche/cacifo), Idade, Estado do lanche (dropdown: Não iniciado / A decorrer / Terminado). O estado do lanche altera via `useAtualizarEstadoLanche`.
 
-**Cards de entrada livre:** cada entrada livre ativa mostra nome do encarregado, duração e crianças.
+**Tabela de entradas livres:** colunas Hora do lanche, Encarregado, Crianças, Estado (dropdown via `useAtualizarEstadoLancheEntrada`).
 
-> Acesso restrito à função `LANCHE` (e `ADMINISTRADOR`). Não permite editar festas — apenas notas de lanche.
+**Modal de observações** (`useAtualizarNotasLanche`): edita notas de lanche + observações de lesões em simultâneo.
+
+> Acesso restrito à função `LANCHE` (e `ADMINISTRADOR`). Não permite editar festas — apenas notas de lanche e estado do lanche.
+
+---
+
+## Festas a Acabar `/festas-acabar`
+
+Ecrã dedicado à função `FESTAS_ACABAR`. Mostra as festas em curso (`EM_CURSO`) prontas a serem finalizadas, ordenadas por hora de saída prevista (`fimPrevisto`).
+
+**Componente:** `FestasAcabarContent.tsx`
+
+**Tabela** com colunas: Hora de saída, Aniversariante, Cor, Total de crianças, Brindes, Brindes pais, Observações de lesões.
+
+**Modal de edição** (`useAtualizarFestaAcabar`): actualiza `observacoesBrindes`, `observacoesBrindesPais` e `observacoesLesoes`.
+
+> Acesso restrito à função `FESTAS_ACABAR` (e `ADMINISTRADOR`). É a página inicial (home route) deste papel via `getHomeRoute()`.
+
+---
+
+## Monitores (Gantt) `/monitores`
+
+Ecrã dedicado à função `MONITOR`. Mostra o escalonamento de monitores por dia numa vista Gantt (`MonitorTimeline`) e notas diárias escritas pelo administrador.
+
+**Componentes:** `MonitoresEscalacaoContent.tsx`, `NotasDiariasPanel.tsx`
+
+**Gantt:** barras horizontais por monitor/local com data selector e legenda de locais.
+
+**Notas Diárias** (`NotaDiaria`): painel com dois campos (Manhã / Tarde). O `ADMINISTRADOR` pode escrever (`canWrite("monitores")`); o `MONITOR` apenas lê.
+
+> Acesso restrito às funções `MONITOR` (leitura) e `ADMINISTRADOR`. É a página inicial (home route) do `MONITOR` via `getHomeRoute()`.
 
 ---
 

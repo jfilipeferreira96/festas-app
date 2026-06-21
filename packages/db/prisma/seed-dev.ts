@@ -86,9 +86,25 @@ function pickNames(n: number, existing: string[] = []): string[] {
 }
 
 // ─── Main ─────────────────────────────────────────────────────
+async function wipeDatabase() {
+  console.log("🧹 Wiping existing data...");
+  // Truncate every table so the seed is fully idempotent (re-runnable).
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 0;");
+  const tables: { [key: string]: string }[] =
+    await prisma.$queryRawUnsafe(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();`);
+  for (const row of tables) {
+    const table = row.TABLE_NAME ?? row["TABLE_NAME"];
+    if (!table) continue;
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\`;`);
+  }
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 1;");
+  console.log("  ✓ All tables truncated\n");
+}
+
 async function main() {
   console.log("🌱 Seeding development data...\n");
 
+  await wipeDatabase();
   await seedEssential();
   await seedLocais();
   await seedExtras();
@@ -115,6 +131,8 @@ async function seedEssential() {
     { id: "admin-001", name: "Maria Silva", email: "admin@festas.pt", password: "admin123", funcao: "ADMINISTRADOR" as const },
     { id: "lanche-001", name: "Lanche Teste", email: "lanche@festas.pt", password: "lanche123", funcao: "LANCHE" as const },
     { id: "cacifos-001", name: "Cacifos Teste", email: "cacifos@festas.pt", password: "cacifos123", funcao: "CACIFOS" as const },
+    { id: "monitor-001", name: "Monitor Teste", email: "monitor@festas.pt", password: "monitor123", funcao: "MONITOR" as const },
+    { id: "festas-acabar-001", name: "Festas Acabar Teste", email: "festas-acabar@festas.pt", password: "festas123", funcao: "FESTAS_ACABAR" as const },
   ];
 
   await prisma.account.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
@@ -1052,19 +1070,6 @@ async function seedMarketing() {
 // ─── Entradas Livres ────────────────────────────────────────────
 async function seedEntradasLivres() {
   console.log("  Creating entrada livre data...");
-
-  // ─── Tarifário global (singleton) ────────────────────────────────
-  await prisma.configuracaoPreco.upsert({
-    where: { id: "config-preco-001" },
-    update: {},
-    create: {
-      id: "config-preco-001",
-      precoFestaSemana: 150.0,
-      precoFestaFimSemana: 200.0,
-      precoEntradaHoraSemana: 10.0,
-      precoEntradaHoraFimSemana: 12.0,
-    },
-  });
 
   const now = new Date();
   const todayDate = today();

@@ -41,6 +41,8 @@ enum FuncaoUtilizador {
   ADMINISTRADOR
   LANCHE
   CACIFOS
+  MONITOR
+  FESTAS_ACABAR
 }
 
 enum EstadoReserva {
@@ -49,6 +51,12 @@ enum EstadoReserva {
   EM_CURSO
   CONCLUIDA
   CANCELADA
+}
+
+enum EstadoLanche {
+  NAO_INICIADO
+  A_DECORRER
+  TERMINADO
 }
 
 enum EstadoCacifo {
@@ -456,17 +464,26 @@ model NotaRapida {
 }
 ```
 
-### RBAC — Funções & Permissões
+### RBAC — Funções & Permissões (HARDCODED)
 
-```prisma
-model FuncaoPermissao {
-  funcao      FuncaoUtilizador
-  modulo      String   // "reservas", "cacifos", "menus", "relatorios", "divulgacoes", "configuracoes"
-  nivelAcesso String   // "leitura", "escrita", "administracao"
-
-  @@unique([funcao, modulo])
-}
-```
+> O modelo `FuncaoPermissao` foi removido. As permissões são definidas em código (`apps/web/src/lib/permissoes.ts`).
+>
+> **5 papéis:** `ADMINISTRADOR`, `LANCHE`, `CACIFOS`, `MONITOR`, `FESTAS_ACABAR`.
+>
+> **Módulos:** `reservas`, `cacifos`, `menus`, `lanche`, `relatorios`, `divulgacoes`, `configuracoes`, `monitores`, `festas_acabar`.
+>
+> Cada papel não-administrador é redirecionado para a sua home route via `getHomeRoute()`:
+> - `LANCHE` → `/lanche`
+> - `CACIFOS` → `/festas`
+> - `MONITOR` → `/monitores`
+> - `FESTAS_ACABAR` → `/festas-acabar`
+>
+> **Matriz:**
+> - `ADMINISTRADOR` — administração em todos os módulos.
+> - `LANCHE` — `lanche` (escrita), `menus` (leitura).
+> - `CACIFOS` — `cacifos` (escrita), `reservas` (leitura).
+> - `MONITOR` — `monitores` (leitura).
+> - `FESTAS_ACABAR` — `festas_acabar` (escrita).
 
 ## Regras de negócio na camada de dados
 

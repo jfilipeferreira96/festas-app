@@ -22,5 +22,6 @@ export type { CriancaInput, EntradaLivre, EntradaLivreExtraItem, CriarEntradaLiv
 export type { LinhaRelatorio, SecaoRelatorio, RelatorioFinanceiro } from "./types/relatorio";
 export type { TipoExcecaoCalendario, ExcecaoCalendario, CriarExcecaoCalendarioDTO } from "./types/excecaoCalendario";
 export type { SlotHorario, CriarSlotHorarioDTO } from "./types/slotHorario";
-export type { LancheFesta, LancheEntradaLivre, LancheDoDia, AtualizarNotasLancheDTO } from "./types/lanche";
+export type { EstadoLanche, LancheFesta, LancheEntradaLivre, LancheDoDia, AtualizarNotasLancheDTO, AtualizarLancheEntradaDTO } from "./types/lanche";
 export type { MinimoCriancasPorAniversariante, ConfiguracaoPreco, AtualizarConfiguracaoPrecoDTO } from "./types/configuracaoPreco";
+export type { NotaDiaria, UpsertNotaDiariaDTO } from "./types/notaDiaria";

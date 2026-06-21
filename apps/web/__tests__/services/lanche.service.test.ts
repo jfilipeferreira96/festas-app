@@ -109,4 +109,22 @@ describe("Lanche Service", () => {
       expect(encontrou).toBe(true);
     });
   });
+
+  describe("atualizarEstadoLanche()", () => {
+    it("deve actualizar o estadoLanche da reserva", async () => {
+      await lancheService.atualizarEstadoLanche(TEST_IDS.RESERVA_CONFIRMADA, "A_DECORRER");
+
+      const reserva = await testPrisma.reserva.findUnique({
+        where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+        select: { estadoLanche: true },
+      });
+      expect(reserva?.estadoLanche).toBe("A_DECORRER");
+    });
+
+    it("deve lançar NOT_FOUND para reserva inexistente", async () => {
+      await expect(
+        lancheService.atualizarEstadoLanche("inexistente-xxx", "TERMINADO")
+      ).rejects.toThrow("NOT_FOUND");
+    });
+  });
 });

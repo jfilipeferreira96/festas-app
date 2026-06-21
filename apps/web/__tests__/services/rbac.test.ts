@@ -9,14 +9,15 @@ import {
   isModuleAdmin,
   isAdmin,
   getPermissoesPorFuncao,
+  getHomeRoute,
   MODULOS,
 } from "@/lib/permissoes";
 import type { Modulo, NivelAcesso } from "@/lib/permissoes";
 
 describe("RBAC — Matriz hardcoded", () => {
   describe("FUNCOES", () => {
-    it("deve conter apenas ADMINISTRADOR, LANCHE, CACIFOS", () => {
-      expect(FUNCOES).toEqual(["ADMINISTRADOR", "LANCHE", "CACIFOS"]);
+    it("deve conter os 5 papéis: ADMINISTRADOR, LANCHE, CACIFOS, MONITOR, FESTAS_ACABAR", () => {
+      expect(FUNCOES).toEqual(["ADMINISTRADOR", "LANCHE", "CACIFOS", "MONITOR", "FESTAS_ACABAR"]);
     });
   });
 
@@ -55,12 +56,54 @@ describe("RBAC — Matriz hardcoded", () => {
       expect(PERMISSOES.CACIFOS.cacifos).toBe("escrita");
     });
 
-    it("NÃO deve ter acesso a reservas", () => {
-      expect(PERMISSOES.CACIFOS.reservas).toBeUndefined();
+    it("deve ter leitura no módulo reservas", () => {
+      expect(PERMISSOES.CACIFOS.reservas).toBe("leitura");
     });
 
     it("NÃO deve ter acesso a lanche", () => {
       expect(PERMISSOES.CACIFOS.lanche).toBeUndefined();
+    });
+  });
+
+  describe("PERMISSOES — MONITOR", () => {
+    it("deve ter leitura no módulo monitores", () => {
+      expect(PERMISSOES.MONITOR.monitores).toBe("leitura");
+    });
+
+    it("NÃO deve ter acesso a reservas", () => {
+      expect(PERMISSOES.MONITOR.reservas).toBeUndefined();
+    });
+
+    it("NÃO deve ter escrita em monitores (só leitura)", () => {
+      expect(hasAccess("MONITOR", "monitores", "escrita")).toBe(false);
+      expect(canRead("MONITOR", "monitores")).toBe(true);
+    });
+
+    it("NÃO deve ter acesso a nenhum outro módulo", () => {
+      expect(PERMISSOES.MONITOR.lanche).toBeUndefined();
+      expect(PERMISSOES.MONITOR.cacifos).toBeUndefined();
+      expect(PERMISSOES.MONITOR.festas_acabar).toBeUndefined();
+    });
+  });
+
+  describe("PERMISSOES — FESTAS_ACABAR", () => {
+    it("deve ter escrita no módulo festas_acabar", () => {
+      expect(PERMISSOES.FESTAS_ACABAR.festas_acabar).toBe("escrita");
+    });
+
+    it("NÃO deve ter acesso a reservas", () => {
+      expect(PERMISSOES.FESTAS_ACABAR.reservas).toBeUndefined();
+    });
+
+    it("NÃO deve ter admin em festas_acabar (só escrita)", () => {
+      expect(hasAccess("FESTAS_ACABAR", "festas_acabar", "administracao")).toBe(false);
+      expect(canWrite("FESTAS_ACABAR", "festas_acabar")).toBe(true);
+    });
+
+    it("NÃO deve ter acesso a nenhum outro módulo", () => {
+      expect(PERMISSOES.FESTAS_ACABAR.lanche).toBeUndefined();
+      expect(PERMISSOES.FESTAS_ACABAR.cacifos).toBeUndefined();
+      expect(PERMISSOES.FESTAS_ACABAR.monitores).toBeUndefined();
     });
   });
 
@@ -73,7 +116,9 @@ describe("RBAC — Matriz hardcoded", () => {
 
     it("deve retornar sem_acesso para módulos não atribuídos", () => {
       expect(getNivel("LANCHE", "cacifos")).toBe("sem_acesso");
-      expect(getNivel("CACIFOS", "reservas")).toBe("sem_acesso");
+      expect(getNivel("CACIFOS", "lanche")).toBe("sem_acesso");
+      expect(getNivel("MONITOR", "reservas")).toBe("sem_acesso");
+      expect(getNivel("FESTAS_ACABAR", "cacifos")).toBe("sem_acesso");
     });
 
     it("deve retornar sem_acesso para função nula/indefinida", () => {
@@ -139,7 +184,36 @@ describe("RBAC — Matriz hardcoded", () => {
       expect(isAdmin("ADMINISTRADOR")).toBe(true);
       expect(isAdmin("LANCHE")).toBe(false);
       expect(isAdmin("CACIFOS")).toBe(false);
+      expect(isAdmin("MONITOR")).toBe(false);
+      expect(isAdmin("FESTAS_ACABAR")).toBe(false);
       expect(isAdmin(null)).toBe(false);
+    });
+  });
+
+  describe("getHomeRoute()", () => {
+    it("ADMINISTRADOR deve ir para /dashboard", () => {
+      expect(getHomeRoute("ADMINISTRADOR")).toBe("/dashboard");
+    });
+
+    it("LANCHE deve ir para /lanche", () => {
+      expect(getHomeRoute("LANCHE")).toBe("/lanche");
+    });
+
+    it("CACIFOS deve ir para /festas", () => {
+      expect(getHomeRoute("CACIFOS")).toBe("/festas");
+    });
+
+    it("MONITOR deve ir para /monitores", () => {
+      expect(getHomeRoute("MONITOR")).toBe("/monitores");
+    });
+
+    it("FESTAS_ACABAR deve ir para /festas-acabar", () => {
+      expect(getHomeRoute("FESTAS_ACABAR")).toBe("/festas-acabar");
+    });
+
+    it("função nula/indefinida deve ir para /dashboard", () => {
+      expect(getHomeRoute(null)).toBe("/dashboard");
+      expect(getHomeRoute(undefined)).toBe("/dashboard");
     });
   });
 
@@ -168,3 +242,4 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 });
+

@@ -63,18 +63,21 @@ festas/
 
 ### Key Models
 
-`User`, `Session`, `Account`, `Verification`, `Cliente`, `Aniversariante`, `Local`, `Extra`, `ExtraLocal`, `Monitor`, `MonitorLocal`, `ConfiguracaoCacifo`, `Reserva`, `ReservaExtra`, `ReservaMonitor`, `ReservaAniversariante`, `EtapaFesta`, `ReservaEtapa`, `Participante`, `Cacifo`, `Menu`, `Segmento`, `NewsletterContacto`, `ContactoSegmento`, `Campanha`, `EnvioCampanha`, `AuditLog`, `NotaRapida`, `EntradaLivre`, `ExcecaoCalendario`, `SlotHorario`, `ConfiguracaoPreco`
+`User`, `Session`, `Account`, `Verification`, `Cliente`, `Aniversariante`, `Local`, `Extra`, `ExtraLocal`, `Monitor`, `MonitorLocal`, `ConfiguracaoCacifo`, `Reserva`, `ReservaExtra`, `ReservaMonitor`, `ReservaAniversariante`, `EtapaFesta`, `ReservaEtapa`, `Participante`, `Cacifo`, `Menu`, `Segmento`, `NewsletterContacto`, `ContactoSegmento`, `Campanha`, `EnvioCampanha`, `AuditLog`, `NotaRapida`, `EntradaLivre`, `ExcecaoCalendario`, `SlotHorario`, `ConfiguracaoPreco`, `NotaDiaria`
 
 > **Important:** `Reserva` is unified with `Festa` — there is no separate `Festa` model. When a reserva enters `EM_CURSO` state, runtime fields (`inicioEm`, `fimPrevisto`, `fimReal`) are populated. The old `ItemMenu` model was removed; `Menu` is simplified to `nome` + `preco` + `notasLanche`.
 >
-> **RBAC is hardcoded** — the `FuncaoPermissao` model was removed. Permissions are defined in code (`src/lib/permissoes.ts`). Only three roles exist: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`.
+> **RBAC is hardcoded** — the `FuncaoPermissao` model was removed. Permissions are defined in code (`src/lib/permissoes.ts`). Five roles exist: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`, `MONITOR`, `FESTAS_ACABAR`. Each non-admin role is redirected to a role-specific home page via `getHomeRoute()`.
 >
 > **New pricing model:** Festas are priced per-child (`precoCriancaSemana`/`precoCriancaFimSemana`) with minimums by nº of aniversariantes. `ConfiguracaoPreco` is a singleton holding all tariffs. `ExcecaoCalendario` marks feriados (affect price) and blocked days (prevent booking). `SlotHorario` defines preset party time slots (default 2h15m = 135 min). `EntradaLivre` supports multiple children, mandatory socks (meias), and split payments (up to 2 methods).
+>
+> **Role views:** Each non-admin role sees a tailored view. `LANCHE` gets an enhanced lanche table (estado lanche dropdown + observações modal). `MONITOR` sees the Gantt chart + daily notes (`NotaDiaria` written by admin). `FESTAS_ACABAR` sees a table of EM_CURSO festas with brindes/lesões fields. `CACIFOS` sees festas + cacifos only.
 
 ### Enums
 
-- `FuncaoUtilizador`: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`
+- `FuncaoUtilizador`: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`, `MONITOR`, `FESTAS_ACABAR`
 - `EstadoReserva`: `RESERVA`, `CONFIRMADO`, `EM_CURSO`, `CONCLUIDA`, `CANCELADA`
+- `EstadoLanche`: `NAO_INICIADO`, `A_DECORRER`, `TERMINADO`
 - `EstadoCacifo`: `LIVRE`, `OCUPADO`, `RESERVADO`
 - `EstadoEntradaLivre`: `ATIVA`, `CONCLUIDA`, `CANCELADA`
 - `MetodoPagamento`: `DINHEIRO`, `MULTIBANCO`, `MBWAY`, `TRANSFERENCIA`, `CARTAO`, `OUTRO`
@@ -179,6 +182,8 @@ if (error.message in ERROR_MAP) {
 | Exceções Calendário | `/api/excecoes-calendario/*` | `src/services/excecaoCalendario.service.ts` |
 | Slots Horário | `/api/slots-horario/*` | `src/services/slotHorario.service.ts` |
 | Relatórios | `/api/relatorios/*` | `src/services/relatorio.service.ts` |
+| Notas Diárias | `/api/notas-diarias/*` | `src/services/notaDiaria.service.ts` |
+| Festas a Acabar | `/api/festas-acabar/*` | `src/services/festasAcabar.service.ts` |
 
 ### Auth
 
@@ -215,6 +220,8 @@ The app uses Next.js route groups:
 | `/calendario` | Calendário (protected) |
 | `/festas` | Festas (protected) |
 | `/festas/a-decorrer` | Festas a decorrer (protected) |
+| `/festas-acabar` | Festas a Acabar (protected, FESTAS_ACABAR role) |
+| `/monitores` | Monitores / Gantt (protected, MONITOR role) |
 | `/cacifos` | Cacifos (protected) |
 | `/lanche` | Lanche (protected) |
 | `/menus` | Menus (protected) |
@@ -306,7 +313,9 @@ Default configurations for: extras, menus, locais, menu-templates.
 | `configuracaoPreco.service.test.ts` | getConfig, updateConfig, calcularPrecoFesta, meias, entradas |
 | `excecaoCalendario.service.test.ts` | CRUD, isFeriado, isBloqueado, recorrenciaAnual |
 | `slotHorario.service.test.ts` | CRUD, list/listAll, duracaoMin default |
-| `lanche.service.test.ts` | getLanchesDoDia, getById, atualizarNotas, alergias |
+| `lanche.service.test.ts` | getLanchesDoDia, getById, atualizarNotas, alergias, atualizarEstadoLanche |
+| `notaDiaria.service.test.ts` | getByData, upsert (manhã/tarde) |
+| `festasAcabar.service.test.ts` | getFestas (EM_CURSO), atualizarObservacoes |
 | `paginacao-filtro-pesquisa.test.ts` | Paginação, filtros e pesquisa genérica |
 
 ### Test Pattern

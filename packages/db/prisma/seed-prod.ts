@@ -48,7 +48,7 @@ const seedAuth = betterAuth({
 async function main() {
   console.log("🌱 Production seed (minimum)...\n");
 
-  await seedAdmin();
+  await seedUsers();
   await seedConfiguracaoPreco();
   await seedExcecoesCalendario();
   await seedSlotsHorario();
@@ -57,31 +57,40 @@ async function main() {
   console.log("\n✅ Production seed complete!");
 }
 
-// ─── Admin user ───────────────────────────────────────────────
-async function seedAdmin() {
-  console.log("  Creating admin user...");
+// ─── Users (admin + role accounts) ───────────────────────────
+const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD || "Alterar!2025";
 
-  const email = process.env.SEED_ADMIN_EMAIL || "admin@baselandia.pt";
-  const password = process.env.SEED_ADMIN_PASSWORD || "Alterar!2025";
-  const name = "Administrador";
+const ROLE_USERS: { email: string; funcao: import("@prisma/client").FuncaoUtilizador; name: string }[] = [
+  { email: process.env.SEED_ADMIN_EMAIL || "admin@festas.pt", funcao: "ADMINISTRADOR", name: "Administrador" },
+  { email: "cacifos@festas.pt", funcao: "CACIFOS", name: "Cacifos" },
+  { email: "lanches@festas.pt", funcao: "LANCHE", name: "Lanches" },
+  { email: "monitor@festas.pt", funcao: "MONITOR", name: "Monitor" },
+  { email: "festas-acabar@festas.pt", funcao: "FESTAS_ACABAR", name: "Festas a Acabar" },
+];
 
-  // Idempotent: remove a previous admin with the same email before creating.
-  await prisma.account.deleteMany({ where: { user: { email } } });
-  await prisma.session.deleteMany({ where: { user: { email } } });
-  await prisma.user.deleteMany({ where: { email } });
+async function seedUsers() {
+  console.log("  Creating users...\n");
 
-  const result = await seedAuth.api.signUpEmail({
-    body: { name, email, password },
-  });
-  if (!result?.user) throw new Error(`Failed to create admin ${email}`);
+  for (const u of ROLE_USERS) {
+    // Idempotent: remove a previous user with the same email before creating.
+    await prisma.account.deleteMany({ where: { user: { email: u.email } } });
+    await prisma.session.deleteMany({ where: { user: { email: u.email } } });
+    await prisma.user.deleteMany({ where: { email: u.email } });
 
-  await prisma.user.update({
-    where: { id: result.user.id },
-    data: { emailVerified: true, funcao: "ADMINISTRADOR", activo: true },
-  });
+    const result = await seedAuth.api.signUpEmail({
+      body: { name: u.name, email: u.email, password: DEFAULT_PASSWORD },
+    });
+    if (!result?.user) throw new Error(`Failed to create user ${u.email}`);
 
-  console.log(`  ✓ Admin: ${email} / ${password}`);
-  console.log("  ⚠️  Altera a palavra-passe após o primeiro login!\n");
+    await prisma.user.update({
+      where: { id: result.user.id },
+      data: { emailVerified: true, funcao: u.funcao, activo: true },
+    });
+
+    console.log(`  ✓ ${u.funcao}: ${u.email} / ${DEFAULT_PASSWORD}`);
+  }
+
+  console.log("\n  ⚠️  Altera as palavras-passe após o primeiro login!\n");
 }
 
 // ─── Configuração de Preços (singleton) ───────────────────────

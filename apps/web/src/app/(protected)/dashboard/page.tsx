@@ -1,33 +1,26 @@
-"use client";
-
+import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/session";
+import { getHomeRoute } from "@/lib/permissoes";
 import { PageHeader } from "@/components/ui";
 import DashboardContent from "@/components/dashboard/DashboardContent";
+import type { FuncaoUtilizador } from "@saas/shared-types";
 
-export default function DashboardPage() {
-  // Lógica de seleção de data desativada
-  // const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+export default async function DashboardPage() {
+  const session = await requireAuth();
+  if (!session?.user) redirect("/entrar");
 
-  // const handleDateChange = (selectedDates: Date[]) => {
-  //   if (selectedDates.length > 0) {
-  //     setSelectedDate(selectedDates[0]);
-  //   }
-  // };
+  // Non-admins are redirected to their role-specific home route
+  const userFuncao = (session.user as Record<string, unknown>).funcao as
+    | FuncaoUtilizador
+    | undefined;
+  const home = getHomeRoute(userFuncao);
+  if (home !== "/dashboard") {
+    redirect(home);
+  }
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        // DatePicker desativado
-        // actions={
-        //   <DatePicker
-        //     id="dashboard-date-picker"
-        //     mode="single"
-        //     defaultDate={selectedDate}
-        //     onChange={handleDateChange}
-        //     placeholder="Selecionar data"
-        //   />
-        // }
-      />
+      <PageHeader title="Dashboard" />
       <div className="mt-4">
         <DashboardContent />
       </div>
