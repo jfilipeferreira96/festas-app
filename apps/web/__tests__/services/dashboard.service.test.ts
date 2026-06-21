@@ -48,6 +48,23 @@ describe("Dashboard Service", () => {
       // We have at least CONFIRMADO and EM_CURSO reservas for today
       expect(kpis.festasHoje).toBeGreaterThanOrEqual(1);
     });
+
+    it("deve retornar totalCriancasNoParque (festas EM_CURSO + entradas ATIVAS)", async () => {
+      const kpis = await dashboardService.getKPIs();
+      expect(kpis).toHaveProperty("totalCriancasNoParque");
+      expect(typeof kpis.totalCriancasNoParque).toBe("number");
+      // Seed tem RESERVA_EM_CURSO com numCriancas + entradas ATIVAS
+      expect(kpis.totalCriancasNoParque).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ── getTotalCriancasNoParque (v2) ─────────────────────────────
+  describe("getTotalCriancasNoParque()", () => {
+    it("deve somar crianças de festas EM_CURSO + entradas ATIVAS", async () => {
+      const total = await dashboardService.getTotalCriancasNoParque();
+      expect(typeof total).toBe("number");
+      expect(total).toBeGreaterThanOrEqual(1);
+    });
   });
 
   // ── getFestasEmCurso ──────────────────────────────────────────

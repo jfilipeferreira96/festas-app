@@ -228,6 +228,49 @@ describe("Cacifo Service", () => {
     });
   });
 
+  // ── getDisponiveisParaFesta (v2) ───────────────────────────────
+  describe("getDisponiveisParaFesta()", () => {
+    it("deve incluir cacifos LIVRE + cacifos da reserva indicada", async () => {
+      const livres = await cacifoService.getDisponiveisParaFesta();
+      expect(livres.length).toBeGreaterThan(0);
+      expect(livres.every((c: { estado: string }) => c.estado === "LIVRE")).toBe(true);
+
+      // Marcar um cacifo para a reserva e verificar que aparece na lista filtrada
+      const cacifo = await cacifoService.getDisponiveis();
+      const c = cacifo[0]!;
+      await cacifoService.marcarReservado(c.id, TEST_IDS.RESERVA_CONFIRMADA);
+
+      const paraFesta = await cacifoService.getDisponiveisParaFesta(TEST_IDS.RESERVA_CONFIRMADA);
+      const ids = paraFesta.map((cc: { id: string }) => cc.id);
+      expect(ids).toContain(c.id);
+
+      // Cleanup
+      await cacifoService.libertar(c.id);
+    });
+  });
+
+  // ── libertar mantém histórico (v2) ────────────────────────────
+  describe("libertar() mantém histórico", () => {
+    it("deve preservar histórico ao libertar cacifo ocupado", async () => {
+      const livres = await cacifoService.getDisponiveis();
+      const cacifo = livres[0]!;
+
+      await cacifoService.marcarOcupado(cacifo.id, TEST_IDS.RESERVA_EM_CURSO, {
+        notas: "Teste histórico",
+        criancas: "Criança X",
+      });
+
+      await cacifoService.libertar(cacifo.id);
+
+      // O cacifo deve estar LIVRE mas o histórico deve conter a entrada
+      const historico = await cacifoService.getHistorico(cacifo.id);
+      expect(Array.isArray(historico)).toBe(true);
+      expect(historico.length).toBeGreaterThanOrEqual(1);
+      const ultima = historico[historico.length - 1];
+      expect(ultima.reservaId).toBe(TEST_IDS.RESERVA_EM_CURSO);
+    });
+  });
+
   // ── getContadores ─────────────────────────────────────────────
   describe("getContadores()", () => {
     it("should return counts by estado", async () => {

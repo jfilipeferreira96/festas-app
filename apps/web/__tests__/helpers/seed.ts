@@ -317,7 +317,9 @@ export async function seedTestData(): Promise<void> {
   });
 
   // ── Exceções de Calendário (demo) ───────────────────────────
+  // Normaliza para meia-noite (evita problemas de precisão de DATETIME no MySQL)
   const feriadoDemo = new Date(today);
+  feriadoDemo.setHours(0, 0, 0, 0);
   feriadoDemo.setDate(feriadoDemo.getDate() + 30);
   await testPrisma.excecaoCalendario.upsert({
     where: { data: feriadoDemo },
@@ -325,6 +327,7 @@ export async function seedTestData(): Promise<void> {
     create: { data: feriadoDemo, tipo: "FERIADO", nome: "Feriado Demo", afectaPreco: true, bloqueiaReserva: false, recorrenciaAnual: false },
   });
   const bloqueadoDemo = new Date(today);
+  bloqueadoDemo.setHours(0, 0, 0, 0);
   bloqueadoDemo.setDate(bloqueadoDemo.getDate() + 45);
   await testPrisma.excecaoCalendario.upsert({
     where: { data: bloqueadoDemo },
@@ -468,6 +471,10 @@ export async function cleanTestData(): Promise<void> {
   await testPrisma.extra.deleteMany().catch(() => {});
 
   await testPrisma.local.deleteMany().catch(() => {});
+
+  await testPrisma.excecaoCalendario.deleteMany().catch(() => {});
+  await testPrisma.slotHorario.deleteMany().catch(() => {});
+  await testPrisma.configuracaoPreco.deleteMany().catch(() => {});
 
   await testPrisma.user.deleteMany().catch(() => {});
 }

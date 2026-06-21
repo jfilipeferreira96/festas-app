@@ -796,4 +796,72 @@ describe("Reserva Service", () => {
       ).rejects.toThrow("LOCAL_REQUIRED");
     });
   });
+
+  // ── v2: Dia bloqueado, meias, split payment ────────────────────
+  describe("create() — dia bloqueado rejeita criação", () => {
+    it("deve rejeitar criação numa data bloqueada (DAY_BLOCKED)", async () => {
+      // Criar exceção de bloqueio dedicada (evita dependência de seed/timezone)
+      const bloqueado = new Date();
+      bloqueado.setDate(bloqueado.getDate() + 90);
+      const bloqueadoStr = bloqueado.toISOString().split("T")[0]!;
+      const dataNormalizada = new Date(bloqueadoStr + "T00:00:00.000Z");
+
+      await testPrisma.excecaoCalendario.create({
+        data: {
+          data: dataNormalizada,
+          tipo: "BLOQUEADO",
+          nome: "Bloqueio Teste v2",
+          afectaPreco: false,
+          bloqueiaReserva: true,
+          recorrenciaAnual: false,
+        },
+      });
+
+      await expect(
+        reservaService.create({
+          data: bloqueadoStr,
+          horario: "14:00",
+          duracaoMinutos: 120,
+          localId: TEST_IDS.LOCAL_2,
+          aniversariantes: [TEST_ANIVERSARIANTE],
+          numCriancas: 10,
+        }),
+      ).rejects.toThrow("DAY_BLOCKED");
+
+      // Cleanup
+      await testPrisma.excecaoCalendario.deleteMany({ where: { data: dataNormalizada } }).catch(() => {});
+    });
+  });
+
+  describe("create() — meias e split payment", () => {
+    it("deve aplicar meiasQuantidade e metodoPagamento2 na criação", async () => {
+      const futuro = new Date();
+      futuro.setDate(futuro.getDate() + 60);
+      const futuroStr = futuro.toISOString().split("T")[0]!;
+
+      const reserva = await reservaService.create({
+        data: futuroStr,
+        horario: "15:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        aniversariantes: [TEST_ANIVERSARIANTE],
+        numCriancas: 12,
+        meiasQuantidade: 12,
+        metodoPagamento: "DINHEIRO",
+        valorPago: 180,
+        metodoPagamento2: "MBWAY",
+        valorPago2: 20,
+      });
+
+      expect(reserva.meiasQuantidade).toBe(12);
+      expect(reserva.metodoPagamento2).toBe("MBWAY");
+      expect(Number(reserva.valorPago2)).toBe(20);
+      // precoCriancaAplicado deve ter sido calculado automaticamente
+      expect(reserva.precoCriancaAplicado).toBeDefined();
+      expect(reserva.minimoCriancas).toBeDefined();
+
+      // Cleanup
+      await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+    });
+  });
 });

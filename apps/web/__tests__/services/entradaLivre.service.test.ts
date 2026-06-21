@@ -667,4 +667,48 @@ describe("Entrada Livre Service", () => {
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
   });
+
+  // ── v2: meias e split payment ──────────────────────────────────
+  describe("create() — meias e pagamento dividido", () => {
+    it("deve criar entrada com meiasQuantidade e metodoPagamento2", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Meias Split",
+        encarregadoTelefone: "915555555",
+        localId: TEST_IDS.LOCAL_1,
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança 1" }, { nome: "Criança 2" }, { nome: "Criança 3" }],
+        meiasQuantidade: 3,
+        metodoPagamento: "DINHEIRO",
+        metodoPagamento2: "MBWAY",
+        valorPago2: 10,
+      });
+
+      expect(entrada.meiasQuantidade).toBe(3);
+      expect(entrada.metodoPagamento2).toBe("MBWAY");
+      expect(Number(entrada.valorPago2)).toBe(10);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("deve criar entrada com várias crianças (multi-criança)", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Multi Crianças",
+        encarregadoTelefone: "916666666",
+        localId: TEST_IDS.LOCAL_2,
+        duracaoMinutos: 90,
+        criancas: [
+          { nome: "C1", idade: 4 },
+          { nome: "C2", idade: 5 },
+          { nome: "C3", idade: 6 },
+          { nome: "C4", idade: 7 },
+        ],
+      });
+
+      expect(entrada.criancas).toHaveLength(4);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+  });
 });
