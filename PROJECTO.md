@@ -11,13 +11,13 @@
 **Tagline:** *Organize, controle e torne cada festa inesquecível.*  
 **Stack tecnológico:**
 - **Frontend:** Next.js 15 (App Router) + React 19 + Tailwind CSS 4 + TanStack Query
-- **Backend:** Express 5 + TypeScript + Prisma ORM + Better Auth
-- **Database:** Neon PostgreSQL (serverless) via Prisma
+- **Fullstack:** Next.js 15 (App Router) + TypeScript + Prisma ORM + Better Auth (API Routes, sem Express)
+- **Database:** MySQL 8.x via Prisma
 - **Validation:** Zod (both frontend and backend)
 - **Auth:** Better Auth 1.3.x (email/password only)
 - **Idioma:** Português de Portugal (PT-PT) — datas, moeda (€), textos e validações
 
-**Descrição:** Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, festas em curso, cacifos, menus/lanches, monitores, locais/salas, participantes, clientes, utilizadores e campanhas de marketing (newsletter e SMS).
+**Descrição:** Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, festas em curso, cacifos, menus/lanches, monitores, locais/salas, participantes, clientes, entradas livres, utilizadores e campanhas de marketing (newsletter e SMS). Os cacifos preservam histórico (JSON), as festas têm preço por criança (com mínimo por aniversariantes), e suporta meias + pagamento dividido.
 
 ---
 
@@ -105,7 +105,9 @@ A sidebar é fixa à esquerda, com largura de ~220px. Contém logo, menu princip
 | Sub-item | Rota | Ícone (Lucide) |
 |---|---|---|
 | Utilizadores | `/configuracoes/utilizadores` | `Users` |
-| Permissões | `/configuracoes/permissoes` | `ShieldCheck` |
+| Config. Preços | `/configuracoes/precos` | `Euro` |
+| Exceções Calendário | `/configuracoes/excecoes-calendario` | `CalendarX` |
+| Slots Horário | `/configuracoes/slots-horario` | `Clock` |
 | Monitores | `/configuracoes/monitores` | `UserCog` |
 | Locais | `/configuracoes/locais` | `MapPin` |
 | Extras | `/configuracoes/extras` | `Sparkles` |
@@ -197,11 +199,25 @@ Vista em tempo real das festas activas.
 
 Gestão dos menus associados a cada reserva.
 
-**Modelo simplificado:** `Menu` com `nome` + `preco` (1:1 com Reserva).
+**Modelo simplificado:** `Menu` com `nome` + `preco` + `notasLanche` (1:1 com Reserva).
 
 ---
 
-### 4.5 Cacifos (`/cacifos`)
+### 4.5b Lanche (`/lanche`)
+
+Ecrã dedicado à equipa de lanche (função `LANCHE`). Mostra o que tem de ser preparado para cada festa e entrada livre do dia.
+
+**KPIs do dia:** festas, entradas livres, total de crianças.
+
+**Alergias:** alerta com festas que têm `notasLanche` preenchidas (alergias, restrições).
+
+**Cards:** cada festa mostra nome, horário, sala, menu e notas editáveis via modal.
+
+> Acesso: `LANCHE` (escrita notas) + `ADMINISTRADOR`.
+
+---
+
+### 4.6 Cacifos (`/cacifos`)
 
 Gestão visual dos cacifos físicos do espaço.
 
@@ -240,8 +256,10 @@ Sub-páginas de administração:
 
 | Página | Rota | Modelo |
 |---|---|---|
-| Utilizadores | `/configuracoes/utilizadores` | `User` + RBAC |
-| Permissões | `/configuracoes/permissoes` | `FuncaoPermissao` |
+| Utilizadores | `/configuracoes/utilizadores` | `User` + RBAC (hardcoded em `permissoes.ts`) |
+| Config. Preços | `/configuracoes/precos` | `ConfiguracaoPreco` (singleton) |
+| Exceções Calendário | `/configuracoes/excecoes-calendario` | `ExcecaoCalendario` |
+| Slots Horário | `/configuracoes/slots-horario` | `SlotHorario` |
 | Monitores | `/configuracoes/monitores` | `Monitor` + `MonitorLocal` |
 | Locais | `/configuracoes/locais` | `Local` |
 | Extras | `/configuracoes/extras` | `Extra` + `ExtraLocal` |
@@ -397,7 +415,7 @@ Definidos em `packages/shared/shared-types/src/types/`:
 
 ```typescript
 // types/utilizador.ts
-export type FuncaoUtilizador = 'ADMINISTRADOR' | 'GESTOR' | 'RECECAO' | 'MARKETING';
+export type FuncaoUtilizador = 'ADMINISTRADOR' | 'LANCHE' | 'CACIFOS';
 
 export interface Utilizador {
   id: string;

@@ -1,4 +1,4 @@
-# Gestão de Festas Infantis — Descrição de Páginas
+s# Gestão de Festas Infantis — Descrição de Páginas
 
 > Documento de referência para agentes de IA e developers.
 > Descreve o conteúdo, lógica e comportamento esperado de cada página da aplicação.
@@ -136,6 +136,24 @@ Monitorização de festas. A sub-rota `/festas/a-decorrer` mostra festas em esta
 
 ---
 
+## Lanche `/lanche`
+
+Ecrã dedicado à equipa de lanche (função `LANCHE`). Mostra o que tem de ser preparado para cada festa e entrada livre do dia.
+
+**Componente:** `LancheContent.tsx`
+
+**KPIs do dia:** Nº de festas, Nº de entradas livres, Total de crianças.
+
+**Alergias:** secção de alerta com festas que têm notas de lanche preenchidas (alergias, restrições alimentares).
+
+**Cards de festa:** cada festa do dia mostra nome, horário, sala, menu associado e notas de lanche. As notas são editáveis via modal (`useAtualizarNotasLanche`).
+
+**Cards de entrada livre:** cada entrada livre ativa mostra nome do encarregado, duração e crianças.
+
+> Acesso restrito à função `LANCHE` (e `ADMINISTRADOR`). Não permite editar festas — apenas notas de lanche.
+
+---
+
 ## Cacifos `/cacifos`
 
 Gestão visual dos cacifos físicos do espaço.
@@ -245,19 +263,50 @@ Gestão de acessos ao sistema (RBAC).
 
 **Componente:** `UtilizadoresContent.tsx`
 
-**Funções disponíveis:** `ADMINISTRADOR`, `GESTOR`, `RECECAO`, `MARKETING`
+**Funções disponíveis:** `ADMINISTRADOR`, `LANCHE`, `CACIFOS`
+
+> **RBAC hardcoded:** As permissões são definidas em código (`src/lib/permissoes.ts`), não em base de dados. O modelo `FuncaoPermissao` foi removido.
 
 **Campos:** Nome, Email, Função, Estado (Activo/Inactivo).
 
 ---
 
-### Permissões `/configuracoes/permissoes`
+### Configuração de Preços `/configuracoes/precos`
 
-Configuração RBAC por função e módulo.
+Configuração global de preços (tarifário por criança, meias, entradas livres, excesso de tempo).
 
-**Componente:** `PermissoesContent.tsx`
+**Componente:** `ConfigPrecosContent.tsx`
 
-**Modelo:** `FuncaoPermissao` com `funcao`, `modulo`, `nivelAcesso` (leitura/escrita/administração).
+**Modelo:** `ConfiguracaoPreco` — singleton com campos: `precoCriancaSemana`, `precoCriancaFimSemana`, `precoMeia`, `precoEntradaHoraSemana`, `precoEntradaHoraFimSemana`, `precoExcessoFixo`, `minimosCriancasPorAniversariante` (JSON array: `[{ aniversariantes, minimo }]`).
+
+> O preço da festa é calculado automaticamente: `precoCrianca × criancasFaturadas` (respeitando mínimo por nº de aniversariantes). Fins-de-semana e feriados usam tarifa fim-de-semana.
+
+---
+
+### Exceções de Calendário `/configuracoes/excecoes-calendario`
+
+Gestão de feriados e dias bloqueados.
+
+**Componente:** `ExcecoesCalendarioContent.tsx`
+
+**Modelo:** `ExcecaoCalendario` com `data`, `tipo` (FERIADO/BLOQUEADO), `nome`, `afectaPreco` (aplica tarifa fim-de-semana), `bloqueiaReserva` (impede criar festas), `recorrenciaAnual`.
+
+**Regras de negócio:**
+- Feriados com `afectaPreco=true` aplicam tarifa de fim-de-semana
+- Dias com `bloqueiaReserva=true` rejeitam criação de festas (erro `DAY_BLOCKED`)
+- `recorrenciaAnual=true` compara apenas mês/dia (ignora o ano)
+
+---
+
+### Slots de Horário `/configuracoes/slots-horario`
+
+Configuração dos horários predefinidos para festas.
+
+**Componente:** `SlotsHorarioContent.tsx`
+
+**Modelo:** `SlotHorario` com `horaInicio`, `duracaoMin` (default 135 = 2h15), `ordem`, `activo`.
+
+> Os slots predefinidos agilizam a criação de festas. A duração normal de uma festa é 2h15m (135 minutos).
 
 ---
 
@@ -364,13 +413,18 @@ Lista de tabelas com as suas relações principais.
 | `envio_campanha` | → campanha |
 | `audit_log` | → user — registo imutável de todas as acções |
 | `nota_rapida` | → user — notas rápidas por utilizador |
-| `funcao_permissao` | — RBAC: função + módulo + nível de acesso; unique([funcao, modulo]) |
+| `entrada_livre` | → local; crianças (JSON); cacifo (N:1 opcional); entradas pagas sem festa |
+| `excecao_calendario` | — feriados/dias bloqueados; `data` única; `afectaPreco`, `bloqueiaReserva`, `recorrenciaAnual` |
+| `slot_horario` | — horários predefinidos: `horaInicio`, `duracaoMin`, `ordem`, `activo` |
+| `configuracao_preco` | — singleton: tarifário por criança, meias, entradas, excesso, mínimos |
 
 **Notas sobre relações:**
 - `Reserva` é unificada com `Festa` — não existe tabela separada. Campos de runtime (`inicioEm`, `fimPrevisto`, `fimReal`) são preenchidos quando estado = `EM_CURSO`
 - Múltiplos aniversariantes por reserva via `reserva_aniversariante`
 - `participante` pode ter cacifo associado (check-in)
-- `menu` é simplificado: `nome` + `preco` (1:1 com reserva). O antigo modelo `ItemMenu` foi removido
+- `menu` é simplificado: `nome` + `preco` + `notasLanche` (1:1 com reserva). O antigo modelo `ItemMenu` foi removido
 - `monitor` pode estar ligado a um `user` do sistema (1:1 opcional)
 - `audit_log` nunca é alterado nem eliminado — apenas inserções
-- `funcao_permissao` define o mapa de RBAC: qual função acede a que módulo e com que nível
+- **RBAC é hardcoded** em `src/lib/permissoes.ts` — o modelo `FuncaoPermissao` foi removido. Funções: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`
+- `cacifo` preserva histórico (`cacifosHistorico` JSON) ao ser libertado — não apaga os dados da festa
+- `entrada_livre` suporta múltiplas crianças (irmãos/amigos), meias e pagamento dividido (até 2 métodos)

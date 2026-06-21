@@ -7,7 +7,7 @@ Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, 
 | Layer | Technology |
 |-------|-----------|
 | Fullstack | Next.js 15 (App Router) + React 19 + TypeScript |
-| Database | Neon PostgreSQL (serverless) via Prisma ORM |
+| Database | MySQL 8.x via Prisma ORM |
 | Validation | Zod (frontend & API routes) |
 | Auth | Better Auth 1.3.x (email/password only) |
 | State Management | TanStack Query (React Query) |
@@ -136,10 +136,13 @@ All API routes are defined in `apps/web/src/app/api/[resource]/route.ts` and fol
 | Participantes | `/api/participantes/*` | `src/services/participante.service.ts` |
 | Campanhas | `/api/campanhas/*` | `src/services/campanha.service.ts` |
 | Utilizadores | `/api/utilizadores/*` | `src/services/utilizador.service.ts` |
-| Permissões | `/api/permissoes/*` | `src/services/permissoes.service.ts` |
 | Upload | `/api/upload/*` | `src/services/upload.service.ts` |
 | Aloc. Monitores | `/api/alocacao-monitores/*` | `src/services/alocacaoMonitor.service.ts` |
 | Entrada Livre | `/api/entrada-livre/*` | `src/services/entradaLivre.service.ts` |
+| Lanche | `/api/lanche/*` | `src/services/lanche.service.ts` |
+| Config. Preços | `/api/configuracoes/precos/*` | `src/services/configuracaoPreco.service.ts` |
+| Exceções Calendário | `/api/excecoes-calendario/*` | `src/services/excecaoCalendario.service.ts` |
+| Slots Horário | `/api/slots-horario/*` | `src/services/slotHorario.service.ts` |
 | Relatórios | `/api/relatorios/*` | `src/services/relatorio.service.ts` |
 
 ## User Roles (RBAC)

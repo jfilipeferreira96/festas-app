@@ -47,7 +47,7 @@ festas/
 | Layer | Technology |
 |-------|-----------|
 | Fullstack | Next.js 15 (App Router) + React 19 + TypeScript |
-| Database | Neon PostgreSQL (serverless) via Prisma ORM |
+| Database | MySQL 8.x via Prisma ORM |
 | Validation | Zod (frontend & API routes) |
 | Auth | Better Auth 1.3.x (email/password only) |
 | State Management | TanStack Query (React Query) |
@@ -56,25 +56,31 @@ festas/
 
 ## Database
 
-- **Provider:** Neon PostgreSQL (serverless, cloud)
+- **Provider:** MySQL 8.x
 - **Prisma schema:** `packages/db/prisma/schema.prisma`
-- **Dev schema:** `festas` (set via `?schema=festas` in `DATABASE_URL`)
-- **Test schema:** `test` (set via `?schema=testfestas` in test `DATABASE_URL`)
+- **Dev database:** `festas` (main `DATABASE_URL`)
+- **Test database:** `festas_test` (auto-created by `__tests__/setup-db.ts`)
 
 ### Key Models
 
-`User`, `Session`, `Account`, `Verification`, `Cliente`, `Aniversariante`, `Local`, `Extra`, `ExtraLocal`, `Monitor`, `MonitorLocal`, `ConfiguracaoCacifo`, `Reserva`, `ReservaExtra`, `ReservaMonitor`, `ReservaAniversariante`, `EtapaFesta`, `ReservaEtapa`, `Participante`, `Cacifo`, `Menu`, `Segmento`, `NewsletterContacto`, `ContactoSegmento`, `Campanha`, `EnvioCampanha`, `AuditLog`, `NotaRapida`, `FuncaoPermissao`
+`User`, `Session`, `Account`, `Verification`, `Cliente`, `Aniversariante`, `Local`, `Extra`, `ExtraLocal`, `Monitor`, `MonitorLocal`, `ConfiguracaoCacifo`, `Reserva`, `ReservaExtra`, `ReservaMonitor`, `ReservaAniversariante`, `EtapaFesta`, `ReservaEtapa`, `Participante`, `Cacifo`, `Menu`, `Segmento`, `NewsletterContacto`, `ContactoSegmento`, `Campanha`, `EnvioCampanha`, `AuditLog`, `NotaRapida`, `EntradaLivre`, `ExcecaoCalendario`, `SlotHorario`, `ConfiguracaoPreco`
 
-> **Important:** `Reserva` is unified with `Festa` — there is no separate `Festa` model. When a reserva enters `EM_CURSO` state, runtime fields (`inicioEm`, `fimPrevisto`, `fimReal`) are populated. The old `ItemMenu` model was removed; `Menu` is simplified to `nome` + `preco`.
+> **Important:** `Reserva` is unified with `Festa` — there is no separate `Festa` model. When a reserva enters `EM_CURSO` state, runtime fields (`inicioEm`, `fimPrevisto`, `fimReal`) are populated. The old `ItemMenu` model was removed; `Menu` is simplified to `nome` + `preco` + `notasLanche`.
+>
+> **RBAC is hardcoded** — the `FuncaoPermissao` model was removed. Permissions are defined in code (`src/lib/permissoes.ts`). Only three roles exist: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`.
+>
+> **New pricing model:** Festas are priced per-child (`precoCriancaSemana`/`precoCriancaFimSemana`) with minimums by nº of aniversariantes. `ConfiguracaoPreco` is a singleton holding all tariffs. `ExcecaoCalendario` marks feriados (affect price) and blocked days (prevent booking). `SlotHorario` defines preset party time slots (default 2h15m = 135 min). `EntradaLivre` supports multiple children, mandatory socks (meias), and split payments (up to 2 methods).
 
 ### Enums
 
-- `FuncaoUtilizador`: `ADMINISTRADOR`, `GESTOR`, `RECECAO`, `MARKETING`
+- `FuncaoUtilizador`: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`
 - `EstadoReserva`: `RESERVA`, `CONFIRMADO`, `EM_CURSO`, `CONCLUIDA`, `CANCELADA`
 - `EstadoCacifo`: `LIVRE`, `OCUPADO`, `RESERVADO`
+- `EstadoEntradaLivre`: `ATIVA`, `CONCLUIDA`, `CANCELADA`
 - `MetodoPagamento`: `DINHEIRO`, `MULTIBANCO`, `MBWAY`, `TRANSFERENCIA`, `CARTAO`, `OUTRO`
 - `EstadoCaucao`: `PAGA`, `NAO_PAGA`, `PAGA_NO_DIA`
 - `CategoriaItem`: `MENU`, `EXTRA`
+- `TipoExcecao`: `FERIADO`, `BLOQUEADO`
 - `TipoCampanha`: `EMAIL`, `SMS`
 - `EstadoCampanha`: `RASCUNHO`, `AGENDADA`, `ENVIADA`, `CANCELADA`
 
@@ -165,10 +171,13 @@ if (error.message in ERROR_MAP) {
 | Participantes | `/api/participantes/*` | `src/services/participante.service.ts` |
 | Campanhas | `/api/campanhas/*` | `src/services/campanha.service.ts` |
 | Utilizadores | `/api/utilizadores/*` | `src/services/utilizador.service.ts` |
-| Permissões | `/api/permissoes/*` | `src/services/permissoes.service.ts` |
 | Upload | `/api/upload/*` | `src/services/upload.service.ts` |
 | Aloc. Monitores | `/api/alocacao-monitores/*` | `src/services/alocacaoMonitor.service.ts` |
 | Entrada Livre | `/api/entrada-livre/*` | `src/services/entradaLivre.service.ts` |
+| Lanche | `/api/lanche/*` | `src/services/lanche.service.ts` |
+| Config. Preços | `/api/configuracoes/precos/*` | `src/services/configuracaoPreco.service.ts` |
+| Exceções Calendário | `/api/excecoes-calendario/*` | `src/services/excecaoCalendario.service.ts` |
+| Slots Horário | `/api/slots-horario/*` | `src/services/slotHorario.service.ts` |
 | Relatórios | `/api/relatorios/*` | `src/services/relatorio.service.ts` |
 
 ### Auth
@@ -207,12 +216,15 @@ The app uses Next.js route groups:
 | `/festas` | Festas (protected) |
 | `/festas/a-decorrer` | Festas a decorrer (protected) |
 | `/cacifos` | Cacifos (protected) |
+| `/lanche` | Lanche (protected) |
 | `/menus` | Menus (protected) |
 | `/relatorios` | Relatórios (protected) |
 | `/divulgacoes` | Divulgações (protected) |
 | `/clientes` | Clientes (protected) |
 | `/configuracoes/utilizadores` | Utilizadores (protected) |
-| `/configuracoes/permissoes` | Permissões (protected) |
+| `/configuracoes/precos` | Config. Preços (protected) |
+| `/configuracoes/excecoes-calendario` | Exceções Calendário (protected) |
+| `/configuracoes/slots-horario` | Slots Horário (protected) |
 | `/configuracoes/monitores` | Monitores (protected) |
 | `/configuracoes/locais` | Locais (protected) |
 | `/configuracoes/extras` | Extras (protected) |
@@ -269,27 +281,32 @@ Default configurations for: extras, menus, locais, menu-templates.
 
 - **Framework:** Vitest
 - **Config:** `apps/web/vitest.config.ts`
-- **Test schema:** `test` (isolated PostgreSQL schema in same Neon database)
-- **Setup:** `apps/web/__tests__/setup.ts` creates `test` schema and pushes tables
+- **Test database:** `festas_test` (separate MySQL database, auto-created by `__tests__/setup-db.ts`)
+- **Setup:** `apps/web/__tests__/setup-db.ts` creates the `festas_test` database and pushes the Prisma schema; `__tests__/setup.ts` loads env
 - **Test helpers:** `apps/web/__tests__/helpers/seed.ts` provides `seedTestData()` and `cleanTestData()`
-- **Test client:** `apps/web/__tests__/helpers/test-prisma.ts` provides PrismaClient configured for `test` schema
+- **Test client:** `apps/web/__tests__/helpers/test-prisma.ts` provides a PrismaClient configured for the test database
 
 ### Test Files
 
 | File | Service tested |
 |------|---------------|
-| `permissoes.service.test.ts` | CRUD for permissões, seedDefaults, hasAccess |
+| `rbac.test.ts` | RBAC hardcoded: FUNCOES, PERMISSOES matrix, hasAccess, role isolation |
 | `local.service.test.ts` | CRUD for locais |
-| `reserva.service.test.ts` | Create, list, updateStatus, delete |
-| `cacifo.service.test.ts` | MarcarOcupado, marcarPago, libertar |
+| `reserva.service.test.ts` | Create, list, updateStatus, delete, DAY_BLOCKED, meias/split |
+| `cacifo.service.test.ts` | MarcarOcupado, marcarPago, libertar, histórico, getDisponiveisParaFesta |
 | `extra.service.test.ts` | CRUD for extras |
 | `cliente.service.test.ts` | CRUD for clientes, search |
 | `monitor.service.test.ts` | CRUD for monitores, listActive |
 | `campanha.service.test.ts` | Create, update, enviar, metricas |
 | `menu.service.test.ts` | getByReservaId, create |
-| `dashboard.service.test.ts` | getKPIs, getFestasEmCurso, getProximasFestas |
+| `dashboard.service.test.ts` | getKPIs, getFestasEmCurso, getProximasFestas, totalCriancasNoParque |
 | `utilizador.service.test.ts` | CRUD for utilizadores, updateFuncao |
 | `participante.service.test.ts` | CRUD for participantes, check-in |
+| `entradaLivre.service.test.ts` | CRUD, concluir, pagamento, meias/split, multi-criança |
+| `configuracaoPreco.service.test.ts` | getConfig, updateConfig, calcularPrecoFesta, meias, entradas |
+| `excecaoCalendario.service.test.ts` | CRUD, isFeriado, isBloqueado, recorrenciaAnual |
+| `slotHorario.service.test.ts` | CRUD, list/listAll, duracaoMin default |
+| `lanche.service.test.ts` | getLanchesDoDia, getById, atualizarNotas, alergias |
 | `paginacao-filtro-pesquisa.test.ts` | Paginação, filtros e pesquisa genérica |
 
 ### Test Pattern
@@ -300,7 +317,11 @@ import testPrisma from "../helpers/test-prisma";
 import { seedTestData, cleanTestData } from "../helpers/seed";
 
 vi.mock("@festas/db", () => ({
-  PrismaClient: vi.fn(() => testPrisma),
+  default: testPrisma,
+}));
+
+vi.mock("@/lib/logger", () => ({
+  default: { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), http: vi.fn() },
 }));
 
 describe("ServiceName", () => {
@@ -335,12 +356,12 @@ npm run test             # Run tests (Vitest)
 
 ### Database Scripts (`packages/db/scripts/db.js`)
 
-The `db:clean` and `db:reset` commands automatically clean stale enum types (`_old` suffix) before running `prisma db push` to prevent the `cannot drop type X_old` PostgreSQL error.
+The `db:clean` and `db:reset` commands clean stale enum values before running `prisma db push`.
 
 ## Environment Variables
 
 **App** (`apps/web/.env`):
-- `DATABASE_URL` — Neon PostgreSQL connection string (includes `?schema=festas`)
+- `DATABASE_URL` — MySQL connection string (`mysql://user:pass@host:3306/festas`)
 - `BETTER_AUTH_SECRET` — Auth secret key
 - `BETTER_AUTH_URL` — Backend URL (same as app URL)
 - `NEXT_PUBLIC_APP_URL` — Frontend URL (http://localhost:3000)

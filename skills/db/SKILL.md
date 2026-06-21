@@ -5,9 +5,9 @@ Padrão para queries, migrações, relações e convenções da base de dados.
 ## Stack
 
 - **ORM:** Prisma
-- **Base de dados:** Neon PostgreSQL (serverless)
-- **Dev schema:** `festas` (via `?schema=festas` em `DATABASE_URL`)
-- **Test schema:** `test` (via `?schema=testfestas`)
+- **Base de dados:** MySQL 8.x
+- **Dev database:** `festas` (`DATABASE_URL`)
+- **Test database:** `festas_test` (auto-created por `__tests__/setup-db.ts`)
 - **Schema file:** `packages/db/prisma/schema.prisma`
 
 ## Convenções de nomenclatura
@@ -39,9 +39,8 @@ updatedAt DateTime @updatedAt
 ```prisma
 enum FuncaoUtilizador {
   ADMINISTRADOR
-  GESTOR
-  RECECAO
-  MARKETING
+  LANCHE
+  CACIFOS
 }
 
 enum EstadoReserva {
@@ -106,7 +105,7 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
-  funcao        FuncaoUtilizador @default(RECECAO)
+  funcao        FuncaoUtilizador @default(CACIFOS)
   activo        Boolean          @default(true)
 
   sessions      Session[]
