@@ -32,6 +32,7 @@
     "localNotAvailable": "O local selecionado não está disponível neste horário",
     "localInactive": "O local selecionado está inactivo",
     "clienteRequired": "Cliente é obrigatório",
+    "dayBlocked": "Não é possível criar festas neste dia (dia bloqueado)",
     "capacityExceeded": "O número de crianças excede a capacidade da sala",
     "cannotDeleteInProgress": "Não é possível eliminar uma reserva em curso",
     "cannotModifyInProgress": "Não é possível modificar uma reserva em curso",
@@ -47,6 +48,15 @@
     "available": "Sala disponível neste horário",
     "notAvailableOverlap": "Sala ocupada neste horário",
     "aniversarianteNomeRequired": "É obrigatório indicar pelo menos um aniversariante"
+  },
+  "excecaoCalendario": {
+    "notFound": "Exceção de calendário não encontrada",
+    "alreadyExists": "Já existe uma exceção para esta data",
+    "deleted": "Exceção eliminada com sucesso"
+  },
+  "slotHorario": {
+    "notFound": "Slot de horário não encontrado",
+    "deleted": "Slot de horário eliminado com sucesso"
   },
   "cacifo": {
     "notFound": "Cacifo não encontrado",
