@@ -9,7 +9,9 @@ import { format, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
+import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import InputField from "@/components/form/input/InputField";
+import DatePicker from "@/components/form/date-picker";
 import Switch from "@/components/form/switch/Switch";
 import { Select } from "@/components/ui/select";
 import DataTable from "@/components/ui/table/DataTable";
@@ -52,6 +54,7 @@ export default function ExcecoesCalendarioContent() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingExcecao, setEditingExcecao] = useState<ExcecaoCalendario | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; nome: string }>({ isOpen: false, id: "", nome: "" });
 
   const {
     register,
@@ -72,6 +75,7 @@ export default function ExcecoesCalendarioContent() {
     },
   });
 
+  const watchedData = watch("data");
   const watchedTipo = watch("tipo");
   const watchedAfectaPreco = watch("afectaPreco");
   const watchedBloqueiaReserva = watch("bloqueiaReserva");
@@ -168,12 +172,24 @@ export default function ExcecoesCalendarioContent() {
   );
 
   const handleDelete = useCallback(
-    async (excecao: ExcecaoCalendario) => {
-      if (window.confirm(`Eliminar a exceção "${excecao.nome}"?`)) {
-        await deleteExcecao.mutateAsync(excecao.id);
-      }
+    (excecao: ExcecaoCalendario) => {
+      setDeleteModal({ isOpen: true, id: excecao.id, nome: excecao.nome });
     },
-    [deleteExcecao]
+    []
+  );
+
+  const confirmDelete = useCallback(async () => {
+    await deleteExcecao.mutateAsync(deleteModal.id);
+    setDeleteModal({ isOpen: false, id: "", nome: "" });
+  }, [deleteExcecao, deleteModal.id]);
+
+  // DatePicker (flatpickr) callback — converte Date selecionado para yyyy-MM-dd
+  const onDataDateChange = useCallback(
+    (selectedDates: Date[]) => {
+      const d = selectedDates?.[0];
+      if (d) setValue("data", format(d, "yyyy-MM-dd"), { shouldValidate: true });
+    },
+    [setValue]
   );
 
   return (
@@ -215,6 +231,19 @@ export default function ExcecoesCalendarioContent() {
         />
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, id: "", nome: "" })}
+        onConfirm={confirmDelete}
+        title="Eliminar Exceção"
+        message={`Tem a certeza que deseja eliminar a exceção "${deleteModal.nome}"? Esta acção não pode ser revertida.`}
+        confirmText="Eliminar"
+        variant="danger"
+        isConfirming={deleteExcecao.isPending}
+      />
+
+      {/* Form Modal */}
       {showForm && (
         <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div className="p-6">
@@ -223,13 +252,15 @@ export default function ExcecoesCalendarioContent() {
             </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-text-primary mb-1.5">Data</label>
-                <InputField
-                  type="date"
-                  {...register("data")}
-                  error={!!errors.data}
-                  hint={errors.data?.message}
+                <DatePicker
+                  id="excecao-data"
+                  label="Data"
+                  defaultDate={watchedData || undefined}
+                  onChange={onDataDateChange}
                 />
+                {errors.data && (
+                  <p className="mt-1.5 text-xs text-error-500">{errors.data.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1.5">Nome</label>
@@ -287,3 +318,4 @@ export default function ExcecoesCalendarioContent() {
     </div>
   );
 }
+

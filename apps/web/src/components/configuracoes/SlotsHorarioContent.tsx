@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
+import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import InputField from "@/components/form/input/InputField";
 import Switch from "@/components/form/switch/Switch";
 import DataTable from "@/components/ui/table/DataTable";
@@ -41,6 +42,7 @@ export default function SlotsHorarioContent() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingSlot, setEditingSlot] = useState<SlotHorario | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string; horaInicio: string }>({ isOpen: false, id: "", horaInicio: "" });
 
   const {
     register,
@@ -69,14 +71,7 @@ export default function SlotsHorarioContent() {
 
   const columns: Column<SlotHorario>[] = useMemo(
     () => [
-      {
-        key: "ordem",
-        label: "#",
-        sortable: true,
-        render: (value) => (
-          <span className="text-sm font-medium text-text-muted w-6">{value as number}</span>
-        ),
-      },
+      // NOTA: a coluna de índice "#" já é desenhada pelo DataTable; não repetir aqui.
       {
         key: "horaInicio",
         label: "Hora de Início",
@@ -146,13 +141,16 @@ export default function SlotsHorarioContent() {
   );
 
   const handleDelete = useCallback(
-    async (slot: SlotHorario) => {
-      if (window.confirm(`Eliminar o slot das ${slot.horaInicio}?`)) {
-        await deleteSlot.mutateAsync(slot.id);
-      }
+    (slot: SlotHorario) => {
+      setDeleteModal({ isOpen: true, id: slot.id, horaInicio: slot.horaInicio });
     },
-    [deleteSlot]
+    []
   );
+
+  const confirmDelete = useCallback(async () => {
+    await deleteSlot.mutateAsync(deleteModal.id);
+    setDeleteModal({ isOpen: false, id: "", horaInicio: "" });
+  }, [deleteSlot, deleteModal.id]);
 
   return (
     <div>
@@ -193,6 +191,19 @@ export default function SlotsHorarioContent() {
         />
       </div>
 
+      {/* Delete Confirmation Modal */}
+      <ConfirmActionModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, id: "", horaInicio: "" })}
+        onConfirm={confirmDelete}
+        title="Eliminar Slot"
+        message={`Tem a certeza que deseja eliminar o slot das ${deleteModal.horaInicio}? Esta acção não pode ser revertida.`}
+        confirmText="Eliminar"
+        variant="danger"
+        isConfirming={deleteSlot.isPending}
+      />
+
+      {/* Form Modal */}
       {showForm && (
         <Modal isOpen={showForm} onClose={() => setShowForm(false)}>
           <div className="p-6">
