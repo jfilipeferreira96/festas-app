@@ -193,7 +193,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, openSubmenu, toggleSubmenu } = useSidebar();
   const pathname = usePathname();
   const { handleSignOut } = useSignOut();
-  const { canRead, isLoading: permissoesLoading } = useMinhasPermissoes();
+  const { canRead, isGlobalAdmin, isLoading: permissoesLoading } = useMinhasPermissoes();
 
   const isActive = useCallback(
     (path: string) => {
@@ -241,7 +241,11 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
         <nav className="flex-1 overflow-y-auto py-3 px-2">
           <ul className="space-y-1">
             {mainNavItems
-              .filter((item) => !item.modulo || permissoesLoading || canRead(item.modulo))
+              .filter((item) => {
+                // Dashboard is admin-only (no modulo assigned)
+                if (item.name === "Dashboard") return isGlobalAdmin;
+                return !item.modulo || permissoesLoading || canRead(item.modulo);
+              })
               .map((item) => (
               <li key={item.name}>
                 {item.subItems ? (() => {

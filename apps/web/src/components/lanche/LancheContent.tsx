@@ -8,6 +8,7 @@ import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
+import DatePicker from "@/components/form/date-picker";
 import { Select } from "@/components/ui/select";
 import {
   useLanchesDoDia,
@@ -103,11 +104,13 @@ export default function LancheContent() {
         subtitle={formatDataLabel(dataSel)}
         actions={
           <div className="flex items-center gap-2">
-            <InputField
-              type="date"
-              value={dataSel}
-              onChange={(e) => setDataSel(e.target.value)}
-              className="w-auto"
+            <DatePicker
+              id="lanche-date-picker"
+              defaultDate={dataSel}
+              onChange={([date]: Date[]) => {
+                if (date) setDataSel(date.toISOString().split("T")[0]);
+              }}
+              className="w-44"
             />
           </div>
         }
@@ -140,7 +143,7 @@ export default function LancheContent() {
         {isLoading ? (
           <p className="text-sm text-text-muted">A carregar...</p>
         ) : festas.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <div className="overflow-hidden rounded-xl bg-white border border-border shadow-theme-xs">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-border">
                 <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
@@ -233,7 +236,7 @@ export default function LancheContent() {
             <DoorOpen size={16} className="text-brand-500" />
             Entradas Livres
           </h3>
-          <div className="overflow-x-auto rounded-lg border border-border">
+          <div className="overflow-hidden rounded-xl bg-white border border-border shadow-theme-xs">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-border">
                 <tr className="text-left text-xs uppercase tracking-wider text-text-muted">

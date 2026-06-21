@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginFormData } from "@/lib/validations/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
+import { useUser } from "@/contexts/AuthContext";
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +21,7 @@ export default function SignInForm() {
   const router = useRouter();
   const { success, handleApiError } = useToast();
   const { t } = useTranslation();
+  const { checkSession } = useUser();
 
   const {
     register,
@@ -44,6 +46,11 @@ export default function SignInForm() {
         handleApiError(result.error, t("auth.signIn.errors.loginFailed"));
       } else {
         success(t("auth.signIn.errors.loginSuccess"));
+        // Refresh the persistent AuthProvider's session so the sidebar and
+        // permissions re-render with the newly-authenticated user — no full
+        // page reload required. The /dashboard server component then redirects
+        // non-admin roles to their role-specific home route.
+        await checkSession();
         router.push("/dashboard");
       }
     } catch (error) {

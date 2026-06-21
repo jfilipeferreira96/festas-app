@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Save, Clock } from "lucide-react";
+import { Save, Clock, Pencil } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { pt } from "date-fns/locale";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import TextArea from "@/components/form/input/TextArea";
+import DataTable, { type Column } from "@/components/ui/table/DataTable";
+import { FestaColorDot } from "@/components/ui/FestaColorPicker";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { useFestasAcabar, useAtualizarFestaAcabar } from "@/hooks/use-festas-acabar";
 import type { FestaAcabar } from "@/lib/api/festasAcabar";
 
@@ -46,6 +48,73 @@ export default function FestasAcabarContent() {
     setEditing(null);
   }, [editing, atualizar]);
 
+  const columns: Column<FestaAcabar>[] = [
+    {
+      key: "fimPrevisto",
+      label: "Hora Saída",
+      sortable: true,
+      render: (_v, f) => (
+        <span className="font-medium text-text-primary whitespace-nowrap flex items-center gap-1">
+          <Clock size={13} className="text-text-muted" />
+          {f.fimPrevisto ? format(parseISO(f.fimPrevisto), "HH:mm") : "—"}
+        </span>
+      ),
+    },
+    {
+      key: "nomeFesta",
+      label: "Aniversariante",
+      sortable: true,
+      render: (_v, f) => (
+        <div className="flex items-center gap-2">
+          <FestaColorDot color={f.cor} />
+          <span className="text-sm font-medium text-text-primary">{f.nomeFesta}</span>
+        </div>
+      ),
+    },
+    {
+      key: "localNome",
+      label: "Sala",
+      render: (_v, f) => (
+        <span className="text-sm text-text-secondary">{f.localNome || "—"}</span>
+      ),
+    },
+    {
+      key: "numCriancas",
+      label: "Crianças",
+      sortable: true,
+      render: (_v, f) => (
+        <span className="text-sm text-text-secondary text-center block">{f.numCriancas}</span>
+      ),
+    },
+    {
+      key: "observacoesBrindes",
+      label: "Brindes",
+      render: (_v, f) => (
+        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+          {f.observacoesBrindes || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "observacoesBrindesPais",
+      label: "Brindes dos Pais",
+      render: (_v, f) => (
+        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+          {f.observacoesBrindesPais || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "observacoesLesoes",
+      label: "Obs. Lesões",
+      render: (_v, f) => (
+        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+          {f.observacoesLesoes || "—"}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -53,79 +122,37 @@ export default function FestasAcabarContent() {
         subtitle="Festas em curso ordenadas por hora de saída"
       />
 
-      {isLoading ? (
-        <p className="text-sm text-text-muted mt-4">A carregar...</p>
-      ) : festas.length > 0 ? (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-border">
-              <tr className="text-left text-xs uppercase tracking-wider text-text-muted">
-                <th className="px-3 py-2.5">
-                  <span className="flex items-center gap-1">
-                    <Clock size={12} /> Hora Saída
-                  </span>
-                </th>
-                <th className="px-3 py-2.5">Aniversariante</th>
-                <th className="px-3 py-2.5">Cor</th>
-                <th className="px-3 py-2.5 text-center">Total Crianças</th>
-                <th className="px-3 py-2.5">Brindes</th>
-                <th className="px-3 py-2.5">Brindes dos Pais</th>
-                <th className="px-3 py-2.5">Obs. Lesões</th>
-                <th className="px-3 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {festas.map((f) => (
-                <tr key={f.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2.5 font-medium text-text-primary whitespace-nowrap">
-                    {f.fimPrevisto
-                      ? format(parseISO(f.fimPrevisto), "HH:mm")
-                      : "—"}
-                  </td>
-                  <td className="px-3 py-2.5 text-text-primary">{f.nomeFesta}</td>
-                  <td className="px-3 py-2.5">
-                    {f.cor ? (
-                      <span
-                        className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: `${f.cor}20`, color: f.cor }}
-                      >
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: f.cor }} />
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="px-3 py-2.5 text-center text-text-secondary">{f.numCriancas}</td>
-                  <td className="px-3 py-2.5 text-text-secondary text-xs max-w-[150px] truncate">
-                    {f.observacoesBrindes || "—"}
-                  </td>
-                  <td className="px-3 py-2.5 text-text-secondary text-xs max-w-[150px] truncate">
-                    {f.observacoesBrindesPais || "—"}
-                  </td>
-                  <td className="px-3 py-2.5 text-text-secondary text-xs max-w-[150px] truncate">
-                    {f.observacoesLesoes || "—"}
-                  </td>
-                  <td className="px-3 py-2.5">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(f)}>
-                      Editar
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="mt-8 flex flex-col items-center justify-center text-center py-12">
-          <div className="w-16 h-16 rounded-full bg-surface border border-border flex items-center justify-center mb-4">
-            <Clock size={28} className="text-text-muted" />
+      <DataTable<FestaAcabar>
+        data={festas}
+        columns={columns}
+        itemLabel="festas em curso"
+        loading={isLoading}
+        defaultSort={{ key: "fimPrevisto", direction: "asc" }}
+        searchable
+        searchPlaceholder="Pesquisar por aniversariante, sala..."
+        searchFn={(f, q) =>
+          (f.nomeFesta ?? "").toLowerCase().includes(q) ||
+          (f.localNome ?? "").toLowerCase().includes(q)
+        }
+        pagination
+        pageSize={10}
+        renderActions={(f) => (
+          <div className="flex items-center justify-end gap-1">
+            <Tooltip content="Editar observações" position="top" theme="dark">
+              <button
+                onClick={() => handleEdit(f)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+              >
+                <Pencil size={15} />
+              </button>
+            </Tooltip>
           </div>
-          <p className="text-sm font-medium text-text-primary">Sem festas em curso</p>
-          <p className="text-xs text-text-muted mt-1">
-            Não há festas a decorrer neste momento.
-          </p>
-        </div>
-      )}
+        )}
+        emptyState={{
+          title: "Sem festas em curso",
+          description: "Não há festas a decorrer neste momento.",
+        }}
+      />
 
       {/* Modal de edição */}
       {editing && (

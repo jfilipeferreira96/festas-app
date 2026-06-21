@@ -102,8 +102,14 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
 };
 
 // ── Rota inicial por role ────────────────────
-/** Retorna a rota inicial (landing page) para um papel. */
-export function getHomeRoute(funcao: FuncaoUtilizador | undefined | null): string {
+/**
+ * Retorna a rota inicial (landing page) para um papel.
+ * O tipo de retorno é uma união de literais de rotas reais para satisfazer
+ * o `typedRoutes` do Next.js ao usar com `redirect()` / `<Link href>`.
+ */
+export type HomeRoute = "/dashboard" | "/lanche" | "/festas" | "/monitores" | "/festas-acabar";
+
+export function getHomeRoute(funcao: FuncaoUtilizador | undefined | null): HomeRoute {
   switch (funcao) {
     case "LANCHE":
       return "/lanche";
