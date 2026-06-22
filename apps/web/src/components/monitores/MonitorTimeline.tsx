@@ -34,30 +34,31 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-white p-8 text-center">
-        <div className="h-6 w-6 mx-auto mb-3 rounded-full border-2 border-brand-200 border-t-brand-500 animate-spin" />
-        <p className="text-sm text-text-muted">A carregar escalação...</p>
+      <div className="rounded-xl border border-border bg-white shadow-theme-sm p-12 text-center">
+        <div className="h-8 w-8 mx-auto mb-4 rounded-full border-2 border-primary-200 border-t-primary-500 animate-spin" />
+        <p className="text-sm font-medium text-text-muted">A carregar escalação...</p>
       </div>
     );
   }
 
   if (alocacoes.length === 0) {
     return (
-      <div className="rounded-xl border border-border bg-white p-12 text-center">
-        <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gray-50 mx-auto mb-4">
-          <UserCog size={32} className="text-text-muted" />
+      <div className="rounded-xl border border-border bg-white shadow-theme-sm p-12 text-center">
+        <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-50 to-primary-100 ring-1 ring-primary-200/50 mx-auto mb-4">
+          <UserCog size={28} className="text-primary-400" />
         </div>
-        <p className="text-sm font-medium text-text-primary mb-1">Nenhuma alocação neste dia</p>
+        <p className="text-sm font-semibold text-text-primary mb-1">Nenhuma alocação neste dia</p>
         <p className="text-xs text-text-muted">Use o botão “Adicionar” para escalar um monitor.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border bg-white shadow-theme-xs overflow-hidden">
+    <div className="rounded-xl border border-border bg-white shadow-theme-sm overflow-hidden">
       {/* Cabeçalho com horas 0–24h */}
-      <div className="flex border-b border-border bg-gray-50/60">
-        <div className="w-[150px] shrink-0 px-3 py-2.5 text-xs font-semibold text-text-secondary uppercase tracking-wider">
+      <div className="flex border-b border-border bg-gray-50/80">
+        <div className="w-[150px] shrink-0 px-3 py-3 text-xs font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+          <UserCog size={13} className="text-text-muted" />
           Monitor
         </div>
         <div className="relative flex-1 min-w-[480px]">
@@ -65,16 +66,16 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
             {HOUR_MARKERS.slice(0, -1).map((h, i) => (
               <div
                 key={h}
-                className="flex-1 relative py-2.5"
-                style={{ borderLeft: i === 0 ? "none" : "1px solid var(--color-border)" }}
+                className="flex-1 relative py-3"
+                style={{ borderLeft: i === 0 ? "none" : "1px dashed var(--color-border)" }}
               >
-                <span className="absolute -top-0.5 left-1.5 text-[10px] font-medium text-text-muted">
+                <span className="absolute top-1.5 left-1.5 text-[10px] font-semibold text-text-muted tabular-nums">
                   {String(h).padStart(2, "0")}h
                 </span>
               </div>
             ))}
             {/* marcador final 24h */}
-            <span className="absolute -top-0.5 right-1.5 text-[10px] font-medium text-text-muted">
+            <span className="absolute top-1.5 right-1.5 text-[10px] font-semibold text-text-muted tabular-nums">
               24h
             </span>
           </div>
@@ -84,13 +85,13 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
       {/* Linhas por monitor */}
       <div className="divide-y divide-border">
         {rows.map((row) => (
-          <div key={row.id} className="flex hover:bg-gray-50/40 transition-colors">
+          <div key={row.id} className="flex hover:bg-gray-50/50 transition-colors group">
             {/* Nome do monitor */}
-            <div className="w-[150px] shrink-0 px-3 py-3 flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
-                <UserCog size={13} className="text-primary-500" />
+            <div className="w-[150px] shrink-0 px-3 py-3 flex items-center gap-2 border-r border-border/50">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center shrink-0 ring-1 ring-primary-200/50">
+                <UserCog size={14} className="text-primary-600" />
               </div>
-              <span className="text-sm font-medium text-text-primary truncate">{row.nome}</span>
+              <span className="text-sm font-semibold text-text-primary truncate">{row.nome}</span>
             </div>
 
             {/* Track 0–24h */}
@@ -98,7 +99,8 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
               className="relative flex-1 min-w-[480px] py-2.5"
               style={{
                 backgroundImage:
-                  "repeating-linear-gradient(90deg, var(--color-border) 0 1px, transparent 1px calc(100% / 24))",
+                  "repeating-linear-gradient(90deg, var(--color-border) 0 1px, transparent 1px calc(100% / 12))",
+                backgroundSize: "calc(100% / 12 * 2) 100%",
               }}
             >
               {row.items.map((a) => {
@@ -115,7 +117,7 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
                     title={`${a.local?.nome ?? ""} · ${formatarIntervalo(a.horaInicio, a.horaFim)}${
                       a.observacoes ? ` · ${a.observacoes}` : ""
                     }`}
-                    className="absolute top-1.5 bottom-1.5 rounded-md text-[11px] font-semibold shadow-sm flex items-center gap-1 px-1.5 overflow-hidden hover:brightness-110 hover:shadow-md transition-all cursor-pointer"
+                    className="absolute top-1.5 bottom-1.5 rounded-lg text-[11px] font-semibold shadow-sm ring-1 ring-black/5 flex items-center gap-1 px-2 overflow-hidden hover:brightness-105 hover:shadow-md hover:ring-black/10 hover:-translate-y-px transition-all cursor-pointer"
                     style={{
                       left: `${left}%`,
                       width: `${width}%`,
@@ -137,13 +139,13 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
       </div>
 
       {/* Resumo de horas */}
-      <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-t border-border bg-gray-50/60 text-xs text-text-muted">
-        <span className="flex items-center gap-1.5">
-          <Clock size={13} />
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-border bg-gray-50/80 text-xs text-text-muted">
+        <span className="flex items-center gap-1.5 font-medium">
+          <Clock size={13} className="text-primary-400" />
           {alocacoes.length} {alocacoes.length === 1 ? "alocação" : "alocações"} · {rows.length}{" "}
           {rows.length === 1 ? "monitor" : "monitores"}
         </span>
-        <span>Horas: 00h — 24h</span>
+        <span className="tabular-nums">Horário: 00h — 24h</span>
       </div>
     </div>
   );

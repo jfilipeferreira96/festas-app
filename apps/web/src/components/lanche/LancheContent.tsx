@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Sandwich, AlertTriangle, Cake, DoorOpen, Save } from "lucide-react";
+import { Sandwich, AlertTriangle, Cake, DoorOpen, Save, Pencil } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
 import { PageHeader, Button } from "@/components/ui";
@@ -10,6 +10,7 @@ import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
 import DatePicker from "@/components/form/date-picker";
 import { Select } from "@/components/ui/select";
+import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import {
   useLanchesDoDia,
   useAlergias,
@@ -154,7 +155,9 @@ export default function LancheContent() {
                   <th className="px-3 py-2.5 text-center">Total</th>
                   <th className="px-3 py-2.5">Menu</th>
                   <th className="px-3 py-2.5">Extras</th>
-                  <th className="px-3 py-2.5">Obs. Lanche/Cacifo</th>
+                  <th className="px-3 py-2.5">Obs. Lanche</th>
+                  <th className="px-3 py-2.5">Obs. Cacifo</th>
+                  <th className="px-3 py-2.5">Obs. Lesões</th>
                   <th className="px-3 py-2.5 text-center">Idade</th>
                   <th className="px-3 py-2.5">Estado</th>
                   <th className="px-3 py-2.5"></th>
@@ -191,8 +194,14 @@ export default function LancheContent() {
                     <td className="px-3 py-2.5 text-text-secondary text-xs">
                       {f.extrasNomes?.length ? f.extrasNomes.join(", ") : "—"}
                     </td>
-                    <td className="px-3 py-2.5 text-text-secondary text-xs max-w-[180px] truncate">
-                      {[f.notasLanche, f.observacoesCacifo].filter(Boolean).join(" / ") || "—"}
+                    <td className="px-3 py-2.5 text-text-secondary text-xs max-w-[160px] truncate" title={f.notasLanche ?? ""}>
+                      {f.notasLanche || "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-text-secondary text-xs max-w-[160px] truncate" title={f.observacoesCacifo ?? ""}>
+                      {f.observacoesCacifo || "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-text-secondary text-xs max-w-[160px] truncate" title={f.observacoesLesoes ?? ""}>
+                      {f.observacoesLesoes || "—"}
                     </td>
                     <td className="px-3 py-2.5 text-center text-text-secondary">
                       {f.idadeAniversariante != null ? `${f.idadeAniversariante}a` : "—"}
@@ -210,14 +219,14 @@ export default function LancheContent() {
                       />
                     </td>
                     <td className="px-3 py-2.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditNotas(f)}
-                        className="whitespace-nowrap"
-                      >
-                        Notas
-                      </Button>
+                      <Tooltip content="Editar observações" position="top" theme="dark">
+                        <button
+                          onClick={() => handleEditNotas(f)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      </Tooltip>
                     </td>
                   </tr>
                 ))}
