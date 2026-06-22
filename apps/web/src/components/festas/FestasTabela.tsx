@@ -60,7 +60,18 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
     const hoje = new Date().toISOString().split("T")[0];
     if (filtro === "hoje") return { data: hoje };
     if (filtro === "semana") {
-      return {}; // TODO: add date range filter
+      // Segunda → domingo da semana atual
+      const now = new Date();
+      const dow = now.getDay(); // 0 = domingo
+      const diffToMonday = dow === 0 ? -6 : 1 - dow;
+      const monday = new Date(now);
+      monday.setDate(now.getDate() + diffToMonday);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      return {
+        dataInicio: monday.toISOString().split("T")[0],
+        dataFim: sunday.toISOString().split("T")[0],
+      };
     }
     if (["RESERVA", "CONFIRMADO", "EM_CURSO", "CONCLUIDA"].includes(filtro)) {
       return { estado: filtro as EstadoReserva };

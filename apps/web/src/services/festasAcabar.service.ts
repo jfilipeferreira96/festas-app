@@ -36,6 +36,7 @@ export const festasAcabarService = {
         cor: r.cor,
         idadeAniversariante,
         numCriancas: r.numCriancas,
+        inicioEm: r.inicioEm?.toISOString() ?? null,
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
         localNome: r.local?.nome ?? "—",
         observacoesBrindes: r.observacoesBrindes ?? "",

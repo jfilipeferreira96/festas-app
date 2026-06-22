@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { reservasApi } from "@/lib/api/reservas";
 import type { CreateReservaData, UpdateReservaData, EstadoReserva, DisponibilidadeResult } from "@/lib/api/reservas";
 
-export function useReservas(filtros?: { estado?: EstadoReserva; data?: string; localId?: string; page?: number; pageSize?: number }) {
+export function useReservas(filtros?: { estado?: EstadoReserva; data?: string; dataInicio?: string; dataFim?: string; localId?: string; page?: number; pageSize?: number }) {
   return useQuery({
     queryKey: ["reservas", filtros],
     queryFn: () => reservasApi.list(filtros),

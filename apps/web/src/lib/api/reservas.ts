@@ -87,10 +87,12 @@ export interface DisponibilidadeResult {
 
 // API calls
 export const reservasApi = {
-  list: (filtros?: { estado?: EstadoReserva; data?: string; localId?: string; page?: number; pageSize?: number }) => {
+  list: (filtros?: { estado?: EstadoReserva; data?: string; dataInicio?: string; dataFim?: string; localId?: string; page?: number; pageSize?: number }) => {
     const params = new URLSearchParams();
     if (filtros?.estado) params.set("estado", filtros.estado);
     if (filtros?.data) params.set("data", filtros.data);
+    if (filtros?.dataInicio) params.set("dataInicio", filtros.dataInicio);
+    if (filtros?.dataFim) params.set("dataFim", filtros.dataFim);
     if (filtros?.localId) params.set("localId", filtros.localId);
     if (filtros?.page) params.set("page", String(filtros.page));
     if (filtros?.pageSize) params.set("pageSize", String(filtros.pageSize));

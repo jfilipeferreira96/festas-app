@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Package, Download, LockKeyhole } from "lucide-react";
+import { Package, Download, LockKeyhole, AlertTriangle, Unlock } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
@@ -10,6 +10,8 @@ import {
   useCacifos,
   useCacifoContadores,
   useLibertar,
+  useCacifosEsquecidos,
+  useLibertarTodos,
 } from "@/hooks/use-cacifos";
 import { useReservas, useReservasAtivas } from "@/hooks/use-reservas";
 import type { Cacifo, EstadoCacifo } from "@/lib/api/cacifos";
@@ -70,6 +72,19 @@ export default function CacifosContent() {
   );
   const { data: contadores } = useCacifoContadores();
   const libertar = useLibertar();
+  const { data: esquecidos } = useCacifosEsquecidos();
+  const libertarTodos = useLibertarTodos();
+
+  const esquecidosList = (esquecidos ?? []) as Array<{
+    id: string;
+    numero: number;
+    estado: string;
+    reserva?: { estado?: string; cliente?: { nome?: string | null } | null } | null;
+  }>;
+
+  const handleLibertarEsquecidos = useCallback(async () => {
+    await libertarTodos.mutateAsync(esquecidosList.map((c) => c.id));
+  }, [esquecidosList, libertarTodos]);
 
   const handleLibertar = useCallback(
     async (id: string) => {
@@ -116,6 +131,35 @@ export default function CacifosContent() {
         title="Cacifos"
         subtitle={`Vista geral dos cacifos — ${formattedDate}`}
       />
+
+      {/* Alerta de cacifos esquecidos */}
+      {esquecidosList.length > 0 && (
+        <div className="p-4 rounded-xl bg-accent-red-50 border border-accent-red-200">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={18} className="text-accent-red-500 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-accent-red-700">
+                  {esquecidosList.length} cacifo{esquecidosList.length === 1 ? "" : "s"} esquecido{esquecidosList.length === 1 ? "" : "s"}
+                </p>
+                <p className="text-xs text-accent-red-600">
+                  Cacifos ocupados cuja festa já terminou:{" "}
+                  {esquecidosList.map((c) => `#${c.numero}`).join(", ")}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleLibertarEsquecidos}
+              disabled={libertarTodos.isPending}
+              loading={libertarTodos.isPending}
+              className="bg-accent-red-500 hover:bg-accent-red-600 flex items-center gap-2"
+            >
+              <Unlock size={16} />
+              Libertar todos
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Stats + Legend Card */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

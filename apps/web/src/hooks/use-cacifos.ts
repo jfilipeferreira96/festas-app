@@ -78,3 +78,28 @@ export function useActualizarCacifo() {
     },
   });
 }
+
+/** Cacifos esquecidos (OCUPADO/RESERVADO com reserva CONCLUIDA/CANCELADA). */
+export function useCacifosEsquecidos() {
+  return useQuery({
+    queryKey: ["cacifos", "esquecidos"],
+    queryFn: cacifosApi.getEsquecidos,
+  });
+}
+
+/** Liberta vários cacifos em sequência (limpeza de esquecidos). */
+export function useLibertarTodos() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const resultados = await Promise.all(
+        ids.map((id) => cacifosApi.libertar(id))
+      );
+      return resultados;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}

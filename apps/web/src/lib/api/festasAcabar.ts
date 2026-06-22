@@ -6,6 +6,7 @@ export interface FestaAcabar {
   cor?: string;
   idadeAniversariante?: number | null;
   numCriancas: number;
+  inicioEm: string | null;
   fimPrevisto: string | null;
   localNome: string;
   observacoesBrindes: string;
@@ -25,4 +26,9 @@ export const festasAcabarApi = {
       body: JSON.stringify(data),
       headers: { "Content-Type": "application/json" },
     }),
+
+  /** Finaliza (conclui) uma festa em curso. Reusa o endpoint de reservas. */
+  finalizar: (reservaId: string) =>
+    api(`/api/reservas/${reservaId}/finalizar`, { method: "POST" }),
 };
+

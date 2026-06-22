@@ -62,4 +62,6 @@ export const cacifosApi = {
 
   getContadores: () =>
     api<{ livres: number; ocupados: number; reservados: number; total: number }>("/api/cacifos/contadores"),
+
+  getEsquecidos: () => api<Cacifo[]>("/api/cacifos/esquecidos"),
 };

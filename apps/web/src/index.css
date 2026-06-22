@@ -132,3 +132,48 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Utilitários de impressão ────────────────────────────────────── */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Esconder chrome da aplicação */
+  aside,
+  header,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Mostrar conteúdo apenas de impressão */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Reset de layout para ocupar a largura completa */
+  main {
+    padding: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  /* Garantir que as tabelas sejam legíveis em papel */
+  table {
+    width: 100% !important;
+    font-size: 11px !important;
+  }
+
+  th,
+  td {
+    color: black !important;
+  }
+
+  /* Evitar cortes de linhas entre páginas */
+  tr {
+    page-break-inside: avoid;
+  }
+}

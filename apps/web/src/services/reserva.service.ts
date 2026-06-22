@@ -213,7 +213,7 @@ async function findConflitos(params: {
 }
 
 export const reservaService = {
-  async list(filters?: { estado?: string; data?: string; localId?: string; pesquisa?: string; page?: number; pageSize?: number }) {
+  async list(filters?: { estado?: string; data?: string; dataInicio?: string; dataFim?: string; localId?: string; pesquisa?: string; page?: number; pageSize?: number }) {
     const where: Record<string, unknown> = {};
     if (filters?.estado) where.estado = filters.estado;
     if (filters?.data) {
@@ -221,6 +221,15 @@ export const reservaService = {
       const nextDay = new Date(date);
       nextDay.setDate(nextDay.getDate() + 1);
       where.data = { gte: date, lt: nextDay };
+    } else if (filters?.dataInicio || filters?.dataFim) {
+      const range: Record<string, Date> = {};
+      if (filters?.dataInicio) range.gte = new Date(filters.dataInicio);
+      if (filters?.dataFim) {
+        const end = new Date(filters.dataFim);
+        end.setDate(end.getDate() + 1);
+        range.lt = end;
+      }
+      where.data = range;
     }
     if (filters?.localId) where.localId = filters.localId;
     if (filters?.pesquisa) {

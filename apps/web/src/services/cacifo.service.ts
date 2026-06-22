@@ -215,4 +215,28 @@ export const cacifoService = {
 
     return { livres, ocupados, reservados, total };
   },
+
+  /**
+   * Cacifos "esquecidos": marcados OCUPADO/RESERVADO cuja reserva associada
+   * já está CONCLUIDA ou CANCELADA. Devem ser libertados na limpeza diária.
+   */
+  async getCacifosEsquecidos() {
+    return prisma.cacifo.findMany({
+      where: {
+        estado: { in: ["OCUPADO", "RESERVADO"] },
+        reserva: { estado: { in: ["CONCLUIDA", "CANCELADA"] } },
+      },
+      include: {
+        reserva: {
+          select: {
+            id: true,
+            estado: true,
+            cliente: { select: { nome: true } },
+            aniversariantes: { include: { aniversariante: { select: { nome: true } } } },
+          },
+        },
+      },
+      orderBy: { numero: "asc" },
+    });
+  },
 };

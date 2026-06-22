@@ -20,9 +20,9 @@ export default async function ProtectedLayout({
     <ProtectedProviders>
       <div className="flex min-h-screen">
         <AppSidebar user={session.user} />
-        <div className="flex-1 flex flex-col lg:ml-[220px] transition-all duration-300">
+        <div className="flex-1 flex flex-col lg:ml-[220px] transition-all duration-300 print:ml-0">
           <AppHeader user={session.user} />
-          <main className="flex-1 p-4 md:p-6 bg-background">
+          <main className="flex-1 p-4 md:p-6 bg-background print:p-0">
             {children}
           </main>
           <Backdrop />

@@ -7,6 +7,7 @@ export function useFestasAcabar() {
   return useQuery({
     queryKey: ["festas-acabar"],
     queryFn: () => festasAcabarApi.getAll(),
+    refetchInterval: 60_000,
   });
 }
 
@@ -22,6 +23,20 @@ export function useAtualizarFestaAcabar() {
     }) => festasAcabarApi.atualizar(reservaId, data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["festas-acabar"] });
+    },
+  });
+}
+
+/** Finaliza (conclui) uma festa em curso. */
+export function useFinalizarFesta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (reservaId: string) => festasAcabarApi.finalizar(reservaId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["festas-acabar"] });
+      qc.invalidateQueries({ queryKey: ["reservas"] });
+      qc.invalidateQueries({ queryKey: ["cacifos"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
 }

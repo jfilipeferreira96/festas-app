@@ -62,6 +62,8 @@ export async function GET(request: NextRequest) {
     const filtros = {
       estado: searchParams.get("estado") || undefined,
       data: searchParams.get("data") || undefined,
+      dataInicio: searchParams.get("dataInicio") || undefined,
+      dataFim: searchParams.get("dataFim") || undefined,
       localId: searchParams.get("localId") || undefined,
       pesquisa: searchParams.get("pesquisa") || undefined,
       page: searchParams.get("page") ? parseInt(searchParams.get("page") as string) : undefined,

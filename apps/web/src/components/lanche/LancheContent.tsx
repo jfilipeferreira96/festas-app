@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Sandwich, AlertTriangle, Cake, DoorOpen, Save, Pencil } from "lucide-react";
+import { Sandwich, AlertTriangle, Save, Pencil, Printer, Clock, CookingPot, CheckCheck } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
 import { PageHeader, Button } from "@/components/ui";
@@ -40,12 +40,23 @@ const ESTADO_LANCHE_OPTIONS = [
   { value: "TERMINADO", label: "Terminado" },
 ];
 
+/** Opções do filtro por estado lanche (aplicado a Festas + Entradas Livres). */
+const FILTRO_OPTIONS = [
+  { value: "TODOS", label: "Todos" },
+  { value: "NAO_INICIADO", label: "Por preparar" },
+  { value: "A_DECORRER", label: "A decorrer" },
+  { value: "TERMINADO", label: "Terminado" },
+] as const;
+
+type FiltroEstado = (typeof FILTRO_OPTIONS)[number]["value"];
+
 /** Row types — DataTable requires { id: string } */
 type LancheFestaRow = LancheFesta & { id: string };
 type LancheEntradaRow = LancheEntradaLivre & { id: string };
 
 export default function LancheContent() {
   const [dataSel, setDataSel] = useState<string>(todayISO());
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("TODOS");
   const [editingFesta, setEditingFesta] = useState<LancheFesta | null>(null);
   const [notasEdit, setNotasEdit] = useState("");
   const [lesoesEdit, setLesoesEdit] = useState("");
@@ -68,6 +79,27 @@ export default function LancheContent() {
     e.sort((a, b) => (a.horaLanche ?? a.inicioEm ?? "").localeCompare(b.horaLanche ?? b.inicioEm ?? ""));
     return { festas: f, entradas: e };
   }, [lanches]);
+
+  // ── Contadores de estado (Festas + Entradas Livres) ───────────────
+  const counts = useMemo(() => {
+    const c: Record<string, number> = {
+      NAO_INICIADO: 0,
+      A_DECORRER: 0,
+      TERMINADO: 0,
+    };
+    for (const f of festas) c[f.estadoLanche] = (c[f.estadoLanche] ?? 0) + 1;
+    for (const e of entradas) c[e.estadoLanche] = (c[e.estadoLanche] ?? 0) + 1;
+    return c;
+  }, [festas, entradas]);
+
+  // ── Listas filtradas por estado lanche ────────────────────────────
+  const { filteredFestas, filteredEntradas } = useMemo(() => {
+    if (filtroEstado === "TODOS") return { filteredFestas: festas, filteredEntradas: entradas };
+    return {
+      filteredFestas: festas.filter((f) => f.estadoLanche === filtroEstado),
+      filteredEntradas: entradas.filter((e) => e.estadoLanche === filtroEstado),
+    };
+  }, [festas, entradas, filtroEstado]);
 
   const handleEditNotas = useCallback((festa: LancheFesta) => {
     setEditingFesta(festa);
@@ -269,12 +301,56 @@ export default function LancheContent() {
   ], [handleEstadoEntradaChange]);
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Lanches do Dia"
         subtitle={formatDataLabel(dataSel)}
-        actions={
-          <div className="flex items-center gap-2">
+      />
+
+      {/* Resumo de estados — cards compactos (estilo cacifos) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 no-print">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-orange-50">
+            <Clock size={20} className="text-accent-orange-500" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Por preparar</p>
+            <p className="text-lg font-bold text-accent-orange-600">{counts.NAO_INICIADO}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-50">
+            <CookingPot size={20} className="text-brand-500" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">A decorrer</p>
+            <p className="text-lg font-bold text-brand-600">{counts.A_DECORRER}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-green-50">
+            <CheckCheck size={20} className="text-accent-green-500" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Terminados</p>
+            <p className="text-lg font-bold text-accent-green-600">{counts.TERMINADO}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-50">
+            <Sandwich size={20} className="text-gray-500" />
+          </div>
+          <div>
+            <p className="text-xs text-text-muted">Total</p>
+            <p className="text-lg font-bold text-text-primary">{festas.length + entradas.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Card de Filtros (estilo cacifos) */}
+      <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <DatePicker
               id="lanche-date-picker"
               defaultDate={dataSel}
@@ -283,13 +359,47 @@ export default function LancheContent() {
               }}
               className="w-44"
             />
+            <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-1">
+              {FILTRO_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFiltroEstado(opt.value)}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 flex items-center gap-1.5 ${
+                    filtroEstado === opt.value
+                      ? "bg-white text-brand-600 shadow-theme-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-white/60"
+                  }`}
+                >
+                  {opt.label}
+                  {opt.value !== "TODOS" && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                        filtroEstado === opt.value
+                          ? "bg-brand-100 text-brand-700"
+                          : "bg-gray-100 text-text-muted"
+                      }`}
+                    >
+                      {counts[opt.value] ?? 0}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
-        }
-      />
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
+          >
+            <Printer size={16} />
+            <span>Imprimir</span>
+          </button>
+        </div>
+      </div>
 
       {/* Alergias / Restrições */}
       {((alergias as unknown as { reservaId: string; nomeFesta: string; notasLanche: string }[]) ?? []).length > 0 && (
-        <div className="mt-4 p-4 rounded-lg bg-warning-50 border border-warning-200">
+        <div className="p-4 rounded-xl bg-warning-50 border border-warning-200">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} className="text-warning-600" />
             <h3 className="text-sm font-semibold text-warning-800">Alergias e Restrições</h3>
@@ -307,17 +417,12 @@ export default function LancheContent() {
 
       {/* Tabela de Festas — DataTable (mesmo padrão do FestasTabela) */}
       <div className="mt-6">
-        <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-          <Cake size={16} className="text-brand-500" />
-          Festas
-        </h3>
-        {isLoading ? (
-          <p className="text-sm text-text-muted">A carregar...</p>
-        ) : festas.length > 0 ? (
+        {filteredFestas.length > 0 || isLoading ? (
           <DataTable<LancheFestaRow>
-            data={festas}
+            data={filteredFestas}
             columns={festasColumns}
             itemLabel="festas"
+            loading={isLoading}
             defaultSort={{ key: "horaLanche", direction: "asc" }}
             searchable
             searchPlaceholder="Pesquisar por aniversariante..."
@@ -328,27 +433,27 @@ export default function LancheContent() {
               <Tooltip content="Editar observações" position="top" theme="dark">
                 <button
                   onClick={() => handleEditNotas(f)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors no-print"
                 >
                   <Pencil size={15} />
                 </button>
               </Tooltip>
             )}
           />
-        ) : (
-          <p className="text-sm text-text-muted">Sem festas para esta data.</p>
-        )}
+        ) : entradas.length > 0 ? (
+          <p className="text-sm text-text-muted">
+            {filtroEstado !== "TODOS"
+              ? "Sem festas com este estado."
+              : "Sem festas para esta data."}
+          </p>
+        ) : null}
       </div>
 
       {/* Tabela de Entradas Livres — DataTable */}
-      {entradas.length > 0 && (
+      {filteredEntradas.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <DoorOpen size={16} className="text-brand-500" />
-            Entradas Livres
-          </h3>
           <DataTable<LancheEntradaRow>
-            data={entradas}
+            data={filteredEntradas}
             columns={entradasColumns}
             itemLabel="entradas livres"
             defaultSort={{ key: "horaLanche", direction: "asc" }}
