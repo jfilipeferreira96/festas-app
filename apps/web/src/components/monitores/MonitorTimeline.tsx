@@ -110,6 +110,8 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
                   ((a.horaFim - a.horaInicio) / TOTAL_MINUTES) * 100,
                   1.5
                 );
+                const inicioStr = minutosParaHora(a.horaInicio);
+                const fimStr = minutosParaHora(a.horaFim);
                 return (
                   <button
                     key={a.id}
@@ -117,7 +119,7 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
                     title={`${a.local?.nome ?? ""} · ${formatarIntervalo(a.horaInicio, a.horaFim)}${
                       a.observacoes ? ` · ${a.observacoes}` : ""
                     }`}
-                    className="absolute top-1.5 bottom-1.5 rounded-lg text-[11px] font-semibold shadow-sm ring-1 ring-black/5 flex items-center gap-1 px-2 overflow-hidden hover:brightness-105 hover:shadow-md hover:ring-black/10 hover:-translate-y-px transition-all cursor-pointer"
+                    className="absolute top-1.5 bottom-1.5 rounded-lg text-[11px] font-semibold shadow-sm ring-1 ring-black/5 flex items-center justify-between gap-0.5 px-1.5 overflow-hidden hover:brightness-105 hover:shadow-md hover:ring-black/10 hover:-translate-y-px transition-all cursor-pointer"
                     style={{
                       left: `${left}%`,
                       width: `${width}%`,
@@ -125,10 +127,16 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
                       color: cor.text,
                     }}
                   >
-                    {width > 6 && (
-                      <span className="truncate leading-none">
+                    {width > 3.5 && (
+                      <span className="shrink-0 leading-none tabular-nums">{inicioStr}</span>
+                    )}
+                    {width > 9 && (
+                      <span className="truncate leading-none text-center flex-1">
                         {a.local?.nome ?? ""}
                       </span>
+                    )}
+                    {width > 7 && (
+                      <span className="shrink-0 leading-none tabular-nums">{fimStr}</span>
                     )}
                   </button>
                 );
