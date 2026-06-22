@@ -449,6 +449,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       <FestaDetailModal
         reservaId={viewingReservaId}
         onClose={() => setViewingReservaId(null)}
+        hidePrices={isCacifos}
       />
 
       {/* Check-in Modal */}

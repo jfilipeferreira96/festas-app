@@ -10,7 +10,7 @@ import { useEntradasLivres, useEliminarEntradaLivre, useConcluirEntradaLivre, us
 import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
-import DataTable from "@/components/ui/table/DataTable";
+import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -41,7 +41,8 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export default function EntradasLivresTabela() {
+export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" | "cacifos" }) {
+  const isCacifos = mode === "cacifos";
   const [filtro, setFiltro] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
@@ -146,10 +147,12 @@ export default function EntradasLivresTabela() {
             ))}
           </div>
         </div>
-        <Button onClick={handleCreate} className="flex items-center gap-2">
-          <Plus size={16} />
-          Nova Entrada
-        </Button>
+        {!isCacifos && (
+          <Button onClick={handleCreate} className="flex items-center gap-2">
+            <Plus size={16} />
+            Nova Entrada
+          </Button>
+        )}
       </div>
 
       {/* Table */}
@@ -157,7 +160,7 @@ export default function EntradasLivresTabela() {
         data={entradas ?? []}
         itemLabel="entradas"
         defaultSort={{ key: "inicioEm", direction: "desc" }}
-        columns={[
+        columns={([
           {
             key: "criancas",
             label: "Crianças",
@@ -246,7 +249,7 @@ export default function EntradasLivresTabela() {
               )
             ),
           },
-        ]}
+        ] as Column<EntradaLivre>[]).filter((c) => !(isCacifos && (c.key === "custo" || c.key === "pago")))}
         loading={isLoading}
         searchable
         searchPlaceholder="Pesquisar por nome, telefone, email..."
@@ -261,7 +264,23 @@ export default function EntradasLivresTabela() {
         }}
         pagination
         pageSize={10}
-        renderActions={(r) => (
+        renderActions={(r) => {
+          // CACIFOS read-only: apenas "Ver detalhes"
+          if (isCacifos) {
+            return (
+              <div className="flex items-center justify-end gap-1">
+                <Tooltip content="Ver detalhes" position="top" theme="dark">
+                  <button
+                    onClick={() => setViewingEntradaId(r.id)}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+                  >
+                    <Eye size={15} />
+                  </button>
+                </Tooltip>
+              </div>
+            );
+          }
+          return (
           <div className="flex items-center justify-end gap-1">
             {/* Quick action: Marcar Pago (ATIVA não paga) */}
             {r.estado === "ATIVA" && !r.pago && (
@@ -339,11 +358,11 @@ export default function EntradasLivresTabela() {
               </button>
             </Tooltip>
           </div>
-        )}
+        )}}
         emptyState={{
           title: "Nenhum registo encontrado",
           description: "Tente alterar os filtros ou crie uma nova entrada.",
-          action: (
+          action: isCacifos ? undefined : (
             <Button onClick={handleCreate} className="gap-2">
               <Plus size={16} /> Nova Entrada
             </Button>
@@ -365,6 +384,7 @@ export default function EntradasLivresTabela() {
       <EntradaLivreDetailModal
         entradaId={viewingEntradaId}
         onClose={() => setViewingEntradaId(null)}
+        hidePrices={isCacifos}
       />
 
       {/* Confirm Delete Modal */}

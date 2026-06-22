@@ -47,10 +47,12 @@ type QuickTab = "geral" | "participantes" | "cacifos";
 interface FestaDetailModalProps {
   reservaId: string | null;
   onClose: () => void;
+  /** Oculta secções de preço (Pagamento, Caução, Desconto, valores monetários) — usado para o papel CACIFOS. */
+  hidePrices?: boolean;
 }
 
 // ── Main Component ─────────────────────────────────────────────────
-export default function FestaDetailModal({ reservaId, onClose }: FestaDetailModalProps) {
+export default function FestaDetailModal({ reservaId, onClose, hidePrices = false }: FestaDetailModalProps) {
   const { data: reserva, isLoading } = useReserva(reservaId ?? "");
 
   // Quick nav
@@ -73,6 +75,7 @@ export default function FestaDetailModal({ reservaId, onClose }: FestaDetailModa
             reserva={reserva}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
+            hidePrices={hidePrices}
           />
         ) : (
           <div className="text-center text-text-muted py-8">
@@ -89,10 +92,12 @@ function DetailContent({
   reserva,
   activeTab,
   setActiveTab,
+  hidePrices = false,
 }: {
   reserva: Reserva;
   activeTab: QuickTab;
   setActiveTab: (tab: QuickTab) => void;
+  hidePrices?: boolean;
 }) {
   const estado = reserva.estado;
   const numParticipantes = reserva.participantes?.length ?? 0;
@@ -170,7 +175,7 @@ function DetailContent({
 
       {/* Tab Content */}
       {activeTab === "geral" && (
-        <GeralTab reserva={reserva} />
+        <GeralTab reserva={reserva} hidePrices={hidePrices} />
       )}
       {activeTab === "participantes" && (
         <ParticipantesTab reserva={reserva} />
@@ -184,7 +189,7 @@ function DetailContent({
 }
 
 // ── Geral Tab ──────────────────────────────────────────────────────
-function GeralTab({ reserva }: { reserva: Reserva }) {
+function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrices?: boolean }) {
   return (
     <div className="space-y-4">
       {/* Configuração Geral */}
@@ -245,7 +250,7 @@ function GeralTab({ reserva }: { reserva: Reserva }) {
                 <span className="text-sm text-text-primary">{e.extra.nome}</span>
                 <div className="flex items-center gap-2">
                   {e.quantidade > 1 && <span className="text-xs text-text-muted">×{e.quantidade}</span>}
-                  {e.extra.precoUnitario != null && e.extra.precoUnitario > 0 && (
+                  {!hidePrices && e.extra.precoUnitario != null && e.extra.precoUnitario > 0 && (
                     <span className="text-xs text-text-secondary">
                       {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(e.extra.precoUnitario * e.quantidade)}
                     </span>
@@ -262,7 +267,7 @@ function GeralTab({ reserva }: { reserva: Reserva }) {
         <Section title="Lanche / Menu" icon={<Cake size={13} />}>
           <div className="flex items-center justify-between">
             <span className="text-sm text-text-primary">{reserva.menu.nome}</span>
-            {reserva.menu.preco != null && (
+            {!hidePrices && reserva.menu.preco != null && (
               <span className="text-sm text-text-secondary">
                 {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(reserva.menu.preco)}
               </span>
@@ -288,7 +293,8 @@ function GeralTab({ reserva }: { reserva: Reserva }) {
         </Section>
       )}
 
-      {/* Pagamento */}
+      {/* Pagamento — oculto para CACIFOS (hidePrices) */}
+      {!hidePrices && (
       <Section title="Pagamento" icon={<CreditCard size={13} />}>
         <div className="space-y-1.5">
           <DetailRow
@@ -310,8 +316,10 @@ function GeralTab({ reserva }: { reserva: Reserva }) {
           )}
         </div>
       </Section>
+      )}
 
-      {/* Caução */}
+      {/* Caução — oculto para CACIFOS (hidePrices) */}
+      {!hidePrices && (
       <Section title="Caução" icon={<Shield size={13} />}>
         <div className="space-y-1.5">
           <DetailRow
@@ -332,9 +340,10 @@ function GeralTab({ reserva }: { reserva: Reserva }) {
           )}
         </div>
       </Section>
+      )}
 
-      {/* Desconto */}
-      {(reserva.descontoPercentagem != null && reserva.descontoPercentagem > 0) && (
+      {/* Desconto — oculto para CACIFOS (hidePrices) */}
+      {!hidePrices && (reserva.descontoPercentagem != null && reserva.descontoPercentagem > 0) && (
         <Section title="Desconto" icon={<Percent size={13} />}>
           <div className="space-y-1.5">
             <DetailRow icon={<Percent size={13} />} label="Desconto" value={`${reserva.descontoPercentagem}%`} />

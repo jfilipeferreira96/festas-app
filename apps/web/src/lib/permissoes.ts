@@ -16,7 +16,8 @@ export type Modulo =
   | "divulgacoes"
   | "configuracoes"
   | "monitores"
-  | "festas_acabar";
+  | "festas_acabar"
+  | "clientes";
 
 export type NivelAcesso = "sem_acesso" | "leitura" | "escrita" | "administracao";
 
@@ -30,6 +31,7 @@ export const MODULOS: Modulo[] = [
   "configuracoes",
   "monitores",
   "festas_acabar",
+  "clientes",
 ];
 
 export const NIVEIS_ACESSO: { value: NivelAcesso; label: string }[] = [
@@ -49,6 +51,7 @@ export const MODULO_LABELS: Record<Modulo, string> = {
   configuracoes: "Configurações",
   monitores: "Monitores",
   festas_acabar: "Festas a Acabar",
+  clientes: "Clientes",
 };
 
 export const FUNCAO_LABELS: Record<FuncaoUtilizador, string> = {
@@ -84,6 +87,7 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
     configuracoes: "administracao",
     monitores: "administracao",
     festas_acabar: "administracao",
+    clientes: "administracao",
   },
   LANCHE: {
     lanche: "escrita",
@@ -107,14 +111,14 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
  * O tipo de retorno é uma união de literais de rotas reais para satisfazer
  * o `typedRoutes` do Next.js ao usar com `redirect()` / `<Link href>`.
  */
-export type HomeRoute = "/dashboard" | "/lanche" | "/festas" | "/monitores" | "/festas-acabar";
+export type HomeRoute = "/dashboard" | "/lanche" | "/festas" | "/cacifos" | "/monitores" | "/festas-acabar";
 
 export function getHomeRoute(funcao: FuncaoUtilizador | undefined | null): HomeRoute {
   switch (funcao) {
     case "LANCHE":
       return "/lanche";
     case "CACIFOS":
-      return "/festas";
+      return "/cacifos";
     case "MONITOR":
       return "/monitores";
     case "FESTAS_ACABAR":

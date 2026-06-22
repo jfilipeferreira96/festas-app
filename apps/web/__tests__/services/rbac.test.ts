@@ -63,6 +63,27 @@ describe("RBAC — Matriz hardcoded", () => {
     it("NÃO deve ter acesso a lanche", () => {
       expect(PERMISSOES.CACIFOS.lanche).toBeUndefined();
     });
+
+    it("NÃO deve ter acesso a clientes", () => {
+      expect(PERMISSOES.CACIFOS.clientes).toBeUndefined();
+    });
+
+    it("NÃO deve ter acesso a configuracoes", () => {
+      expect(PERMISSOES.CACIFOS.configuracoes).toBeUndefined();
+    });
+  });
+
+  describe("PERMISSOES — clientes (módulo)", () => {
+    it("ADMINISTRADOR deve ter administracao em clientes", () => {
+      expect(PERMISSOES.ADMINISTRADOR.clientes).toBe("administracao");
+    });
+
+    it("NENHUM outro papel deve ter acesso a clientes", () => {
+      expect(PERMISSOES.LANCHE.clientes).toBeUndefined();
+      expect(PERMISSOES.CACIFOS.clientes).toBeUndefined();
+      expect(PERMISSOES.MONITOR.clientes).toBeUndefined();
+      expect(PERMISSOES.FESTAS_ACABAR.clientes).toBeUndefined();
+    });
   });
 
   describe("PERMISSOES — MONITOR", () => {
@@ -199,8 +220,8 @@ describe("RBAC — Matriz hardcoded", () => {
       expect(getHomeRoute("LANCHE")).toBe("/lanche");
     });
 
-    it("CACIFOS deve ir para /festas", () => {
-      expect(getHomeRoute("CACIFOS")).toBe("/festas");
+    it("CACIFOS deve ir para /cacifos", () => {
+      expect(getHomeRoute("CACIFOS")).toBe("/cacifos");
     });
 
     it("MONITOR deve ir para /monitores", () => {

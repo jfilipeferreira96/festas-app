@@ -44,9 +44,11 @@ function useCurrentTime() {
 interface EntradaLivreDetailModalProps {
   entradaId: string | null;
   onClose: () => void;
+  /** Oculta secções de preço — usado para o papel CACIFOS. */
+  hidePrices?: boolean;
 }
 
-export default function EntradaLivreDetailModal({ entradaId, onClose }: EntradaLivreDetailModalProps) {
+export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices = false }: EntradaLivreDetailModalProps) {
   const { data: entrada, isLoading } = useEntradaLivre(entradaId ?? "");
 
   const now = useCurrentTime();
@@ -109,25 +111,29 @@ export default function EntradaLivreDetailModal({ entradaId, onClose }: EntradaL
               {entrada.excessoMinutos != null && entrada.excessoMinutos > 0 && (
                 <DetailRow icon={<AlertTriangle size={12} />} label="Excesso" value={`${entrada.excessoMinutos} min`} accent />
               )}
-              <div className="border-t border-border my-2" />
-              <DetailRow icon={<CreditCard size={12} />} label="Custo Base" value={formatCurrency(entrada.custoTotal)} />
-              {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
-                <DetailRow label="Custo Excesso" value={formatCurrency(entrada.custoExcesso)} accent />
-              )}
-              <DetailRow label="Total Final" value={formatCurrency(entrada.custoTotalFinal ?? entrada.custoTotal)} bold />
-              <DetailRow
-                label="Pagamento"
-                value={entrada.pago ? "Pago" : "Por pagar"}
-              />
-              {entrada.metodoPagamento && (
-                <DetailRow label="Método" value={entrada.metodoPagamento} />
-              )}
-              {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
-                <DetailRow
-                  label="Excesso Pago"
-                  value={entrada.pagoExcesso ? "Sim" : "Não"}
-                  accent={!entrada.pagoExcesso}
-                />
+              {!hidePrices && (
+                <>
+                  <div className="border-t border-border my-2" />
+                  <DetailRow icon={<CreditCard size={12} />} label="Custo Base" value={formatCurrency(entrada.custoTotal)} />
+                  {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
+                    <DetailRow label="Custo Excesso" value={formatCurrency(entrada.custoExcesso)} accent />
+                  )}
+                  <DetailRow label="Total Final" value={formatCurrency(entrada.custoTotalFinal ?? entrada.custoTotal)} bold />
+                  <DetailRow
+                    label="Pagamento"
+                    value={entrada.pago ? "Pago" : "Por pagar"}
+                  />
+                  {entrada.metodoPagamento && (
+                    <DetailRow label="Método" value={entrada.metodoPagamento} />
+                  )}
+                  {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
+                    <DetailRow
+                      label="Excesso Pago"
+                      value={entrada.pagoExcesso ? "Sim" : "Não"}
+                      accent={!entrada.pagoExcesso}
+                    />
+                  )}
+                </>
               )}
               {entrada.observacoes && (
                 <DetailRow icon={<FileText size={12} />} label="Observações" value={entrada.observacoes} />

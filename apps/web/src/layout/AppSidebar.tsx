@@ -116,7 +116,7 @@ const mainNavItems: NavItem[] = [
     name: "Clientes",
     icon: <BookUser className="w-5 h-5" />,
     path: "/clientes",
-    modulo: "reservas",
+    modulo: "clientes",
   },
   {
     name: "Relatórios",
@@ -164,7 +164,7 @@ const configItems: NavItem = {
       name: "Cacifos",
       path: "/configuracoes/cacifos",
       icon: <LockKeyhole className="w-4 h-4" />,
-      modulo: "cacifos",
+      modulo: "configuracoes",
     },
     {
       name: "Preços",

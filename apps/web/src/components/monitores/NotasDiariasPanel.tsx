@@ -64,7 +64,7 @@ export default function NotasDiariasPanel({ data }: NotasDiariasPanelProps) {
           </label>
           {podeEditar ? (
             <TextArea
-              placeholder="Ex.: Nena faz parque/lanche..."
+              placeholder="Ex.: Alberto faz parque/lanche..."
               value={notasManha}
               onChange={(v) => setNotasManha(v)}
               rows={4}
@@ -84,7 +84,7 @@ export default function NotasDiariasPanel({ data }: NotasDiariasPanelProps) {
           </label>
           {podeEditar ? (
             <TextArea
-              placeholder="Ex.: Heloisa faz cacifos/parques..."
+              placeholder="Ex.: Maria faz cacifos/parques..."
               value={notasTarde}
               onChange={(v) => setNotasTarde(v)}
               rows={4}
