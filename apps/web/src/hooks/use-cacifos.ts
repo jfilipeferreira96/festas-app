@@ -87,15 +87,19 @@ export function useCacifosEsquecidos() {
   });
 }
 
-/** Liberta vários cacifos em sequência (limpeza de esquecidos). */
+/** Liberta vários cacifos em sequência (limpeza de esquecidos).
+ *  Usa Promise.allSettled para que falhas parciais não descartem sucessos.
+ *  Retorna { libertados, falhados } para feedback granular. */
 export function useLibertarTodos() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      const resultados = await Promise.all(
+      const resultados = await Promise.allSettled(
         ids.map((id) => cacifosApi.libertar(id))
       );
-      return resultados;
+      const libertados = resultados.filter((r) => r.status === "fulfilled").length;
+      const falhados = resultados.filter((r) => r.status === "rejected").length;
+      return { libertados, falhados };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cacifos"] });

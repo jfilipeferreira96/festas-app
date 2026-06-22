@@ -14,6 +14,7 @@ import {
   useLibertarTodos,
 } from "@/hooks/use-cacifos";
 import { useReservas, useReservasAtivas } from "@/hooks/use-reservas";
+import { useToast } from "@/hooks/use-toast";
 import type { Cacifo, EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 import { formatDate } from "@/utils/date";
@@ -55,6 +56,8 @@ export default function CacifosContent() {
   const [filtroFesta, setFiltroFesta] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
 
+  const toast = useToast();
+
   // Fetch festas for the selected date (for summary bar)
   const { data: reservasData } = useReservas({ data: selectedDate, pageSize: 100 });
   const festas = useMemo(() => reservasData?.items ?? [], [reservasData]);
@@ -83,8 +86,19 @@ export default function CacifosContent() {
   }>;
 
   const handleLibertarEsquecidos = useCallback(async () => {
-    await libertarTodos.mutateAsync(esquecidosList.map((c) => c.id));
-  }, [esquecidosList, libertarTodos]);
+    try {
+      const { libertados, falhados } = await libertarTodos.mutateAsync(
+        esquecidosList.map((c) => c.id)
+      );
+      if (falhados === 0) {
+        toast.success(`${libertados} cacifo${libertados === 1 ? "" : "s"} libertado${libertados === 1 ? "" : "s"} com sucesso.`);
+      } else {
+        toast.warning(`${libertados} cacifos libertados, ${falhados} falharam. Tente libertar os restantes individualmente.`);
+      }
+    } catch {
+      toast.handleApiError(undefined, "Não foi possível libertar os cacifos.");
+    }
+  }, [esquecidosList, libertarTodos, toast]);
 
   const handleLibertar = useCallback(
     async (id: string) => {
