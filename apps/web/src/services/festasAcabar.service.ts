@@ -1,3 +1,4 @@
+import { differenceInYears } from "date-fns";
 import prisma from "@festas/db";
 
 /**
@@ -22,10 +23,18 @@ export const festasAcabarService = {
         .filter(Boolean)
         .join(", ");
 
+      // Calcular idade do primeiro aniversariante com dataNascimento
+      const primeiroAniv = r.aniversariantes.find((a) => a.aniversariante?.dataNascimento);
+      const idadeAniversariante =
+        primeiroAniv?.aniversariante?.dataNascimento
+          ? differenceInYears(new Date(r.data ?? new Date()), new Date(primeiroAniv.aniversariante.dataNascimento))
+          : null;
+
       return {
         id: r.id,
         nomeFesta: nomesAniv || "—",
         cor: r.cor,
+        idadeAniversariante,
         numCriancas: r.numCriancas,
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
         localNome: r.local?.nome ?? "—",

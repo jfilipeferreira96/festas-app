@@ -67,7 +67,12 @@ export default function FestasAcabarContent() {
       render: (_v, f) => (
         <div className="flex items-center gap-2">
           <FestaColorDot color={f.cor} />
-          <span className="text-sm font-medium text-text-primary">{f.nomeFesta}</span>
+          <div>
+            <p className="text-sm font-medium text-text-primary">{f.nomeFesta}</p>
+            {f.idadeAniversariante != null && (
+              <p className="text-xs text-primary-500 font-medium">{f.idadeAniversariante} anos</p>
+            )}
+          </div>
         </div>
       ),
     },

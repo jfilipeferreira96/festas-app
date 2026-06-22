@@ -4,6 +4,7 @@ export interface FestaAcabar {
   id: string;
   nomeFesta: string;
   cor?: string;
+  idadeAniversariante?: number | null;
   numCriancas: number;
   fimPrevisto: string | null;
   localNome: string;
