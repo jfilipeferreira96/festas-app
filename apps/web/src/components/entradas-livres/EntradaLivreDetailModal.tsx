@@ -97,7 +97,6 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
               {entrada.encarregadoEmail && (
                 <DetailRow icon={<Mail size={12} />} label="Email" value={entrada.encarregadoEmail} />
               )}
-              <DetailRow icon={<MapPin size={12} />} label="Local" value={entrada.local?.nome ?? "—"} />
               {entrada.cacifo && (
                 <DetailRow icon={<Package size={12} />} label="Cacifo" value={`#${entrada.cacifo.numero}`} />
               )}

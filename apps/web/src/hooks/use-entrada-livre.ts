@@ -48,16 +48,6 @@ export function useEntradasLivresConcluidasHoje() {
   });
 }
 
-// Capacidade do local agora (warn-only) — só executa quando há localId
-export function useCheckOcupacaoLocal(localId: string | undefined, numCriancas: number, excludeId?: string) {
-  return useQuery({
-    queryKey: ["entradas-livres", "ocupacao", localId, numCriancas, excludeId],
-    queryFn: () => entradaLivreApi.checkOcupacao(localId!, numCriancas, excludeId),
-    enabled: !!localId,
-    refetchInterval: 30000,
-  });
-}
-
 // ── Mutations ─────────────────────────────────────
 
 export function useCriarEntradaLivre() {

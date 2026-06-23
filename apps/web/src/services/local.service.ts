@@ -2,13 +2,11 @@ import prisma from "@festas/db";
 
 interface CreateLocalData {
   nome: string;
-  capacidade: number;
   activo?: boolean;
 }
 
 interface UpdateLocalData {
   nome?: string;
-  capacidade?: number;
   activo?: boolean;
 }
 
@@ -27,12 +25,10 @@ export const localService = {
 
   async create(data: CreateLocalData) {
     if (!data.nome) throw new Error("NAME_REQUIRED");
-    if (!data.capacidade || data.capacidade <= 0) throw new Error("CAPACITY_REQUIRED");
 
     return prisma.local.create({
       data: {
         nome: data.nome,
-        capacidade: data.capacidade,
         activo: data.activo !== undefined ? data.activo : true,
       },
     });

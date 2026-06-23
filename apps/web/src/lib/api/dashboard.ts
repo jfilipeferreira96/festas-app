@@ -13,6 +13,9 @@ export interface DashboardKPIs {
   cacifosReservados: number;
   cacifosTotal: number;
   totalCriancasNoParque: number;
+  criancasFestas: number;
+  criancasEntradas: number;
+  receitasHoje: Record<string, number>;
 }
 
 export interface ReservaEmCurso {

@@ -32,6 +32,19 @@ export const extraService = {
     });
   },
 
+  /** Retorna todas as subcategorias distintas já usadas nos extras */
+  async getSubcategorias(): Promise<string[]> {
+    const results = await prisma.extra.findMany({
+      where: { subcategoria: { not: null } },
+      select: { subcategoria: true },
+      distinct: ["subcategoria"],
+    });
+    const subcategorias: string[] = results
+      .map((r: { subcategoria: string | null }) => r.subcategoria)
+      .filter((s: string | null): s is string => Boolean(s));
+    return subcategorias.sort((a, b) => a.localeCompare(b, "pt"));
+  },
+
   async getById(id: string) {
     const extra = await prisma.extra.findUnique({
       where: { id },

@@ -16,8 +16,8 @@ import type { Modulo, NivelAcesso } from "@/lib/permissoes";
 
 describe("RBAC — Matriz hardcoded", () => {
   describe("FUNCOES", () => {
-    it("deve conter os 5 papéis: ADMINISTRADOR, LANCHE, CACIFOS, MONITOR, FESTAS_ACABAR", () => {
-      expect(FUNCOES).toEqual(["ADMINISTRADOR", "LANCHE", "CACIFOS", "MONITOR", "FESTAS_ACABAR"]);
+    it("deve conter os 7 papéis: ADMINISTRADOR, LANCHE, CACIFOS, MONITOR, FESTAS_ACABAR, STAFF, RECECAO", () => {
+      expect(FUNCOES).toEqual(["ADMINISTRADOR", "LANCHE", "CACIFOS", "MONITOR", "FESTAS_ACABAR", "STAFF", "RECECAO"]);
     });
   });
 
@@ -78,11 +78,14 @@ describe("RBAC — Matriz hardcoded", () => {
       expect(PERMISSOES.ADMINISTRADOR.clientes).toBe("administracao");
     });
 
-    it("NENHUM outro papel deve ter acesso a clientes", () => {
+    it("apenas ADMINISTRADOR e RECECAO devem ter acesso a clientes", () => {
+      expect(PERMISSOES.ADMINISTRADOR.clientes).toBe("administracao");
+      expect(PERMISSOES.RECECAO.clientes).toBe("escrita");
       expect(PERMISSOES.LANCHE.clientes).toBeUndefined();
       expect(PERMISSOES.CACIFOS.clientes).toBeUndefined();
       expect(PERMISSOES.MONITOR.clientes).toBeUndefined();
       expect(PERMISSOES.FESTAS_ACABAR.clientes).toBeUndefined();
+      expect(PERMISSOES.STAFF.clientes).toBeUndefined();
     });
   });
 
@@ -125,6 +128,64 @@ describe("RBAC — Matriz hardcoded", () => {
       expect(PERMISSOES.FESTAS_ACABAR.lanche).toBeUndefined();
       expect(PERMISSOES.FESTAS_ACABAR.cacifos).toBeUndefined();
       expect(PERMISSOES.FESTAS_ACABAR.monitores).toBeUndefined();
+    });
+  });
+
+  describe("PERMISSOES — STAFF", () => {
+    it("deve ter leitura no módulo reservas", () => {
+      expect(PERMISSOES.STAFF.reservas).toBe("leitura");
+    });
+
+    it("deve ter escrita no módulo cacifos", () => {
+      expect(PERMISSOES.STAFF.cacifos).toBe("escrita");
+    });
+
+    it("deve ter leitura no módulo festas_acabar", () => {
+      expect(PERMISSOES.STAFF.festas_acabar).toBe("leitura");
+    });
+
+    it("NÃO deve ter acesso a lanche", () => {
+      expect(PERMISSOES.STAFF.lanche).toBeUndefined();
+    });
+
+    it("NÃO deve ter acesso a configuracoes", () => {
+      expect(PERMISSOES.STAFF.configuracoes).toBeUndefined();
+    });
+
+    it("NÃO deve ter escrita em reservas (só leitura)", () => {
+      expect(hasAccess("STAFF", "reservas", "escrita")).toBe(false);
+      expect(canRead("STAFF", "reservas")).toBe(true);
+    });
+  });
+
+  describe("PERMISSOES — RECECAO", () => {
+    it("deve ter escrita no módulo reservas", () => {
+      expect(PERMISSOES.RECECAO.reservas).toBe("escrita");
+    });
+
+    it("deve ter escrita no módulo clientes", () => {
+      expect(PERMISSOES.RECECAO.clientes).toBe("escrita");
+    });
+
+    it("deve ter leitura no módulo cacifos", () => {
+      expect(PERMISSOES.RECECAO.cacifos).toBe("leitura");
+    });
+
+    it("NÃO deve ter escrita em cacifos (só leitura)", () => {
+      expect(hasAccess("RECECAO", "cacifos", "escrita")).toBe(false);
+      expect(canRead("RECECAO", "cacifos")).toBe(true);
+    });
+
+    it("NÃO deve ter acesso a lanche", () => {
+      expect(PERMISSOES.RECECAO.lanche).toBeUndefined();
+    });
+
+    it("NÃO deve ter acesso a configuracoes", () => {
+      expect(PERMISSOES.RECECAO.configuracoes).toBeUndefined();
+    });
+
+    it("NÃO deve ter acesso a monitores", () => {
+      expect(PERMISSOES.RECECAO.monitores).toBeUndefined();
     });
   });
 
@@ -207,6 +268,8 @@ describe("RBAC — Matriz hardcoded", () => {
       expect(isAdmin("CACIFOS")).toBe(false);
       expect(isAdmin("MONITOR")).toBe(false);
       expect(isAdmin("FESTAS_ACABAR")).toBe(false);
+      expect(isAdmin("STAFF")).toBe(false);
+      expect(isAdmin("RECECAO")).toBe(false);
       expect(isAdmin(null)).toBe(false);
     });
   });
@@ -230,6 +293,14 @@ describe("RBAC — Matriz hardcoded", () => {
 
     it("FESTAS_ACABAR deve ir para /festas-acabar", () => {
       expect(getHomeRoute("FESTAS_ACABAR")).toBe("/festas-acabar");
+    });
+
+    it("STAFF deve ir para /festas", () => {
+      expect(getHomeRoute("STAFF")).toBe("/festas");
+    });
+
+    it("RECECAO deve ir para /reservas", () => {
+      expect(getHomeRoute("RECECAO")).toBe("/reservas");
     });
 
     it("função nula/indefinida deve ir para /dashboard", () => {

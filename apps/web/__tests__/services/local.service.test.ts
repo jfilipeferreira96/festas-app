@@ -53,7 +53,6 @@ describe("Local Service", () => {
       expect(local).toBeDefined();
       expect(local.id).toBe(TEST_IDS.LOCAL_1);
       expect(local.nome).toBe("Sala Teste Azul");
-      expect(local.capacidade).toBe(25);
     });
 
     it("should throw NOT_FOUND for non-existent ID", async () => {
@@ -66,11 +65,9 @@ describe("Local Service", () => {
     it("should create a new local", async () => {
       const local = await localService.create({
         nome: "Sala Teste Nova",
-        capacidade: 20,
       });
       expect(local).toBeDefined();
       expect(local.nome).toBe("Sala Teste Nova");
-      expect(local.capacidade).toBe(20);
       expect(local.activo).toBe(true);
 
       // Cleanup
@@ -80,7 +77,6 @@ describe("Local Service", () => {
     it("should create a local with INACTIVO status", async () => {
       const local = await localService.create({
         nome: "Sala Inactiva Teste",
-        capacidade: 10,
         activo: false,
       });
       expect(local.activo).toBe(false);
@@ -91,14 +87,8 @@ describe("Local Service", () => {
 
     it("should throw NAME_REQUIRED if nome is empty", async () => {
       await expect(
-        localService.create({ nome: "", capacidade: 10 })
+        localService.create({ nome: "" })
       ).rejects.toThrow("NAME_REQUIRED");
-    });
-
-    it("should throw CAPACITY_REQUIRED if capacidade is 0", async () => {
-      await expect(
-        localService.create({ nome: "Teste", capacidade: 0 })
-      ).rejects.toThrow("CAPACITY_REQUIRED");
     });
   });
 
@@ -126,7 +116,7 @@ describe("Local Service", () => {
     it("should soft delete a local without active reservas", async () => {
       // Create a local with no reservas
       const local = await testPrisma.local.create({
-        data: { id: "test-local-delete", nome: "Para Apagar", capacidade: 5 },
+        data: { id: "test-local-delete", nome: "Para Apagar" },
       });
 
       const deleted = await localService.delete(local.id);

@@ -40,6 +40,7 @@ describe("ConfiguracaoPreco Service", () => {
       expect(Number(config.precoEntradaHoraSemana)).toBe(10);
       expect(Number(config.precoEntradaHoraFimSemana)).toBe(12);
       expect(Number(config.precoExcessoFixo)).toBe(5);
+      expect(Number(config.caucaoDefault)).toBe(40);
     });
 
     it("should return existing config on second call (singleton)", async () => {
@@ -91,6 +92,20 @@ describe("ConfiguracaoPreco Service", () => {
         precoExcessoFixo: 7.5,
       });
       expect(Number(updated.precoExcessoFixo)).toBe(7.5);
+    });
+
+    it("should update caucaoDefault", async () => {
+      const updated = await configuracaoPrecoService.updateConfig({
+        caucaoDefault: 50,
+      });
+      expect(Number(updated.caucaoDefault)).toBe(50);
+    });
+
+    it("should allow caucaoDefault of 0 (sem caução obrigatória)", async () => {
+      const updated = await configuracaoPrecoService.updateConfig({
+        caucaoDefault: 0,
+      });
+      expect(Number(updated.caucaoDefault)).toBe(0);
     });
   });
 

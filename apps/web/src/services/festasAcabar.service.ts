@@ -6,6 +6,77 @@ import prisma from "@festas/db";
  * Mostra as festas EM_CURSO, ordenadas por hora de saída (fimPrevisto).
  */
 export const festasAcabarService = {
+  /**
+   * Dados para o ecrã TV: festas EM_CURSO/CONCLUIDA recentes + entradas livres ativas.
+   * Janela de ±5 minutos em torno do fimPrevisto.
+   */
+  async getFestasTV() {
+    const agora = new Date();
+    const janelaMin = new Date(agora.getTime() - 5 * 60 * 1000); // 5 min atrás
+    const janelaMax = new Date(agora.getTime() + 5 * 60 * 1000); // 5 min à frente
+
+    const [festas, entradas] = await Promise.all([
+      prisma.reserva.findMany({
+        where: {
+          estado: { in: ["EM_CURSO", "CONCLUIDA"] },
+          fimPrevisto: { gte: janelaMin, lte: janelaMax },
+        },
+        include: {
+          local: true,
+          aniversariantes: { include: { aniversariante: true } },
+        },
+        orderBy: { fimPrevisto: "asc" },
+      }),
+      prisma.entradaLivre.findMany({
+        where: { estado: "ATIVA" },
+        select: {
+          id: true,
+          criancas: true,
+          encarregadoNome: true,
+          inicioEm: true,
+          fimPrevisto: true,
+          duracaoMinutos: true,
+        },
+        orderBy: { inicioEm: "asc" },
+      }),
+    ]);
+
+    const festasFormatadas = festas.map((r: typeof festas[number]) => {
+      const nomesAniv = r.aniversariantes
+        .map((a: typeof r.aniversariantes[number]) => a.aniversariante?.nome)
+        .filter(Boolean)
+        .join(", ");
+
+      return {
+        id: r.id,
+        nomeFesta: nomesAniv || "—",
+        cor: r.cor,
+        numCriancas: r.numCriancas,
+        inicioEm: r.inicioEm?.toISOString() ?? null,
+        fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
+        localNome: r.local?.nome ?? "—",
+        estado: r.estado,
+      };
+    });
+
+    const entradasFormatadas = entradas.map((e: typeof entradas[number]) => {
+      const criancasNomes = Array.isArray(e.criancas)
+        ? (e.criancas as Array<{ nome?: string }>).map((c) => c.nome).filter(Boolean).join(", ")
+        : "";
+      return {
+        id: e.id,
+        criancasNomes: criancasNomes || "—",
+        encarregadoNome: e.encarregadoNome,
+        inicioEm: e.inicioEm?.toISOString() ?? null,
+        fimPrevisto: e.fimPrevisto?.toISOString() ?? null,
+        duracaoMinutos: e.duracaoMinutos,
+        numCriancas: Array.isArray(e.criancas) ? e.criancas.length : 0,
+      };
+    });
+
+    return { festas: festasFormatadas, entradas: entradasFormatadas };
+  },
+
   async getFestas() {
     const festas = await prisma.reserva.findMany({
       where: { estado: "EM_CURSO" },

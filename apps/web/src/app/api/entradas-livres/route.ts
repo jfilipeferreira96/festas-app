@@ -3,7 +3,7 @@ import { entradaLivreService } from "@/services/entradaLivre.service";
 import { requireAuth } from "@/lib/auth-server";
 import { handleError } from "../error-handler";
 
-// GET /api/entradas-livres[?estado=&localId=&data=&dataInicio=&dataFim=&dataConclusao=&pesquisa=]
+// GET /api/entradas-livres[?estado=&data=&dataInicio=&dataFim=&dataConclusao=&pesquisa=]
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const filtros = {
       estado: searchParams.get("estado") || undefined,
-      localId: searchParams.get("localId") || undefined,
       data: searchParams.get("data") || undefined,
       dataInicio: searchParams.get("dataInicio") || undefined,
       dataFim: searchParams.get("dataFim") || undefined,

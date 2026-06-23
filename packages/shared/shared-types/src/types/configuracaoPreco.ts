@@ -23,6 +23,8 @@ export interface ConfiguracaoPreco {
   precoMeias: number;
   // Excesso de tempo
   precoExcessoFixo: number;
+  // Caução por defeito (valor sugerido ao criar reserva — sobrescrevível)
+  caucaoDefault: number;
   // Durações default
   duracaoDefaultFestaMin: number;
   duracaoExcessoBlocoMin: number;
@@ -38,6 +40,7 @@ export interface AtualizarConfiguracaoPrecoDTO {
   minimosCriancasPorAniversariante?: MinimoCriancasPorAniversariante[];
   precoMeias?: number;
   precoExcessoFixo?: number;
+  caucaoDefault?: number;
   duracaoDefaultFestaMin?: number;
   duracaoExcessoBlocoMin?: number;
 }

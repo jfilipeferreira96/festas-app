@@ -133,6 +133,8 @@ async function seedEssential() {
     { id: "cacifos-001", name: "Cacifos Teste", email: "cacifos@festas.pt", password: "cacifos123", funcao: "CACIFOS" as const },
     { id: "monitor-001", name: "Monitor Teste", email: "monitor@festas.pt", password: "monitor123", funcao: "MONITOR" as const },
     { id: "festas-acabar-001", name: "Festas Acabar Teste", email: "festas-acabar@festas.pt", password: "festas123", funcao: "FESTAS_ACABAR" as const },
+    { id: "staff-001", name: "Staff Teste", email: "staff@festas.pt", password: "staff123", funcao: "STAFF" as const },
+    { id: "rececao-001", name: "Receção Teste", email: "rececao@festas.pt", password: "rececao123", funcao: "RECECAO" as const },
   ];
 
   await prisma.account.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
@@ -156,9 +158,9 @@ async function seedEssential() {
 async function seedLocais() {
   console.log("  Creating locais...");
   const locais = [
-    { id: "local-001", nome: "Sala Azul", capacidade: 25 },
-    { id: "local-002", nome: "Sala Arco-Íris", capacidade: 30 },
-    { id: "local-003", nome: "Parque Trampolins", capacidade: 15 },
+    { id: "local-001", nome: "Sala Azul" },
+    { id: "local-002", nome: "Sala Arco-Íris" },
+    { id: "local-003", nome: "Parque Trampolins" },
   ];
   for (const local of locais) {
     await prisma.local.upsert({ where: { id: local.id }, update: {}, create: local });
@@ -262,6 +264,7 @@ async function seedConfiguracaoPreco() {
         minimosCriancasPorAniversariante: minimos,
         precoMeias: 2,
         precoExcessoFixo: 5,
+        caucaoDefault: 40,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },
@@ -1019,9 +1022,9 @@ async function seedReservas() {
     await prisma.menu.upsert({ where: { id: `menu-${c.id}` }, update: {}, create: { id: `menu-${c.id}`, nome: `Menu ${c.tema}`, preco: c.menuPreco, notas: "Sumo, pipocas, bolo", reservaId: c.id } });
   }
 
-  // ─── Preencher horaLanche (45 min após início) + observacoesBrindesPais ───
+  // ─── Preencher horaLanche (45 min após início) + valorCaucao + observacoesBrindesPais ───
   const todasReservas = await prisma.reserva.findMany({
-    select: { id: true, horario: true, observacoesBrindes: true },
+    select: { id: true, horario: true, observacoesBrindes: true, caucao: true },
   });
   for (const r of todasReservas) {
     let horaLanche: string | null = null;
@@ -1038,6 +1041,7 @@ async function seedReservas() {
       where: { id: r.id },
       data: {
         horaLanche,
+        valorCaucao: r.caucao === "NAO_PAGA" ? 0 : 40,
         observacoesBrindesPais: r.observacoesBrindes
           ? "Sacos-lembrança para os pais com foto da festa."
           : "Oferecer café e fatia de bolo aos pais durante a festa.",
@@ -1127,7 +1131,8 @@ async function seedEntradasLivres() {
       inicioEm: ativaInicio,
       fimPrevisto: addMin(ativaInicio, 90),
       estado: "ATIVA",
-      localId: "local-001",
+      temLanche: false,
+      numAdultos: 0,
       pago: true,
       metodoPagamento: "MBWAY",
       criancas: [{ nome: "Miguel", idade: 6 }, { nome: "Sofia", idade: 4 }],
@@ -1150,7 +1155,8 @@ async function seedEntradasLivres() {
       inicioEm: ativaInicio2,
       fimPrevisto: addMin(ativaInicio2, 60),
       estado: "ATIVA",
-      localId: "local-002",
+      temLanche: true,
+      numAdultos: 1,
       cacifoId: cacifo31?.id,
       pago: false,
       criancas: [{ nome: "Beatriz", idade: 5 }],
@@ -1181,7 +1187,8 @@ async function seedEntradasLivres() {
       fimPrevisto: addMin(concluidaInicio, 120),
       fimReal: concluidaFim,
       estado: "CONCLUIDA",
-      localId: "local-001",
+      temLanche: false,
+      numAdultos: 0,
       excessoMinutos: 30,
       custoExcesso: 6.0,
       custoTotalFinal: 26.0,
@@ -1208,7 +1215,8 @@ async function seedEntradasLivres() {
       fimPrevisto: addMin(canceladaInicio, 90),
       fimReal: addMin(canceladaInicio, 5),
       estado: "CANCELADA",
-      localId: "local-003",
+      temLanche: false,
+      numAdultos: 0,
       observacoes: "Cancelado por emergência familiar",
       criancas: [{ nome: "Leonor", idade: 6 }],
     },
@@ -1216,11 +1224,11 @@ async function seedEntradasLivres() {
 
   // ─── MAIS ATIVAS (hoje) — 5 entradas em vários estados ──────────
   const ativasExtras = [
-    { id: "entrada-livre-ativa-003", hora: 11, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Mariana Alves", tel: "911111112", email: "mariana@email.pt", pago: true, met: MP("DINHEIRO"), criancas: [{ nome: "João", idade: 5 }, { nome: "Rita", idade: 7 }] },
-    { id: "entrada-livre-ativa-004", hora: 13, min: 30, dur: 90, custo: 12.0, local: "local-003", nome: "Carlos Pereira", tel: "922222223", email: "carlos@email.pt", pago: false, met: undefined, criancas: [{ nome: "Pedro", idade: 8 }, { nome: "Inês", idade: 6 }, { nome: "Tiago", idade: 4 }] },
-    { id: "entrada-livre-ativa-005", hora: 14, min: 45, dur: 120, custo: 8.0, local: "local-002", nome: "Filipa Dinis", tel: "933333334", email: "filipa@email.pt", pago: true, met: MP("MBWAY"), criancas: [{ nome: "Sofia", idade: 5 }] },
-    { id: "entrada-livre-ativa-006", hora: 15, min: 0, dur: 30, custo: 10.0, local: "local-001", nome: "Hugo Cardoso", tel: "944444445", email: "hugo@email.pt", pago: false, met: undefined, criancas: [{ nome: "Marta", idade: 6 }, { nome: "Guilherme", idade: 3 }] },
-    { id: "entrada-livre-ativa-007", hora: 16, min: 15, dur: 60, custo: 12.0, local: "local-003", nome: "Teresa Morais", tel: "955555556", email: "teresa@email.pt", pago: true, met: MP("CARTAO"), criancas: [{ nome: "Afonso", idade: 7 }] },
+    { id: "entrada-livre-ativa-003", hora: 11, min: 0, dur: 60, custo: 10.0, nome: "Mariana Alves", tel: "911111112", email: "mariana@email.pt", pago: true, met: MP("DINHEIRO"), lanche: false, adultos: 0, criancas: [{ nome: "João", idade: 5 }, { nome: "Rita", idade: 7 }] },
+    { id: "entrada-livre-ativa-004", hora: 13, min: 30, dur: 90, custo: 12.0, nome: "Carlos Pereira", tel: "922222223", email: "carlos@email.pt", pago: false, met: undefined, lanche: true, adultos: 1, criancas: [{ nome: "Pedro", idade: 8 }, { nome: "Inês", idade: 6 }, { nome: "Tiago", idade: 4 }] },
+    { id: "entrada-livre-ativa-005", hora: 14, min: 45, dur: 120, custo: 8.0, nome: "Filipa Dinis", tel: "933333334", email: "filipa@email.pt", pago: true, met: MP("MBWAY"), lanche: false, adultos: 0, criancas: [{ nome: "Sofia", idade: 5 }] },
+    { id: "entrada-livre-ativa-006", hora: 15, min: 0, dur: 30, custo: 10.0, nome: "Hugo Cardoso", tel: "944444445", email: "hugo@email.pt", pago: false, met: undefined, lanche: false, adultos: 1, criancas: [{ nome: "Marta", idade: 6 }, { nome: "Guilherme", idade: 3 }] },
+    { id: "entrada-livre-ativa-007", hora: 16, min: 15, dur: 60, custo: 12.0, nome: "Teresa Morais", tel: "955555556", email: "teresa@email.pt", pago: true, met: MP("CARTAO"), lanche: true, adultos: 0, criancas: [{ nome: "Afonso", idade: 7 }] },
   ];
 
   for (const a of ativasExtras) {
@@ -1239,7 +1247,8 @@ async function seedEntradasLivres() {
         inicioEm: start,
         fimPrevisto: addMin(start, a.dur),
         estado: "ATIVA",
-        localId: a.local,
+        temLanche: a.lanche,
+        numAdultos: a.adultos,
         pago: a.pago,
         metodoPagamento: a.met,
         criancas: a.criancas,
@@ -1247,15 +1256,39 @@ async function seedEntradasLivres() {
     });
   }
 
+  // ─── ENTRADA ATIVA HOJE — COM LANCHE + ADULTO (para teste visual) ────
+  const entradaLancheStart = dateAt(todayDate, 12, 0);
+  await prisma.entradaLivre.upsert({
+    where: { id: "entrada-livre-ativa-lanche-001" },
+    update: {},
+    create: {
+      id: "entrada-livre-ativa-lanche-001",
+      encarregadoNome: "Sofia Lancheiro",
+      encarregadoTelefone: "960000099",
+      encarregadoEmail: "sofia.lancheiro@email.pt",
+      duracaoMinutos: 120,
+      custoHora: 10.0,
+      custoTotal: 20.0,
+      inicioEm: entradaLancheStart,
+      fimPrevisto: addMin(entradaLancheStart, 120),
+      estado: "ATIVA",
+      temLanche: true,
+      numAdultos: 1,
+      pago: true,
+      metodoPagamento: "MBWAY",
+      criancas: [{ nome: "Tomás", idade: 5 }, { nome: "Madalena", idade: 3 }],
+    },
+  });
+
   // ─── CONCLUIDAS esta semana (-1 a -5 dias) — 7 entradas ──────────
   const concluidasSemana = [
-    { dias: 1, hora: 10, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Rui Costa", tel: "966666667", met: MP("MBWAY"), excesso: 15, criancas: [{ nome: "Diogo", idade: 6 }] },
-    { dias: 2, hora: 14, min: 30, dur: 90, custo: 8.0, local: "local-002", nome: "Sandra Ribeiro", tel: "977777778", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Beatriz", idade: 5 }, { nome: "Carlos", idade: 7 }] },
-    { dias: 2, hora: 16, min: 0, dur: 120, custo: 12.0, local: "local-003", nome: "Paulo Sousa", tel: "988888889", met: MP("MULTIBANCO"), excesso: 45, criancas: [{ nome: "João", idade: 8 }, { nome: "Marta", idade: 6 }, { nome: "Pedro", idade: 5 }] },
-    { dias: 3, hora: 11, min: 30, dur: 60, custo: 10.0, local: "local-001", nome: "Catarina Lopes", tel: "999999990", met: MP("CARTAO"), excesso: 0, criancas: [{ nome: "Ana", idade: 4 }] },
-    { dias: 4, hora: 15, min: 0, dur: 90, custo: 8.0, local: "local-002", nome: "Gonçalo Ferreira", tel: "910000011", met: MP("MBWAY"), excesso: 20, criancas: [{ nome: "Rita", idade: 6 }, { nome: "Miguel", idade: 8 }] },
-    { dias: 4, hora: 10, min: 0, dur: 30, custo: 12.0, local: "local-003", nome: "Inês Martins", tel: "920000012", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Tiago", idade: 3 }] },
-    { dias: 5, hora: 17, min: 0, dur: 120, custo: 10.0, local: "local-001", nome: "André Santos", tel: "930000013", met: MP("TRANSFERENCIA"), excesso: 30, criancas: [{ nome: "Sofia", idade: 7 }, { nome: "Laura", idade: 5 }, { nome: "Rodrigo", idade: 6 }] },
+    { dias: 1, hora: 10, min: 0, dur: 60, custo: 10.0, nome: "Rui Costa", tel: "966666667", met: MP("MBWAY"), excesso: 15, lanche: false, adultos: 0, criancas: [{ nome: "Diogo", idade: 6 }] },
+    { dias: 2, hora: 14, min: 30, dur: 90, custo: 8.0, nome: "Sandra Ribeiro", tel: "977777778", met: MP("DINHEIRO"), excesso: 0, lanche: true, adultos: 0, criancas: [{ nome: "Beatriz", idade: 5 }, { nome: "Carlos", idade: 7 }] },
+    { dias: 2, hora: 16, min: 0, dur: 120, custo: 12.0, nome: "Paulo Sousa", tel: "988888889", met: MP("MULTIBANCO"), excesso: 45, lanche: false, adultos: 1, criancas: [{ nome: "João", idade: 8 }, { nome: "Marta", idade: 6 }, { nome: "Pedro", idade: 5 }] },
+    { dias: 3, hora: 11, min: 30, dur: 60, custo: 10.0, nome: "Catarina Lopes", tel: "999999990", met: MP("CARTAO"), excesso: 0, lanche: false, adultos: 0, criancas: [{ nome: "Ana", idade: 4 }] },
+    { dias: 4, hora: 15, min: 0, dur: 90, custo: 8.0, nome: "Gonçalo Ferreira", tel: "910000011", met: MP("MBWAY"), excesso: 20, lanche: true, adultos: 0, criancas: [{ nome: "Rita", idade: 6 }, { nome: "Miguel", idade: 8 }] },
+    { dias: 4, hora: 10, min: 0, dur: 30, custo: 12.0, nome: "Inês Martins", tel: "920000012", met: MP("DINHEIRO"), excesso: 0, lanche: false, adultos: 0, criancas: [{ nome: "Tiago", idade: 3 }] },
+    { dias: 5, hora: 17, min: 0, dur: 120, custo: 10.0, nome: "André Santos", tel: "930000013", met: MP("TRANSFERENCIA"), excesso: 30, lanche: false, adultos: 1, criancas: [{ nome: "Sofia", idade: 7 }, { nome: "Laura", idade: 5 }, { nome: "Rodrigo", idade: 6 }] },
   ];
 
   for (const [idx, c] of concluidasSemana.entries()) {
@@ -1279,7 +1312,8 @@ async function seedEntradasLivres() {
         fimPrevisto: fim,
         fimReal,
         estado: "CONCLUIDA",
-        localId: c.local,
+        temLanche: c.lanche,
+        numAdultos: c.adultos,
         excessoMinutos: c.excesso || null,
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
@@ -1293,11 +1327,11 @@ async function seedEntradasLivres() {
 
   // ─── CONCLUIDAS semana passada (-7 a -11 dias) — 5 entradas ──────
   const concluidasPas = [
-    { dias: 7, hora: 14, min: 0, dur: 90, custo: 10.0, local: "local-001", nome: "Luís Pereira", tel: "940000014", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Mariana", idade: 6 }] },
-    { dias: 8, hora: 10, min: 30, dur: 60, custo: 8.0, local: "local-002", nome: "Helena Costa", tel: "950000015", met: MP("MBWAY"), excesso: 10, criancas: [{ nome: "João", idade: 5 }, { nome: "Beatriz", idade: 7 }] },
-    { dias: 9, hora: 16, min: 0, dur: 120, custo: 12.0, local: "local-003", nome: "Ricardo Silva", tel: "960000016", met: MP("MULTIBANCO"), excesso: 25, criancas: [{ nome: "Pedro", idade: 8 }, { nome: "Inês", idade: 6 }, { nome: "Marta", idade: 4 }] },
-    { dias: 10, hora: 11, min: 0, dur: 90, custo: 10.0, local: "local-001", nome: "Sofia Mendes", tel: "970000017", met: MP("CARTAO"), excesso: 0, criancas: [{ nome: "Tiago", idade: 6 }] },
-    { dias: 11, hora: 15, min: 30, dur: 60, custo: 8.0, local: "local-002", nome: "Nuno Ribeiro", tel: "980000018", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Ana", idade: 5 }, { nome: "Rita", idade: 7 }] },
+    { dias: 7, hora: 14, min: 0, dur: 90, custo: 10.0, nome: "Luís Pereira", tel: "940000014", met: MP("DINHEIRO"), excesso: 0, lanche: false, adultos: 0, criancas: [{ nome: "Mariana", idade: 6 }] },
+    { dias: 8, hora: 10, min: 30, dur: 60, custo: 8.0, nome: "Helena Costa", tel: "950000015", met: MP("MBWAY"), excesso: 10, lanche: true, adultos: 1, criancas: [{ nome: "João", idade: 5 }, { nome: "Beatriz", idade: 7 }] },
+    { dias: 9, hora: 16, min: 0, dur: 120, custo: 12.0, nome: "Ricardo Silva", tel: "960000016", met: MP("MULTIBANCO"), excesso: 25, lanche: false, adultos: 0, criancas: [{ nome: "Pedro", idade: 8 }, { nome: "Inês", idade: 6 }, { nome: "Marta", idade: 4 }] },
+    { dias: 10, hora: 11, min: 0, dur: 90, custo: 10.0, nome: "Sofia Mendes", tel: "970000017", met: MP("CARTAO"), excesso: 0, lanche: false, adultos: 0, criancas: [{ nome: "Tiago", idade: 6 }] },
+    { dias: 11, hora: 15, min: 30, dur: 60, custo: 8.0, nome: "Nuno Ribeiro", tel: "980000018", met: MP("DINHEIRO"), excesso: 0, lanche: true, adultos: 0, criancas: [{ nome: "Ana", idade: 5 }, { nome: "Rita", idade: 7 }] },
   ];
 
   for (const [idx, c] of concluidasPas.entries()) {
@@ -1321,7 +1355,8 @@ async function seedEntradasLivres() {
         fimPrevisto: fim,
         fimReal,
         estado: "CONCLUIDA",
-        localId: c.local,
+        temLanche: c.lanche,
+        numAdultos: c.adultos,
         excessoMinutos: c.excesso || null,
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
@@ -1335,9 +1370,9 @@ async function seedEntradasLivres() {
 
   // ─── CANCELADAS — 3 entradas ─────────────────────────────────────
   const canceladasExtras = [
-    { dias: 2, hora: 9, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Vasco Almeida", tel: "990000019", obs: "Criança adoeceu", criancas: [{ nome: "Leonor", idade: 5 }] },
-    { dias: 4, hora: 14, min: 0, dur: 90, custo: 8.0, local: "local-002", nome: "Marta Cardoso", tel: "901000020", obs: "Mudança de planos", criancas: [{ nome: "Diogo", idade: 6 }, { nome: "Sofia", idade: 4 }] },
-    { dias: 6, hora: 11, min: 30, dur: 120, custo: 12.0, local: "local-003", nome: "Pedro Lourenço", tel: "912000021", obs: "Conflito de horário", criancas: [{ nome: "Beatriz", idade: 7 }] },
+    { dias: 2, hora: 9, min: 0, dur: 60, custo: 10.0, nome: "Vasco Almeida", tel: "990000019", obs: "Criança adoeceu", lanche: false, adultos: 0, criancas: [{ nome: "Leonor", idade: 5 }] },
+    { dias: 4, hora: 14, min: 0, dur: 90, custo: 8.0, nome: "Marta Cardoso", tel: "901000020", obs: "Mudança de planos", lanche: false, adultos: 0, criancas: [{ nome: "Diogo", idade: 6 }, { nome: "Sofia", idade: 4 }] },
+    { dias: 6, hora: 11, min: 30, dur: 120, custo: 12.0, nome: "Pedro Lourenço", tel: "912000021", obs: "Conflito de horário", lanche: false, adultos: 0, criancas: [{ nome: "Beatriz", idade: 7 }] },
   ];
 
   for (const [idx, c] of canceladasExtras.entries()) {
@@ -1357,7 +1392,8 @@ async function seedEntradasLivres() {
         fimPrevisto: addMin(start, c.dur),
         fimReal: addMin(start, 5),
         estado: "CANCELADA",
-        localId: c.local,
+        temLanche: c.lanche,
+        numAdultos: c.adultos,
         observacoes: c.obs,
         criancas: c.criancas,
       },
@@ -1366,10 +1402,10 @@ async function seedEntradasLivres() {
 
   // ─── CONCLUIDAS HOJE (para o relatório de hoje ter dados) ─────────
   const concluidasHoje = [
-    { id: "entrada-livre-conc-hoje-001", hora: 11, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Patrícia Gomes", tel: "910000099", met: MP("DINHEIRO"), excesso: 0, criancas: [{ nome: "Marta", idade: 5 }] },
-    { id: "entrada-livre-conc-hoje-002", hora: 13, min: 30, dur: 90, custo: 8.0, local: "local-002", nome: "Bruno Antunes", tel: "920000099", met: MP("MBWAY"), excesso: 15, criancas: [{ nome: "Tomás", idade: 6 }, { nome: "Madalena", idade: 4 }] },
-    { id: "entrada-livre-conc-hoje-003", hora: 15, min: 0, dur: 120, custo: 12.0, local: "local-003", nome: "Sónia Rocha", tel: "930000099", met: MP("MULTIBANCO"), excesso: 0, criancas: [{ nome: "Afonso", idade: 7 }] },
-    { id: "entrada-livre-conc-hoje-004", hora: 16, min: 0, dur: 60, custo: 10.0, local: "local-001", nome: "Daniel Faria", tel: "940000099", met: MP("TRANSFERENCIA"), excesso: 0, criancas: [{ nome: "Leonor", idade: 5 }, { nome: "Vicente", idade: 3 }] },
+    { id: "entrada-livre-conc-hoje-001", hora: 11, min: 0, dur: 60, custo: 10.0, nome: "Patrícia Gomes", tel: "910000099", met: MP("DINHEIRO"), excesso: 0, lanche: false, adultos: 0, criancas: [{ nome: "Marta", idade: 5 }] },
+    { id: "entrada-livre-conc-hoje-002", hora: 13, min: 30, dur: 90, custo: 8.0, nome: "Bruno Antunes", tel: "920000099", met: MP("MBWAY"), excesso: 15, lanche: true, adultos: 0, criancas: [{ nome: "Tomás", idade: 6 }, { nome: "Madalena", idade: 4 }] },
+    { id: "entrada-livre-conc-hoje-003", hora: 15, min: 0, dur: 120, custo: 12.0, nome: "Sónia Rocha", tel: "930000099", met: MP("MULTIBANCO"), excesso: 0, lanche: false, adultos: 1, criancas: [{ nome: "Afonso", idade: 7 }] },
+    { id: "entrada-livre-conc-hoje-004", hora: 16, min: 0, dur: 60, custo: 10.0, nome: "Daniel Faria", tel: "940000099", met: MP("TRANSFERENCIA"), excesso: 0, lanche: false, adultos: 0, criancas: [{ nome: "Leonor", idade: 5 }, { nome: "Vicente", idade: 3 }] },
   ];
 
   for (const c of concluidasHoje) {
@@ -1392,7 +1428,8 @@ async function seedEntradasLivres() {
         fimPrevisto: fim,
         fimReal,
         estado: "CONCLUIDA",
-        localId: c.local,
+        temLanche: c.lanche,
+        numAdultos: c.adultos,
         excessoMinutos: c.excesso || null,
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,

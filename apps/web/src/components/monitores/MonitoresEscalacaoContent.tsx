@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { UserCog, Plus, Pencil, Trash2, MapPin, Clock } from "lucide-react";
+import { UserCog, Plus, Pencil, Trash2, MapPin, Clock, Tv, Minimize2 } from "lucide-react";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -9,6 +9,7 @@ import DatePicker from "@/components/form/date-picker";
 import { useAlocacoesByDate, useDeleteAlocacao } from "@/hooks/use-alocacoes-monitor";
 import { useLocais } from "@/hooks/use-locais";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
+import { useTVMode } from "@/hooks/use-tv-mode";
 import MonitorTimeline from "./MonitorTimeline";
 import AlocacaoMonitorForm from "./AlocacaoMonitorForm";
 import NotasDiariasPanel from "./NotasDiariasPanel";
@@ -32,6 +33,7 @@ export default function MonitoresEscalacaoContent() {
   const deleteAlocacao = useDeleteAlocacao();
   const { canWrite } = useMinhasPermissoes();
   const podeEditar = canWrite("reservas");
+  const { isTVMode, toggleTVMode } = useTVMode();
 
   const formattedDate = formatDate(selectedDate);
 
@@ -88,12 +90,22 @@ export default function MonitoresEscalacaoContent() {
         title="Monitores"
         subtitle={`Escalação por dia — ${formattedDate}`}
         actions={
-          podeEditar ? (
-            <Button onClick={handleAdd} className="flex items-center gap-2">
-              <Plus size={16} />
-              Adicionar
-            </Button>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleTVMode}
+              className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-brand-500/5 transition-colors"
+              title={isTVMode ? "Sair do modo ecrã" : "Modo ecrã"}
+            >
+              {isTVMode ? <Minimize2 size={16} /> : <Tv size={16} />}
+              <span className="hidden sm:inline">{isTVMode ? "Sair" : "Ecrã"}</span>
+            </button>
+            {podeEditar ? (
+              <Button onClick={handleAdd} className="flex items-center gap-2">
+                <Plus size={16} />
+                Adicionar
+              </Button>
+            ) : undefined}
+          </div>
         }
       />
 

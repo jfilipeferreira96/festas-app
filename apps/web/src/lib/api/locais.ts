@@ -6,7 +6,6 @@ export type { Local };
 
 export type CreateLocalInput = {
   nome: string;
-  capacidade: number;
   activo?: boolean;
 };
 

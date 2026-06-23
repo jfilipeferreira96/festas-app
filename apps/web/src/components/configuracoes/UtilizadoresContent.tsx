@@ -46,6 +46,8 @@ const roleColors: Record<FuncaoUtilizador, string> = {
   CACIFOS: "bg-accent-orange-50 text-accent-orange-700",
   MONITOR: "bg-accent-blue-50 text-accent-blue-700",
   FESTAS_ACABAR: "bg-accent-red-50 text-accent-red-700",
+  STAFF: "bg-accent-teal-50 text-accent-teal-700",
+  RECECAO: "bg-primary-50 text-primary-700",
 };
 
 const roleLabels: Record<FuncaoUtilizador, string> = {
@@ -54,6 +56,8 @@ const roleLabels: Record<FuncaoUtilizador, string> = {
   CACIFOS: "Cacifos",
   MONITOR: "Monitor",
   FESTAS_ACABAR: "Festas a Acabar",
+  STAFF: "Staff",
+  RECECAO: "Receção",
 };
 
 const roleOptions = Object.entries(roleLabels).map(([value, label]) => ({ value, label }));

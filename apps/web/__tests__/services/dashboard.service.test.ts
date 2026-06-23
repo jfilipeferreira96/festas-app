@@ -56,14 +56,47 @@ describe("Dashboard Service", () => {
       // Seed tem RESERVA_EM_CURSO com numCriancas + entradas ATIVAS
       expect(kpis.totalCriancasNoParque).toBeGreaterThanOrEqual(1);
     });
+
+    it("deve retornar criancasFestas e criancasEntradas separadamente", async () => {
+      const kpis = await dashboardService.getKPIs();
+      expect(kpis).toHaveProperty("criancasFestas");
+      expect(kpis).toHaveProperty("criancasEntradas");
+      expect(typeof kpis.criancasFestas).toBe("number");
+      expect(typeof kpis.criancasEntradas).toBe("number");
+      // total = festas + entradas
+      expect(kpis.totalCriancasNoParque).toBe(kpis.criancasFestas + kpis.criancasEntradas);
+    });
+
+    it("deve retornar receitasHoje agrupadas por método de pagamento", async () => {
+      const kpis = await dashboardService.getKPIs();
+      expect(kpis).toHaveProperty("receitasHoje");
+      expect(typeof kpis.receitasHoje).toBe("object");
+    });
   });
 
   // ── getTotalCriancasNoParque (v2) ─────────────────────────────
   describe("getTotalCriancasNoParque()", () => {
     it("deve somar crianças de festas EM_CURSO + entradas ATIVAS", async () => {
-      const total = await dashboardService.getTotalCriancasNoParque();
-      expect(typeof total).toBe("number");
-      expect(total).toBeGreaterThanOrEqual(1);
+      const result = await dashboardService.getTotalCriancasNoParque();
+      expect(result).toHaveProperty("total");
+      expect(result).toHaveProperty("festas");
+      expect(result).toHaveProperty("entradas");
+      expect(result.total).toBe(result.festas + result.entradas);
+      expect(result.total).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  // ── getReceitasHoje ───────────────────────────────────────────
+  describe("getReceitasHoje()", () => {
+    it("deve retornar um objeto com receitas por método de pagamento", async () => {
+      const receitas = await dashboardService.getReceitasHoje();
+      expect(typeof receitas).toBe("object");
+      // Pode estar vazio se não houver pagamentos hoje, mas deve ser um objeto
+      // Os valores devem ser números
+      for (const [, valor] of Object.entries(receitas)) {
+        expect(typeof valor).toBe("number");
+        expect(valor).toBeGreaterThan(0);
+      }
     });
   });
 

@@ -72,6 +72,13 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
   }, [filtro]);
 
   const { data: entradas, isLoading } = useEntradasLivres(filtros);
+
+  // Total de crianças (somatório de todas as entradas visíveis)
+  const totalCriancas = useMemo(() => {
+    if (!entradas) return 0;
+    return entradas.reduce((sum, e) => sum + (e.criancas?.length ?? 0), 0);
+  }, [entradas]);
+
   const eliminar = useEliminarEntradaLivre();
   const concluir = useConcluirEntradaLivre();
   const cancelar = useCancelarEntradaLivre();
@@ -126,6 +133,16 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
       <PageHeader
         title="Entradas Livres"
         subtitle="Gestão de entradas livres"
+        actions={
+          !isLoading && totalCriancas > 0 ? (
+            <div className="flex items-center gap-2 rounded-xl bg-brand-50 border border-brand-200 px-4 py-2">
+              <Users size={18} className="text-brand-600" />
+              <span className="text-sm font-semibold text-brand-700">
+                {totalCriancas} {totalCriancas === 1 ? "criança" : "crianças"}
+              </span>
+            </div>
+          ) : undefined
+        }
       />
 
       {/* Filters + Create */}
@@ -192,13 +209,6 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
                   {r.encarregadoEmail ?? ""}
                 </p>
               </div>
-            ),
-          },
-          {
-            key: "local",
-            label: "Local",
-            render: (_v, r) => (
-              <span className="text-sm text-text-secondary">{r.local?.nome ?? "—"}</span>
             ),
           },
           {
@@ -408,7 +418,7 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
           isConfirming={concluir.isPending}
           titulo="Concluir Entrada"
           entidadeNome={concluirModal.criancas?.[0]?.nome ?? concluirModal.encarregadoNome}
-          localNome={concluirModal.local?.nome}
+          localNome="Parque (Entrada Livre)"
           inicioEm={concluirModal.inicioEm}
           fimPrevisto={concluirModal.fimPrevisto}
           duracaoMinutos={concluirModal.duracaoMinutos}

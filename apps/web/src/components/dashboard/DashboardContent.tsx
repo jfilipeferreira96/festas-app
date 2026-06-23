@@ -230,7 +230,7 @@ const KPIGrid = React.memo(function KPIGrid() {
         <MiniStat
           label="Crianças no Parque"
           value={kpis?.totalCriancasNoParque ?? 0}
-          hint="Festas + Entradas"
+          hint={`Festas: ${kpis?.criancasFestas ?? 0} · Entradas: ${kpis?.criancasEntradas ?? 0}`}
           icon={<Users size={16} />}
           color={palette.entradas.fg}
           bgColor={palette.entradas.bg}
@@ -386,6 +386,53 @@ const ProximasFestasSection = React.memo(function ProximasFestasSection() {
   );
 });
 
+const METODO_LABELS: Record<string, string> = {
+  DINHEIRO: "Dinheiro",
+  MULTIBANCO: "Multibanco",
+  MBWAY: "MBWay",
+  TRANSFERENCIA: "Transferência",
+  CARTAO: "Cartão",
+  OUTRO: "Outro",
+};
+
+const ReceitasDoDiaSection = React.memo(function ReceitasDoDiaSection() {
+  const { data: kpis, isLoading } = useDashboardKPIs();
+  const receitas = kpis?.receitasHoje ?? {};
+  const metodos = Object.keys(receitas).filter((m) => receitas[m] > 0);
+  const total = metodos.reduce((sum, m) => sum + receitas[m], 0);
+  const fmtMoeda = (v: number) =>
+    new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(v);
+
+  return (
+    <div className="bg-surface rounded-[14px] p-5 shadow-card border border-border">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-poppins font-semibold text-[16px] text-text-primary">
+          Receitas do Dia
+        </h3>
+        <span className="text-lg font-bold text-brand-600 tabular-nums">{fmtMoeda(total)}</span>
+      </div>
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />
+          ))}
+        </div>
+      ) : metodos.length > 0 ? (
+        <div className="space-y-2">
+          {metodos.map((metodo) => (
+            <div key={metodo} className="flex items-center justify-between py-1.5 border-b border-border last:border-0">
+              <span className="text-sm text-text-secondary">{METODO_LABELS[metodo] ?? metodo}</span>
+              <span className="text-sm font-semibold text-text-primary tabular-nums">{fmtMoeda(receitas[metodo])}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-[13px] text-text-muted">Sem receitas registadas hoje.</p>
+      )}
+    </div>
+  );
+});
+
 // Main component
 export default function DashboardContent({ }: DashboardContentProps) {
   const { user } = useUser();
@@ -406,6 +453,9 @@ export default function DashboardContent({ }: DashboardContentProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
         <FestasEmCursoSection />
         <ProximasFestasSection />
+      </div>
+      <div className="mt-4">
+        <ReceitasDoDiaSection />
       </div>
       <div className="mt-6 text-center">
         <Link

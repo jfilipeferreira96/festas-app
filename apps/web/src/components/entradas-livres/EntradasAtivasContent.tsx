@@ -169,7 +169,6 @@ export default function EntradasAtivasContent() {
           isConfirming={concluir.isPending}
           titulo="Concluir Entrada"
           entidadeNome={confirmConcluir.criancas?.[0]?.nome ?? confirmConcluir.encarregadoNome}
-          localNome={confirmConcluir.local?.nome}
           inicioEm={confirmConcluir.inicioEm}
           fimPrevisto={confirmConcluir.fimPrevisto}
           duracaoMinutos={confirmConcluir.duracaoMinutos}
@@ -311,8 +310,6 @@ function EntradaAtivaCard({
               <StatusBadge status="ATIVA" />
             </div>
             <div className="flex items-center gap-2 text-xs text-text-muted">
-              <span>{entrada.local?.nome ?? "—"}</span>
-              <span>·</span>
               <span>{formatTime(entrada.inicioEm)}</span>
               <span>·</span>
               <span>{entrada.duracaoMinutos} min</span>

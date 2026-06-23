@@ -19,7 +19,7 @@ import Switch from "@/components/form/switch/Switch";
 import MultiSelect from "@/components/form/MultiSelect";
 import Checkbox from "@/components/form/input/Checkbox";
 import { FormStepper } from "@/components/ui/stepper/FormStepper";
-import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade } from "@/hooks/use-reservas";
+import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade, useReservas } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useExtras } from "@/hooks/use-extras";
 import { useMonitores } from "@/hooks/use-monitores";
@@ -59,6 +59,7 @@ const reservaSchema = z.object({
   tema: z.string().optional(),
   data: z.string().min(1, "Data é obrigatória"),
   horario: z.string().min(1, "Horário é obrigatório"),
+  horaLanche: z.string().optional(),
   duracaoMinutos: z.number().min(30, "Duração mínima é 30 minutos"),
   localId: z.string().min(1, "Seleccione uma sala"),
   encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
@@ -160,7 +161,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const extraGroups = useMemo(() => groupBySubcategoria(extraItems), [extraItems]);
 
   const salaOptions = useMemo(
-    () => (locais ?? []).map((l) => ({ value: l.id, label: `${l.nome} (${l.capacidade} crianças)` })),
+    () => (locais ?? []).map((l) => ({ value: l.id, label: l.nome })),
     [locais]
   );
   const monitorOptions = useMemo(
@@ -195,6 +196,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const defaultValues = useMemo<ReservaFormData>(() => ({
     tema: reserva?.tema ?? "", data: reserva?.data ?? "", horario: reserva?.horario ?? "",
     duracaoMinutos: reserva?.duracaoMinutos ?? 120, localId: reserva?.localId ?? "",
+    horaLanche: reserva?.horaLanche ?? "",
     encarregadoNome: reserva?.cliente?.nome ?? "",
     encarregadoContacto: reserva?.cliente?.telefone ?? "",
     encarregadoEmail: reserva?.cliente?.email ?? "",
@@ -239,6 +241,15 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     excludeId: reserva?.id,
   });
 
+  // ── Cores em uso no mesmo dia (para avisar pulseiras repetidas) ──
+  const { data: reservasDoDia } = useReservas(watchedData ? { data: watchedData, pageSize: 100 } : undefined);
+  const coresEmUso = useMemo(() => {
+    if (!reservasDoDia?.items) return [] as string[];
+    return reservasDoDia.items
+      .filter((r) => r.id !== reserva?.id && r.cor)
+      .map((r) => r.cor as string);
+  }, [reservasDoDia, reserva?.id]);
+
   // ── Tarifário global (auto-preenchimento do valor) ──
   const { data: configPreco } = useConfigPreco();
   const valorPagoEditedRef = useRef(false);
@@ -265,6 +276,13 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     const criancasFaturadas = Math.max(previsaoCriancas ?? 10, minimoAplicavel);
     setValue("valorPago", precoCrianca * criancasFaturadas);
   }, [watchedData, configPreco, setValue, reserva?.valorPago, previsaoCriancas, aniversariantes]);
+
+  // ── Pré-preencher valorCaucao com o default das configurações ──
+  React.useEffect(() => {
+    if (reserva?.valorCaucao && Number(reserva.valorCaucao) > 0) return;
+    if (!configPreco?.caucaoDefault) return;
+    setValue("valorCaucao", Number(configPreco.caucaoDefault));
+  }, [configPreco, setValue, reserva?.valorCaucao]);
 
   React.useEffect(() => {
     const count = previsaoCriancas ?? 0;
@@ -386,6 +404,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
       adicionarCliente: data.adicionarCliente ?? true, idadeAnos: idade,
       tema: data.tema || undefined, data: data.data, horario: data.horario,
       duracaoMinutos: data.duracaoMinutos, localId: data.localId, numCriancas: data.previsaoCriancas,
+      horaLanche: data.horaLanche || undefined,
       extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
       extrasTexto: Object.fromEntries(Object.entries(extrasTexto).filter(([, v]) => v.trim())),
       monitoresIds: data.monitoresIds, etapasIds: data.etapasIds,
@@ -442,6 +461,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
               disponibilidadeLoading={disponibilidade.isLoading}
               onVerificarDisponibilidade={() => disponibilidade.refetch()}
               onOpenSearchCliente={() => setShowClienteSearch(true)}
+              coresEmUso={coresEmUso}
             />
           )}
           {currentStep === 1 && (
@@ -522,6 +542,7 @@ interface Step1Props {
   disponibilidadeLoading: boolean;
   onVerificarDisponibilidade: () => void;
   onOpenSearchCliente: () => void;
+  coresEmUso: string[];
 }
 
 function Step1Geral({
@@ -533,6 +554,7 @@ function Step1Geral({
   extraItems, extraGroups, selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto,
   totalEstimado, watchedData, corOptions, menuOptions,
   showAniversarianteError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
+  coresEmUso,
 }: Step1Props) {
   const currentCor = defaultValues.cor || "";
 
@@ -673,6 +695,10 @@ function Step1Geral({
           <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" value={String(defaultValues.duracaoMinutos)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
         </div>
         <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Hora do Lanche</label>
+          <InputField type="time" {...register("horaLanche")} />
+        </div>
+        <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1"><MapPin size={12} /> Sala *</label>
           <Select options={salaOptions} placeholder="Seleccionar" value={defaultValues.localId} onChange={(val) => setValue("localId", val)} />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
@@ -722,6 +748,12 @@ function Step1Geral({
             <Select options={corOptions} placeholder="Escolher cor" value={currentCor || "NONE"} onChange={(val) => setValue("cor", val === "NONE" ? "" : val)} showColorIndicators={true} />
             {currentCor && (<div className="absolute right-10 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: currentCor }} />)}
           </div>
+          {currentCor && coresEmUso.includes(currentCor) && (
+            <div className="mt-1 flex items-center gap-1 text-xs text-accent-orange-700 bg-orange-50 border border-orange-200 rounded-md px-2 py-1">
+              <AlertTriangle size={12} />
+              <span>Cor já em uso noutra festa neste dia</span>
+            </div>
+          )}
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>

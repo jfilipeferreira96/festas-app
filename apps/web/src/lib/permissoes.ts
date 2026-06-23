@@ -60,6 +60,8 @@ export const FUNCAO_LABELS: Record<FuncaoUtilizador, string> = {
   CACIFOS: "Cacifos",
   MONITOR: "Monitor",
   FESTAS_ACABAR: "Festas a Acabar",
+  STAFF: "Staff",
+  RECECAO: "Receção",
 };
 
 export const FUNCOES: FuncaoUtilizador[] = [
@@ -68,6 +70,8 @@ export const FUNCOES: FuncaoUtilizador[] = [
   "CACIFOS",
   "MONITOR",
   "FESTAS_ACABAR",
+  "STAFF",
+  "RECECAO",
 ];
 
 // ── Matriz papel → módulo → nível ────────────
@@ -76,6 +80,8 @@ export const FUNCOES: FuncaoUtilizador[] = [
 // CACIFOS: cacifos (escrita) + reservas (leitura — ponto de vista festas/crianças).
 // MONITOR: monitores (leitura — vê Gantt + notas diárias).
 // FESTAS_ACABAR: festas_acabar (escrita — tabela de festas a acabar).
+// RECECAO: reservas (escrita), clientes (escrita), cacifos (leitura) — faz check-in e cria reservas.
+// STAFF: reservas (leitura), cacifos (escrita), festas_acabar (leitura) — apoio geral no parque.
 export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAcesso>>> = {
   ADMINISTRADOR: {
     reservas: "administracao",
@@ -103,6 +109,16 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
   FESTAS_ACABAR: {
     festas_acabar: "escrita",
   },
+  RECECAO: {
+    reservas: "escrita",
+    clientes: "escrita",
+    cacifos: "leitura",
+  },
+  STAFF: {
+    reservas: "leitura",
+    cacifos: "escrita",
+    festas_acabar: "leitura",
+  },
 };
 
 // ── Rota inicial por role ────────────────────
@@ -111,7 +127,7 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
  * O tipo de retorno é uma união de literais de rotas reais para satisfazer
  * o `typedRoutes` do Next.js ao usar com `redirect()` / `<Link href>`.
  */
-export type HomeRoute = "/dashboard" | "/lanche" | "/festas" | "/cacifos" | "/monitores" | "/festas-acabar";
+export type HomeRoute = "/dashboard" | "/lanche" | "/festas" | "/cacifos" | "/monitores" | "/festas-acabar" | "/reservas";
 
 export function getHomeRoute(funcao: FuncaoUtilizador | undefined | null): HomeRoute {
   switch (funcao) {
@@ -123,6 +139,10 @@ export function getHomeRoute(funcao: FuncaoUtilizador | undefined | null): HomeR
       return "/monitores";
     case "FESTAS_ACABAR":
       return "/festas-acabar";
+    case "RECECAO":
+      return "/reservas";
+    case "STAFF":
+      return "/festas";
     default:
       return "/dashboard";
   }

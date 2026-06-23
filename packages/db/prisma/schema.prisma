@@ -91,6 +91,8 @@ enum FuncaoUtilizador {
   CACIFOS
   MONITOR
   FESTAS_ACABAR
+  STAFF
+  RECECAO
 }
 
 enum EstadoReserva {
@@ -202,14 +204,12 @@ model Aniversariante {
 model Local {
   id         String   @id @default(cuid())
   nome       String
-  capacidade Int      // Nº máximo de crianças
   activo     Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   reservas      Reserva[]
   extras        ExtraLocal[]
-  entradasLivres EntradaLivre[]
   alocacoes     AlocacaoMonitor[]
 
   @@map("local")
@@ -333,6 +333,8 @@ model ConfiguracaoPreco {
   precoMeias                    Decimal  @db.Decimal(10, 2) @default(2)
   // Excesso de tempo
   precoExcessoFixo              Decimal  @db.Decimal(10, 2) @default(5)
+  // Caução por defeito (valor sugerido ao criar reserva — sobrescrevível)
+  caucaoDefault                 Decimal  @db.Decimal(10, 2) @default(40)
   // Durações default
   duracaoDefaultFestaMin        Int      @default(135) // 2h15m
   duracaoExcessoBlocoMin        Int      @default(30)
@@ -752,10 +754,6 @@ model EntradaLivre {
   fimReal         DateTime?
   excessoMinutos  Int?                @default(0)
 
-  // ── Local ───────────────────────────
-  localId         String
-  local           Local               @relation(fields: [localId], references: [id])
-
   // ── Estado ──────────────────────────
   estado          EstadoEntradaLivre  @default(ATIVA)
 
@@ -781,8 +779,12 @@ model EntradaLivre {
   observacoesLesoes String?           @db.Text
 
   // ── Lanche ──
+  temLanche       Boolean            @default(false) // Se a entrada inclui lanche
   estadoLanche    EstadoLanche       @default(NAO_INICIADO)
   horaLanche      String?            // HH:MM — hora planeada do lanche
+
+  // ── Adultos (encarregados que acompanham e pagam) ──
+  numAdultos      Int                @default(0) // Nº de adultos que entram e pagam
 
   // ── Extras (opcional) ───────────────
   extras          EntradaLivreExtra[]

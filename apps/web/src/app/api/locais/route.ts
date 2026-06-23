@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const { nome, capacidade, activo } = await request.json();
-    const local = await localService.create({ nome, capacidade, activo });
+    const { nome, activo } = await request.json();
+    const local = await localService.create({ nome, activo });
     return NextResponse.json(local, { status: 201 });
   } catch (error) {
     return handleError(error);

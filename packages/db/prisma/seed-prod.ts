@@ -66,6 +66,8 @@ const ROLE_USERS: { email: string; funcao: import("@prisma/client").FuncaoUtiliz
   { email: "lanches@festas.pt", funcao: "LANCHE", name: "Lanches" },
   { email: "monitor@festas.pt", funcao: "MONITOR", name: "Monitor" },
   { email: "festas-acabar@festas.pt", funcao: "FESTAS_ACABAR", name: "Festas a Acabar" },
+  { email: "staff@festas.pt", funcao: "STAFF", name: "Staff" },
+  { email: "rececao@festas.pt", funcao: "RECECAO", name: "Receção" },
 ];
 
 async function seedUsers() {
@@ -114,6 +116,7 @@ async function seedConfiguracaoPreco() {
         minimosCriancasPorAniversariante: minimos,
         precoMeias: 2,
         precoExcessoFixo: 5,
+        caucaoDefault: 40,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },

@@ -132,7 +132,7 @@ function entradaToEvent(e: EntradaLivre): CalendarEvent {
     horario: format(inicio, "HH:mm"),
     duracaoMinutos: e.duracaoMinutos,
     titulo: criancasNomes,
-    subtitulo: `${e.local?.nome ?? ""} · ${e.encarregadoNome}`,
+    subtitulo: `Entrada Livre · ${e.encarregadoNome}`,
     className: ENTRADA_ESTADO_COLORS[e.estado] ?? ENTRADA_ESTADO_COLORS.ATIVA,
     estado: e.estado,
     raw: e,
@@ -703,7 +703,6 @@ function EntradaDetail({ e }: { e: EntradaLivre }) {
         value={format(parseISO(e.inicioEm), "d/MM/yyyy HH:mm")}
       />
       <DetailRow label="Duração" value={`${e.duracaoMinutos} min`} />
-      <DetailRow label="Local" value={e.local?.nome ?? "—"} />
       <div className="flex items-center gap-2">
         <span className="text-xs text-text-muted w-28 shrink-0">Estado:</span>
         <StatusBadge status={e.estado as StatusType}>

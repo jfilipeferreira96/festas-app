@@ -15,7 +15,6 @@ interface CriarEntradaLivreDTO {
   encarregadoTelefone: string;
   encarregadoEmail?: string;
   duracaoMinutos: number;
-  localId: string;
   custoTotal?: number;
   metodoPagamento?: MetodoPagamento;
   pago?: boolean;
@@ -23,6 +22,10 @@ interface CriarEntradaLivreDTO {
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
+  // Lanche
+  temLanche?: boolean;
+  // Adultos (encarregados que acompanham e pagam)
+  numAdultos?: number;
   // Pagamento dividido (até 2 métodos)
   metodoPagamento2?: MetodoPagamento;
   valorPago2?: number;
@@ -61,7 +64,6 @@ export const entradaLivreService = {
   // ── Listar entradas livres ──────────────────────
   async list(filtros?: {
     estado?: string;
-    localId?: string;
     data?: string;
     dataInicio?: string;
     dataFim?: string;
@@ -70,7 +72,6 @@ export const entradaLivreService = {
   }) {
     const where: Record<string, unknown> = {};
     if (filtros?.estado) where.estado = filtros.estado;
-    if (filtros?.localId) where.localId = filtros.localId;
 
     // Filtro por data específica de conclusão (fimReal)
     if (filtros?.dataConclusao) {
@@ -108,7 +109,6 @@ export const entradaLivreService = {
     const entradas = await prisma.entradaLivre.findMany({
       where,
       include: {
-        local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
@@ -149,7 +149,6 @@ export const entradaLivreService = {
     const entrada = await prisma.entradaLivre.findUnique({
       where: { id },
       include: {
-        local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
@@ -171,7 +170,7 @@ export const entradaLivreService = {
 
   // ── Criar entrada livre ─────────────────────────
   async create(data: CriarEntradaLivreDTO) {
-    const { criancas, duracaoMinutos, localId, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
+    const { criancas, duracaoMinutos, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
     // Tarifário global: calcular preço/hora a partir da data atual (semana vs fim de semana)
     const configPreco = await configuracaoPrecoService.getConfig();
@@ -207,13 +206,11 @@ export const entradaLivreService = {
         custoTotal,
         inicioEm,
         fimPrevisto,
-        localId,
         cacifoId: cacifoId || null,
         clienteId,
         ...rest,
       },
       include: {
-        local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
@@ -284,7 +281,6 @@ export const entradaLivreService = {
         custoTotalFinal,
       },
       include: {
-        local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
@@ -321,7 +317,6 @@ export const entradaLivreService = {
       where: { id },
       data: { estado: "CANCELADA" },
       include: {
-        local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
@@ -357,7 +352,6 @@ export const entradaLivreService = {
       where: { id },
       data,
       include: {
-        local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
@@ -392,6 +386,10 @@ export const entradaLivreService = {
       extrasIds?: string[];
       observacoes?: string;
       observacoesLesoes?: string;
+      // Lanche
+      temLanche?: boolean;
+      // Adultos
+      numAdultos?: number;
       // Pagamento dividido (até 2 métodos)
       metodoPagamento2?: MetodoPagamento;
       valorPago2?: number;
@@ -482,7 +480,6 @@ export const entradaLivreService = {
       where: { id },
       data: updateData,
       include: {
-        local: { select: { id: true, nome: true } },
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
@@ -541,64 +538,5 @@ export const entradaLivreService = {
     ]);
 
     return { ativas, concluidasHoje, totalHoje };
-  },
-
-  // ── Verificar ocupação do local AGORA ───────────
-  // Aviso apenas (warn-only): nunca bloqueia a criação/edição.
-
-  async checkOcupacaoLocal(localId: string, numCriancas = 0, excludeId?: string) {
-    if (!localId) throw new Error("LOCAL_REQUIRED");
-
-    const agora = new Date();
-
-    // Capacidade do local
-    const local = await prisma.local.findUnique({
-      where: { id: localId },
-      select: { id: true, nome: true, capacidade: true },
-    });
-    if (!local) throw new Error("LOCAL_NOT_FOUND");
-    const capacidade = local.capacidade ?? 0;
-
-    // Festas (reservas) a decorrer neste local — contar crianças previstas
-    const festas = await prisma.reserva.findMany({
-      where: { localId, estado: "EM_CURSO" },
-      select: { id: true, previsaoCriancas: true, numCriancas: true },
-    });
-    const criancasFestas = festas.reduce(
-      (sum: number, f: { previsaoCriancas: number | null; numCriancas: number | null }) =>
-        sum + (f.previsaoCriancas ?? f.numCriancas ?? 0),
-      0
-    );
-
-    // Entradas livres ativas neste local — contar crianças (JSON array)
-    const entradas = await prisma.entradaLivre.findMany({
-      where: {
-        localId,
-        estado: "ATIVA",
-        ...(excludeId ? { id: { not: excludeId } } : {}),
-      },
-      select: { id: true, criancas: true },
-    });
-    const criancasEntradas = entradas.reduce((sum: number, e: { criancas: unknown }) => {
-      const arr = Array.isArray(e.criancas) ? e.criancas : [];
-      return sum + arr.length;
-    }, 0);
-
-    const ocupacaoAtual = criancasFestas + criancasEntradas;
-    const novasCriancas = numCriancas;
-    const totalPrevisto = ocupacaoAtual + novasCriancas;
-    const excedeCapacidade = capacidade > 0 && totalPrevisto > capacidade;
-
-    return {
-      localId,
-      localNome: local.nome,
-      capacidade,
-      ocupacaoAtual,
-      novasCriancas,
-      totalPrevisto,
-      excedeCapacidade,
-      disponivel: !excedeCapacidade,
-      verificadoEm: agora.toISOString(),
-    };
   },
 };

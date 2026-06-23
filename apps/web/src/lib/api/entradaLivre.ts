@@ -29,8 +29,6 @@ export interface EntradaLivre {
   fimPrevisto: string;
   fimReal?: string;
   excessoMinutos: number;
-  localId: string;
-  local?: { id: string; nome: string };
   clienteId?: string;
   cliente?: { id: string; nome: string; email: string | null; telefone: string };
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
@@ -47,6 +45,12 @@ export interface EntradaLivre {
   cacifo?: { id: string; numero: number; nome?: string };
   observacoes?: string;
   observacoesLesoes?: string;
+  // Lanche
+  temLanche?: boolean;
+  estadoLanche?: string;
+  horaLanche?: string;
+  // Adultos (encarregados que acompanham e pagam)
+  numAdultos?: number;
   extras: EntradaLivreExtraItem[];
   createdAt: string;
   updatedAt: string;
@@ -58,7 +62,6 @@ export interface CriarEntradaLivreDTO {
   encarregadoTelefone: string;
   encarregadoEmail?: string;
   duracaoMinutos: number;
-  localId: string;
   custoTotal?: number;
   metodoPagamento?: string;
   pago?: boolean;
@@ -66,6 +69,10 @@ export interface CriarEntradaLivreDTO {
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
+  // Lanche
+  temLanche?: boolean;
+  // Adultos (encarregados que acompanham e pagam)
+  numAdultos?: number;
   // Pagamento dividido (até 2 métodos)
   metodoPagamento2?: string;
   valorPago2?: number;
@@ -86,6 +93,10 @@ export interface AtualizarEntradaLivreDTO {
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
+  // Lanche
+  temLanche?: boolean;
+  // Adultos
+  numAdultos?: number;
   // Pagamento dividido (até 2 métodos)
   metodoPagamento2?: string;
   valorPago2?: number;
@@ -93,23 +104,10 @@ export interface AtualizarEntradaLivreDTO {
   meiasQuantidade?: number;
 }
 
-export interface OcupacaoLocalResult {
-  localId: string;
-  localNome: string;
-  capacidade: number;
-  ocupacaoAtual: number;
-  novasCriancas: number;
-  totalPrevisto: number;
-  excedeCapacidade: boolean;
-  disponivel: boolean;
-  verificadoEm: string;
-}
-
 export const entradaLivreApi = {
-  list: (filtros?: { estado?: string; localId?: string; data?: string; dataInicio?: string; dataFim?: string; dataConclusao?: string; pesquisa?: string }) => {
+  list: (filtros?: { estado?: string; data?: string; dataInicio?: string; dataFim?: string; dataConclusao?: string; pesquisa?: string }) => {
     const params = new URLSearchParams();
     if (filtros?.estado) params.set("estado", filtros.estado);
-    if (filtros?.localId) params.set("localId", filtros.localId);
     if (filtros?.data) params.set("data", filtros.data);
     if (filtros?.dataInicio) params.set("dataInicio", filtros.dataInicio);
     if (filtros?.dataFim) params.set("dataFim", filtros.dataFim);
@@ -153,12 +151,4 @@ export const entradaLivreApi = {
 
   getContadores: () =>
     api<{ ativas: number; concluidasHoje: number; totalHoje: number }>("/api/entradas-livres/contadores"),
-
-  // Capacidade do local agora (warn-only)
-  checkOcupacao: (localId: string, numCriancas: number, excludeId?: string) => {
-    const params = new URLSearchParams({ localId });
-    params.set("numCriancas", String(numCriancas));
-    if (excludeId) params.set("excludeId", excludeId);
-    return api<OcupacaoLocalResult>(`/api/entradas-livres/ocupacao?${params.toString()}`);
-  },
 };

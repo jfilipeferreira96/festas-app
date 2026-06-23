@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { BadgeEuro, Save, PartyPopper, DoorOpen, Timer, Info, ShoppingBag, Clock, Plus, Trash2 } from "lucide-react";
+import { BadgeEuro, Save, PartyPopper, DoorOpen, Info, ShoppingBag, Clock, Plus, Trash2 } from "lucide-react";
 import PageHeader from "@/components/ui/PageHeader";
 import Button from "@/components/ui/button/Button";
 import InputField from "@/components/form/input/InputField";
@@ -19,6 +19,7 @@ export default function ConfigPrecosContent() {
   const [precoEntradaHoraSemana, setPrecoEntradaHoraSemana] = useState("");
   const [precoEntradaHoraFimSemana, setPrecoEntradaHoraFimSemana] = useState("");
   const [precoExcessoFixo, setPrecoExcessoFixo] = useState("");
+  const [caucaoDefault, setCaucaoDefault] = useState("");
   const [precoMeias, setPrecoMeias] = useState("");
   const [duracaoDefaultFestaMin, setDuracaoDefaultFestaMin] = useState("");
   const [minimos, setMinimos] = useState<MinimoConfig[]>([
@@ -34,6 +35,7 @@ export default function ConfigPrecosContent() {
       setPrecoEntradaHoraSemana(String(Number(config.precoEntradaHoraSemana)));
       setPrecoEntradaHoraFimSemana(String(Number(config.precoEntradaHoraFimSemana)));
       setPrecoExcessoFixo(String(Number(config.precoExcessoFixo)));
+      setCaucaoDefault(String(Number(config.caucaoDefault ?? 40)));
       setPrecoMeias(String(Number(config.precoMeias)));
       setDuracaoDefaultFestaMin(String(Number(config.duracaoDefaultFestaMin)));
       if (config.minimosCriancasPorAniversariante && config.minimosCriancasPorAniversariante.length > 0) {
@@ -62,6 +64,7 @@ export default function ConfigPrecosContent() {
         precoEntradaHoraSemana: parseFloat(precoEntradaHoraSemana) || 0,
         precoEntradaHoraFimSemana: parseFloat(precoEntradaHoraFimSemana) || 0,
         precoExcessoFixo: parseFloat(precoExcessoFixo) || 0,
+        caucaoDefault: parseFloat(caucaoDefault) || 0,
         precoMeias: parseFloat(precoMeias) || 0,
         duracaoDefaultFestaMin: parseInt(duracaoDefaultFestaMin) || 135,
         minimosCriancasPorAniversariante: minimos.sort((a, b) => a.aniversariantes - b.aniversariantes),
@@ -70,7 +73,7 @@ export default function ConfigPrecosContent() {
     } catch {
       error("Erro ao atualizar tarifário");
     }
-  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoExcessoFixo, precoMeias, duracaoDefaultFestaMin, minimos, updateMutation, success, error]);
+  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoExcessoFixo, caucaoDefault, precoMeias, duracaoDefaultFestaMin, minimos, updateMutation, success, error]);
 
   if (isLoading) {
     return (
@@ -298,30 +301,30 @@ export default function ConfigPrecosContent() {
         </div>
       </div>
 
-      {/* Excesso de Tempo card */}
+      {/* Caução card */}
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-accent-orange-100 flex items-center justify-center">
-            <Timer className="w-5 h-5 text-accent-orange-600" />
+            <BadgeEuro className="w-5 h-5 text-accent-orange-600" />
           </div>
           <div>
-            <h3 className="font-poppins text-lg font-semibold text-text-primary">Excesso de Tempo</h3>
-            <p className="text-xs text-text-muted">Valor sugerido ao concluir festas/entradas com atraso</p>
+            <h3 className="font-poppins text-lg font-semibold text-text-primary">Caução (valor por defeito)</h3>
+            <p className="text-xs text-text-muted">Valor pré-preenchido ao criar uma reserva (pode ser alterado caso a caso)</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">
-              Preço de excesso (fixo)
+              Valor da caução
             </label>
             <div className="relative">
               <InputField
                 type="number"
                 min="0"
                 step={0.01}
-                value={precoExcessoFixo}
-                onChange={(e) => setPrecoExcessoFixo(e.target.value)}
-                placeholder="5"
+                value={caucaoDefault}
+                onChange={(e) => setCaucaoDefault(e.target.value)}
+                placeholder="40"
                 className="pr-8"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€</span>

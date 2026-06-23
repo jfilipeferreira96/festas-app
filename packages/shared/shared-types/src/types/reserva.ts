@@ -12,6 +12,7 @@ export interface Reserva {
   id: string;
   data: string;
   horario: string;
+  horaLanche?: string;
   duracaoMinutos: number;
   numCriancas: number;
   notas?: string;
@@ -112,6 +113,7 @@ export interface ReservaAniversariante {
 export interface CriarReservaDTO {
   data: string;
   horario: string;
+  horaLanche?: string;
   duracaoMinutos: number;
   numCriancas?: number;
   notas?: string;

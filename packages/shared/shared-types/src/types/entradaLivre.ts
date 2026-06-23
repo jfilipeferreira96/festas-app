@@ -22,8 +22,6 @@ export interface EntradaLivre {
   fimPrevisto: string;
   fimReal?: string;
   excessoMinutos: number;
-  localId: string;
-  local?: { id: string; nome: string };
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
   metodoPagamento?: string;
   pago: boolean;
@@ -38,6 +36,12 @@ export interface EntradaLivre {
   cacifo?: { id: string; numero: number; nome?: string };
   observacoes?: string;
   observacoesLesoes?: string;
+  // Lanche
+  temLanche?: boolean;
+  estadoLanche?: string;
+  horaLanche?: string;
+  // Adultos (encarregados que acompanham e pagam)
+  numAdultos?: number;
   extras: EntradaLivreExtraItem[];
   createdAt: string;
   updatedAt: string;
@@ -58,7 +62,6 @@ export interface CriarEntradaLivreDTO {
   encarregadoTelefone: string;
   encarregadoEmail?: string;
   duracaoMinutos: number;
-  localId: string;
   custoTotal?: number;
   metodoPagamento?: string;
   pago?: boolean;
@@ -66,6 +69,10 @@ export interface CriarEntradaLivreDTO {
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
+  // Lanche
+  temLanche?: boolean;
+  // Adultos (encarregados que acompanham e pagam)
+  numAdultos?: number;
   // Pagamento dividido (até 2 métodos)
   metodoPagamento2?: string;
   valorPago2?: number;

@@ -43,11 +43,6 @@ describe("Entrada Livre Service", () => {
       expect(concluidas.every((e: any) => e.estado === "CONCLUIDA")).toBe(true);
     });
 
-    it("should filter by localId", async () => {
-      const local1 = await entradaLivreService.list({ localId: TEST_IDS.LOCAL_1 });
-      expect(local1.every((e: any) => e.localId === TEST_IDS.LOCAL_1)).toBe(true);
-    });
-
     // ── Date filters ────────────────────────────────────────────
     it("should filter by data (today)", async () => {
       const hoje = new Date().toISOString().split("T")[0];
@@ -132,7 +127,6 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Maria Teste",
         encarregadoTelefone: "912345678",
         encarregadoEmail: "maria@email.pt",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 90,
         criancas: [{ nome: "João", idade: 6 }, { nome: "Ana", idade: 5 }],
         observacoes: "Teste de criação",
@@ -154,7 +148,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Pedro Sem Cacifo",
         encarregadoTelefone: "923456789",
-        localId: TEST_IDS.LOCAL_2,
         duracaoMinutos: 60,
         criancas: [{ nome: "Luís" }],
       });
@@ -177,7 +170,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Ana Com Cacifo",
         encarregadoTelefone: "934567890",
-        localId: TEST_IDS.LOCAL_1,
         cacifoId: cacifo!.id,
         duracaoMinutos: 120,
         criancas: [{ nome: "Beatriz" }],
@@ -194,21 +186,15 @@ describe("Entrada Livre Service", () => {
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
 
-    it("should create entrada using global pricing config for any local", async () => {
-      // Create a local — pricing is now global, not per-local
-      const localSemConfig = await testPrisma.local.create({
-        data: { id: "local-no-config", nome: "Sem Config", capacidade: 10 },
-      });
-
+    it("should create entrada using global pricing config", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Global",
         encarregadoTelefone: "912345678",
-        localId: localSemConfig.id,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança" }],
       });
 
-      // Deve usar o tarifário global (10€/h dia de semana, 12€/h fim de semana)
+      // Deve usar o tarifário global (10€/h dia de semana, 12€/h fim de semanas)
       const hoje = new Date();
       const isFimSemana = hoje.getDay() === 0 || hoje.getDay() === 6;
       const esperado = isFimSemana ? 12 : 10;
@@ -219,7 +205,40 @@ describe("Entrada Livre Service", () => {
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
-      await testPrisma.local.delete({ where: { id: localSemConfig.id } });
+    });
+
+    it("should create entrada with temLanche=true (lanche incluído)", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Com Lanche",
+        encarregadoTelefone: "912345679",
+        duracaoMinutos: 120,
+        criancas: [{ nome: "Criança" }, { nome: "Criança 2" }],
+        temLanche: true,
+      });
+
+      expect(entrada).toBeDefined();
+      expect(entrada.temLanche).toBe(true);
+      expect(entrada.custoTotal).toBeGreaterThan(0);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should create entrada with numAdultos (pai paga)", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Pai Paga",
+        encarregadoTelefone: "912345680",
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança Pequena", idade: 2 }],
+        numAdultos: 1,
+      });
+
+      expect(entrada).toBeDefined();
+      expect(entrada.numAdultos).toBe(1);
+      expect(entrada.custoTotal).toBeGreaterThan(0);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
   });
 
@@ -235,7 +254,6 @@ describe("Entrada Livre Service", () => {
           id: "test-concluir-no-excess",
           encarregadoNome: "Teste Sem Excesso",
           encarregadoTelefone: "999999999",
-          localId: TEST_IDS.LOCAL_1,
           inicioEm: inicio,
           duracaoMinutos: 90,
           custoHora: 10.0,
@@ -268,7 +286,6 @@ describe("Entrada Livre Service", () => {
           id: "test-concluir-com-excesso",
           encarregadoNome: "Teste Com Excesso",
           encarregadoTelefone: "999999999",
-          localId: TEST_IDS.LOCAL_1,
           inicioEm: inicio,
           duracaoMinutos: 90,
           custoHora: 10.0,
@@ -304,7 +321,6 @@ describe("Entrada Livre Service", () => {
           id: "test-concluir-manual",
           encarregadoNome: "Teste Manual",
           encarregadoTelefone: "999999999",
-          localId: TEST_IDS.LOCAL_1,
           inicioEm: inicio,
           duracaoMinutos: 90,
           custoHora: 10.0,
@@ -335,7 +351,6 @@ describe("Entrada Livre Service", () => {
           id: "test-concluir-manual-zero",
           encarregadoNome: "Teste Zero",
           encarregadoTelefone: "999999999",
-          localId: TEST_IDS.LOCAL_1,
           inicioEm: inicio,
           duracaoMinutos: 90,
           custoHora: 10.0,
@@ -367,7 +382,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Libertar Cacifo",
         encarregadoTelefone: "999999999",
-        localId: TEST_IDS.LOCAL_1,
         cacifoId: cacifo!.id,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança" }],
@@ -391,7 +405,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Para Cancelar",
         encarregadoTelefone: "999999999",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança" }],
       });
@@ -420,7 +433,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Cancelar Com Cacifo",
         encarregadoTelefone: "999999999",
-        localId: TEST_IDS.LOCAL_1,
         cacifoId: cacifo!.id,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança" }],
@@ -442,7 +454,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Para Eliminar",
         encarregadoTelefone: "999999999",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança" }],
       });
@@ -464,7 +475,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Ativa Teste",
         encarregadoTelefone: "999999999",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança" }],
       });
@@ -483,7 +493,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Pagamento",
         encarregadoTelefone: "999999999",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança" }],
         pago: false,
@@ -511,7 +520,6 @@ describe("Entrada Livre Service", () => {
           id: "test-pagamento-excesso",
           encarregadoNome: "Teste",
           encarregadoTelefone: "999999999",
-          localId: TEST_IDS.LOCAL_1,
           inicioEm: inicio,
           duracaoMinutos: 90,
           custoHora: 10.0,
@@ -547,52 +555,6 @@ describe("Entrada Livre Service", () => {
     });
   });
 
-  // ── checkOcupacaoLocal (capacity-based) ───────────────────────
-  describe("checkOcupacaoLocal()", () => {
-    // LOCAL_1 has capacidade 25; seed has ENTRADA_LIVRE_1 (ATIVA, 2 crianças)
-
-    it("should return disponivel=true when within capacity", async () => {
-      const result = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 5);
-      expect(result.capacidade).toBe(25);
-      expect(result.disponivel).toBe(true);
-      expect(result.excedeCapacidade).toBe(false);
-      expect(result.totalPrevisto).toBeLessThanOrEqual(result.capacidade);
-    });
-
-    it("should detect when capacity is exceeded", async () => {
-      // 2 existing + 30 new = 32 > 25 capacity
-      const result = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 30);
-      expect(result.excedeCapacidade).toBe(true);
-      expect(result.disponivel).toBe(false);
-      expect(result.totalPrevisto).toBeGreaterThan(result.capacidade);
-    });
-
-    it("should exclude self when excludeId is provided", async () => {
-      // Count with ENTRADA_LIVRE_1 included
-      const resultWith = await entradaLivreService.checkOcupacaoLocal(TEST_IDS.LOCAL_1, 0);
-      // Count without ENTRADA_LIVRE_1 (excluded)
-      const resultWithout = await entradaLivreService.checkOcupacaoLocal(
-        TEST_IDS.LOCAL_1,
-        0,
-        TEST_IDS.ENTRADA_LIVRE_1,
-      );
-      // Excluding the entry should reduce ocupacaoAtual
-      expect(resultWithout.ocupacaoAtual).toBeLessThan(resultWith.ocupacaoAtual);
-    });
-
-    it("should throw LOCAL_REQUIRED if localId is empty", async () => {
-      await expect(
-        entradaLivreService.checkOcupacaoLocal("", 5),
-      ).rejects.toThrow("LOCAL_REQUIRED");
-    });
-
-    it("should throw LOCAL_NOT_FOUND for non-existent local", async () => {
-      await expect(
-        entradaLivreService.checkOcupacaoLocal("non-existent-local", 5),
-      ).rejects.toThrow("LOCAL_NOT_FOUND");
-    });
-  });
-
   // ── create() — Cliente creation (marketing base de contactos) ─
   describe("create() — Cliente creation", () => {
     it("should create a new Cliente when encarregado is new", async () => {
@@ -602,7 +564,6 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Novo Encarregado Teste",
         encarregadoTelefone: "9555444333",
         encarregadoEmail: "novo-enc-teste@test.com",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança Nova" }],
       });
@@ -631,7 +592,6 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Cliente Existente",
         encarregadoTelefone: "911111111",
         encarregadoEmail: "teste1@email.pt",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança Reuso" }],
       });
@@ -653,7 +613,6 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Cliente Por Telefone",
         encarregadoTelefone: "922222222",
         // No email → should match by telefone
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança Tel" }],
       });
@@ -674,7 +633,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Meias Split",
         encarregadoTelefone: "915555555",
-        localId: TEST_IDS.LOCAL_1,
         duracaoMinutos: 60,
         criancas: [{ nome: "Criança 1" }, { nome: "Criança 2" }, { nome: "Criança 3" }],
         meiasQuantidade: 3,
@@ -695,7 +653,6 @@ describe("Entrada Livre Service", () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Multi Crianças",
         encarregadoTelefone: "916666666",
-        localId: TEST_IDS.LOCAL_2,
         duracaoMinutos: 90,
         criancas: [
           { nome: "C1", idade: 4 },

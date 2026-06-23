@@ -53,7 +53,7 @@ export const lancheService = {
           estado: "ATIVA",
           inicioEm: { gte: inicio, lt: fim },
         },
-        include: { local: true, extras: { include: { extra: true } } },
+        include: { extras: { include: { extra: true } } },
         orderBy: { inicioEm: "asc" },
       }),
     ]);
@@ -120,7 +120,7 @@ export const lancheService = {
         encarregadoNome: e.encarregadoNome,
         inicioEm: e.inicioEm.toISOString(),
         horaLanche: e.horaLanche ?? undefined,
-        localNome: e.local?.nome ?? "—",
+        localNome: "Parque Geral",
         criancas,
         observacoesLesoes: e.observacoesLesoes ?? undefined,
         estadoLanche: (e.estadoLanche ?? "NAO_INICIADO") as EstadoLanche,

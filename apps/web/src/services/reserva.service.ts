@@ -17,6 +17,7 @@ interface AniversarianteInput {
 interface CreateReservaData {
   data: string;
   horario: string;
+  horaLanche?: string;
   duracaoMinutos: number;
   localId: string;
   clienteId?: string;
@@ -68,6 +69,7 @@ interface CreateReservaData {
 interface UpdateReservaData {
   data?: string;
   horario?: string;
+  horaLanche?: string;
   duracaoMinutos?: number;
   localId?: string;
   clienteId?: string;
@@ -343,10 +345,6 @@ export const reservaService = {
     if (!local) throw new Error("LOCAL_NOT_FOUND");
     if (!local.activo) throw new Error("LOCAL_INACTIVE");
 
-    if (data.numCriancas && data.numCriancas > local.capacidade) {
-      throw new Error("CAPACITY_EXCEEDED");
-    }
-
     // Check for conflicts (duration overlap)
     const conflitosCriacao = await findConflitos({
       data: data.data,
@@ -385,6 +383,7 @@ export const reservaService = {
         previsaoCriancas: data.previsaoCriancas,
         cor: data.cor,
         bolo: data.bolo,
+        horaLanche: data.horaLanche,
         observacoesGerais: data.observacoesGerais,
         observacoesLesoes: data.observacoesLesoes,
         observacoesBrindes: data.observacoesBrindes,
@@ -487,6 +486,7 @@ export const reservaService = {
       data: {
         data: data.data ? new Date(data.data) : undefined,
         horario: data.horario,
+        horaLanche: data.horaLanche,
         duracaoMinutos: data.duracaoMinutos,
         localId: data.localId,
         clienteId: data.clienteId,

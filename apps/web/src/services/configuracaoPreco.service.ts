@@ -41,6 +41,7 @@ export const configuracaoPrecoService = {
     minimosCriancasPorAniversariante?: MinimoConfig[];
     precoMeias?: number;
     precoExcessoFixo?: number;
+    caucaoDefault?: number;
     duracaoDefaultFestaMin?: number;
     duracaoExcessoBlocoMin?: number;
   }) {
@@ -56,6 +57,7 @@ export const configuracaoPrecoService = {
           minimosCriancasPorAniversariante: data.minimosCriancasPorAniversariante as unknown as Prisma.InputJsonValue,
           precoMeias: data.precoMeias ?? 2,
           precoExcessoFixo: data.precoExcessoFixo ?? 5,
+          caucaoDefault: data.caucaoDefault ?? 40,
           duracaoDefaultFestaMin: data.duracaoDefaultFestaMin ?? 135,
           duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin ?? 30,
         },
@@ -74,6 +76,7 @@ export const configuracaoPrecoService = {
         }),
         ...(data.precoMeias !== undefined && { precoMeias: data.precoMeias }),
         ...(data.precoExcessoFixo !== undefined && { precoExcessoFixo: data.precoExcessoFixo }),
+        ...(data.caucaoDefault !== undefined && { caucaoDefault: data.caucaoDefault }),
         ...(data.duracaoDefaultFestaMin !== undefined && { duracaoDefaultFestaMin: data.duracaoDefaultFestaMin }),
         ...(data.duracaoExcessoBlocoMin !== undefined && { duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin }),
       },
@@ -173,5 +176,13 @@ export const configuracaoPrecoService = {
   async getPrecoExcesso(): Promise<number> {
     const config = await this.getConfig();
     return Number(config.precoExcessoFixo);
+  },
+
+  /**
+   * Retorna o valor da caução por defeito (sugerido ao criar reserva).
+   */
+  async getCaucaoDefault(): Promise<number> {
+    const config = await this.getConfig();
+    return Number(config.caucaoDefault);
   },
 };

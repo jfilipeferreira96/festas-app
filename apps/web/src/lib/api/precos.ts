@@ -17,6 +17,8 @@ export interface ConfiguracaoPreco {
   minimosCriancasPorAniversariante?: MinimoConfig[] | null;
   // Meias
   precoMeias: number;
+  // Caução (valor por defeito)
+  caucaoDefault: number;
   // Excesso
   precoExcessoFixo: number;
   // Durações

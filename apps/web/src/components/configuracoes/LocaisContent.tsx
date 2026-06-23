@@ -18,7 +18,6 @@ import type { StatusType } from "@/components/ui";
 // --- Zod Schema ---
 const localSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
-  capacidade: z.number().min(1, "Mínimo 1").max(500, "Máximo 500"),
   activo: z.boolean(),
 });
 
@@ -37,14 +36,6 @@ const columns: Column<Local>[] = [
         </div>
         <span className="text-sm font-medium text-text-primary">{l.nome}</span>
       </div>
-    ),
-  },
-  {
-    key: "capacidade",
-    label: "Capacidade",
-    sortable: true,
-    render: (value) => (
-      <span className="text-sm text-text-secondary">{value} crianças</span>
     ),
   },
   {
@@ -79,7 +70,6 @@ export default function LocaisContent() {
     resolver: zodResolver(localSchema),
     defaultValues: {
       nome: "",
-      capacidade: 20,
       activo: true,
     },
   });
@@ -88,7 +78,7 @@ export default function LocaisContent() {
 
   const handleCreate = useCallback(() => {
     setEditingLocal(null);
-    reset({ nome: "", capacidade: 20, activo: true });
+    reset({ nome: "", activo: true });
     setShowForm(true);
   }, [reset]);
 
@@ -97,7 +87,6 @@ export default function LocaisContent() {
       setEditingLocal(local);
       reset({
         nome: local.nome,
-        capacidade: local.capacidade,
         activo: local.activo,
       });
       setShowForm(true);
@@ -110,12 +99,11 @@ export default function LocaisContent() {
       if (editingLocal) {
         await updateLocal.mutateAsync({
           id: editingLocal.id,
-          data: { nome: data.nome, capacidade: data.capacidade, activo: data.activo },
+          data: { nome: data.nome, activo: data.activo },
         });
       } else {
         await createLocal.mutateAsync({
           nome: data.nome,
-          capacidade: data.capacidade,
           activo: data.activo,
         });
       }
@@ -177,17 +165,6 @@ export default function LocaisContent() {
                   placeholder="Ex: Sala Azul"
                   error={!!errors.nome}
                   hint={errors.nome?.message}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1.5">Capacidade (crianças)</label>
-                <InputField
-                  type="number"
-                  {...register("capacidade", { valueAsNumber: true })}
-                  min={1}
-                  max={500}
-                  error={!!errors.capacidade}
-                  hint={errors.capacidade?.message}
                 />
               </div>
               <div className="flex items-center justify-between">

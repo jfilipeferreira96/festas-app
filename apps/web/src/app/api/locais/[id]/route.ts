@@ -33,8 +33,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
-    const { nome, capacidade, activo } = await request.json();
-    const local = await localService.update(id, { nome, capacidade, activo });
+    const { nome, activo } = await request.json();
+    const local = await localService.update(id, { nome, activo });
     return NextResponse.json(local);
   } catch (error) {
     return handleError(error);

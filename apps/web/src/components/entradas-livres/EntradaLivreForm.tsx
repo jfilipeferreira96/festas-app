@@ -5,8 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Plus, Trash2, CreditCard, User, Users, MapPin,
-  Clock, Package, MessageSquare, AlertTriangle, CheckCircle2, Search,
+  Plus, Trash2, CreditCard, User, Users,
+  Clock, Package, MessageSquare, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
@@ -18,9 +18,7 @@ import type { Cliente } from "@/lib/api/clientes";
 import {
   useCriarEntradaLivre,
   useAtualizarEntradaLivre,
-  useCheckOcupacaoLocal,
 } from "@/hooks/use-entrada-livre";
-import { useLocais } from "@/hooks/use-locais";
 import { useCacifos } from "@/hooks/use-cacifos";
 import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
@@ -31,14 +29,17 @@ const entradaLivreSchema = z.object({
   encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
   encarregadoTelefone: z.string().min(9, "Contacto inválido"),
   encarregadoEmail: z.string().email("Email inválido").optional().or(z.literal("")),
-  localId: z.string().min(1, "Seleccione um local"),
-  duracaoMinutos: z.number().min(30, "Duração mínima é 30 minutos"),
+  duracaoMinutos: z.number().min(60, "Duração mínima é 1 hora"),
   custoTotal: z.number().min(0, "O custo não pode ser negativo").optional(),
   metodoPagamento: z.string().optional(),
   pago: z.boolean().optional(),
   cacifoId: z.string().optional(),
   observacoes: z.string().optional(),
   observacoesLesoes: z.string().optional(),
+  // Lanche
+  temLanche: z.boolean().optional(),
+  // Adultos (encarregados que acompanham e pagam)
+  numAdultos: z.number().min(0).optional(),
   // Pagamento dividido (2º método)
   metodoPagamento2: z.string().optional(),
   valorPago2: z.number().min(0).optional(),
@@ -54,9 +55,7 @@ interface EntradaLivreFormProps {
 }
 
 const DURACAO_OPTIONS = [
-  { value: "30", label: "30 min" },
   { value: "60", label: "1 hora" },
-  { value: "90", label: "1h 30min" },
   { value: "120", label: "2 horas" },
   { value: "180", label: "3 horas" },
 ];
@@ -104,10 +103,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const criar = useCriarEntradaLivre();
   const atualizar = useAtualizarEntradaLivre();
 
-  const { data: locais } = useLocais();
-  // ── Cacifos: usa filtro server-side para só trazer cacifos LIVRE.
-  // Em modo edição, o cacifo actualmente associado vem do objeto `entrada`
-  // (porque está OCUPADO e não apareceria na query de LIVRE).
   const { data: cacifosLivresData } = useCacifos({ estado: "LIVRE" });
   const { data: extras } = useExtras();
 
@@ -132,7 +127,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       encarregadoNome: entrada?.encarregadoNome ?? "",
       encarregadoTelefone: entrada?.encarregadoTelefone ?? "",
       encarregadoEmail: entrada?.encarregadoEmail ?? "",
-      localId: entrada?.localId ?? "",
       duracaoMinutos: entrada?.duracaoMinutos ?? 60,
       custoTotal: entrada?.custoTotal,
       metodoPagamento: entrada?.metodoPagamento ?? "",
@@ -140,6 +134,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       cacifoId: entrada?.cacifoId ?? "",
       observacoes: entrada?.observacoes ?? "",
       observacoesLesoes: entrada?.observacoesLesoes ?? "",
+      temLanche: entrada?.temLanche ?? false,
+      numAdultos: entrada?.numAdultos ?? 0,
       metodoPagamento2: entrada?.metodoPagamento2 ?? "",
       valorPago2: entrada?.valorPago2 ?? 0,
       meiasQuantidade: entrada?.meiasQuantidade ?? 0,
@@ -159,17 +155,12 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   });
 
   // ── Derived data ──
-  const localId = watch("localId");
   const duracaoMinutos = watch("duracaoMinutos");
   const pago = watch("pago") ?? false;
   const cacifoIdWatched = watch("cacifoId");
 
   // Tarifário global (singleton) — usado para auto-preenchimento do custo
   const { data: configPreco } = useConfigPreco();
-
-  // Capacidade do local agora (warn-only) — conta as crianças do formulário
-  const numCriancasForm = criancas.filter((c) => c.nome.trim()).length;
-  const ocupacao = useCheckOcupacaoLocal(localId || undefined, numCriancasForm, entrada?.id);
 
   // Custo calculado a partir do tarifário global (precoHora * duração).
   // Distingue dia de semana vs fim de semana.
@@ -184,7 +175,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     return (precoHora / 60) * (duracaoMinutos || 0);
   }, [configPreco, duracaoMinutos]);
 
-  // Sync do custoTotal quando o local/duração mudem (auto-preenchimento).
+  // Sync do custoTotal quando a duração muda (auto-preenchimento).
   // Respeita edições manuais do utilizador (não sobrescreve se já editou).
   React.useEffect(() => {
     if (custoEdited) return;
@@ -192,11 +183,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       setValue("custoTotal", Number(custoCalculado.toFixed(2)));
     }
   }, [custoCalculado, setValue, custoEdited]);
-
-  // Reset do flag de edição quando o local muda (configuração diferente)
-  React.useEffect(() => {
-    setCustoEdited(false);
-  }, [localId]);
 
   const custoTotalWatched = watch("custoTotal");
   const custoFinal = custoTotalWatched ?? custoCalculado;
@@ -224,14 +210,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     }
     return total;
   }, [selectedExtrasIds, extraItems]);
-
-  const localOptions = useMemo(
-    () => [
-      { value: "", label: "Seleccionar local" },
-      ...(locais ?? []).map((l) => ({ value: l.id, label: l.nome })),
-    ],
-    [locais]
-  );
 
   // Lista de cacifos: só LIVRES (da API) + o cacifo actualmente associado
   // (em edição) para que continue visível no dropdown.
@@ -333,7 +311,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         encarregadoNome: data.encarregadoNome,
         encarregadoTelefone: data.encarregadoTelefone,
         encarregadoEmail: data.encarregadoEmail || undefined,
-        localId: data.localId,
         duracaoMinutos: data.duracaoMinutos,
         custoTotal: data.custoTotal,
         metodoPagamento: data.metodoPagamento && data.metodoPagamento !== "NONE" ? data.metodoPagamento : undefined,
@@ -342,6 +319,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
         observacoes: data.observacoes || undefined,
         observacoesLesoes: data.observacoesLesoes || undefined,
+        temLanche: data.temLanche,
+        numAdultos: data.numAdultos,
         metodoPagamento2: data.metodoPagamento2 && data.metodoPagamento2 !== "NONE" ? data.metodoPagamento2 : undefined,
         valorPago2: data.valorPago2 || undefined,
         meiasQuantidade: data.meiasQuantidade || undefined,
@@ -484,29 +463,15 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             </div>
           </div>
 
-          {/* ── Configuração (Local · Duração) ── */}
+          {/* ── Duração e Custo ── */}
           <div className="space-y-2">
             <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-              <MapPin size={14} className="text-brand-500" /> Configuração
+              <Clock size={14} className="text-brand-500" /> Duração e Custo
             </label>
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Local *
-                </label>
-                <Select
-                  options={localOptions}
-                  placeholder="Seleccionar local"
-                  value={localId}
-                  onChange={(val) => setValue("localId", val)}
-                />
-                {errors.localId && (
-                  <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>
-                )}
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1">
-                  <Clock size={12} /> Duração *
+                  Duração *
                 </label>
                 <Select
                   options={DURACAO_OPTIONS}
@@ -515,64 +480,68 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                   onChange={(val) => setValue("duracaoMinutos", Number(val))}
                 />
               </div>
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-text-secondary">
-                Custo total (€) — editável
-              </label>
-              <div className="flex items-center gap-2">
-                <InputField
-                  type="number"
-                  step={0.01}
-                  min={0}
-                  placeholder="0.00"
-                  value={
-                    custoTotalWatched != null
-                      ? String(custoTotalWatched)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setCustoEdited(true);
-                    setValue(
-                      "custoTotal",
-                      v === "" ? undefined : Number(v),
-                      { shouldDirty: true }
-                    );
-                  }}
-                />
-                <span className="text-xs text-text-muted whitespace-nowrap">
-                  ≈ {formatEuro(custoCalculado)}
-                </span>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Custo total (€) — editável
+                </label>
+                <div className="flex items-center gap-2">
+                  <InputField
+                    type="number"
+                    step={0.01}
+                    min={0}
+                    placeholder="0.00"
+                    value={
+                      custoTotalWatched != null
+                        ? String(custoTotalWatched)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setCustoEdited(true);
+                      setValue(
+                        "custoTotal",
+                        v === "" ? undefined : Number(v),
+                        { shouldDirty: true }
+                      );
+                    }}
+                  />
+                  <span className="text-xs text-text-muted whitespace-nowrap">
+                    ≈ {formatEuro(custoCalculado)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* ── Aviso de capacidade do local (warn-only) ── */}
-          {localId && ocupacao.data && (
-            <div>
-              {ocupacao.data.excedeCapacidade ? (
-                <div className="rounded-lg bg-accent-orange-50 border border-accent-orange-200 p-3 space-y-1">
-                  <div className="flex items-center gap-1.5 text-accent-orange-700 text-xs font-semibold">
-                    <AlertTriangle size={14} /> Capacidade do local excedida
-                  </div>
-                  <p className="text-xs text-accent-orange-700 pl-5">
-                    {ocupacao.data.ocupacaoAtual} na sala + {ocupacao.data.novasCriancas} novas ={" "}
-                    <strong>{ocupacao.data.totalPrevisto}</strong> crianças
-                    (capacidade máx. {ocupacao.data.capacidade}).
-                  </p>
-                  <p className="text-[11px] text-accent-orange-600 pl-5">
-                    Pode continuar mesmo assim (aviso apenas).
-                  </p>
-                </div>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-success-50 border border-success-200 text-success-700 text-xs font-medium">
-                  <CheckCircle2 size={14} /> Dentro da capacidade — {ocupacao.data.totalPrevisto}/
-                  {ocupacao.data.capacidade} crianças
-                </span>
-              )}
+          {/* ── Lanche e Adultos ── */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <Users size={14} className="text-brand-500" /> Lanche e Acompanhantes
+            </label>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Inclui lanche?
+                </label>
+                <Switch
+                  checked={watch("temLanche") ?? false}
+                  onChange={(checked: boolean) => setValue("temLanche", checked)}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Nº de adultos (pagam)
+                </label>
+                <InputField
+                  type="number"
+                  min={0}
+                  max={20}
+                  placeholder="0"
+                  {...register("numAdultos", { valueAsNumber: true })}
+                />
+              </div>
             </div>
-          )}
+          </div>
 
           {/* ── Cacifo ── */}
           {cacifoOptions.length > 1 && (

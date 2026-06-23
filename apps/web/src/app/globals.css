@@ -631,3 +631,19 @@ span.flatpickr-weekday,
 .flatpickr-calendar.static {
   @apply right-0;
 }
+
+/* ── TV Mode (ceiling display) ────────────────────────────── */
+/* When body.tv-mode is active, hide sidebar + header, remove margins */
+
+body.tv-mode aside,
+body.tv-mode header {
+  display: none !important;
+}
+
+body.tv-mode .lg\:ml-\[220px\] {
+  margin-left: 0 !important;
+}
+
+body.tv-mode main {
+  padding: 0 !important;
+}

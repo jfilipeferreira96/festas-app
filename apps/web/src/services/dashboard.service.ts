@@ -55,9 +55,10 @@ export const dashboardService = {
       }),
     ]);
 
-    const [totalCacifos, totalCriancasNoParque] = await Promise.all([
+    const [totalCacifos, criancasBreakdown, receitasHoje] = await Promise.all([
       prisma.cacifo.count(),
       this.getTotalCriancasNoParque(),
+      this.getReceitasHoje(),
     ]);
 
     return {
@@ -67,16 +68,19 @@ export const dashboardService = {
       cacifosOcupados,
       cacifosReservados,
       cacifosTotal: totalCacifos,
-      totalCriancasNoParque,
+      totalCriancasNoParque: criancasBreakdown.total,
+      criancasFestas: criancasBreakdown.festas,
+      criancasEntradas: criancasBreakdown.entradas,
+      receitasHoje,
     };
   },
 
   /**
-   * Total de crianças atualmente no parque:
+   * Total de crianças atualmente no parque (separado por festas e entradas):
    * - soma de numCriancas das reservas EM_CURSO
    * - soma do nº de crianças (JSON) das entradas livres ATIVA
    */
-  async getTotalCriancasNoParque(): Promise<number> {
+  async getTotalCriancasNoParque(): Promise<{ total: number; festas: number; entradas: number }> {
     const [reservasEmCurso, entradasAtivas] = await Promise.all([
       prisma.reserva.findMany({
         where: { estado: "EM_CURSO" },
@@ -89,16 +93,64 @@ export const dashboardService = {
     ]);
 
     const criancasFestas = reservasEmCurso.reduce(
-      (sum, r) => sum + (r.numCriancas ?? 0),
+      (sum: number, r: { numCriancas: number | null }) => sum + (r.numCriancas ?? 0),
       0
     );
 
-    const criancasEntradas = entradasAtivas.reduce((sum, e) => {
-      const lista = e.criancas as unknown;
+    const criancasEntradas = entradasAtivas.reduce((sum: number, e: { criancas: unknown }) => {
+      const lista = e.criancas;
       return sum + (Array.isArray(lista) ? lista.length : 0);
     }, 0);
 
-    return criancasFestas + criancasEntradas;
+    return { total: criancasFestas + criancasEntradas, festas: criancasFestas, entradas: criancasEntradas };
+  },
+
+  /**
+   * Receitas do dia agrupadas por método de pagamento.
+   * Contabiliza reservas e entradas livres pagas hoje.
+   */
+  async getReceitasHoje(): Promise<Record<string, number>> {
+    const hoje = new Date();
+    const hojeStart = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const hojeEnd = new Date(hojeStart);
+    hojeEnd.setDate(hojeEnd.getDate() + 1);
+
+    const [reservasHoje, entradasHoje] = await Promise.all([
+      prisma.reserva.findMany({
+        where: {
+          data: { gte: hojeStart, lt: hojeEnd },
+          pago: true,
+        },
+        select: { metodoPagamento: true, valorPago: true, metodoPagamento2: true, valorPago2: true },
+      }),
+      prisma.entradaLivre.findMany({
+        where: {
+          inicioEm: { gte: hojeStart, lt: hojeEnd },
+          estado: { in: ["ATIVA", "CONCLUIDA"] },
+          pago: true,
+        },
+        select: { metodoPagamento: true, custoTotal: true, metodoPagamento2: true, valorPago2: true },
+      }),
+    ]);
+
+    const receitas: Record<string, number> = {};
+
+    const somar = (metodo: string | null | undefined, valor: unknown) => {
+      const num = valor == null ? 0 : Number(valor);
+      if (!metodo || num <= 0) return;
+      receitas[metodo] = (receitas[metodo] ?? 0) + num;
+    };
+
+    for (const r of reservasHoje) {
+      somar(r.metodoPagamento, r.valorPago);
+      somar(r.metodoPagamento2, r.valorPago2);
+    }
+    for (const e of entradasHoje) {
+      somar(e.metodoPagamento, e.custoTotal);
+      somar(e.metodoPagamento2, e.valorPago2);
+    }
+
+    return receitas;
   },
 
   async getFestasEmCurso() {

@@ -49,12 +49,6 @@ const CATEGORIA_OPTIONS = [
   { value: "MENU", label: "Menu" },
 ];
 
-const SUBCATEGORIA_OPTIONS = [
-  { value: "", label: "Sem subcategoria" },
-  { value: "Diversão", label: "Diversão" },
-  { value: "Premium", label: "Premium" },
-];
-
 // --- Table Columns ---
 const columns: Column<Extra>[] = [
   {
@@ -116,6 +110,16 @@ const columns: Column<Extra>[] = [
 
 export default function ExtrasContent() {
   const { data: extras, isLoading } = useExtras();
+
+  // Subcategorias distintas para autocomplete
+  const subcategoriaSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of extras ?? []) {
+      if (e.subcategoria?.trim()) set.add(e.subcategoria.trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt"));
+  }, [extras]);
+
   const createExtra = useCreateExtra();
   const updateExtra = useUpdateExtra();
   const deleteExtra = useDeleteExtra();
@@ -288,12 +292,17 @@ export default function ExtrasContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-text-primary mb-1.5">Subcategoria</label>
-                  <Select
-                    options={SUBCATEGORIA_OPTIONS}
-                    value={watch("subcategoria") || ""}
-                    onChange={(val) => setValue("subcategoria", val, { shouldDirty: true })}
-                    placeholder="Sem subcategoria"
+                  <input
+                    {...register("subcategoria")}
+                    list="subcategoria-suggestions"
+                    placeholder="Escrever ou escolher..."
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-input text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary-400"
                   />
+                  <datalist id="subcategoria-suggestions">
+                    {subcategoriaSuggestions.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
                 </div>
                 <div className="flex items-end pb-2">
                   <label className="flex items-center gap-2 cursor-pointer">

@@ -76,12 +76,12 @@ export async function seedTestData(): Promise<void> {
   await testPrisma.local.upsert({
     where: { id: TEST_IDS.LOCAL_1 },
     update: {},
-    create: { id: TEST_IDS.LOCAL_1, nome: "Sala Teste Azul", capacidade: 25 },
+    create: { id: TEST_IDS.LOCAL_1, nome: "Sala Teste Azul" },
   });
   await testPrisma.local.upsert({
     where: { id: TEST_IDS.LOCAL_2 },
     update: {},
-    create: { id: TEST_IDS.LOCAL_2, nome: "Sala Teste Verde", capacidade: 30 },
+    create: { id: TEST_IDS.LOCAL_2, nome: "Sala Teste Verde" },
   });
 
   // ── Extras (EXTRA category) ──────────────────────────────────
@@ -367,7 +367,8 @@ export async function seedTestData(): Promise<void> {
       inicioEm: entradaInicio,
       fimPrevisto: entradaFim,
       estado: "ATIVA",
-      localId: TEST_IDS.LOCAL_1,
+      temLanche: false,
+      numAdultos: 0,
       pago: true,
       metodoPagamento: "MBWAY",
       criancas: [{ nome: "João", idade: 6 }, { nome: "Maria", idade: 5 }],
@@ -398,7 +399,8 @@ export async function seedTestData(): Promise<void> {
       fimPrevisto: entradaFimOntem,
       fimReal: entradaFimReal,
       estado: "CONCLUIDA",
-      localId: TEST_IDS.LOCAL_2,
+      temLanche: true,
+      numAdultos: 0,
       excessoMinutos: 30,
       custoExcesso: 5.0,
       custoTotalFinal: 17.0,
@@ -428,7 +430,8 @@ export async function seedTestData(): Promise<void> {
       inicioEm: entradaInicio3,
       fimPrevisto: entradaFim3,
       estado: "CANCELADA",
-      localId: TEST_IDS.LOCAL_1,
+      temLanche: false,
+      numAdultos: 0,
       fimReal: new Date(today), // Cancelada rapidamente
       criancas: [{ nome: "Ana", idade: 4 }],
     },

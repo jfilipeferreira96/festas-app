@@ -45,6 +45,7 @@ export interface CreateReservaData {
   idadeAnos: number;
   data: string;
   horario: string;
+  horaLanche?: string;
   duracaoMinutos: number;
   localId: string;
   numCriancas?: number;
