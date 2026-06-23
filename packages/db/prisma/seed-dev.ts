@@ -265,6 +265,7 @@ async function seedConfiguracaoPreco() {
         precoMeias: 2,
         precoExcessoFixo: 5,
         caucaoDefault: 40,
+        precoLancheEntrada: 3,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },
@@ -796,6 +797,7 @@ async function seedReservas() {
   await prisma.reserva.upsert({
     where: { id: "reserva-future-001" },
     update: {},
+    // ── EXEMPLO DE CAUÇÃO PAGA: Total 200€ − Caução 40€ = Faltam 160€ ──
     create: {
       id: "reserva-future-001",
       data: new Date(future3Str),

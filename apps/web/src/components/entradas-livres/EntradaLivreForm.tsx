@@ -162,8 +162,12 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   // Tarifário global (singleton) — usado para auto-preenchimento do custo
   const { data: configPreco } = useConfigPreco();
 
-  // Custo calculado a partir do tarifário global (precoHora * duração).
+  // Custo calculado a partir do tarifário global:
+  // (precoHora × duração) × nº de pessoas (crianças + adultos).
+  // Se temLanche, adiciona o suplemento de lanche por pessoa.
   // Distingue dia de semana vs fim de semana.
+  const temLancheWatched = watch("temLanche") ?? false;
+  const numAdultosWatched = watch("numAdultos") ?? 0;
   const custoCalculado = useMemo(() => {
     if (!configPreco) return 0;
     const hoje = new Date();
@@ -172,8 +176,13 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     const precoHora = isFimSemana
       ? Number(configPreco.precoEntradaHoraFimSemana)
       : Number(configPreco.precoEntradaHoraSemana);
-    return (precoHora / 60) * (duracaoMinutos || 0);
-  }, [configPreco, duracaoMinutos]);
+    const numCriancasComNome = criancas.filter((c) => c.nome.trim()).length;
+    const totalPessoas = Math.max(numCriancasComNome + (numAdultosWatched ?? 0), 1);
+    const custoTempo = (precoHora / 60) * (duracaoMinutos || 0) * totalPessoas;
+    const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
+    const custoLanche = temLancheWatched ? precoLanche * totalPessoas : 0;
+    return custoTempo + custoLanche;
+  }, [configPreco, duracaoMinutos, criancas, numAdultosWatched, temLancheWatched]);
 
   // Sync do custoTotal quando a duração muda (auto-preenchimento).
   // Respeita edições manuais do utilizador (não sobrescreve se já editou).

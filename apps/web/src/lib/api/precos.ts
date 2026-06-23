@@ -19,6 +19,8 @@ export interface ConfiguracaoPreco {
   precoMeias: number;
   // Caução (valor por defeito)
   caucaoDefault: number;
+  // Lanche entrada livre (suplemento por pessoa)
+  precoLancheEntrada: number;
   // Excesso
   precoExcessoFixo: number;
   // Durações

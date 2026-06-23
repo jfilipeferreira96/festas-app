@@ -1021,6 +1021,37 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
               <span className="text-sm font-semibold text-text-primary">Total a pagar</span>
               <span className="text-base font-bold text-primary-500">{formatEuro(Number(watch("valorPago")) || 0)}</span>
             </div>
+            {/* ── Valor em Falta (total − caução paga − 2º pagamento) ── */}
+            {(() => {
+              const totalFinal = Number(watch("valorPago")) || 0;
+              const caucaoPaga = (watch("caucao") === "PAGA" || watch("caucao") === "PAGA_NO_DIA")
+                ? Number(watch("valorCaucao")) || 0
+                : 0;
+              const segundoPagamento = Number(watch("valorPago2")) || 0;
+              const emFalta = Math.max(totalFinal - caucaoPaga - segundoPagamento, 0);
+              const temCaucao = caucaoPaga > 0 || segundoPagamento > 0;
+              if (!temCaucao || totalFinal <= 0) return null;
+              return (
+                <>
+                  {caucaoPaga > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-success-600">Já pago (caução)</span>
+                      <span className="text-xs text-success-600">−{formatEuro(caucaoPaga)}</span>
+                    </div>
+                  )}
+                  {segundoPagamento > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-success-600">Já pago (2º método)</span>
+                      <span className="text-xs text-success-600">−{formatEuro(segundoPagamento)}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1.5 border-t border-border bg-accent-orange-50 -mx-1 px-1 py-1 rounded-md">
+                    <span className="text-sm font-bold text-accent-orange-700">Falta liquidar</span>
+                    <span className="text-base font-bold text-accent-orange-700">{formatEuro(emFalta)}</span>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>

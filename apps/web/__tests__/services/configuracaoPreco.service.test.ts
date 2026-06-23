@@ -41,6 +41,7 @@ describe("ConfiguracaoPreco Service", () => {
       expect(Number(config.precoEntradaHoraFimSemana)).toBe(12);
       expect(Number(config.precoExcessoFixo)).toBe(5);
       expect(Number(config.caucaoDefault)).toBe(40);
+      expect(Number(config.precoLancheEntrada)).toBe(3);
     });
 
     it("should return existing config on second call (singleton)", async () => {

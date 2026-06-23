@@ -117,6 +117,7 @@ async function seedConfiguracaoPreco() {
         precoMeias: 2,
         precoExcessoFixo: 5,
         caucaoDefault: 40,
+        precoLancheEntrada: 3,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },

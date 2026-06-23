@@ -181,11 +181,19 @@ export const entradaLivreService = {
       : Number(configPreco.precoEntradaHoraSemana);
 
     // Preço: usa valor manual do utilizador se fornecido, senão calcula a partir
-    // do tarifário global (precoHora × duração).
+    // do tarifário global: (precoHora × duração) × nº de pessoas (crianças + adultos).
+    // Se temLanche, adiciona o suplemento de lanche por pessoa.
+    const numAdultos = data.numAdultos ?? 0;
+    const totalPessoas = criancas.length + numAdultos;
+    const custoTempo = (custoHora / 60) * duracaoMinutos * totalPessoas;
+    const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
+    const custoLanche = data.temLanche ? precoLanche * totalPessoas : 0;
+    const custoCalculado = custoTempo + custoLanche;
+
     const custoTotal =
       typeof custoTotalInput === "number" && custoTotalInput >= 0
         ? custoTotalInput
-        : (custoHora / 60) * duracaoMinutos;
+        : custoCalculado;
 
     const inicioEm = new Date();
     const fimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);

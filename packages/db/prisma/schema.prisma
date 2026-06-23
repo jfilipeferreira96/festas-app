@@ -335,6 +335,8 @@ model ConfiguracaoPreco {
   precoExcessoFixo              Decimal  @db.Decimal(10, 2) @default(5)
   // Caução por defeito (valor sugerido ao criar reserva — sobrescrevível)
   caucaoDefault                 Decimal  @db.Decimal(10, 2) @default(40)
+  // Lanche em entrada livre (suplemento por pessoa quando temLanche = true)
+  precoLancheEntrada            Decimal  @db.Decimal(10, 2) @default(3)
   // Durações default
   duracaoDefaultFestaMin        Int      @default(135) // 2h15m
   duracaoExcessoBlocoMin        Int      @default(30)

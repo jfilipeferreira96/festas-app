@@ -25,6 +25,8 @@ export interface ConfiguracaoPreco {
   precoExcessoFixo: number;
   // Caução por defeito (valor sugerido ao criar reserva — sobrescrevível)
   caucaoDefault: number;
+  // Lanche em entrada livre (suplemento por pessoa quando temLanche = true)
+  precoLancheEntrada: number;
   // Durações default
   duracaoDefaultFestaMin: number;
   duracaoExcessoBlocoMin: number;
@@ -41,6 +43,7 @@ export interface AtualizarConfiguracaoPrecoDTO {
   precoMeias?: number;
   precoExcessoFixo?: number;
   caucaoDefault?: number;
+  precoLancheEntrada?: number;
   duracaoDefaultFestaMin?: number;
   duracaoExcessoBlocoMin?: number;
 }
