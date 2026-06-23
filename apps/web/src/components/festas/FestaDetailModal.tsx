@@ -338,6 +338,29 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
           {reserva.valorCaucao != null && (
             <DetailRow icon={<Shield size={13} />} label="Valor" value={new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(reserva.valorCaucao)} />
           )}
+          {/* Falta liquidar = Total − Caução paga − 2º pagamento */}
+          {(() => {
+            const total = Number(reserva.valorPago) || 0;
+            const caucaoPaga = (reserva.caucao === "PAGA" || reserva.caucao === "PAGA_NO_DIA")
+              ? Number(reserva.valorCaucao) || 0
+              : 0;
+            const segundo = Number(reserva.valorPago2) || 0;
+            const emFalta = Math.max(total - caucaoPaga - segundo, 0);
+            if (total <= 0 || caucaoPaga <= 0) return null;
+            const fmt = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
+            return (
+              <div className="pt-2 mt-1 border-t border-border bg-accent-orange-50 -mx-3 px-3 py-2 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-accent-orange-700">Falta liquidar</span>
+                  <span className="text-base font-bold text-accent-orange-700">{fmt.format(emFalta)}</span>
+                </div>
+                <div className="flex items-center justify-between mt-0.5">
+                  <span className="text-xs text-text-muted">Já pago (caução)</span>
+                  <span className="text-xs text-success-600">−{fmt.format(caucaoPaga)}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </Section>
       )}
