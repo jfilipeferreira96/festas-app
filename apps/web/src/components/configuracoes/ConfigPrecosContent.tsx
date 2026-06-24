@@ -18,6 +18,9 @@ export default function ConfigPrecosContent() {
   const [precoCriancaFimSemana, setPrecoCriancaFimSemana] = useState("");
   const [precoEntradaHoraSemana, setPrecoEntradaHoraSemana] = useState("");
   const [precoEntradaHoraFimSemana, setPrecoEntradaHoraFimSemana] = useState("");
+  const [precoEntrada1h, setPrecoEntrada1h] = useState("");
+  const [precoEntrada2h, setPrecoEntrada2h] = useState("");
+  const [precoEntradaHoraAdicional, setPrecoEntradaHoraAdicional] = useState("");
   const [precoExcessoFixo, setPrecoExcessoFixo] = useState("");
   const [caucaoDefault, setCaucaoDefault] = useState("");
   const [precoLancheEntrada, setPrecoLancheEntrada] = useState("");
@@ -35,6 +38,9 @@ export default function ConfigPrecosContent() {
       setPrecoCriancaFimSemana(String(Number(config.precoCriancaFimSemana)));
       setPrecoEntradaHoraSemana(String(Number(config.precoEntradaHoraSemana)));
       setPrecoEntradaHoraFimSemana(String(Number(config.precoEntradaHoraFimSemana)));
+      setPrecoEntrada1h(String(Number(config.precoEntrada1h ?? 6)));
+      setPrecoEntrada2h(String(Number(config.precoEntrada2h ?? 10)));
+      setPrecoEntradaHoraAdicional(String(Number(config.precoEntradaHoraAdicional ?? 5)));
       setPrecoExcessoFixo(String(Number(config.precoExcessoFixo)));
       setCaucaoDefault(String(Number(config.caucaoDefault ?? 40)));
       setPrecoLancheEntrada(String(Number(config.precoLancheEntrada ?? 3)));
@@ -65,6 +71,9 @@ export default function ConfigPrecosContent() {
         precoCriancaFimSemana: parseFloat(precoCriancaFimSemana) || 0,
         precoEntradaHoraSemana: parseFloat(precoEntradaHoraSemana) || 0,
         precoEntradaHoraFimSemana: parseFloat(precoEntradaHoraFimSemana) || 0,
+        precoEntrada1h: parseFloat(precoEntrada1h) || 0,
+        precoEntrada2h: parseFloat(precoEntrada2h) || 0,
+        precoEntradaHoraAdicional: parseFloat(precoEntradaHoraAdicional) || 0,
         precoExcessoFixo: parseFloat(precoExcessoFixo) || 0,
         caucaoDefault: parseFloat(caucaoDefault) || 0,
         precoLancheEntrada: parseFloat(precoLancheEntrada) || 0,
@@ -76,7 +85,7 @@ export default function ConfigPrecosContent() {
     } catch {
       error("Erro ao atualizar tarifário");
     }
-  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoExcessoFixo, caucaoDefault, precoLancheEntrada, precoMeias, duracaoDefaultFestaMin, minimos, updateMutation, success, error]);
+  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoEntrada1h, precoEntrada2h, precoEntradaHoraAdicional, precoExcessoFixo, caucaoDefault, precoLancheEntrada, precoMeias, duracaoDefaultFestaMin, minimos, updateMutation, success, error]);
 
   if (isLoading) {
     return (
@@ -263,45 +272,65 @@ export default function ConfigPrecosContent() {
           </div>
           <div>
             <h3 className="font-poppins text-lg font-semibold text-text-primary">Entradas Livres</h3>
-            <p className="text-xs text-text-muted">Preço por hora (calculado conforme a duração)</p>
+            <p className="text-xs text-text-muted">Tarifário por escalão (aplica-se a todos os dias)</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">
-              Dia de semana (2ª a 6ª) — por hora
+              1ª hora (por pessoa)
             </label>
             <div className="relative">
               <InputField
                 type="number"
                 min="0"
                 step={0.01}
-                value={precoEntradaHoraSemana}
-                onChange={(e) => setPrecoEntradaHoraSemana(e.target.value)}
+                value={precoEntrada1h}
+                onChange={(e) => setPrecoEntrada1h(e.target.value)}
+                placeholder="6"
+                className="pr-10"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">
+              2 horas (por pessoa)
+            </label>
+            <div className="relative">
+              <InputField
+                type="number"
+                min="0"
+                step={0.01}
+                value={precoEntrada2h}
+                onChange={(e) => setPrecoEntrada2h(e.target.value)}
                 placeholder="10"
-                className="pr-12"
+                className="pr-10"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€/h</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€</span>
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">
-              Fim de semana e feriados — por hora
+              Hora adicional (por pessoa)
             </label>
             <div className="relative">
               <InputField
                 type="number"
                 min="0"
                 step={0.01}
-                value={precoEntradaHoraFimSemana}
-                onChange={(e) => setPrecoEntradaHoraFimSemana(e.target.value)}
-                placeholder="12"
-                className="pr-12"
+                value={precoEntradaHoraAdicional}
+                onChange={(e) => setPrecoEntradaHoraAdicional(e.target.value)}
+                placeholder="5"
+                className="pr-10"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€/h</span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€</span>
             </div>
           </div>
         </div>
+        <p className="text-xs text-text-muted mt-3">
+          Ex.: 1h = 1º valor; 2h = 2º valor; 3h = 2º + hora adicional. Aplica-se a todos os dias (incluindo fins-de-semana e feriados).
+        </p>
       </div>
 
       {/* Caução + Lanche card */}

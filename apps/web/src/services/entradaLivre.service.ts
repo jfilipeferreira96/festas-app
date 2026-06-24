@@ -172,20 +172,18 @@ export const entradaLivreService = {
   async create(data: CriarEntradaLivreDTO) {
     const { criancas, duracaoMinutos, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
-    // Tarifário global: calcular preço/hora a partir da data atual (semana vs fim de semana)
+    // Tarifário global: preço por escalão (1h/2h + hora adicional) — aplica-se a todos os dias.
     const configPreco = await configuracaoPrecoService.getConfig();
-    const hoje = new Date();
-    const isFimSemana = hoje.getDay() === 0 || hoje.getDay() === 6;
-    const custoHora = isFimSemana
-      ? Number(configPreco.precoEntradaHoraFimSemana)
-      : Number(configPreco.precoEntradaHoraSemana);
+    // custoHora mantém-se para registo histórico (linelegado); usa o escalão aplicável.
+    const custoHora = Number(configPreco.precoEntrada1h ?? 6);
 
     // Preço: usa valor manual do utilizador se fornecido, senão calcula a partir
-    // do tarifário global: (precoHora × duração) × nº de pessoas (crianças + adultos).
+    // do tarifário por escalão × nº de pessoas (crianças + adultos).
     // Se temLanche, adiciona o suplemento de lanche por pessoa.
     const numAdultos = data.numAdultos ?? 0;
     const totalPessoas = criancas.length + numAdultos;
-    const custoTempo = (custoHora / 60) * duracaoMinutos * totalPessoas;
+    const custoTempoPorPessoa = await configuracaoPrecoService.calcularPrecoEntrada(duracaoMinutos, new Date());
+    const custoTempo = custoTempoPorPessoa * totalPessoas;
     const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
     const custoLanche = data.temLanche ? precoLanche * totalPessoas : 0;
     const custoCalculado = custoTempo + custoLanche;

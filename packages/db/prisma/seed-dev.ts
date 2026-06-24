@@ -197,6 +197,16 @@ async function seedExtras() {
     { id: "extra-lanche-donuts", nome: "Donuts", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    // ─── Extras à diversão BasyLandy ────────────────────────────
+    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-convites", nome: "Convites Personalizados", precoUnitario: 15.0, descricao: "Pacote de 30 convites personalizados. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: true },
+    { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    // ─── Bolos BasyLandy ────────────────────────────────────────
+    { id: "extra-bolo-1kg", nome: "Bolo 1KG", precoUnitario: 17.5, descricao: "Bolo de aniversário de 1kg.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-2kg", nome: "Bolo 2KG (hóstia incluída)", precoUnitario: 30.0, descricao: "Bolo de aniversário de 2kg com hóstia incluída.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-artistico", nome: "Bolo Artístico", precoUnitario: 50.0, descricao: "Bolo artístico personalizado.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: true },
   ];
   for (const extra of extras) {
     await prisma.extra.upsert({ where: { id: extra.id }, update: {}, create: extra });
@@ -208,6 +218,9 @@ async function seedExtras() {
     "extra-lanche-cenoura", "extra-lanche-babybel", "extra-lanche-pipocas",
     "extra-lanche-pizzas", "extra-lanche-bolachas", "extra-lanche-nuggets",
     "extra-lanche-donuts", "extra-lanche-fruta", "extra-lanche-muffins",
+    "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-convites",
+    "extra-diversao-prol1h", "extra-diversao-prol30m",
+    "extra-bolo-1kg", "extra-bolo-2kg", "extra-bolo-artistico",
   ];
   const basyLandyLocais = basyLandyIds.flatMap(eid =>
     [{ extraId: eid, localId: "local-001" }, { extraId: eid, localId: "local-002" }, { extraId: eid, localId: "local-003" }]
@@ -231,7 +244,7 @@ async function seedExtras() {
       update: {}, create: el,
     });
   }
-  console.log("  ✓ 23 extras (7 EXTRA + 4 MENU + 3 Menu BasyLandy + 9 Extras ao lanche) with local associations\n");
+  console.log("  ✓ 31 extras (7 EXTRA + 4 MENU + 3 Menu BasyLandy + 9 Extras ao lanche + 5 Extras à diversão + 3 Bolos) with local associations\n");
 }
 
 // ─── Monitores ────────────────────────────────────────────────
@@ -283,15 +296,18 @@ async function seedConfiguracaoPreco() {
   if (!existing) {
     await prisma.configuracaoPreco.create({
       data: {
-        precoCriancaSemana: 15,
-        precoCriancaFimSemana: 20,
+        precoCriancaSemana: 14,
+        precoCriancaFimSemana: 15.9,
         precoEntradaHoraSemana: 10,
         precoEntradaHoraFimSemana: 12,
+        precoEntrada1h: 6,
+        precoEntrada2h: 10,
+        precoEntradaHoraAdicional: 5,
         minimosCriancasPorAniversariante: minimos,
-        precoMeias: 2,
+        precoMeias: 2.5,
         precoExcessoFixo: 5,
         caucaoDefault: 40,
-        precoLancheEntrada: 3,
+        precoLancheEntrada: 4.5,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },

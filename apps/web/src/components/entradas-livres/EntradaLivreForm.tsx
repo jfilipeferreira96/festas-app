@@ -170,15 +170,15 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const numAdultosWatched = watch("numAdultos") ?? 0;
   const custoCalculado = useMemo(() => {
     if (!configPreco) return 0;
-    const hoje = new Date();
-    const dia = hoje.getDay();
-    const isFimSemana = dia === 0 || dia === 6;
-    const precoHora = isFimSemana
-      ? Number(configPreco.precoEntradaHoraFimSemana)
-      : Number(configPreco.precoEntradaHoraSemana);
+    // Tarifário por escalão (1h/2h + hora adicional) — aplica-se a todos os dias
+    const preco1h = Number(configPreco.precoEntrada1h ?? 6);
+    const preco2h = Number(configPreco.precoEntrada2h ?? 10);
+    const precoHoraAdicional = Number(configPreco.precoEntradaHoraAdicional ?? 5);
+    const dur = duracaoMinutos || 0;
+    let custoTempoPorPessoa = dur <= 60 ? preco1h : dur <= 120 ? preco2h : preco2h + Math.ceil((dur - 120) / 60) * precoHoraAdicional;
     const numCriancasComNome = criancas.filter((c) => c.nome.trim()).length;
     const totalPessoas = Math.max(numCriancasComNome + (numAdultosWatched ?? 0), 1);
-    const custoTempo = (precoHora / 60) * (duracaoMinutos || 0) * totalPessoas;
+    const custoTempo = custoTempoPorPessoa * totalPessoas;
     const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
     const custoLanche = temLancheWatched ? precoLanche * totalPessoas : 0;
     return custoTempo + custoLanche;
@@ -361,7 +361,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         >
           <span className="text-sm text-text-primary">{item.nome}</span>
           <span className="text-xs font-medium text-text-secondary">
-            +{formatEuro(item.precoUnitario / 100)}
+            +{formatEuro(item.precoUnitario)}
           </span>
         </button>
       );

@@ -323,9 +323,14 @@ model ConfiguracaoPreco {
   // Preço POR CRIANÇA (festa)
   precoCriancaSemana            Decimal  @db.Decimal(10, 2) @default(15)
   precoCriancaFimSemana         Decimal  @db.Decimal(10, 2) @default(20)
-  // Entrada livre (preço por hora)
+  // Entrada livre (preço por hora — linear, legado)
   precoEntradaHoraSemana        Decimal  @db.Decimal(10, 2) @default(10)
   precoEntradaHoraFimSemana     Decimal  @db.Decimal(10, 2) @default(12)
+  // Entrada livre (tarifário por escalão — aplica-se a todos os dias)
+  precoEntrada1h                Decimal  @db.Decimal(10, 2) @default(6)
+  precoEntrada2h                Decimal  @db.Decimal(10, 2) @default(10)
+  // Entrada livre: hora adicional (ex.: 1h extra = 5€)
+  precoEntradaHoraAdicional     Decimal  @db.Decimal(10, 2) @default(5)
   // Mínimos de crianças por nº de aniversariantes
   // JSON: [{ "aniversariantes": 1, "minimo": 10 }, { "aniversariantes": 2, "minimo": 15 }, { "aniversariantes": 3, "minimo": 20 }]
   minimosCriancasPorAniversariante Json?

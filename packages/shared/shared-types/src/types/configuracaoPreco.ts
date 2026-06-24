@@ -14,9 +14,13 @@ export interface ConfiguracaoPreco {
   // Preço POR CRIANÇA (festa)
   precoCriancaSemana: number;
   precoCriancaFimSemana: number;
-  // Entrada livre (preço por hora)
+  // Entrada livre (preço por hora — linear, legado)
   precoEntradaHoraSemana: number;
   precoEntradaHoraFimSemana: number;
+  // Entrada livre (tarifário por escalão — aplica-se a todos os dias)
+  precoEntrada1h: number;
+  precoEntrada2h: number;
+  precoEntradaHoraAdicional: number;
   // Mínimos de crianças por nº de aniversariantes
   minimosCriancasPorAniversariante: MinimoCriancasPorAniversariante[];
   // Meias
@@ -39,6 +43,9 @@ export interface AtualizarConfiguracaoPrecoDTO {
   precoCriancaFimSemana?: number;
   precoEntradaHoraSemana?: number;
   precoEntradaHoraFimSemana?: number;
+  precoEntrada1h?: number;
+  precoEntrada2h?: number;
+  precoEntradaHoraAdicional?: number;
   minimosCriancasPorAniversariante?: MinimoCriancasPorAniversariante[];
   precoMeias?: number;
   precoExcessoFixo?: number;
