@@ -183,10 +183,35 @@ async function seedExtras() {
     { id: "extra-menu-002", nome: "Menu Carne", precoUnitario: 15.0, descricao: "Menu com nuggets, pizza, sumo e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
     { id: "extra-menu-003", nome: "Menu Lanche", precoUnitario: 10.0, descricao: "Menu leve com croissants, sumo e pipocas", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
     { id: "extra-menu-004", nome: "Menu Premium", precoUnitario: 25.0, descricao: "Menu premium com pizza, nuggets, sumo natural, pipocas, bolo decorado e surpresa", categoria: "MENU" as const, subcategoria: "Premium", requerTexto: false },
+    // ─── Menus BasyLandy ────────────────────────────────────────
+    { id: "extra-menu-basy-semana", nome: "Menu BasyLandy (Semana)", precoUnitario: 14.0, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Preço de dia de semana (exclui feriados).", categoria: "MENU" as const, subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-basy-fimsemana", nome: "Menu BasyLandy (Fim-de-semana)", precoUnitario: 15.9, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Aplicado a sábados, domingos e feriados.", categoria: "MENU" as const, subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-almoco-jantar", nome: "Almoço/Jantar (Suplemento)", precoUnitario: 3.5, descricao: "Pizza, fruta e nuggets. Suplemento a acrescentar ao menu base (almoço/jantar).", categoria: "MENU" as const, subcategoria: "BasyLandy", requerTexto: false },
+    // ─── Extras ao lanche BasyLandy ────────────────────────────
+    { id: "extra-lanche-cenoura", nome: "Cenoura Baby", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-babybel", nome: "Queijo babybel", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pipocas", nome: "Pipocas", precoUnitario: 0.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pizzas", nome: "Pizzas", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-bolachas", nome: "Bolachas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-nuggets", nome: "Nuggets", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-donuts", nome: "Donuts", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
   ];
   for (const extra of extras) {
     await prisma.extra.upsert({ where: { id: extra.id }, update: {}, create: extra });
   }
+
+  // Novos extras/menus BasyLandy → associados a todos os locais
+  const basyLandyIds = [
+    "extra-menu-basy-semana", "extra-menu-basy-fimsemana", "extra-menu-almoco-jantar",
+    "extra-lanche-cenoura", "extra-lanche-babybel", "extra-lanche-pipocas",
+    "extra-lanche-pizzas", "extra-lanche-bolachas", "extra-lanche-nuggets",
+    "extra-lanche-donuts", "extra-lanche-fruta", "extra-lanche-muffins",
+  ];
+  const basyLandyLocais = basyLandyIds.flatMap(eid =>
+    [{ extraId: eid, localId: "local-001" }, { extraId: eid, localId: "local-002" }, { extraId: eid, localId: "local-003" }]
+  );
 
   const extraLocals = [
     { extraId: "extra-001", localId: "local-001" }, { extraId: "extra-002", localId: "local-001" },
@@ -198,6 +223,7 @@ async function seedExtras() {
     { extraId: "extra-007", localId: "local-002" },
     { extraId: "extra-001", localId: "local-003" }, { extraId: "extra-003", localId: "local-003" },
     { extraId: "extra-005", localId: "local-003" }, { extraId: "extra-007", localId: "local-003" },
+    ...basyLandyLocais,
   ];
   for (const el of extraLocals) {
     await prisma.extraLocal.upsert({
@@ -205,7 +231,7 @@ async function seedExtras() {
       update: {}, create: el,
     });
   }
-  console.log("  ✓ 13 extras with local associations\n");
+  console.log("  ✓ 23 extras (7 EXTRA + 4 MENU + 3 Menu BasyLandy + 9 Extras ao lanche) with local associations\n");
 }
 
 // ─── Monitores ────────────────────────────────────────────────

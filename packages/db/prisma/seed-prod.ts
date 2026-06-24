@@ -49,6 +49,7 @@ async function main() {
   console.log("🌱 Production seed (minimum)...\n");
 
   await seedUsers();
+  await seedExtras();
   await seedConfiguracaoPreco();
   await seedExcecoesCalendario();
   await seedSlotsHorario();
@@ -93,6 +94,55 @@ async function seedUsers() {
   }
 
   console.log("\n  ⚠️  Altera as palavras-passe após o primeiro login!\n");
+}
+
+// ─── Extras & Menus BasyLandy ────────────────────────────────
+async function seedExtras() {
+  console.log("  Creating extras & menus (BasyLandy)...");
+
+  // Menus selecionáveis (categoria MENU) + extras de lanche (categoria EXTRA).
+  // Sem associação a locais: ficam globais, associáveis posteriormente.
+  const extras: {
+    id: string;
+    nome: string;
+    precoUnitario: number;
+    descricao: string;
+    categoria: "MENU" | "EXTRA";
+    subcategoria: string;
+    requerTexto: boolean;
+  }[] = [
+    // ─── Menus BasyLandy ────────────────────────────────────────
+    { id: "extra-menu-basy-semana", nome: "Menu BasyLandy (Semana)", precoUnitario: 14.0, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Preço de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-basy-fimsemana", nome: "Menu BasyLandy (Fim-de-semana)", precoUnitario: 15.9, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Aplicado a sábados, domingos e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-almoco-jantar", nome: "Almoço/Jantar (Suplemento)", precoUnitario: 3.5, descricao: "Pizza, fruta e nuggets. Suplemento a acrescentar ao menu base (almoço/jantar).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
+    // ─── Extras ao lanche BasyLandy ────────────────────────────
+    { id: "extra-lanche-cenoura", nome: "Cenoura Baby", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-babybel", nome: "Queijo babybel", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pipocas", nome: "Pipocas", precoUnitario: 0.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pizzas", nome: "Pizzas", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-bolachas", nome: "Bolachas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-nuggets", nome: "Nuggets", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-donuts", nome: "Donuts", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+  ];
+
+  for (const extra of extras) {
+    await prisma.extra.upsert({
+      where: { id: extra.id },
+      update: {
+        nome: extra.nome,
+        precoUnitario: extra.precoUnitario,
+        descricao: extra.descricao,
+        categoria: extra.categoria,
+        subcategoria: extra.subcategoria,
+        requerTexto: extra.requerTexto,
+      },
+      create: extra,
+    });
+  }
+
+  console.log(`  ✓ ${extras.length} extras & menus BasyLandy (globais)\n`);
 }
 
 // ─── Configuração de Preços (singleton) ───────────────────────
