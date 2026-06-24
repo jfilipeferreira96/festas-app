@@ -37,8 +37,13 @@ const seedAuth = betterAuth({
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     process.env.CORS_ORIGIN || "http://localhost:3000",
   ],
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { 
+    enabled: true,
+    // Desativado envio de emails em ambiente de testes/seeds
+    // sendResetPassword: async () => {},
+  },
   emailVerification: {
+    // Desativado envio de emails em ambiente de testes/seeds
     sendVerificationEmail: async () => {},
     sendOnSignUp: false,
   },
