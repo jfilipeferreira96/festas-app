@@ -3,19 +3,16 @@
 import React, { useCallback } from "react";
 import { cn } from "@/lib/utils";
 
+// Paleta de cores da marca BasyLandy
 const FESTA_COLORS = [
-  { name: "Vermelho", value: "#EF4444" },
-  { name: "Laranja", value: "#F97316" },
-  { name: "Amarelo", value: "#EAB308" },
-  { name: "Verde", value: "#22C55E" },
-  { name: "Azul", value: "#3B82F6" },
-  { name: "Roxo", value: "#A855F7" },
-  { name: "Rosa", value: "#EC4899" },
-  { name: "Turquesa", value: "#14B8A6" },
-  { name: "Índigo", value: "#6366F1" },
-  { name: "Coral", value: "#FB7185" },
-  { name: "Lima", value: "#84CC16" },
-  { name: "Ciano", value: "#06B6D4" },
+  { name: "Azul", value: "#0095C8" },
+  { name: "Verde", value: "#5CBE4A" },
+  { name: "Amarelo", value: "#FCE12D" },
+  { name: "Laranja", value: "#F59253" },
+  { name: "Rosa", value: "#E54796" },
+  { name: "Verde-água", value: "#00A68A" },
+  { name: "Roxo", value: "#993B98" },
+  { name: "Cinzento", value: "#8A8E91" },
 ];
 
 interface FestaColorPickerProps {

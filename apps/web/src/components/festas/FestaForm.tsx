@@ -41,17 +41,16 @@ interface ExtraItem {
 }
 
 // ── Cores pré-definidas ────────────────────────────────────────
+
 const CORES_PREDEFINIDAS = [
-  { value: "#E74C3C", label: "Vermelho" }, { value: "#E91E63", label: "Rosa" },
-  { value: "#9B59B6", label: "Roxo" }, { value: "#673AB7", label: "Violeta" },
-  { value: "#3F51B5", label: "Índigo" }, { value: "#2196F3", label: "Azul" },
-  { value: "#03A9F4", label: "Azul Claro" }, { value: "#00BCD4", label: "Ciano" },
-  { value: "#009688", label: "Teal" }, { value: "#4CAF50", label: "Verde" },
-  { value: "#8BC34A", label: "Verde Claro" }, { value: "#CDDC39", label: "Lima" },
-  { value: "#FFEB3B", label: "Amarelo" }, { value: "#FFC107", label: "Âmbar" },
-  { value: "#FF9800", label: "Laranja" }, { value: "#FF5722", label: "Laranja Escuro" },
-  { value: "#795548", label: "Castanho" }, { value: "#9E9E9E", label: "Cinza" },
-  { value: "#607D8B", label: "Azul Cinzento" }, { value: "#F48FB1", label: "Rosa Pastel" },
+  { value: "#0095C8", label: "Azul" },
+  { value: "#5CBE4A", label: "Verde" },
+  { value: "#FCE12D", label: "Amarelo" },
+  { value: "#F59253", label: "Laranja" },
+  { value: "#E54796", label: "Rosa" },
+  { value: "#00A68A", label: "Verde-água (Teal)" },
+  { value: "#993B98", label: "Roxo" },
+  { value: "#8A8E91", label: "Cinzento" },
 ];
 
 // ── Zod Schema ─────────────────────────────────────────────────
