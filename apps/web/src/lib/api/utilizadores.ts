@@ -112,3 +112,21 @@ export async function eliminarUtilizador(id: string): Promise<{ message: string;
 
   return response.json();
 }
+
+export async function atualizarPassword(id: string, data: { password: string }): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/api/utilizadores/${id}/password`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Erro ao atualizar password");
+  }
+
+  return response.json();
+}

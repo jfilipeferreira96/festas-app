@@ -1,6 +1,7 @@
 import prisma from "@festas/db";
 import { auth } from "@festas/auth";
 import type { FuncaoUtilizador } from "@saas/shared-types";
+import { hashPassword } from "better-auth/crypto";
 
 interface CreateUserData {
   name: string;
@@ -15,6 +16,10 @@ interface UpdateFuncaoData {
 
 interface UpdateActivoData {
   activo: boolean;
+}
+
+interface UpdatePasswordData {
+  password: string;
 }
 
 export const utilizadorService = {
@@ -141,6 +146,34 @@ export const utilizadorService = {
         updatedAt: true,
       },
     });
+  },
+
+  async updatePassword(id: string, data: UpdatePasswordData, currentUserId: string) {
+    await this.getById(id);
+
+    // Cannot change own password here (use the password recovery flow instead)
+    if (id === currentUserId) {
+      throw new Error("CANNOT_CHANGE_OWN_PASSWORD");
+    }
+
+    if (!data.password || data.password.length < 8) {
+      throw new Error("PASSWORD_TOO_SHORT");
+    }
+
+    // Hash and store the new password on the credential account
+    const hashedPassword = await hashPassword(data.password);
+
+    await prisma.account.updateMany({
+      where: {
+        userId: id,
+        providerId: "credential",
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return { message: "Password atualizada com sucesso" };
   },
 
   async updateActivo(id: string, data: UpdateActivoData, currentUserId: string) {
