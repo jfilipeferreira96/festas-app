@@ -22,6 +22,7 @@ import {
 } from "@/hooks/use-dashboard";
 import { useEntradasLivresContadores } from "@/hooks/use-entrada-livre";
 import type { ReservaEmCurso, ProximaFesta } from "@/lib/api/dashboard";
+import AniversariosProximosCard from "@/components/dashboard/AniversariosProximosCard";
 
 interface DashboardContentProps {
   // selectedDate?: Date;
@@ -456,6 +457,9 @@ export default function DashboardContent({ }: DashboardContentProps) {
       </div>
       <div className="mt-4">
         <ReceitasDoDiaSection />
+      </div>
+      <div className="mt-4">
+        <AniversariosProximosCard dias={30} />
       </div>
       <div className="mt-6 text-center">
         <Link

@@ -34,3 +34,11 @@ export function useAniversarioEmBreve() {
     refetchInterval: 30000,
   });
 }
+
+export function useAniversariosProximos(dias = 30) {
+  return useQuery({
+    queryKey: ["dashboard", "aniversarios-proximos", dias],
+    queryFn: () => dashboardApi.getAniversariosProximos(dias),
+    refetchInterval: 60000,
+  });
+}

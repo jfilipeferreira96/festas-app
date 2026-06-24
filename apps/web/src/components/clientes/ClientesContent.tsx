@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Plus, Mail, Phone, Cake, Search } from "lucide-react";
+import { Plus, Mail, Phone, Cake, Search, Users, CalendarHeart } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,6 +14,7 @@ import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { useClientes, useCreateCliente, useUpdateCliente, useDeleteCliente } from "@/hooks/use-clientes";
 import type { Cliente } from "@/lib/api/clientes";
+import { AniversariosTabela } from "@/components/aniversarios/AniversariosContent";
 
 // --- Zod Schema ---
 const clienteSchema = z.object({
@@ -110,6 +111,7 @@ export default function ClientesContent() {
   const deleteCliente = useDeleteCliente();
 
   const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<"clientes" | "aniversarios">("clientes");
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [aniversariantes, setAniversariantes] = useState<AniversarianteEntry[]>([]);
 
@@ -184,7 +186,7 @@ export default function ClientesContent() {
         telefone: data.telefone,
         codigoPostal: data.codigoPostal || undefined,
         observacao: data.observacao || undefined,
-        ...(editingCliente ? {} : { aniversariantes: aniversariantes.filter((a) => a.nome && a.dataNascimento) }),
+        aniversariantes: aniversariantes.filter((a) => a.nome && a.dataNascimento),
       };
       if (editingCliente) {
         await updateCliente.mutateAsync({ id: editingCliente.id, data: payload });
@@ -216,30 +218,62 @@ export default function ClientesContent() {
         }
       />
 
+      {/* Sub-tabs */}
+      <div className="flex items-center gap-3 mt-4 mb-4">
+        <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setActiveTab("clientes")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+              activeTab === "clientes"
+                ? "bg-brand-500 text-white shadow-theme-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <Users size={15} />
+            Clientes
+          </button>
+          <button
+            onClick={() => setActiveTab("aniversarios")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+              activeTab === "aniversarios"
+                ? "bg-brand-500 text-white shadow-theme-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+            }`}
+          >
+            <CalendarHeart size={15} />
+            Aniversários próximos
+          </button>
+        </div>
+      </div>
+
       <div className="mt-4">
-        <DataTable<Cliente>
-          data={clientes}
-          columns={columns}
-          loading={isLoading}
-          searchable
-          searchPlaceholder="Pesquisar clientes..."
-          searchableFields={["nome", "email", "telefone"]}
-          itemLabel="clientes"
-          pagination
-          pageSize={10}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          emptyState={{
-            title: "Nenhum cliente encontrado",
-            description: "Os clientes são adicionados automaticamente ao criar festas. Também pode adicionar manualmente.",
-            action: (
-              <Button onClick={handleCreate} className="flex items-center gap-2">
-                <Plus size={16} />
-                Novo Cliente
-              </Button>
-            ),
-          }}
-        />
+        {activeTab === "clientes" ? (
+          <DataTable<Cliente>
+            data={clientes}
+            columns={columns}
+            loading={isLoading}
+            searchable
+            searchPlaceholder="Pesquisar clientes..."
+            searchableFields={["nome", "email", "telefone"]}
+            itemLabel="clientes"
+            pagination
+            pageSize={10}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            emptyState={{
+              title: "Nenhum cliente encontrado",
+              description: "Os clientes são adicionados automaticamente ao criar festas. Também pode adicionar manualmente.",
+              action: (
+                <Button onClick={handleCreate} className="flex items-center gap-2">
+                  <Plus size={16} />
+                  Novo Cliente
+                </Button>
+              ),
+            }}
+          />
+        ) : (
+          <AniversariosTabela />
+        )}
       </div>
 
       {/* Form Modal */}

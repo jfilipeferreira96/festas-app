@@ -42,6 +42,10 @@ export interface UpdateClienteData {
   codigoPostal?: string;
   observacao?: string;
   optOut?: boolean;
+  aniversariantes?: Array<{
+    nome: string;
+    dataNascimento?: string;
+  }>;
 }
 
 export interface ClienteListResponse {
