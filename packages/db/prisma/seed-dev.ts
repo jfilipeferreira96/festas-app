@@ -132,8 +132,8 @@ async function main() {
   async function seedEssential() {
     console.log("  Creating auth users...");
 
-    const emailDomain = process.env.SEED_EMAIL_DOMAIN || "baselandia.pt";
-    const defaultPassword = process.env.SEED_USER_PASSWORD || "Alterar!2025";
+    const emailDomain = process.env.SEED_EMAIL_DOMAIN || "dominio.pt";
+    const defaultPassword = process.env.SEED_USER_PASSWORD || "ExamplePass";
 
     const users = [
       { id: "admin-001", name: "Maria Silva", email: `admin@${emailDomain}`, password: process.env.SEED_ADMIN_PASSWORD || defaultPassword, funcao: "ADMINISTRADOR" as const },

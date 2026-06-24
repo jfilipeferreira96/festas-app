@@ -2,11 +2,12 @@
  * Production seed — MINIMUM data to bring the app online.
  *
  * Creates ONLY:
- *   - 1 admin user (via Better Auth)
+ *   - 7 users (admin + role accounts via Better Auth)
+ *   - Locais, Extras, Configuração Preços, Exceções Calendário, Slots Horário
  *   - Cacifos config (40 cacifos LIVRE)
  *
- * NO reservas, clientes, extras, monitores, marketing, entradas livres, etc.
- * Idempotent: safe to re-run.
+ * NO reservas, clientes, monitores, marketing, entradas livres, etc.
+ * ⚠️  WIPES ALL DATA before seeding (idempotent: safe to re-run).
  *
  * Admin credentials (override via env):
  *   SEED_ADMIN_EMAIL     (default: admin@baselandia.pt)
@@ -49,11 +50,29 @@ const seedAuth = betterAuth({
   },
 });
 
+// ─── Wipe (idempotent) ────────────────────────────────────────
+async function wipeDatabase() {
+  console.log("🧹 Wiping existing data...");
+  // Truncate every table so the seed is fully idempotent (re-runnable).
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 0;");
+  const tables: { [key: string]: string }[] =
+    await prisma.$queryRawUnsafe(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();`);
+  for (const row of tables) {
+    const table = row.TABLE_NAME ?? row["TABLE_NAME"];
+    if (!table) continue;
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\`;`);
+  }
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 1;");
+  console.log("  ✓ All tables truncated\n");
+}
+
 // ─── Main ─────────────────────────────────────────────────────
 async function main() {
   console.log("🌱 Production seed (minimum)...\n");
 
+  await wipeDatabase();
   await seedUsers();
+  await seedLocais();
   await seedExtras();
   await seedConfiguracaoPreco();
   await seedExcecoesCalendario();
@@ -64,8 +83,8 @@ async function main() {
 }
 
 // ─── Users (admin + role accounts) ───────────────────────────
-const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD || "Alterar!2025";
-const emailDomain = process.env.SEED_EMAIL_DOMAIN || "baselandia.pt";
+const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD || "ExamplePass";
+const emailDomain = process.env.SEED_EMAIL_DOMAIN || "domain.pt";
 
 const ROLE_USERS: { email: string; funcao: import("@prisma/client").FuncaoUtilizador; name: string; password?: string }[] = [
   { email: process.env.SEED_ADMIN_EMAIL || `admin@${emailDomain}`, funcao: "ADMINISTRADOR", name: "Administrador", password: process.env.SEED_ADMIN_PASSWORD },
@@ -105,12 +124,24 @@ async function seedUsers() {
   console.log("\n  ⚠️  Altera as palavras-passe após o primeiro login!\n");
 }
 
+// ─── Locais ───────────────────────────────────────────────────
+async function seedLocais() {
+  console.log("  Creating locais...");
+  const locais = [
+    { id: "local-001", nome: "Sala Azul" },
+    { id: "local-002", nome: "Sala Arco-Íris" },
+    { id: "local-003", nome: "Parque Trampolins" },
+  ];
+  for (const local of locais) {
+    await prisma.local.upsert({ where: { id: local.id }, update: {}, create: local });
+  }
+  console.log("  ✓ 3 locais\n");
+}
+
 // ─── Extras & Menus BasyLandy ────────────────────────────────
 async function seedExtras() {
   console.log("  Creating extras & menus (BasyLandy)...");
 
-  // Menus selecionáveis (categoria MENU) + extras de lanche (categoria EXTRA).
-  // Sem associação a locais: ficam globais, associáveis posteriormente.
   const extras: {
     id: string;
     nome: string;
@@ -161,7 +192,29 @@ async function seedExtras() {
     });
   }
 
-  console.log(`  ✓ ${extras.length} extras & menus BasyLandy (globais)\n`);
+  // Associar todos os extras/menus BasyLandy a todos os locais
+  const basyLandyIds = [
+    "extra-menu-basy-semana", "extra-menu-basy-fimsemana", "extra-menu-almoco-jantar",
+    "extra-lanche-cenoura", "extra-lanche-babybel", "extra-lanche-pipocas",
+    "extra-lanche-pizzas", "extra-lanche-bolachas", "extra-lanche-nuggets",
+    "extra-lanche-donuts", "extra-lanche-fruta", "extra-lanche-muffins",
+    "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-convites",
+    "extra-diversao-prol1h", "extra-diversao-prol30m",
+    "extra-bolo-1kg", "extra-bolo-2kg", "extra-bolo-artistico",
+  ];
+  const basyLandyLocais = basyLandyIds.flatMap(eid =>
+    [{ extraId: eid, localId: "local-001" }, { extraId: eid, localId: "local-002" }, { extraId: eid, localId: "local-003" }]
+  );
+
+  for (const el of basyLandyLocais) {
+    await prisma.extraLocal.upsert({
+      where: { extraId_localId: { extraId: el.extraId, localId: el.localId } },
+      update: {},
+      create: el,
+    });
+  }
+
+  console.log(`  ✓ ${extras.length} extras & menus BasyLandy (globais) + ${basyLandyLocais.length} associações a locais\n`);
 }
 
 // ─── Configuração de Preços (singleton) ───────────────────────
