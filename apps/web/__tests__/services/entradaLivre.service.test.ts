@@ -194,14 +194,12 @@ describe("Entrada Livre Service", () => {
         criancas: [{ nome: "Criança" }],
       });
 
-      // Deve usar o tarifário global (10€/h dia de semana, 12€/h fim de semanas)
-      const hoje = new Date();
-      const isFimSemana = hoje.getDay() === 0 || hoje.getDay() === 6;
-      const esperado = isFimSemana ? 12 : 10;
+      // Tarifário por escalão: 60 min = escalão 1h (6€), aplica-se a todos os dias
+      const esperado = 6;
 
       expect(entrada).toBeDefined();
       expect(Number(entrada.custoHora)).toBe(esperado);
-      expect(Number(entrada.custoTotal)).toBe(esperado); // 60 min = 1h
+      expect(Number(entrada.custoTotal)).toBe(esperado); // 60 min = escalão 1h
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
