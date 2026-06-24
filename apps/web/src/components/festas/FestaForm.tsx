@@ -927,6 +927,9 @@ interface Step4Props {
 function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes, criancas, cacifoAssignments, cacifosDisponiveis, totalEstimado, pago, salaOptions, encarregadosAdicionais, valorPagoEditedRef }: Step4Props) {
   const namedCriancas = criancas.filter((c) => c.nome.trim());
   const sala = salaOptions.find((s) => s.value === watch("localId"));
+  const [showSplitPayment, setShowSplitPayment] = useState(
+    !!defaultValues.metodoPagamento2 || (defaultValues.valorPago2 ?? 0) > 0
+  );
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-4">
@@ -975,17 +978,39 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
             </div>
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Caução (€)</label><InputField type="number" step={0.01} min={0} {...register("valorCaucao", { valueAsNumber: true })} placeholder="0,00" /></div>
           </div>
-          {/* ── Meias (compra obrigatória no parque) ── */}
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Meias (quantidade)</label><InputField type="number" min={0} {...register("meiasQuantidade", { valueAsNumber: true })} placeholder="0" /></div>
-            <div className="flex items-end"><p className="text-xs text-text-muted">Preço por par aplicado automaticamente na finalização.</p></div>
-          </div>
-          {/* ── Pagamento dividido (2º método) ── */}
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
-              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="2º método" value={defaultValues.metodoPagamento2 ?? "NONE"} onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)} />
+          {/* ── Meias com stepper ── */}
+          <div className="border-t border-border pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-text-secondary">Meias</span>
+              <span className="text-xs text-text-muted">Preço por par aplicado na finalização</span>
             </div>
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label><InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" /></div>
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setValue("meiasQuantidade", Math.max(0, (watch("meiasQuantidade") ?? 0) - 1))} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary">−</button>
+              <span className="w-10 text-center text-sm font-medium text-text-primary">{watch("meiasQuantidade") ?? 0}</span>
+              <button type="button" onClick={() => setValue("meiasQuantidade", (watch("meiasQuantidade") ?? 0) + 1)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary">+</button>
+            </div>
+          </div>
+          {/* ── Pagamento dividido (collapsible) ── */}
+          <div className="border-t border-border pt-3 space-y-2">
+            <Checkbox
+              checked={showSplitPayment}
+              onChange={(checked) => {
+                setShowSplitPayment(checked);
+                if (!checked) {
+                  setValue("metodoPagamento2", undefined);
+                  setValue("valorPago2", 0);
+                }
+              }}
+              label="Dividir pagamento (2º método)"
+            />
+            {showSplitPayment && (
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <div><label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
+                  <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="2º método" value={defaultValues.metodoPagamento2 ?? "NONE"} onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)} />
+                </div>
+                <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label><InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" /></div>
+              </div>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-medium text-text-secondary mb-1">Desconto Menu (%)</label><InputField type="number" min={0} max={100} {...register("descontoPercentagem", { valueAsNumber: true })} placeholder="0" /></div>
@@ -1057,3 +1082,4 @@ function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes
     </div>
   );
 }
+

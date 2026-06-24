@@ -134,7 +134,7 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
         title="Entradas Livres"
         subtitle="Gestão de entradas livres"
         actions={
-          !isLoading && totalCriancas > 0 ? (
+          !isLoading && totalCriancas > 0 && (filtro === "hoje" || filtro === "semana" || filtro === "ATIVA") ? (
             <div className="flex items-center gap-2 rounded-xl bg-brand-50 border border-brand-200 px-4 py-2">
               <Users size={18} className="text-brand-600" />
               <span className="text-sm font-semibold text-brand-700">
