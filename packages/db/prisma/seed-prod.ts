@@ -24,6 +24,7 @@ import { PrismaClient } from "@prisma/client";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
+import { getSeedUsers } from "./seed-roles";
 
 // Load env from apps/web/.env when run directly.
 // (db.js also passes --env-file; dotenv ignores a missing file silently.)
@@ -82,22 +83,11 @@ async function main() {
   console.log("\n✅ Production seed complete!");
 }
 
-// ─── Users (admin + role accounts) ───────────────────────────
-const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD || "ExamplePass";
-const emailDomain = process.env.SEED_EMAIL_DOMAIN || "domain.pt";
-
-const ROLE_USERS: { email: string; funcao: import("@prisma/client").FuncaoUtilizador; name: string; password?: string }[] = [
-  { email: process.env.SEED_ADMIN_EMAIL || `admin@${emailDomain}`, funcao: "ADMINISTRADOR", name: "Administrador", password: process.env.SEED_ADMIN_PASSWORD },
-  { email: `cacifos@${emailDomain}`, funcao: "CACIFOS", name: "Cacifos", password: process.env.SEED_CACIFOS_PASSWORD },
-  { email: `lanches@${emailDomain}`, funcao: "LANCHE", name: "Lanches", password: process.env.SEED_LANCHE_PASSWORD },
-  { email: `monitor@${emailDomain}`, funcao: "MONITOR", name: "Monitor", password: process.env.SEED_MONITOR_PASSWORD },
-  { email: `festas-acabar@${emailDomain}`, funcao: "FESTAS_ACABAR", name: "Festas a Acabar", password: process.env.SEED_FESTAS_ACABAR_PASSWORD },
-  { email: `staff@${emailDomain}`, funcao: "STAFF", name: "Staff", password: process.env.SEED_STAFF_PASSWORD },
-  { email: `rececao@${emailDomain}`, funcao: "RECECAO", name: "Receção", password: process.env.SEED_RECECAO_PASSWORD },
-];
-
+// ─── Users (admin + role accounts) — single source: seed-roles.ts ──
 async function seedUsers() {
   console.log("  Creating users...\n");
+
+  const ROLE_USERS = getSeedUsers();
 
   for (const u of ROLE_USERS) {
     // Idempotent: remove a previous user with the same email before creating.
@@ -105,8 +95,7 @@ async function seedUsers() {
     await prisma.session.deleteMany({ where: { user: { email: u.email } } });
     await prisma.user.deleteMany({ where: { email: u.email } });
 
-    // Use role-specific password if set, otherwise use default
-    const password = u.password || DEFAULT_PASSWORD;
+    const password = u.password;
 
     const result = await seedAuth.api.signUpEmail({
       body: { name: u.name, email: u.email, password },

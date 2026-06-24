@@ -26,6 +26,7 @@ const MP = (s: string) => s as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFEREN
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
+import { getSeedUsers } from "./seed-roles";
 
 config({ path: "../../apps/web/.env" });
 
@@ -128,22 +129,11 @@ async function main() {
   console.log("\n✅ Dev seed complete!");
 }
 
-  // ─── Essential (Users) ────────────────────────────────────────
+  // ─── Essential (Users) — single source of truth: seed-roles.ts ─
   async function seedEssential() {
     console.log("  Creating auth users...");
 
-    const emailDomain = process.env.SEED_EMAIL_DOMAIN || "dominio.pt";
-    const defaultPassword = process.env.SEED_USER_PASSWORD || "ExamplePass";
-
-    const users = [
-      { id: "admin-001", name: "Maria Silva", email: `admin@${emailDomain}`, password: process.env.SEED_ADMIN_PASSWORD || defaultPassword, funcao: "ADMINISTRADOR" as const },
-      { id: "lanche-001", name: "Lanche Teste", email: `lanche@${emailDomain}`, password: process.env.SEED_LANCHE_PASSWORD || defaultPassword, funcao: "LANCHE" as const },
-      { id: "cacifos-001", name: "Cacifos Teste", email: `cacifos@${emailDomain}`, password: process.env.SEED_CACIFOS_PASSWORD || defaultPassword, funcao: "CACIFOS" as const },
-      { id: "monitor-001", name: "Monitor Teste", email: `monitor@${emailDomain}`, password: process.env.SEED_MONITOR_PASSWORD || defaultPassword, funcao: "MONITOR" as const },
-      { id: "festas-acabar-001", name: "Festas Acabar Teste", email: `festas-acabar@${emailDomain}`, password: process.env.SEED_FESTAS_ACABAR_PASSWORD || defaultPassword, funcao: "FESTAS_ACABAR" as const },
-      { id: "staff-001", name: "Staff Teste", email: `staff@${emailDomain}`, password: process.env.SEED_STAFF_PASSWORD || defaultPassword, funcao: "STAFF" as const },
-      { id: "rececao-001", name: "Receção Teste", email: `rececao@${emailDomain}`, password: process.env.SEED_RECECAO_PASSWORD || defaultPassword, funcao: "RECECAO" as const },
-    ];
+    const users = getSeedUsers();
 
   await prisma.account.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
   await prisma.session.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
@@ -1081,7 +1071,9 @@ async function seedReservas() {
   for (const r of todasReservas) {
     let horaLanche: string | null = null;
     if (r.horario) {
-      const [h, m] = r.horario.split(":").map(Number);
+      const [hStr, mStr] = r.horario.split(":").map(Number);
+      const h = hStr ?? 0;
+      const m = mStr ?? 0;
       if (!Number.isNaN(h) && !Number.isNaN(m)) {
         const total = h * 60 + m + 45;
         const hh = String(Math.floor((total % 1440) / 60)).padStart(2, "0");
