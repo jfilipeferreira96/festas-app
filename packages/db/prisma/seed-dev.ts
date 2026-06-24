@@ -123,19 +123,22 @@ async function main() {
   console.log("\n✅ Dev seed complete!");
 }
 
-// ─── Essential (Users) ────────────────────────────────────────
-async function seedEssential() {
-  console.log("  Creating auth users...");
+  // ─── Essential (Users) ────────────────────────────────────────
+  async function seedEssential() {
+    console.log("  Creating auth users...");
 
-  const users = [
-    { id: "admin-001", name: "Maria Silva", email: "admin@festas.pt", password: "admin123", funcao: "ADMINISTRADOR" as const },
-    { id: "lanche-001", name: "Lanche Teste", email: "lanche@festas.pt", password: "lanche123", funcao: "LANCHE" as const },
-    { id: "cacifos-001", name: "Cacifos Teste", email: "cacifos@festas.pt", password: "cacifos123", funcao: "CACIFOS" as const },
-    { id: "monitor-001", name: "Monitor Teste", email: "monitor@festas.pt", password: "monitor123", funcao: "MONITOR" as const },
-    { id: "festas-acabar-001", name: "Festas Acabar Teste", email: "festas-acabar@festas.pt", password: "festas123", funcao: "FESTAS_ACABAR" as const },
-    { id: "staff-001", name: "Staff Teste", email: "staff@festas.pt", password: "staff123", funcao: "STAFF" as const },
-    { id: "rececao-001", name: "Receção Teste", email: "rececao@festas.pt", password: "rececao123", funcao: "RECECAO" as const },
-  ];
+    const emailDomain = process.env.SEED_EMAIL_DOMAIN || "baselandia.pt";
+    const defaultPassword = process.env.SEED_USER_PASSWORD || "Alterar!2025";
+
+    const users = [
+      { id: "admin-001", name: "Maria Silva", email: `admin@${emailDomain}`, password: process.env.SEED_ADMIN_PASSWORD || defaultPassword, funcao: "ADMINISTRADOR" as const },
+      { id: "lanche-001", name: "Lanche Teste", email: `lanche@${emailDomain}`, password: process.env.SEED_LANCHE_PASSWORD || defaultPassword, funcao: "LANCHE" as const },
+      { id: "cacifos-001", name: "Cacifos Teste", email: `cacifos@${emailDomain}`, password: process.env.SEED_CACIFOS_PASSWORD || defaultPassword, funcao: "CACIFOS" as const },
+      { id: "monitor-001", name: "Monitor Teste", email: `monitor@${emailDomain}`, password: process.env.SEED_MONITOR_PASSWORD || defaultPassword, funcao: "MONITOR" as const },
+      { id: "festas-acabar-001", name: "Festas Acabar Teste", email: `festas-acabar@${emailDomain}`, password: process.env.SEED_FESTAS_ACABAR_PASSWORD || defaultPassword, funcao: "FESTAS_ACABAR" as const },
+      { id: "staff-001", name: "Staff Teste", email: `staff@${emailDomain}`, password: process.env.SEED_STAFF_PASSWORD || defaultPassword, funcao: "STAFF" as const },
+      { id: "rececao-001", name: "Receção Teste", email: `rececao@${emailDomain}`, password: process.env.SEED_RECECAO_PASSWORD || defaultPassword, funcao: "RECECAO" as const },
+    ];
 
   await prisma.account.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
   await prisma.session.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
@@ -293,7 +296,7 @@ async function seedConfiguracaoPreco() {
   ];
 
   const existing = await prisma.configuracaoPreco.findFirst();
-  if (!existing) {
+   if (!existing) {
     await prisma.configuracaoPreco.create({
       data: {
         precoCriancaSemana: 14,

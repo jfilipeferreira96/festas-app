@@ -60,15 +60,16 @@ async function main() {
 
 // ─── Users (admin + role accounts) ───────────────────────────
 const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD || "Alterar!2025";
+const emailDomain = process.env.SEED_EMAIL_DOMAIN || "baselandia.pt";
 
-const ROLE_USERS: { email: string; funcao: import("@prisma/client").FuncaoUtilizador; name: string }[] = [
-  { email: process.env.SEED_ADMIN_EMAIL || "admin@festas.pt", funcao: "ADMINISTRADOR", name: "Administrador" },
-  { email: "cacifos@festas.pt", funcao: "CACIFOS", name: "Cacifos" },
-  { email: "lanches@festas.pt", funcao: "LANCHE", name: "Lanches" },
-  { email: "monitor@festas.pt", funcao: "MONITOR", name: "Monitor" },
-  { email: "festas-acabar@festas.pt", funcao: "FESTAS_ACABAR", name: "Festas a Acabar" },
-  { email: "staff@festas.pt", funcao: "STAFF", name: "Staff" },
-  { email: "rececao@festas.pt", funcao: "RECECAO", name: "Receção" },
+const ROLE_USERS: { email: string; funcao: import("@prisma/client").FuncaoUtilizador; name: string; password?: string }[] = [
+  { email: process.env.SEED_ADMIN_EMAIL || `admin@${emailDomain}`, funcao: "ADMINISTRADOR", name: "Administrador", password: process.env.SEED_ADMIN_PASSWORD },
+  { email: `cacifos@${emailDomain}`, funcao: "CACIFOS", name: "Cacifos", password: process.env.SEED_CACIFOS_PASSWORD },
+  { email: `lanches@${emailDomain}`, funcao: "LANCHE", name: "Lanches", password: process.env.SEED_LANCHE_PASSWORD },
+  { email: `monitor@${emailDomain}`, funcao: "MONITOR", name: "Monitor", password: process.env.SEED_MONITOR_PASSWORD },
+  { email: `festas-acabar@${emailDomain}`, funcao: "FESTAS_ACABAR", name: "Festas a Acabar", password: process.env.SEED_FESTAS_ACABAR_PASSWORD },
+  { email: `staff@${emailDomain}`, funcao: "STAFF", name: "Staff", password: process.env.SEED_STAFF_PASSWORD },
+  { email: `rececao@${emailDomain}`, funcao: "RECECAO", name: "Receção", password: process.env.SEED_RECECAO_PASSWORD },
 ];
 
 async function seedUsers() {
@@ -80,8 +81,11 @@ async function seedUsers() {
     await prisma.session.deleteMany({ where: { user: { email: u.email } } });
     await prisma.user.deleteMany({ where: { email: u.email } });
 
+    // Use role-specific password if set, otherwise use default
+    const password = u.password || DEFAULT_PASSWORD;
+
     const result = await seedAuth.api.signUpEmail({
-      body: { name: u.name, email: u.email, password: DEFAULT_PASSWORD },
+      body: { name: u.name, email: u.email, password },
     });
     if (!result?.user) throw new Error(`Failed to create user ${u.email}`);
 
@@ -90,7 +94,7 @@ async function seedUsers() {
       data: { emailVerified: true, funcao: u.funcao, activo: true },
     });
 
-    console.log(`  ✓ ${u.funcao}: ${u.email} / ${DEFAULT_PASSWORD}`);
+    console.log(`  ✓ ${u.funcao}: ${u.email} / ${password}`);
   }
 
   console.log("\n  ⚠️  Altera as palavras-passe após o primeiro login!\n");
