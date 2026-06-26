@@ -203,7 +203,7 @@ export default function LancheContent() {
       key: "notasLanche",
       label: "Obs. Lanche",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate" title={f.notasLanche ?? ""}>
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.notasLanche || "—"}
         </span>
       ),
@@ -212,7 +212,7 @@ export default function LancheContent() {
       key: "observacoesCacifo",
       label: "Obs. Cacifo",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate" title={f.observacoesCacifo ?? ""}>
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesCacifo || "—"}
         </span>
       ),
@@ -221,7 +221,7 @@ export default function LancheContent() {
       key: "observacoesLesoes",
       label: "Obs. Lesões",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate" title={f.observacoesLesoes ?? ""}>
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesLesoes || "—"}
         </span>
       ),
@@ -281,7 +281,7 @@ export default function LancheContent() {
       key: "observacoesLesoes",
       label: "Obs. Lesões",
       render: (_v, e) => (
-        <span className="text-xs text-text-secondary block max-w-[180px] truncate" title={e.observacoesLesoes ?? ""}>
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {e.observacoesLesoes || "—"}
         </span>
       ),

@@ -144,7 +144,7 @@ export default function FestasAcabarContent() {
       key: "observacoesBrindes",
       label: "Brindes",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesBrindes || "—"}
         </span>
       ),
@@ -153,7 +153,7 @@ export default function FestasAcabarContent() {
       key: "observacoesBrindesPais",
       label: "Brindes dos Pais",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesBrindesPais || "—"}
         </span>
       ),
@@ -162,7 +162,7 @@ export default function FestasAcabarContent() {
       key: "observacoesLesoes",
       label: "Obs. Lesões",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesLesoes || "—"}
         </span>
       ),

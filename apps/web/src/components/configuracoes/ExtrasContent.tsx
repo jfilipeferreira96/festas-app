@@ -63,7 +63,7 @@ const columns: Column<Extra>[] = [
         <div>
           <span className="text-sm font-medium text-text-primary">{e.nome}</span>
           {e.descricao && (
-            <p className="text-xs text-text-muted truncate max-w-[200px]">{e.descricao}</p>
+            <p className="text-xs text-text-muted whitespace-normal max-w-[280px]">{e.descricao}</p>
           )}
         </div>
       </div>

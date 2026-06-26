@@ -15,6 +15,7 @@ import type { Column } from "@/components/ui/table/DataTable";
 import { useClientes, useCreateCliente, useUpdateCliente, useDeleteCliente } from "@/hooks/use-clientes";
 import type { Cliente } from "@/lib/api/clientes";
 import { AniversariosTabela } from "@/components/aniversarios/AniversariosContent";
+import HistoricoFestasModal from "./HistoricoFestasModal";
 
 // --- Zod Schema ---
 const clienteSchema = z.object({
@@ -114,6 +115,7 @@ export default function ClientesContent() {
   const [activeTab, setActiveTab] = useState<"clientes" | "aniversarios">("clientes");
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
   const [aniversariantes, setAniversariantes] = useState<AniversarianteEntry[]>([]);
+  const [historicoClienteId, setHistoricoClienteId] = useState<string | null>(null);
 
   const {
     register,
@@ -205,6 +207,10 @@ export default function ClientesContent() {
     [deleteCliente]
   );
 
+  const handleView = useCallback((cliente: Cliente) => {
+    setHistoricoClienteId(cliente.id);
+  }, []);
+
   return (
     <div>
       <PageHeader
@@ -260,6 +266,7 @@ export default function ClientesContent() {
             pageSize={10}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onView={handleView}
             emptyState={{
               title: "Nenhum cliente encontrado",
               description: "Os clientes são adicionados automaticamente ao criar festas. Também pode adicionar manualmente.",
@@ -400,6 +407,14 @@ export default function ClientesContent() {
           </div>
         </Modal>
       )}
+
+      {/* Modal de Histórico de Festas */}
+      <HistoricoFestasModal
+        clienteId={historicoClienteId}
+        isOpen={historicoClienteId !== null}
+        onClose={() => setHistoricoClienteId(null)}
+      />
     </div>
   );
 }
+

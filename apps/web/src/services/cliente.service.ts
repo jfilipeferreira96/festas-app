@@ -80,9 +80,11 @@ export const clienteService = {
       where: { id },
       include: {
         aniversariantes: { orderBy: { nome: "asc" } },
+        // Histórico de festas: todas as reservas (exceto canceladas) ordenadas
+        // pela data mais recente primeiro, com os campos relevantes para o modal.
         reservas: {
-          take: 10,
-          orderBy: { createdAt: "desc" },
+          where: { estado: { not: "CANCELADA" } },
+          orderBy: { data: "desc" },
           include: { local: true },
         },
       },

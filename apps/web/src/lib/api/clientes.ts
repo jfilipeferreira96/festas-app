@@ -19,6 +19,17 @@ export interface Cliente {
     createdAt: string;
     updatedAt: string;
   }>;
+  /** Histórico de festas do cliente (disponível em getById). */
+  reservas?: Array<{
+    id: string;
+    data: string;
+    horario: string;
+    numCriancas: number;
+    estado: string;
+    valorPago: number | null;
+    pago: boolean;
+    local?: { id: string; nome: string } | null;
+  }>;
 }
 
 export interface CreateClienteData {
