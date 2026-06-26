@@ -14,11 +14,11 @@ export const dashboardService = {
       cacifosOcupados,
       cacifosReservados,
     ] = await Promise.all([
-      // Festas de hoje (reservas confirmadas ou em curso)
+      // Festas de hoje (todas exceto CANCELADA: CONFIRMADO, EM_CURSO, CONCLUIDA, RESERVA)
       prisma.reserva.count({
         where: {
           data: { gte: hojeStart, lt: hojeEnd },
-          estado: { in: ["CONFIRMADO", "EM_CURSO"] },
+          estado: { not: "CANCELADA" },
         },
       }),
 
@@ -108,6 +108,7 @@ export const dashboardService = {
   /**
    * Receitas do dia agrupadas por método de pagamento.
    * Contabiliza reservas e entradas livres pagas hoje.
+   * Inclui: pagamento dividido, excesso de tempo e meias.
    */
   async getReceitasHoje(): Promise<Record<string, number>> {
     const hoje = new Date();
@@ -121,7 +122,18 @@ export const dashboardService = {
           data: { gte: hojeStart, lt: hojeEnd },
           pago: true,
         },
-        select: { metodoPagamento: true, valorPago: true, metodoPagamento2: true, valorPago2: true },
+        select: {
+          metodoPagamento: true,
+          valorPago: true,
+          metodoPagamento2: true,
+          valorPago2: true,
+          // Excesso de tempo (se já pago)
+          custoExcesso: true,
+          pagoExcesso: true,
+          // Meias
+          meiasQuantidade: true,
+          meiasPrecoUnit: true,
+        },
       }),
       prisma.entradaLivre.findMany({
         where: {
@@ -129,7 +141,16 @@ export const dashboardService = {
           estado: { in: ["ATIVA", "CONCLUIDA"] },
           pago: true,
         },
-        select: { metodoPagamento: true, custoTotal: true, metodoPagamento2: true, valorPago2: true },
+        select: {
+          metodoPagamento: true,
+          custoTotal: true,
+          custoTotalFinal: true,
+          metodoPagamento2: true,
+          valorPago2: true,
+          // Meias
+          meiasQuantidade: true,
+          meiasPrecoUnit: true,
+        },
       }),
     ]);
 
@@ -142,12 +163,27 @@ export const dashboardService = {
     };
 
     for (const r of reservasHoje) {
+      // Pagamento principal + dividido
       somar(r.metodoPagamento, r.valorPago);
       somar(r.metodoPagamento2, r.valorPago2);
+      // Excesso de tempo (só se foi pago)
+      if (r.pagoExcesso) somar(r.metodoPagamento, r.custoExcesso);
+      // Meias (quantidade × preço unitário)
+      const qtdMeias = r.meiasQuantidade ?? 0;
+      if (qtdMeias > 0) {
+        somar(r.metodoPagamento, qtdMeias * Number(r.meiasPrecoUnit ?? 0));
+      }
     }
     for (const e of entradasHoje) {
-      somar(e.metodoPagamento, e.custoTotal);
+      // custoTotalFinal inclui o excesso; fallback para custoTotal
+      const valor = Number(e.custoTotalFinal ?? e.custoTotal ?? 0);
+      somar(e.metodoPagamento, valor);
       somar(e.metodoPagamento2, e.valorPago2);
+      // Meias
+      const qtdMeias = e.meiasQuantidade ?? 0;
+      if (qtdMeias > 0) {
+        somar(e.metodoPagamento, qtdMeias * Number(e.meiasPrecoUnit ?? 0));
+      }
     }
 
     return receitas;

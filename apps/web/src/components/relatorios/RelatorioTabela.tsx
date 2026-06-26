@@ -24,11 +24,13 @@ function CabecalhoTabela() {
       <tr>
         <th className="px-3 py-2.5 text-left text-xs font-semibold text-text-secondary">DESCRIÇÃO</th>
         <th className="px-3 py-2.5 text-center text-xs font-semibold text-text-secondary">QUANT.</th>
-        <th className="px-3 py-2.5 text-center text-xs font-semibold text-text-secondary">TOTAL CRIANÇAS</th>
-        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">VALOR NUMERÁRIO</th>
-        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">VALOR MULTIBANCO</th>
-        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">VALOR TRANSFERÊNCIA</th>
-        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">VALOR MBWAY</th>
+        <th className="px-3 py-2.5 text-center text-xs font-semibold text-text-secondary">CRIANÇAS</th>
+        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">NUMERÁRIO</th>
+        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">MULTIBANCO</th>
+        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">TRANSFERÊNCIA</th>
+        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">MBWAY</th>
+        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">CARTÃO</th>
+        <th className="px-3 py-2.5 text-right text-xs font-semibold text-text-secondary">OUTRO</th>
       </tr>
     </thead>
   );
@@ -44,6 +46,8 @@ function LinhaDados({ linha }: { linha: LinhaRelatorio }) {
       <td className="px-3 py-2 text-right text-sm text-text-primary tabular-nums">{fmtMoeda(linha.valorMultibanco)}</td>
       <td className="px-3 py-2 text-right text-sm text-text-primary tabular-nums">{fmtMoeda(linha.valorTransferencia)}</td>
       <td className="px-3 py-2 text-right text-sm text-text-primary tabular-nums">{fmtMoeda(linha.valorMbway)}</td>
+      <td className="px-3 py-2 text-right text-sm text-text-primary tabular-nums">{fmtMoeda(linha.valorCartao)}</td>
+      <td className="px-3 py-2 text-right text-sm text-text-primary tabular-nums">{fmtMoeda(linha.valorOutro)}</td>
     </tr>
   );
 }
@@ -58,6 +62,8 @@ function LinhaTotal({ linha }: { linha: LinhaRelatorio }) {
       <td className="px-3 py-2.5 text-right text-sm text-brand-700 tabular-nums">{fmtMoeda(linha.valorMultibanco)}</td>
       <td className="px-3 py-2.5 text-right text-sm text-brand-700 tabular-nums">{fmtMoeda(linha.valorTransferencia)}</td>
       <td className="px-3 py-2.5 text-right text-sm text-brand-700 tabular-nums">{fmtMoeda(linha.valorMbway)}</td>
+      <td className="px-3 py-2.5 text-right text-sm text-brand-700 tabular-nums">{fmtMoeda(linha.valorCartao)}</td>
+      <td className="px-3 py-2.5 text-right text-sm text-brand-700 tabular-nums">{fmtMoeda(linha.valorOutro)}</td>
     </tr>
   );
 }

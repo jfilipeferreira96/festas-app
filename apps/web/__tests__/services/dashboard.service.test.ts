@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import testPrisma from "../helpers/test-prisma";
-import { seedTestData, cleanTestData } from "../helpers/seed";
+import { seedTestData, cleanTestData, TEST_IDS } from "../helpers/seed";
 
 vi.mock("@festas/db", () => ({
   default: testPrisma,
@@ -96,6 +96,94 @@ describe("Dashboard Service", () => {
       for (const [, valor] of Object.entries(receitas)) {
         expect(typeof valor).toBe("number");
         expect(valor).toBeGreaterThan(0);
+      }
+    });
+
+    it("deve usar custoTotalFinal (inclui excesso) nas entradas", async () => {
+      // Cria entrada hoje com custoTotal=10 e custoTotalFinal=15 (5€ de excesso)
+      const hoje = new Date();
+      const inicio = new Date(hoje);
+      inicio.setHours(16, 0, 0, 0);
+      const fim = new Date(inicio);
+      fim.setMinutes(fim.getMinutes() + 60);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          encarregadoNome: "Teste Excesso",
+          encarregadoTelefone: "900000000",
+          duracaoMinutos: 60,
+          custoHora: 10,
+          custoTotal: 10,
+          custoTotalFinal: 15,
+          inicioEm: inicio,
+          fimPrevisto: fim,
+          estado: "CONCLUIDA",
+          pago: true,
+          metodoPagamento: "DINHEIRO",
+          criancas: [{ nome: "X" }],
+        },
+      });
+
+      try {
+        const receitas = await dashboardService.getReceitasHoje();
+        // Deve incluir os 15€ (custoTotalFinal) e não os 10€
+        expect(receitas.DINHEIRO ?? 0).toBeGreaterThanOrEqual(15);
+      } finally {
+        await testPrisma.entradaLivre.delete({ where: { id: entrada.id } }).catch(() => {});
+      }
+    });
+
+    it("deve somar meias (reservas pagas hoje)", async () => {
+      const hoje = new Date();
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: hoje,
+          horario: "17:00",
+          duracaoMinutos: 135,
+          numCriancas: 10,
+          estado: "CONCLUIDA",
+          pago: true,
+          metodoPagamento: "DINHEIRO",
+          valorPago: 100,
+          meiasQuantidade: 10,
+          meiasPrecoUnit: 2, // 20€ de meias
+          clienteId: TEST_IDS.CLIENTE_1,
+          localId: TEST_IDS.LOCAL_1,
+        },
+      });
+
+      try {
+        const receitas = await dashboardService.getReceitasHoje();
+        // 100 (valorPago) + 20 (meias) = 120€ em DINHEIRO
+        expect(receitas.DINHEIRO ?? 0).toBeGreaterThanOrEqual(120);
+      } finally {
+        await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+      }
+    });
+  });
+
+  // ── festasHoje inclui CONCLUIDA ──────────────────────────────
+  describe("getKPIs() — festasHoje", () => {
+    it("deve contar festas CONCLUIDAS de hoje (não apenas CONFIRMADO/EM_CURSO)", async () => {
+      const hoje = new Date();
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: hoje,
+          horario: "18:00",
+          duracaoMinutos: 135,
+          numCriancas: 8,
+          estado: "CONCLUIDA",
+          clienteId: TEST_IDS.CLIENTE_1,
+          localId: TEST_IDS.LOCAL_1,
+        },
+      });
+
+      try {
+        const kpisAntes = await dashboardService.getKPIs();
+        // A festa CONCLUIDA criada deve estar incluída no count
+        expect(kpisAntes.festasHoje).toBeGreaterThanOrEqual(1);
+      } finally {
+        await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
       }
     });
   });
