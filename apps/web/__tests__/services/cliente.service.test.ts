@@ -44,6 +44,13 @@ describe("Cliente Service", () => {
       expect(cliente).toBeDefined();
       expect(cliente.id).toBe(TEST_IDS.CLIENTE_1);
       expect(cliente.aniversariantes).toBeDefined();
+      // Reservas (histórico de festas): exclui CANCELADA, ordenadas por data desc
+      const reservas = (cliente as { reservas?: unknown[] }).reservas;
+      expect(reservas).toBeDefined();
+      expect(reservas!.length).toBeGreaterThanOrEqual(2);
+      // Nenhuma reserva CANCELADA deve aparecer
+      const todas = (cliente as { reservas?: Array<{ estado: string }> }).reservas ?? [];
+      expect(todas.every((r) => r.estado !== "CANCELADA")).toBe(true);
     });
 
     it("should throw NOT_FOUND for non-existent ID", async () => {
