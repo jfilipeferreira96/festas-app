@@ -65,7 +65,11 @@ function today(): Date {
   return d;
 }
 function toDateStr(d: Date): string {
-  return d.toISOString().split("T")[0]!;
+  // Usa componentes locais (não toISOString) para evitar desvio de fuso horário.
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 function dateAt(d: Date, h: number, m: number): Date {
   const r = new Date(d);
@@ -786,7 +790,7 @@ async function seedReservas() {
     create: {
       id: "reserva-002",
       data: new Date(todayStr),
-      horario: "15:00", duracaoMinutos: 120, numCriancas: 22, previsaoCriancas: 25,
+      horario: "16:30", duracaoMinutos: 135, numCriancas: 22, previsaoCriancas: 25,
       estado: "CONFIRMADO",
       tema: "Unicórnios", cor: "#E8A0BF",
       bolo: "Bolo arco-íris com unicórnio no topo",
@@ -814,7 +818,7 @@ async function seedReservas() {
     create: {
       id: "reserva-003",
       data: new Date(tomorrowStr),
-      horario: "14:00", duracaoMinutos: 120, numCriancas: 12, previsaoCriancas: 15,
+      horario: "14:00", duracaoMinutos: 135, numCriancas: 12, previsaoCriancas: 15,
       estado: "RESERVA",
       tema: "Futebol", cor: "#16A34A",
       bolo: "Bolo em formato de bola de futebol",
@@ -841,7 +845,7 @@ async function seedReservas() {
     create: {
       id: "reserva-future-001",
       data: new Date(future3Str),
-      horario: "10:00", duracaoMinutos: 150, numCriancas: 16, previsaoCriancas: 18,
+      horario: "10:00", duracaoMinutos: 135, numCriancas: 16, previsaoCriancas: 18,
       estado: "CONFIRMADO",
       tema: "Super-Heróis", cor: "#1E40AF",
       bolo: "Bolo com logo dos Vingadores",
@@ -859,6 +863,7 @@ async function seedReservas() {
 
   // ═══════════════════════════════════════════════════════════
   // +5 days — RESERVA (Matilde, Safari, Sala Arco-Íris)
+  // EXEMPLO DE HORÁRIO CUSTOM (não corresponde a nenhum slot → festasSemSlot)
   // ═══════════════════════════════════════════════════════════
   const future5Str = toDateStr(daysFromNow(5));
   await prisma.reserva.upsert({
@@ -867,7 +872,7 @@ async function seedReservas() {
     create: {
       id: "reserva-future-002",
       data: new Date(future5Str),
-      horario: "15:00", duracaoMinutos: 120, numCriancas: 10, previsaoCriancas: 12,
+      horario: "12:30", duracaoMinutos: 90, numCriancas: 10, previsaoCriancas: 12,
       estado: "RESERVA",
       tema: "Safari", cor: "#D97706",
       bolo: "Bolo com animais da selva",
@@ -891,7 +896,7 @@ async function seedReservas() {
     create: {
       id: "reserva-future-003",
       data: new Date(future7Str),
-      horario: "10:00", duracaoMinutos: 90, numCriancas: 10, previsaoCriancas: 12,
+      horario: "18:30", duracaoMinutos: 135, numCriancas: 10, previsaoCriancas: 12,
       estado: "RESERVA",
       tema: "Sereia", cor: "#06B6D4",
       bolo: "Bolo oceano com sereia",

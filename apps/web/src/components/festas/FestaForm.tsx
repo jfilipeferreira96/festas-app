@@ -26,6 +26,7 @@ import { useMonitores } from "@/hooks/use-monitores";
 import { useEtapasFesta } from "@/hooks/use-etapasFesta";
 import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
 import { useConfigPreco } from "@/hooks/use-precos";
+import { useSlotsHorario, useSlotsDia } from "@/hooks/use-slots-horario";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva, MetodoPagamento, DisponibilidadeResult } from "@/lib/api/reservas";
@@ -131,6 +132,15 @@ function toISODate(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/** Adiciona minutos a uma string "HH:MM" e retorna "HH:MM" */
+function addMinutosToTime(hora: string, minutos: number): string {
+  const [h, m] = hora.split(":").map(Number);
+  const total = (h || 0) * 60 + (m || 0) + minutos;
+  const newH = Math.floor(total / 60) % 24;
+  const newM = total % 60;
+  return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
 }
 
 function calcIdade(dataNascimento: string, dataFesta: string): number {
@@ -261,6 +271,57 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       .filter((r) => r.id !== reserva?.id && r.cor)
       .map((r) => r.cor as string);
   }, [reservasDoDia, reserva?.id]);
+
+  // ── Slots de horário (Select de slots disponíveis p/ a data) ──
+  const { data: slotsHorario } = useSlotsHorario();
+  const { data: slotsDia } = useSlotsDia(watchedData);
+  const [horarioCustom, setHorarioCustom] = useState(false);
+
+  // Determina se o horário actual corresponde a um slot; caso contrário,
+  // activa automaticamente o modo "horário personalizado".
+  React.useEffect(() => {
+    if (!slotsHorario) return;
+    const horarioVal = reserva?.horario ?? initialValues?.horario;
+    if (!horarioVal) {
+      setHorarioCustom(false);
+      return;
+    }
+    setHorarioCustom(!slotsHorario.some((s) => s.horaInicio === horarioVal));
+  }, [slotsHorario, reserva?.horario, initialValues?.horario]);
+
+  const slotOptions = useMemo(() => {
+    const ocupados = new Set(
+      (slotsDia?.slots ?? []).filter((s) => s.ocupado).map((s) => s.horaInicio),
+    );
+    return (slotsHorario ?? []).map((s) => {
+      const fim = addMinutosToTime(s.horaInicio, s.duracaoMin);
+      // A própria reserva em edição ocupa o seu slot — não o desactiva.
+      const isOcupado = ocupados.has(s.horaInicio) && s.horaInicio !== reserva?.horario;
+      return {
+        value: s.horaInicio,
+        label: `${s.horaInicio}–${fim}${isOcupado ? " · ocupado" : ""}`,
+        disabled: isOcupado,
+      };
+    });
+  }, [slotsHorario, slotsDia, reserva?.horario]);
+
+  const handleSelectSlot = useCallback(
+    (horaInicio: string) => {
+      const slot = slotsHorario?.find((s) => s.horaInicio === horaInicio);
+      setValue("horario", horaInicio, { shouldDirty: true });
+      if (slot) setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true });
+    },
+    [slotsHorario, setValue],
+  );
+
+  // ── Auto-preencher a primeira cor disponível ao criar festa ──
+  React.useEffect(() => {
+    // Só em modo criação e quando ainda não há cor definida
+    if (reserva) return;
+    if (defaultValues.cor) return;
+    const primeiraLivre = CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value));
+    if (primeiraLivre) setValue("cor", primeiraLivre.value);
+  }, [reserva, defaultValues.cor, coresEmUso, setValue]);
 
   // ── Tarifário global (auto-preenchimento do valor) ──
   const { data: configPreco } = useConfigPreco();
@@ -449,8 +510,17 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   }, [cacifosDisponiveis]);
   const corOptions = useMemo(() => [
     { value: "NONE", label: "Sem cor" },
-    ...CORES_PREDEFINIDAS.map((c) => ({ value: c.value, label: c.label, color: c.value }))
-  ], []);
+    ...CORES_PREDEFINIDAS.map((c) => {
+      // A própria reserva em edição mantém a sua cor activa.
+      const usadaPorOutra = coresEmUso.includes(c.value) && c.value !== reserva?.cor;
+      return {
+        value: c.value,
+        label: usadaPorOutra ? `${c.label} · em uso` : c.label,
+        color: c.value,
+        disabled: usadaPorOutra,
+      };
+    })
+  ], [coresEmUso, reserva?.cor]);
 
   return (
     <div className="flex flex-col max-h-[70vh]">
@@ -474,6 +544,11 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
               onVerificarDisponibilidade={() => disponibilidade.refetch()}
               onOpenSearchCliente={() => setShowClienteSearch(true)}
               coresEmUso={coresEmUso}
+              slotOptions={slotOptions}
+              horarioCustom={horarioCustom}
+              setHorarioCustom={setHorarioCustom}
+              onSelectSlot={handleSelectSlot}
+              currentHorario={watchedHorario}
             />
           )}
           {currentStep === 1 && (
@@ -547,7 +622,7 @@ interface Step1Props {
   setExtrasTexto: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   totalEstimado: number;
   watchedData: string;
-  corOptions: { value: string; label: string; color?: string }[];
+  corOptions: { value: string; label: string; color?: string; disabled?: boolean }[];
   menuOptions: { value: string; label: string }[];
   showAniversarianteError: boolean;
   disponibilidade?: DisponibilidadeResult;
@@ -555,6 +630,11 @@ interface Step1Props {
   onVerificarDisponibilidade: () => void;
   onOpenSearchCliente: () => void;
   coresEmUso: string[];
+  slotOptions: { value: string; label: string; disabled?: boolean }[];
+  horarioCustom: boolean;
+  setHorarioCustom: (v: boolean) => void;
+  onSelectSlot: (horaInicio: string) => void;
+  currentHorario: string;
 }
 
 function Step1Geral({
@@ -567,8 +647,9 @@ function Step1Geral({
   totalEstimado, watchedData, corOptions, menuOptions,
   showAniversarianteError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
   coresEmUso,
+  slotOptions, horarioCustom, setHorarioCustom, onSelectSlot, currentHorario,
 }: Step1Props) {
-  const currentCor = defaultValues.cor || "";
+  const currentCor = watch("cor") || defaultValues.cor || "";
 
   const renderExtraItem = useCallback((item: ExtraItem) => {
     const isSelected = selectedExtrasIds.includes(item.id);
@@ -700,12 +781,24 @@ function Step1Geral({
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Horário *</label>
-          <InputField type="time" {...register("horario")} error={!!errors.horario} hint={errors.horario?.message} />
+          {horarioCustom ? (
+            <InputField type="time" {...register("horario")} error={!!errors.horario} hint={errors.horario?.message} />
+          ) : (
+            <Select
+              options={slotOptions}
+              placeholder="Seleccionar slot"
+              value={currentHorario}
+              onChange={onSelectSlot}
+              error={!!errors.horario}
+            />
+          )}
         </div>
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Duração *</label>
-          <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" value={String(defaultValues.duracaoMinutos)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
-        </div>
+        {horarioCustom && (
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Duração *</label>
+            <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" value={String(defaultValues.duracaoMinutos)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
+          </div>
+        )}
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Hora do Lanche</label>
           <InputField type="time" {...register("horaLanche")} />
@@ -715,6 +808,18 @@ function Step1Geral({
           <Select options={salaOptions} placeholder="Seleccionar" value={defaultValues.localId} onChange={(val) => setValue("localId", val)} />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
         </div>
+      </div>
+
+      {/* ── Toggle: horário personalizado (fora dos slots) ── */}
+      <div className="flex items-center gap-3">
+        <Checkbox
+          checked={horarioCustom}
+          onChange={setHorarioCustom}
+          label="Horário personalizado (fora dos slots)"
+        />
+        {!horarioCustom && slotOptions.length === 0 && (
+          <span className="text-xs text-text-muted">Sem slots configurados — active a opção para definir a hora manualmente.</span>
+        )}
       </div>
 
       {/* ── Verificação de disponibilidade (aviso apenas) ── */}

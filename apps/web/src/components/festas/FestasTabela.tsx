@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History, LayoutGrid, Table2, Calendar } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History, LayoutGrid, Table2 } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -12,6 +12,7 @@ import FestaDetailModal from "./FestaDetailModal";
 import FestasSlotsGrid from "./FestasSlotsGrid";
 import CheckInModal from "./CheckInModal";
 import HistoricoModal from "./HistoricoModal";
+import DatePicker from "@/components/form/date-picker";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
 import { getAniversarianteNome } from "@/lib/api/reservas";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
@@ -218,13 +219,17 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
 
           {/* Date selector (only in slots mode) */}
           {viewMode === "slots" && (
-            <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 p-1.5 shadow-theme-xs shrink-0">
-              <Calendar size={16} className="text-text-muted ml-1" />
-              <input
-                type="date"
-                value={slotDate}
-                onChange={(e) => setSlotDate(e.target.value)}
-                className="text-sm font-medium text-text-primary bg-transparent border-none outline-none cursor-pointer"
+            <div className="rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs shrink-0">
+              <DatePicker
+                id="festas-slot-date-picker"
+                defaultDate={slotDate}
+                onChange={([date]: Date[]) => {
+                  const y = date.getFullYear();
+                  const m = String(date.getMonth() + 1).padStart(2, "0");
+                  const d = String(date.getDate()).padStart(2, "0");
+                  setSlotDate(`${y}-${m}-${d}`);
+                }}
+                className="w-40 text-sm font-medium text-text-primary border-none outline-none cursor-pointer"
               />
             </div>
           )}

@@ -101,4 +101,114 @@ describe("SlotHorario Service", () => {
       await expect(slotHorarioService.getById(slot.id)).rejects.toThrow("NOT_FOUND");
     });
   });
+
+  // ── Ligação slots ↔ festas (getSlotsDia) ────────────────────────
+  describe("getSlotsDia() — ligação slots ↔ festas", () => {
+    const DIA_TESTE = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 100);
+      return d.toISOString().split("T")[0]!;
+    })();
+
+    const slotIdRef = { current: "" };
+    const reservaIds = ["reserva-slot-test-1", "reserva-slot-test-2", "reserva-slot-test-3"];
+
+    beforeAll(async () => {
+      // Slot 11:00–13:15 (135 min)
+      const slot = await testPrisma.slotHorario.create({
+        data: { horaInicio: "11:00", duracaoMin: 135, ordem: 99 },
+      });
+      slotIdRef.current = slot.id;
+
+      const dataObj = new Date(DIA_TESTE);
+
+      // Festa que corresponde EXACTAMENTE ao slot (11:00, 135 min)
+      await testPrisma.reserva.create({
+        data: {
+          id: reservaIds[0],
+          data: dataObj,
+          horario: "11:00",
+          duracaoMinutos: 135,
+          numCriancas: 12,
+          estado: "CONFIRMADO",
+          cor: "#FF0000",
+          clienteId: "test-cliente-001",
+          localId: "test-local-001",
+        },
+      });
+
+      // Festa com horário CUSTOM (22:00, 30 min) — não sobrepõe nenhum slot
+      await testPrisma.reserva.create({
+        data: {
+          id: reservaIds[1],
+          data: dataObj,
+          horario: "22:00",
+          duracaoMinutos: 30,
+          numCriancas: 8,
+          estado: "RESERVA",
+          cor: "#00FF00",
+          clienteId: "test-cliente-001",
+          localId: "test-local-001",
+        },
+      });
+
+      // Festa CANCELADA que sobrepõe o slot — deve ser ignorada
+      await testPrisma.reserva.create({
+        data: {
+          id: reservaIds[2],
+          data: dataObj,
+          horario: "11:30",
+          duracaoMinutos: 90,
+          numCriancas: 5,
+          estado: "CANCELADA",
+          cor: "#0000FF",
+          clienteId: "test-cliente-001",
+          localId: "test-local-001",
+        },
+      });
+    }, 60000);
+
+    afterAll(async () => {
+      await testPrisma.reserva.deleteMany({ where: { id: { in: reservaIds } } });
+      if (slotIdRef.current) {
+        await testPrisma.slotHorario.delete({ where: { id: slotIdRef.current } }).catch(() => {});
+      }
+    });
+
+    it("deve marcar o slot como ocupado pela festa correspondente", async () => {
+      const dia = await slotHorarioService.getSlotsDia(DIA_TESTE);
+      const slot = dia.slots.find((s) => s.slotId === slotIdRef.current);
+
+      expect(slot).toBeDefined();
+      expect(slot!.ocupado).toBe(true);
+      expect(slot!.festa).not.toBeNull();
+      expect(slot!.festa!.numCriancas).toBe(12);
+    });
+
+    it("deve enviar festas sem slot (horário custom) para festasSemSlot", async () => {
+      const dia = await slotHorarioService.getSlotsDia(DIA_TESTE);
+      const custom = dia.festasSemSlot.find((f) => f.id === reservaIds[1]);
+
+      expect(custom).toBeDefined();
+      expect(custom!.horario).toBe("22:00");
+      expect(custom!.duracaoMinutos).toBe(30);
+    });
+
+    it("deve ignorar festas CANCELADAS (não ocupa slot nem aparece como custom)", async () => {
+      const dia = await slotHorarioService.getSlotsDia(DIA_TESTE);
+
+      const idsPresentes = [
+        ...dia.slots.filter((s) => s.festa).map((s) => s.festa!.id),
+        ...dia.festasSemSlot.map((f) => f.id),
+      ];
+      expect(idsPresentes).not.toContain(reservaIds[2]);
+    });
+
+    it("deve recolher as cores usadas pelas festas activas", async () => {
+      const dia = await slotHorarioService.getSlotsDia(DIA_TESTE);
+      expect(dia.coresUsadas).toContain("#FF0000");
+      expect(dia.coresUsadas).toContain("#00FF00");
+      expect(dia.coresUsadas).not.toContain("#0000FF"); // cancelada
+    });
+  });
 });

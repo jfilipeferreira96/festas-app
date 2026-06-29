@@ -105,7 +105,7 @@ const SlotCard = React.memo(function SlotCard({
   return (
     <button
       onClick={handleClick}
-      className="flex-shrink-0 w-56 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 hover:border-brand-400 hover:bg-brand-50/30 transition-all duration-200 group p-3 text-left"
+      className="flex-shrink-0 w-56 rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50/30 transition-all duration-200 group p-3 text-left"
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-semibold text-text-muted flex items-center gap-1">
