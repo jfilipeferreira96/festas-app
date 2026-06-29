@@ -73,22 +73,47 @@ export const slotHorarioService = {
       festasAtivas.filter((f) => f.cor).map((f) => f.cor as string),
     );
 
-    // IDs de festas já associadas a um slot
-    const festasAssociadas = new Set<string>();
+    // Mapeamento slotId → festaId (cada festa atribuída a no máximo um slot)
+    const slotToFestaId = new Map<string, string>();
+    const festasComSlot = new Set<string>();
 
-    // Combinar slots com festas (verificando sobreposição de horário)
-    const slotsComFestas: SlotDiaItem[] = slots.map((slot) => {
-      const slotInicio = toMinutes(slot.horaInicio);
-      const slotFim = slotInicio + slot.duracaoMin;
+    // Pass 1: match exacto de horaInicio (prioridade máxima)
+    // Garante que uma festa às 16:30 vá para o slot das 16:30 e não para o das 14:00
+    for (const f of festasAtivas) {
+      if (festasComSlot.has(f.id)) continue;
+      const slot = slots.find(
+        (s) => s.horaInicio === f.horario && !slotToFestaId.has(s.id),
+      );
+      if (slot) {
+        slotToFestaId.set(slot.id, f.id);
+        festasComSlot.add(f.id);
+      }
+    }
 
-      // Procurar a primeira festa que se sobrepõe a este slot
-      const festa = festasAtivas.find((f) => {
-        const fInicio = toMinutes(f.horario);
-        const fFim = fInicio + f.duracaoMinutos;
-        const overlap = intervalosSobrepõem(fInicio, fFim, slotInicio, slotFim);
-        if (overlap) festasAssociadas.add(f.id);
-        return overlap;
+    // Pass 2: overlap para festas ainda sem slot exacto
+    // (uma festa que termine após o início do slot seguinte)
+    for (const f of festasAtivas) {
+      if (festasComSlot.has(f.id)) continue;
+      const fInicio = toMinutes(f.horario);
+      const fFim = fInicio + f.duracaoMinutos;
+      const slot = slots.find((s) => {
+        if (slotToFestaId.has(s.id)) return false;
+        const sInicio = toMinutes(s.horaInicio);
+        const sFim = sInicio + s.duracaoMin;
+        return intervalosSobrepõem(fInicio, fFim, sInicio, sFim);
       });
+      if (slot) {
+        slotToFestaId.set(slot.id, f.id);
+        festasComSlot.add(f.id);
+      }
+    }
+
+    // Construir resultado dos slots
+    const slotsComFestas: SlotDiaItem[] = slots.map((slot) => {
+      const festaId = slotToFestaId.get(slot.id);
+      const festa = festaId
+        ? (festasAtivas.find((f) => f.id === festaId) ?? null)
+        : null;
 
       return {
         slotId: slot.id,
@@ -115,7 +140,7 @@ export const slotHorarioService = {
 
     // Festas que não correspondem a nenhum slot (horário custom)
     const festasSemSlot: FestaSemSlotItem[] = festasAtivas
-      .filter((f) => !festasAssociadas.has(f.id))
+      .filter((f) => !festasComSlot.has(f.id))
       .map((f) => ({
         id: f.id,
         nome:

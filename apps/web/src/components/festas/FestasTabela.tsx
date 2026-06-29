@@ -43,7 +43,10 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const isCacifos = mode === "cacifos";
   const [filtro, setFiltro] = useState("hoje");
   const [viewMode, setViewMode] = useState<"tabela" | "slots">("tabela");
-  const [slotDate, setSlotDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [slotDate, setSlotDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
   const [formInitialValues, setFormInitialValues] = useState<FestaFormInitialValues | undefined>(undefined);
   const [showForm, setShowForm] = useState(false);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
@@ -60,10 +63,16 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
     []
   );
 
+  // Helper: Date → YYYY-MM-DD (local, sem timezone shift)
+  const toLocalISO = useCallback((d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+  []);
+
   // Build filter params
   const filtros = React.useMemo(() => {
-    const hoje = new Date().toISOString().split("T")[0];
-    if (filtro === "hoje") return { data: hoje };
+    // Em modo slots, carregar todas as festas do dia para lookup de acções
+    if (viewMode === "slots") return { data: slotDate, pageSize: 100 };
+    if (filtro === "hoje") return { data: toLocalISO(new Date()) };
     if (filtro === "semana") {
       // Segunda → domingo da semana atual
       const now = new Date();
@@ -74,15 +83,15 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       const sunday = new Date(monday);
       sunday.setDate(monday.getDate() + 6);
       return {
-        dataInicio: monday.toISOString().split("T")[0],
-        dataFim: sunday.toISOString().split("T")[0],
+        dataInicio: toLocalISO(monday),
+        dataFim: toLocalISO(sunday),
       };
     }
     if (["RESERVA", "CONFIRMADO", "EM_CURSO", "CONCLUIDA"].includes(filtro)) {
       return { estado: filtro as EstadoReserva };
     }
     return undefined;
-  }, [filtro]);
+  }, [filtro, viewMode, slotDate, toLocalISO]);
 
   const { data: reservas, isLoading } = useReservas(filtros);
   const deleteReserva = useDeleteReserva();
@@ -92,9 +101,10 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
 
   const handleCreate = useCallback(() => {
     setEditingReserva(null);
-    setFormInitialValues(undefined);
+    // Em modo slots, pré-preencher a data seleccionada para que cores/slots sejam correctos
+    setFormInitialValues(viewMode === "slots" ? { data: slotDate } : undefined);
     setShowForm(true);
-  }, []);
+  }, [viewMode, slotDate]);
 
   const handleSlotClick = useCallback((initialValues: FestaFormInitialValues) => {
     setEditingReserva(null);
@@ -158,6 +168,23 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
     await iniciarFesta.mutateAsync(iniciarFestaReserva.id);
     setIniciarFestaReserva(null);
   }, [iniciarFesta, iniciarFestaReserva]);
+
+  // ── Festa Actions (from slot cards) ────────────────────────────
+  const handleFestaAction = useCallback((action: string, festaId: string) => {
+    const reserva = reservas?.items?.find((r) => r.id === festaId);
+    if (!reserva) return;
+    switch (action) {
+      case "view": handleView(reserva); break;
+      case "edit": handleEdit(reserva); break;
+      case "confirm": handleConfirmar(reserva.id); break;
+      case "iniciar": setIniciarFestaReserva(reserva); break;
+      case "finalizar": handleFinalizar(reserva); break;
+      case "checkin": setCheckInReserva(reserva); break;
+      case "historico": setHistoricoReserva(reserva); break;
+      case "cancel": handleCancelar(reserva.id); break;
+      case "delete": handleDelete(reserva.id); break;
+    }
+  }, [reservas]);
 
   return (
     <div>
@@ -247,7 +274,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       {/* Slots Grid View */}
       {viewMode === "slots" && !isCacifos && (
         <div className="mb-6">
-          <FestasSlotsGrid data={slotDate} onSlotClick={handleSlotClick} />
+          <FestasSlotsGrid data={slotDate} onSlotClick={handleSlotClick} onFestaAction={handleFestaAction} />
         </div>
       )}
 

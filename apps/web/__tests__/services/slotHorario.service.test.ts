@@ -210,5 +210,16 @@ describe("SlotHorario Service", () => {
       expect(dia.coresUsadas).toContain("#00FF00");
       expect(dia.coresUsadas).not.toContain("#0000FF"); // cancelada
     });
+
+    it("não deve atribuir a mesma festa a dois slots sobrepostos", async () => {
+      // A festa 11:00 (135 min → 11:00-13:15) sobrepõe-se ao slot 10:00 (10:00-12:15)
+      // e ao slot 11:00 (11:00-13:15). Deve ir apenas para o slot 11:00 (match exacto).
+      const dia = await slotHorarioService.getSlotsDia(DIA_TESTE);
+      const slotsComEstaFesta = dia.slots.filter(
+        (s) => s.festa?.id === reservaIds[0],
+      );
+      expect(slotsComEstaFesta.length).toBe(1);
+      expect(slotsComEstaFesta[0]!.horaInicio).toBe("11:00");
+    });
   });
 });

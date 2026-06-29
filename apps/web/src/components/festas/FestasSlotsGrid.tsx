@@ -1,17 +1,32 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Clock, Plus, Users, MapPin } from "lucide-react";
+import { Clock, Plus, Users, MapPin, Eye, Pencil, CheckCircle2, Play, SquareCheck, UserCheck, History, XCircle, Trash2 } from "lucide-react";
 import { useSlotsDia } from "@/hooks/use-slots-horario";
 import type { SlotDia, FestaSemSlot } from "@/lib/api/slotsHorario";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import type { FestaFormInitialValues } from "./FestaForm";
+
+type FestaAction =
+  | "view"
+  | "edit"
+  | "confirm"
+  | "iniciar"
+  | "finalizar"
+  | "checkin"
+  | "historico"
+  | "cancel"
+  | "delete";
 
 interface FestasSlotsGridProps {
   /** Data no formato YYYY-MM-DD */
   data: string;
   /** Callback quando se clica num slot vazio (abre FestaForm com valores pré-preenchidos) */
   onSlotClick: (initialValues: FestaFormInitialValues) => void;
+  /** Callback para acções rápidas nas festas (ver, editar, confirmar, etc.) */
+  onFestaAction?: (action: FestaAction, festaId: string) => void;
+  /** Modo cacifos (só ver detalhes) */
+  isCacifos?: boolean;
 }
 
 /** Adiciona minutos a uma string "HH:MM" e retorna "HH:MM" */
@@ -36,15 +51,79 @@ function calcHoraLanche(horaInicio: string): string {
   return addMinutosToTime(horaInicio, 60);
 }
 
+// ── Linha de acções rápidas ─────────────────────────────────────
+const FestaActionsRow = React.memo(function FestaActionsRow({
+  estado,
+  festaId,
+  onAction,
+  isCacifos,
+}: {
+  estado: string;
+  festaId: string;
+  onAction: (action: FestaAction, festaId: string) => void;
+  isCacifos?: boolean;
+}) {
+  const btn = (
+    icon: React.ReactNode,
+    title: string,
+    action: FestaAction,
+    hoverColor: string,
+  ) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onAction(action, festaId);
+      }}
+      title={title}
+      className={`p-1 rounded-md text-text-muted ${hoverColor} transition-colors`}
+    >
+      {icon}
+    </button>
+  );
+
+  if (isCacifos) {
+    return (
+      <div className="flex items-center gap-0.5 pt-1.5 mt-1 border-t border-gray-100">
+        {btn(<Eye size={13} />, "Ver detalhes", "view", "hover:bg-gray-100 hover:text-primary-500")}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-0.5 pt-1.5 mt-1 border-t border-gray-100 flex-wrap">
+      {estado === "RESERVA" &&
+        btn(<CheckCircle2 size={13} />, "Confirmar festa", "confirm", "hover:bg-green-50 hover:text-accent-green-400")}
+      {estado === "CONFIRMADO" &&
+        btn(<Play size={13} />, "Iniciar festa", "iniciar", "hover:bg-blue-50 hover:text-brand-500")}
+      {estado === "EM_CURSO" &&
+        btn(<SquareCheck size={13} />, "Finalizar festa", "finalizar", "hover:bg-green-50 hover:text-accent-green-400")}
+      {(estado === "CONFIRMADO" || estado === "EM_CURSO") &&
+        btn(<UserCheck size={13} />, "Check-in participantes", "checkin", "hover:bg-green-50 hover:text-accent-green-400")}
+      {estado === "CONCLUIDA" &&
+        btn(<History size={13} />, "Ver histórico", "historico", "hover:bg-gray-100 hover:text-primary-500")}
+      {(estado === "RESERVA" || estado === "CONFIRMADO") &&
+        btn(<XCircle size={13} />, "Cancelar festa", "cancel", "hover:bg-orange-50 hover:text-accent-orange")}
+      {btn(<Eye size={13} />, "Ver detalhes", "view", "hover:bg-gray-100 hover:text-primary-500")}
+      {estado !== "CONCLUIDA" && estado !== "CANCELADA" &&
+        btn(<Pencil size={13} />, "Editar", "edit", "hover:bg-gray-100 hover:text-primary-500")}
+      {btn(<Trash2 size={13} />, "Eliminar", "delete", "hover:bg-red-50 hover:text-accent-red")}
+    </div>
+  );
+});
+
 // ── Cartão de slot individual ──────────────────────────────────
 const SlotCard = React.memo(function SlotCard({
   slot,
   coresUsadas,
   onSlotClick,
+  onAction,
+  isCacifos,
 }: {
   slot: SlotDia;
   coresUsadas: string[];
   onSlotClick: (initialValues: FestaFormInitialValues) => void;
+  onAction?: (action: FestaAction, festaId: string) => void;
+  isCacifos?: boolean;
 }) {
   const handleClick = React.useCallback(() => {
     if (slot.ocupado) return;
@@ -62,7 +141,7 @@ const SlotCard = React.memo(function SlotCard({
     const f = slot.festa;
     return (
       <div
-        className="relative flex-shrink-0 w-56 rounded-xl border-2 overflow-hidden bg-white shadow-theme-xs transition-all"
+        className="relative w-full rounded-xl border-2 overflow-hidden bg-white shadow-theme-xs transition-all"
         style={{ borderColor: f.cor ?? "#E5E7EB" }}
       >
         {/* Faixa de cor no topo */}
@@ -97,6 +176,11 @@ const SlotCard = React.memo(function SlotCard({
             )}
           </div>
         </div>
+        {onAction && (
+          <div className="px-3 pb-2">
+            <FestaActionsRow estado={f.estado} festaId={f.id} onAction={onAction} isCacifos={isCacifos} />
+          </div>
+        )}
       </div>
     );
   }
@@ -105,7 +189,7 @@ const SlotCard = React.memo(function SlotCard({
   return (
     <button
       onClick={handleClick}
-      className="flex-shrink-0 w-56 rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50/30 transition-all duration-200 group p-3 text-left"
+      className="w-full h-full min-h-[140px] rounded-xl border-2 border-dashed border-gray-200 bg-white hover:border-brand-400 hover:bg-brand-50/30 transition-all duration-200 group p-3 text-left"
     >
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs font-semibold text-text-muted flex items-center gap-1">
@@ -126,11 +210,19 @@ const SlotCard = React.memo(function SlotCard({
 });
 
 // ── Cartão de festa sem slot (horário custom) ──────────────────
-const FestaSemSlotCard = React.memo(function FestaSemSlotCard({ festa }: { festa: FestaSemSlot }) {
+const FestaSemSlotCard = React.memo(function FestaSemSlotCard({
+  festa,
+  onAction,
+  isCacifos,
+}: {
+  festa: FestaSemSlot;
+  onAction?: (action: FestaAction, festaId: string) => void;
+  isCacifos?: boolean;
+}) {
   const horaFim = addMinutosToTime(festa.horario, festa.duracaoMinutos);
   return (
     <div
-      className="relative flex-shrink-0 w-56 rounded-xl border-2 overflow-hidden bg-white shadow-theme-xs"
+      className="relative w-full rounded-xl border-2 overflow-hidden bg-white shadow-theme-xs"
       style={{ borderColor: festa.cor ?? "#E5E7EB" }}
     >
       <div className="h-2 w-full" style={{ backgroundColor: festa.cor ?? "#E5E7EB" }} />
@@ -158,12 +250,17 @@ const FestaSemSlotCard = React.memo(function FestaSemSlotCard({ festa }: { festa
           )}
         </div>
       </div>
+      {onAction && (
+        <div className="px-3 pb-2">
+          <FestaActionsRow estado={festa.estado} festaId={festa.id} onAction={onAction} isCacifos={isCacifos} />
+        </div>
+      )}
     </div>
   );
 });
 
 // ── Componente principal ───────────────────────────────────────
-export default function FestasSlotsGrid({ data, onSlotClick }: FestasSlotsGridProps) {
+export default function FestasSlotsGrid({ data, onSlotClick, onFestaAction, isCacifos }: FestasSlotsGridProps) {
   const { data: slotsData, isLoading } = useSlotsDia(data);
 
   const coresUsadas = useMemo(() => slotsData?.coresUsadas ?? [], [slotsData]);
@@ -180,9 +277,9 @@ export default function FestasSlotsGrid({ data, onSlotClick }: FestasSlotsGridPr
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-4 py-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="flex-shrink-0 w-56 h-28 rounded-xl bg-gray-100 animate-pulse" />
+          <div key={i} className="w-full h-28 rounded-xl bg-gray-100 animate-pulse" />
         ))}
       </div>
     );
@@ -207,7 +304,7 @@ export default function FestasSlotsGrid({ data, onSlotClick }: FestasSlotsGridPr
           <strong className="text-text-primary">{ocupados}</strong> ocupado{ocupados !== 1 ? "s" : ""}
         </span>
         <span className="text-text-muted">
-          <strong className="text-text-primary">{slots.length - ocupados}</strong> disponível{slots.length - ocupados !== 1 ? "eis" : "l"}
+          <strong className="text-text-primary">{slots.length - ocupados}</strong> disponível{slots.length - ocupados !== 1 ? "eis" : ""}
         </span>
         {festasSemSlot.length > 0 && (
           <span className="text-text-muted">
@@ -216,20 +313,22 @@ export default function FestasSlotsGrid({ data, onSlotClick }: FestasSlotsGridPr
         )}
       </div>
 
-      {/* Grid horizontal de slots */}
-      <div className="flex items-stretch gap-3 overflow-x-auto pb-3 filter-scrollbar">
+      {/* Grid responsivo de slots */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {slots.map((slot) => (
           <SlotCard
             key={slot.slotId}
             slot={slot}
             coresUsadas={coresUsadas}
             onSlotClick={handleSlotClick}
+            onAction={onFestaAction}
+            isCacifos={isCacifos}
           />
         ))}
 
         {/* Festas com horário custom (não correspondem a slots) */}
         {festasSemSlot.map((festa) => (
-          <FestaSemSlotCard key={festa.id} festa={festa} />
+          <FestaSemSlotCard key={festa.id} festa={festa} onAction={onFestaAction} isCacifos={isCacifos} />
         ))}
       </div>
 

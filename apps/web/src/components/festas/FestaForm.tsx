@@ -126,12 +126,13 @@ function formatEuro(value: number): string {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
 }
 
-/** Formats a Date object as YYYY-MM-DD for backend */
-function toISODate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+/** Formats a Date (or ISO string from API) as YYYY-MM-DD using local components */
+function toISODate(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /** Adiciona minutos a uma string "HH:MM" e retorna "HH:MM" */
@@ -216,7 +217,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   const [showClienteSearch, setShowClienteSearch] = useState(false);
 
   const defaultValues = useMemo<ReservaFormData>(() => ({
-    tema: reserva?.tema ?? "", data: reserva?.data ?? initialValues?.data ?? "", horario: reserva?.horario ?? initialValues?.horario ?? "",
+    tema: reserva?.tema ?? "",
+    data: reserva?.data ? toISODate(reserva.data) : (initialValues?.data ?? ""),
+    horario: reserva?.horario ?? initialValues?.horario ?? "",
     duracaoMinutos: reserva?.duracaoMinutos ?? initialValues?.duracaoMinutos ?? 120, localId: reserva?.localId ?? "",
     horaLanche: reserva?.horaLanche ?? initialValues?.horaLanche ?? "",
     encarregadoNome: reserva?.cliente?.nome ?? "",

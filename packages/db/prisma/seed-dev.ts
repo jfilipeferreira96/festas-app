@@ -750,12 +750,12 @@ async function seedReservas() {
     where: { id: "reserva-001" },
     update: {
       estado: "EM_CURSO", inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso, fimReal: null,
-      horario: toTimeStr(tEmCurso),
+      horario: "14:00",
     },
     create: {
       id: "reserva-001",
       data: new Date(todayStr),
-      horario: toTimeStr(tEmCurso), duracaoMinutos: 150, numCriancas: 18, previsaoCriancas: 20,
+      horario: "14:00", duracaoMinutos: 150, numCriancas: 18, previsaoCriancas: 20,
       estado: "EM_CURSO",
       inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso,
       tema: "Princesa", cor: "#FF69B4",
@@ -916,10 +916,10 @@ async function seedReservas() {
   // Cacifos 1-15 já usados pela reserva-001. Restantes: 16-40 (25 cacifos)
   // Distribuir sem sobreposição: a=16-23 (8 pres), b=24-27 (4 pres), c=28-32 (5 pres), d=33-36 (4 pres)
   const emCursoExtras = [
-    { id: "reserva-em-curso-a", minAtras: 20, dur: 120, n: 10, p: 12, tema: "Galáxia", cor: "#1E3A8A", local: "local-002", cli: "cliente-003", aniv: "aniv-004", mons: ["monitor-002", "monitor-005"], cacifoStart: 16, etapasConc: 1, obs: "Decoração espacial com estrelas e planetas.", bolo: "Bolo galáxia com planetas", menuNome: "Menu Galáxia", menuPreco: 9.00, menuNotas: "Pizza, pipocas, sumo, bolo" },
-    { id: "reserva-em-curso-b", minAtras: 45, dur: 90, n: 6, p: 8, tema: "Frozen", cor: "#0EA5E9", local: "local-003", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-004"], cacifoStart: 24, etapasConc: 3, obs: "Elsa e Anna. Tudo azul e branco.", bolo: "Bolo Frozen com Elsa", menuNome: "Menu Frozen", menuPreco: 7.50, menuNotas: "Croissants, sumo, bolo" },
-    { id: "reserva-em-curso-c", minAtras: 60, dur: 150, n: 8, p: 10, tema: "Marvel", cor: "#DC2626", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-006"], cacifoStart: 28, etapasConc: 2, obs: "Super-heróis Marvel. Crianças muito animadas!", bolo: "Bolo Vingadores", menuNome: "Menu Marvel", menuPreco: 10.00, menuNotas: "Pizza, nuggets, sumo, bolo" },
-    { id: "reserva-em-curso-d", minAtras: 15, dur: 60, n: 6, p: 8, tema: "Patrulha Pata", cor: "#F59E0B", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-003"], cacifoStart: 33, etapasConc: 1, obs: "Crianças pequenas, 3-4 anos.", bolo: "Bolo Patrulha Pata", menuNome: "Menu Pequeno", menuPreco: 6.00, menuNotas: "Croissants, sumo" },
+    { id: "reserva-em-curso-a", horarioFixo: "18:30", minAtras: 20, dur: 120, n: 10, p: 12, tema: "Galáxia", cor: "#1E3A8A", local: "local-002", cli: "cliente-003", aniv: "aniv-004", mons: ["monitor-002", "monitor-005"], cacifoStart: 16, etapasConc: 1, obs: "Decoração espacial com estrelas e planetas.", bolo: "Bolo galáxia com planetas", menuNome: "Menu Galáxia", menuPreco: 9.00, menuNotas: "Pizza, pipocas, sumo, bolo" },
+    { id: "reserva-em-curso-b", horarioFixo: "12:00", minAtras: 45, dur: 90, n: 6, p: 8, tema: "Frozen", cor: "#0EA5E9", local: "local-003", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-004"], cacifoStart: 24, etapasConc: 3, obs: "Elsa e Anna. Tudo azul e branco.", bolo: "Bolo Frozen com Elsa", menuNome: "Menu Frozen", menuPreco: 7.50, menuNotas: "Croissants, sumo, bolo" },
+    { id: "reserva-em-curso-c", horarioFixo: "15:30", minAtras: 60, dur: 150, n: 8, p: 10, tema: "Marvel", cor: "#DC2626", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-006"], cacifoStart: 28, etapasConc: 2, obs: "Super-heróis Marvel. Crianças muito animadas!", bolo: "Bolo Vingadores", menuNome: "Menu Marvel", menuPreco: 10.00, menuNotas: "Pizza, nuggets, sumo, bolo" },
+    { id: "reserva-em-curso-d", horarioFixo: "11:00", minAtras: 15, dur: 60, n: 6, p: 8, tema: "Patrulha Pata", cor: "#F59E0B", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-003"], cacifoStart: 33, etapasConc: 1, obs: "Crianças pequenas, 3-4 anos.", bolo: "Bolo Patrulha Pata", menuNome: "Menu Pequeno", menuPreco: 6.00, menuNotas: "Croissants, sumo" },
   ];
 
   for (const e of emCursoExtras) {
@@ -929,12 +929,12 @@ async function seedReservas() {
       where: { id: e.id },
       update: {
         estado: "EM_CURSO", inicioEm: start, fimPrevisto: fim, fimReal: null,
-        horario: toTimeStr(start),
+        horario: e.horarioFixo,
       },
       create: {
         id: e.id,
         data: new Date(todayStr),
-        horario: toTimeStr(start),
+        horario: e.horarioFixo,
         duracaoMinutos: e.dur, numCriancas: e.n, previsaoCriancas: e.p,
         estado: "EM_CURSO",
         inicioEm: start, fimPrevisto: fim,
