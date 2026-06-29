@@ -3,26 +3,32 @@
 import { useState, useCallback } from "react";
 import { PageHeader } from "@/components/ui";
 import { Search, FileText } from "lucide-react";
+import DatePicker from "@/components/form/date-picker";
+import { toLocalISODate } from "@/utils/date";
 import { useRelatorioFinanceiro } from "@/hooks/use-relatorios";
 import RelatorioTabela from "./RelatorioTabela";
 
-function toDateInput(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 export default function RelatoriosContent() {
-  const hoje = new Date();
+  const hojeISO = toLocalISODate(new Date());
 
-  const [dataInicio, setDataInicio] = useState<string>(toDateInput(hoje));
-  const [dataFim, setDataFim] = useState<string>(toDateInput(hoje));
+  const [dataInicio, setDataInicio] = useState<string>(hojeISO);
+  const [dataFim, setDataFim] = useState<string>(hojeISO);
   // Inicializa com hoje para carregar automaticamente ao abrir a página
-  const [pesquisaInicio, setPesquisaInicio] = useState<string | null>(toDateInput(hoje));
-  const [pesquisaFim, setPesquisaFim] = useState<string | null>(toDateInput(hoje));
+  const [pesquisaInicio, setPesquisaInicio] = useState<string | null>(hojeISO);
+  const [pesquisaFim, setPesquisaFim] = useState<string | null>(hojeISO);
 
   const { data: relatorio, isLoading, isError, error } = useRelatorioFinanceiro(pesquisaInicio, pesquisaFim);
+
+  // Estável (useCallback) — evita re-inicialização do flatpickr a cada render.
+  const handleInicioChange = useCallback(([date]: Date[]) => {
+    if (!date) return;
+    setDataInicio(toLocalISODate(date));
+  }, []);
+
+  const handleFimChange = useCallback(([date]: Date[]) => {
+    if (!date) return;
+    setDataFim(toLocalISODate(date));
+  }, []);
 
   const handlePesquisar = useCallback(() => {
     setPesquisaInicio(dataInicio);
@@ -40,27 +46,19 @@ export default function RelatoriosContent() {
       <div className="mt-4 mb-6 bg-surface rounded-[14px] p-5 shadow-card border border-border">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4">
           <div className="flex-1">
-            <label htmlFor="data-inicio" className="block text-xs font-medium text-text-secondary mb-1.5">
-              Data Início
-            </label>
-            <input
-              id="data-inicio"
-              type="date"
-              value={dataInicio}
-              onChange={(e) => setDataInicio(e.target.value)}
-              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/20"
+            <DatePicker
+              id="relatorio-data-inicio"
+              label="Data Início"
+              defaultDate={dataInicio}
+              onChange={handleInicioChange}
             />
           </div>
           <div className="flex-1">
-            <label htmlFor="data-fim" className="block text-xs font-medium text-text-secondary mb-1.5">
-              Data Fim
-            </label>
-            <input
-              id="data-fim"
-              type="date"
-              value={dataFim}
-              onChange={(e) => setDataFim(e.target.value)}
-              className="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 shadow-theme-xs focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/20"
+            <DatePicker
+              id="relatorio-data-fim"
+              label="Data Fim"
+              defaultDate={dataFim}
+              onChange={handleFimChange}
             />
           </div>
           <button

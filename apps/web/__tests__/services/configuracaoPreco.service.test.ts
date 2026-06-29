@@ -39,8 +39,12 @@ describe("ConfiguracaoPreco Service", () => {
       expect(Number(config.precoCriancaFimSemana)).toBe(20);
       expect(Number(config.precoEntradaHoraSemana)).toBe(10);
       expect(Number(config.precoEntradaHoraFimSemana)).toBe(12);
+      expect(Number(config.precoEntrada1h)).toBe(6);
+      expect(Number(config.precoEntrada2h)).toBe(10);
+      expect(Number(config.precoEntradaHoraAdicional)).toBe(5);
       expect(Number(config.precoExcessoFixo)).toBe(5);
       expect(Number(config.caucaoDefault)).toBe(40);
+      expect(Number(config.precoLancheEntrada)).toBe(3);
     });
 
     it("should return existing config on second call (singleton)", async () => {
@@ -213,47 +217,59 @@ describe("ConfiguracaoPreco Service", () => {
     });
   });
 
-  // ── calcularPrecoEntrada ──────────────────────────────────────
+  // ── calcularPrecoEntrada (tarifário por escalão) ──────────────
   describe("calcularPrecoEntrada()", () => {
     beforeAll(async () => {
       await configuracaoPrecoService.updateConfig({
-        precoEntradaHoraSemana: 10,
-        precoEntradaHoraFimSemana: 12,
+        precoEntrada1h: 6,
+        precoEntrada2h: 10,
+        precoEntradaHoraAdicional: 5,
       });
     });
 
-    it("should calculate weekday price for 60 minutes on a Wednesday", async () => {
+    it("should return the 1h tier price for 60 minutes (any day)", async () => {
       const quarta = new Date("2025-01-15T00:00:00");
       const preco = await configuracaoPrecoService.calcularPrecoEntrada(60, quarta);
-      // 10€/h * 1h = 10€
-      expect(preco).toBe(10);
-    });
-
-    it("should calculate weekend price for 60 minutes on a Saturday", async () => {
-      const sabado = new Date("2025-01-18T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoEntrada(60, sabado);
-      // 12€/h * 1h = 12€
-      expect(preco).toBe(12);
-    });
-
-    it("should calculate proportional price for 90 minutes", async () => {
-      const quarta = new Date("2025-01-15T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoEntrada(90, quarta);
-      // 10€/h * 1.5h = 15€
-      expect(preco).toBe(15);
-    });
-
-    it("should calculate proportional price for 30 minutes on weekend", async () => {
-      const sabado = new Date("2025-01-18T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoEntrada(30, sabado);
-      // 12€/h * 0.5h = 6€
+      // 1ª hora = 6€ (aplica-se a todos os dias)
       expect(preco).toBe(6);
     });
 
-    it("should return 0 for 0 minutes", async () => {
+    it("should return the 1h tier price for weekend too (60 minutes)", async () => {
+      const sabado = new Date("2025-01-18T00:00:00");
+      const preco = await configuracaoPrecoService.calcularPrecoEntrada(60, sabado);
+      // 1ª hora = 6€ — mesma tarifa em fim-de-semana
+      expect(preco).toBe(6);
+    });
+
+    it("should return the 2h tier price for 90 minutes", async () => {
       const quarta = new Date("2025-01-15T00:00:00");
-      const preco = await configuracaoPrecoService.calcularPrecoEntrada(0, quarta);
-      expect(preco).toBe(0);
+      const preco = await configuracaoPrecoService.calcularPrecoEntrada(90, quarta);
+      // >60 e ≤120 min → escalão 2h = 10€
+      expect(preco).toBe(10);
+    });
+
+    it("should return the 2h tier price for 120 minutes", async () => {
+      const preco = await configuracaoPrecoService.calcularPrecoEntrada(120, new Date());
+      expect(preco).toBe(10);
+    });
+
+    it("should add hourly surcharge beyond 2h (180 min = 10 + 5)", async () => {
+      const preco = await configuracaoPrecoService.calcularPrecoEntrada(180, new Date());
+      // 10€ (2h) + 1 × 5€ (1h adicional) = 15€
+      expect(preco).toBe(15);
+    });
+
+    it("should round up partial extra hours (200 min = 10 + 2×5)", async () => {
+      const preco = await configuracaoPrecoService.calcularPrecoEntrada(200, new Date());
+      // ceil((200-120)/60) = 2 horas adicionais → 10 + 2×5 = 20€
+      expect(preco).toBe(20);
+    });
+
+    it("should return the 1h tier for 30 minutes", async () => {
+      const sabado = new Date("2025-01-18T00:00:00");
+      const preco = await configuracaoPrecoService.calcularPrecoEntrada(30, sabado);
+      // ≤60 min → escalão 1h = 6€
+      expect(preco).toBe(6);
     });
   });
 

@@ -45,6 +45,14 @@ export interface ProximaFesta {
   local: { id: string; nome: string } | null;
 }
 
+export interface AniversarioProximo {
+  aniversariante: { id: string; nome: string; dataNascimento: string | null };
+  cliente: { id: string; nome: string; telefone: string; email: string | null };
+  proximoAniversario: string;
+  idadeQueFaz: number | null;
+  temReservaNoMes: boolean;
+}
+
 // API calls
 export const dashboardApi = {
   getKPIs: () => api<DashboardKPIs>("/api/dashboard/kpis"),
@@ -54,4 +62,7 @@ export const dashboardApi = {
   getProximasFestas: () => api<ProximaFesta[]>("/api/dashboard/proximas-festas"),
 
   getAniversarioEmBreve: () => api<ProximaFesta | null>("/api/dashboard/aniversario-em-breve"),
+
+  getAniversariosProximos: (dias = 30) =>
+    api<AniversarioProximo[]>(`/api/dashboard/aniversarios-proximos?dias=${dias}`),
 };

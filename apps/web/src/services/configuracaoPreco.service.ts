@@ -38,10 +38,14 @@ export const configuracaoPrecoService = {
     precoCriancaFimSemana?: number;
     precoEntradaHoraSemana?: number;
     precoEntradaHoraFimSemana?: number;
+    precoEntrada1h?: number;
+    precoEntrada2h?: number;
+    precoEntradaHoraAdicional?: number;
     minimosCriancasPorAniversariante?: MinimoConfig[];
     precoMeias?: number;
     precoExcessoFixo?: number;
     caucaoDefault?: number;
+    precoLancheEntrada?: number;
     duracaoDefaultFestaMin?: number;
     duracaoExcessoBlocoMin?: number;
   }) {
@@ -54,10 +58,14 @@ export const configuracaoPrecoService = {
           precoCriancaFimSemana: data.precoCriancaFimSemana ?? 20,
           precoEntradaHoraSemana: data.precoEntradaHoraSemana ?? 10,
           precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana ?? 12,
+          precoEntrada1h: data.precoEntrada1h ?? 6,
+          precoEntrada2h: data.precoEntrada2h ?? 10,
+          precoEntradaHoraAdicional: data.precoEntradaHoraAdicional ?? 5,
           minimosCriancasPorAniversariante: data.minimosCriancasPorAniversariante as unknown as Prisma.InputJsonValue,
           precoMeias: data.precoMeias ?? 2,
           precoExcessoFixo: data.precoExcessoFixo ?? 5,
           caucaoDefault: data.caucaoDefault ?? 40,
+          precoLancheEntrada: data.precoLancheEntrada ?? 3,
           duracaoDefaultFestaMin: data.duracaoDefaultFestaMin ?? 135,
           duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin ?? 30,
         },
@@ -71,12 +79,16 @@ export const configuracaoPrecoService = {
         ...(data.precoCriancaFimSemana !== undefined && { precoCriancaFimSemana: data.precoCriancaFimSemana }),
         ...(data.precoEntradaHoraSemana !== undefined && { precoEntradaHoraSemana: data.precoEntradaHoraSemana }),
         ...(data.precoEntradaHoraFimSemana !== undefined && { precoEntradaHoraFimSemana: data.precoEntradaHoraFimSemana }),
+        ...(data.precoEntrada1h !== undefined && { precoEntrada1h: data.precoEntrada1h }),
+        ...(data.precoEntrada2h !== undefined && { precoEntrada2h: data.precoEntrada2h }),
+        ...(data.precoEntradaHoraAdicional !== undefined && { precoEntradaHoraAdicional: data.precoEntradaHoraAdicional }),
         ...(data.minimosCriancasPorAniversariante !== undefined && {
           minimosCriancasPorAniversariante: data.minimosCriancasPorAniversariante as unknown as Prisma.InputJsonValue,
         }),
         ...(data.precoMeias !== undefined && { precoMeias: data.precoMeias }),
         ...(data.precoExcessoFixo !== undefined && { precoExcessoFixo: data.precoExcessoFixo }),
         ...(data.caucaoDefault !== undefined && { caucaoDefault: data.caucaoDefault }),
+        ...(data.precoLancheEntrada !== undefined && { precoLancheEntrada: data.precoLancheEntrada }),
         ...(data.duracaoDefaultFestaMin !== undefined && { duracaoDefaultFestaMin: data.duracaoDefaultFestaMin }),
         ...(data.duracaoExcessoBlocoMin !== undefined && { duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin }),
       },
@@ -161,12 +173,18 @@ export const configuracaoPrecoService = {
    * Calcula o preço de uma entrada livre para uma determinada duração e data.
    * Feriados e fins-de-semana usam tarifa de fim-de-semana.
    */
-  async calcularPrecoEntrada(duracaoMinutos: number, data: Date): Promise<number> {
+  async calcularPrecoEntrada(duracaoMinutos: number, _data?: Date): Promise<number> {
     const config = await this.getConfig();
-    const feriado = await excecaoCalendarioService.isFeriado(data);
-    const aplicarFimSemana = feriado || isFimSemana(data);
-    const precoHora = Number(aplicarFimSemana ? config.precoEntradaHoraFimSemana : config.precoEntradaHoraSemana);
-    return +((precoHora / 60) * duracaoMinutos).toFixed(2);
+    const preco1h = Number(config.precoEntrada1h ?? 6);
+    const preco2h = Number(config.precoEntrada2h ?? 10);
+    const precoHoraAdicional = Number(config.precoEntradaHoraAdicional ?? 5);
+
+    // Tarifário por escalão (aplica-se a todos os dias):
+    //   <= 60min → 1h ; <= 120min → 2h ; > 120min → 2h + horas adicionais (blocos de 60min)
+    if (duracaoMinutos <= 60) return +preco1h.toFixed(2);
+    if (duracaoMinutos <= 120) return +preco2h.toFixed(2);
+    const horasAdicionais = Math.ceil((duracaoMinutos - 120) / 60);
+    return +(preco2h + horasAdicionais * precoHoraAdicional).toFixed(2);
   },
 
   /**

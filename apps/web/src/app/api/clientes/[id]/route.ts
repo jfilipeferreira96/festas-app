@@ -49,7 +49,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
-    const { nome, email, telefone, contribuinte, codigoPostal, observacao } = await request.json();
+    const { nome, email, telefone, contribuinte, codigoPostal, observacao, aniversariantes } =
+      await request.json();
     const cliente = await clienteService.update(id, {
       nome,
       email,
@@ -57,6 +58,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       contribuinte,
       codigoPostal,
       observacao,
+      aniversariantes,
     });
     return NextResponse.json(cliente);
   } catch (error) {

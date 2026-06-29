@@ -8,7 +8,7 @@ import Button from "@/components/ui/button/Button";
 import { Modal } from "@/components/ui/modal";
 import InputField from "@/components/form/input/InputField";
 import { Select } from "@/components/ui/select";
-import { Plus, Trash2, Shield, UserCheck, UserX } from "lucide-react";
+import { Plus, Trash2, Shield, UserCheck, UserX, KeyRound } from "lucide-react";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { format } from "date-fns";
@@ -80,6 +80,8 @@ export default function UtilizadoresContent({
     isUpdatingFuncao,
     updateActivo,
     isUpdatingActivo,
+    updatePassword,
+    isUpdatingPassword,
     deleteUtilizador,
     isDeleting,
   } = useUtilizadores();
@@ -95,6 +97,8 @@ export default function UtilizadoresContent({
     userName: "",
   });
   const [editUser, setEditUser] = useState<Utilizador | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   // Pending photo file for create flow
   const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
@@ -181,6 +185,17 @@ export default function UtilizadoresContent({
     [updateActivo]
   );
 
+  const handleChangePassword = useCallback(
+    async (userId: string, password: string) => {
+      setPasswordSuccess(false);
+      await updatePassword({ id: userId, password });
+      setNewPassword("");
+      setPasswordSuccess(true);
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    },
+    [updatePassword]
+  );
+
   const handleDeleteClick = useCallback(
     (user: Utilizador) => {
       if (!canEditUser(user)) return;
@@ -197,6 +212,8 @@ export default function UtilizadoresContent({
   const handleOpenEdit = useCallback(
     (user: Utilizador) => {
       setEditUser(user);
+      setNewPassword("");
+      setPasswordSuccess(false);
       resetEditForm({ funcao: user.funcao });
     },
     [resetEditForm]
@@ -420,6 +437,45 @@ export default function UtilizadoresContent({
                   )}
                 </button>
               </div>
+
+              {/* Password Change Section (admin-only, not for self) */}
+              {canEditUser(editUser) && (
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <KeyRound className="w-4 h-4 text-text-secondary" />
+                    <label className="block text-sm font-medium text-text-primary">
+                      Nova Palavra-passe
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <InputField
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        setPasswordSuccess(false);
+                      }}
+                      placeholder="Mínimo 8 caracteres"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!newPassword || newPassword.length < 8 || isUpdatingPassword}
+                      onClick={() => handleChangePassword(editUser.id, newPassword)}
+                      className="shrink-0"
+                    >
+                      {isUpdatingPassword ? "..." : "Alterar"}
+                    </Button>
+                  </div>
+                  {newPassword && newPassword.length < 8 && (
+                    <p className="mt-1 text-xs text-accent-red">A password deve ter pelo menos 8 caracteres</p>
+                  )}
+                  {passwordSuccess && (
+                    <p className="mt-1 text-xs text-accent-green-700">Password atualizada com sucesso</p>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
                 <Button variant="outline" onClick={() => setEditUser(null)}>
                   Fechar

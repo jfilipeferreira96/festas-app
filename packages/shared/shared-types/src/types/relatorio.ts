@@ -10,6 +10,8 @@ export interface LinhaRelatorio {
   valorMultibanco: number;
   valorTransferencia: number;
   valorMbway: number;
+  valorCartao: number;
+  valorOutro: number;
 }
 
 export interface SecaoRelatorio {

@@ -1,5 +1,12 @@
 import prisma from "@festas/db";
 
+/** Input para criar/sincronizar aniversariantes (filhos) de um cliente. */
+export interface AniversarianteInput {
+  nome: string;
+  dataNascimento?: string;
+  observacoes?: string;
+}
+
 interface CreateClienteData {
   nome: string;
   email: string;
@@ -8,6 +15,7 @@ interface CreateClienteData {
   codigoPostal?: string;
   observacao?: string;
   optOut?: boolean;
+  aniversariantes?: AniversarianteInput[];
 }
 
 interface UpdateClienteData {
@@ -18,6 +26,21 @@ interface UpdateClienteData {
   codigoPostal?: string;
   observacao?: string;
   optOut?: boolean;
+  aniversariantes?: AniversarianteInput[];
+}
+
+/** Normaliza e filtra a lista de aniversariantes (remove entradas sem nome). */
+function normalizarAniversariantes(
+  input?: AniversarianteInput[]
+): { nome: string; dataNascimento?: Date; observacoes?: string }[] {
+  if (!input || input.length === 0) return [];
+  return input
+    .filter((a) => a && a.nome && a.nome.trim().length > 0)
+    .map((a) => ({
+      nome: a.nome.trim(),
+      dataNascimento: a.dataNascimento ? new Date(a.dataNascimento) : undefined,
+      observacoes: a.observacoes,
+    }));
 }
 
 export const clienteService = {
@@ -57,9 +80,11 @@ export const clienteService = {
       where: { id },
       include: {
         aniversariantes: { orderBy: { nome: "asc" } },
+        // Histórico de festas: todas as reservas (exceto canceladas) ordenadas
+        // pela data mais recente primeiro, com os campos relevantes para o modal.
         reservas: {
-          take: 10,
-          orderBy: { createdAt: "desc" },
+          where: { estado: { not: "CANCELADA" } },
+          orderBy: { data: "desc" },
           include: { local: true },
         },
       },
@@ -85,6 +110,8 @@ export const clienteService = {
     });
     if (existingTel) throw new Error("TELEFONE_ALREADY_EXISTS");
 
+    const filhos = normalizarAniversariantes(data.aniversariantes);
+
     return prisma.cliente.create({
       data: {
         nome: data.nome,
@@ -94,7 +121,11 @@ export const clienteService = {
         codigoPostal: data.codigoPostal,
         observacao: data.observacao,
         optOut: data.optOut || false,
+        ...(filhos.length > 0
+          ? { aniversariantes: { create: filhos } }
+          : {}),
       },
+      include: { aniversariantes: { orderBy: { nome: "asc" } } },
     });
   },
 
@@ -115,9 +146,24 @@ export const clienteService = {
       if (existing) throw new Error("TELEFONE_ALREADY_EXISTS");
     }
 
+    // Separar dados do cliente dos filhos (não podem ir em prisma.update directo)
+    const { aniversariantes, ...clienteData } = data;
+
+    // Se vieram filhos, sincroniza (substitui todos)
+    if (aniversariantes !== undefined) {
+      const filhos = normalizarAniversariantes(aniversariantes);
+      await prisma.aniversariante.deleteMany({ where: { clienteId: id } });
+      if (filhos.length > 0) {
+        await prisma.aniversariante.createMany({
+          data: filhos.map((f) => ({ ...f, clienteId: id })),
+        });
+      }
+    }
+
     return prisma.cliente.update({
       where: { id },
-      data,
+      data: clienteData,
+      include: { aniversariantes: { orderBy: { nome: "asc" } } },
     });
   },
 

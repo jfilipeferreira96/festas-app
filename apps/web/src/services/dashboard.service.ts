@@ -14,11 +14,11 @@ export const dashboardService = {
       cacifosOcupados,
       cacifosReservados,
     ] = await Promise.all([
-      // Festas de hoje (reservas confirmadas ou em curso)
+      // Festas de hoje (todas exceto CANCELADA: CONFIRMADO, EM_CURSO, CONCLUIDA, RESERVA)
       prisma.reserva.count({
         where: {
           data: { gte: hojeStart, lt: hojeEnd },
-          estado: { in: ["CONFIRMADO", "EM_CURSO"] },
+          estado: { not: "CANCELADA" },
         },
       }),
 
@@ -108,6 +108,7 @@ export const dashboardService = {
   /**
    * Receitas do dia agrupadas por método de pagamento.
    * Contabiliza reservas e entradas livres pagas hoje.
+   * Inclui: pagamento dividido, excesso de tempo e meias.
    */
   async getReceitasHoje(): Promise<Record<string, number>> {
     const hoje = new Date();
@@ -121,7 +122,18 @@ export const dashboardService = {
           data: { gte: hojeStart, lt: hojeEnd },
           pago: true,
         },
-        select: { metodoPagamento: true, valorPago: true, metodoPagamento2: true, valorPago2: true },
+        select: {
+          metodoPagamento: true,
+          valorPago: true,
+          metodoPagamento2: true,
+          valorPago2: true,
+          // Excesso de tempo (se já pago)
+          custoExcesso: true,
+          pagoExcesso: true,
+          // Meias
+          meiasQuantidade: true,
+          meiasPrecoUnit: true,
+        },
       }),
       prisma.entradaLivre.findMany({
         where: {
@@ -129,7 +141,16 @@ export const dashboardService = {
           estado: { in: ["ATIVA", "CONCLUIDA"] },
           pago: true,
         },
-        select: { metodoPagamento: true, custoTotal: true, metodoPagamento2: true, valorPago2: true },
+        select: {
+          metodoPagamento: true,
+          custoTotal: true,
+          custoTotalFinal: true,
+          metodoPagamento2: true,
+          valorPago2: true,
+          // Meias
+          meiasQuantidade: true,
+          meiasPrecoUnit: true,
+        },
       }),
     ]);
 
@@ -142,12 +163,27 @@ export const dashboardService = {
     };
 
     for (const r of reservasHoje) {
+      // Pagamento principal + dividido
       somar(r.metodoPagamento, r.valorPago);
       somar(r.metodoPagamento2, r.valorPago2);
+      // Excesso de tempo (só se foi pago)
+      if (r.pagoExcesso) somar(r.metodoPagamento, r.custoExcesso);
+      // Meias (quantidade × preço unitário)
+      const qtdMeias = r.meiasQuantidade ?? 0;
+      if (qtdMeias > 0) {
+        somar(r.metodoPagamento, qtdMeias * Number(r.meiasPrecoUnit ?? 0));
+      }
     }
     for (const e of entradasHoje) {
-      somar(e.metodoPagamento, e.custoTotal);
+      // custoTotalFinal inclui o excesso; fallback para custoTotal
+      const valor = Number(e.custoTotalFinal ?? e.custoTotal ?? 0);
+      somar(e.metodoPagamento, valor);
       somar(e.metodoPagamento2, e.valorPago2);
+      // Meias
+      const qtdMeias = e.meiasQuantidade ?? 0;
+      if (qtdMeias > 0) {
+        somar(e.metodoPagamento, qtdMeias * Number(e.meiasPrecoUnit ?? 0));
+      }
     }
 
     return receitas;
@@ -206,5 +242,106 @@ export const dashboardService = {
     });
 
     return reserva;
+  },
+
+  /**
+   * Lista os aniversariantes (filhos de clientes) cujo próximo aniversário
+   * ocorre nos próximos `dias` dias. Para cada um indica se o cliente já tem
+   * reserva marcada para esse mês (para alertar "ainda sem reserva").
+   * Ignora o ano — compara apenas mês/dia.
+   */
+  async getAniversariosProximos(dias = 30): Promise<
+    {
+      aniversariante: { id: string; nome: string; dataNascimento: Date | null };
+      cliente: { id: string; nome: string; telefone: string; email: string | null };
+      proximoAniversario: Date;
+      idadeQueFaz: number | null;
+      temReservaNoMes: boolean;
+    }[]
+  > {
+    const todos = await prisma.aniversariante.findMany({
+      where: { dataNascimento: { not: null } },
+      include: {
+        cliente: { select: { id: true, nome: true, telefone: true, email: true } },
+      },
+    });
+
+    const agora = new Date();
+    const anoAtual = agora.getFullYear();
+    const limite = new Date(agora);
+    limite.setDate(limite.getDate() + dias);
+
+    const resultados: {
+      aniversariante: { id: string; nome: string; dataNascimento: Date | null };
+      cliente: { id: string; nome: string; telefone: string; email: string | null };
+      proximoAniversario: Date;
+      idadeQueFaz: number | null;
+      temReservaNoMes: boolean;
+    }[] = [];
+
+    for (const a of todos) {
+      if (!a.dataNascimento) continue;
+      const nasc = new Date(a.dataNascimento);
+
+      // Próximo aniversário (mês/dia) — este ano ou no próximo
+      let prox = new Date(anoAtual, nasc.getMonth(), nasc.getDate());
+      // Se já passou hoje, usa o ano seguinte (mas dentro da janela pode incluir 29 fev etc.)
+      const hojeZero = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+      if (prox < hojeZero) {
+        prox = new Date(anoAtual + 1, nasc.getMonth(), nasc.getDate());
+      }
+
+      if (prox > limite) continue;
+
+      // Idade que vai fazer
+      let idade = prox.getFullYear() - nasc.getFullYear();
+      const esteAnivAntesDoNasc =
+        prox.getMonth() < nasc.getMonth() ||
+        (prox.getMonth() === nasc.getMonth() && prox.getDate() < nasc.getDate());
+      if (esteAnivAntesDoNasc) idade -= 1;
+
+      resultados.push({
+        aniversariante: { id: a.id, nome: a.nome, dataNascimento: a.dataNascimento },
+        cliente: a.cliente,
+        proximoAniversario: prox,
+        idadeQueFaz: idade,
+        temReservaNoMes: false, // preenchido em lote abaixo
+      });
+    }
+
+    // Marcar quais clientes já têm reserva no mês do aniversário
+    if (resultados.length > 0) {
+      const reservas = await prisma.reserva.findMany({
+        where: {
+          estado: { notIn: ["CANCELADA"] },
+          clienteId: { in: resultados.map((r) => r.cliente.id) },
+        },
+        select: { clienteId: true, data: true },
+      });
+
+      // Índice cliente -> conjunto de "ano-mes"
+      const reservasPorCliente = new Map<string, Set<string>>();
+      for (const r of reservas) {
+        if (!r.data) continue;
+        const d = new Date(r.data);
+        const key = `${d.getFullYear()}-${d.getMonth()}`;
+        if (!reservasPorCliente.has(r.clienteId)) reservasPorCliente.set(r.clienteId, new Set());
+        reservasPorCliente.get(r.clienteId)!.add(key);
+      }
+
+      for (const r of resultados) {
+        const set = reservasPorCliente.get(r.cliente.id);
+        r.temReservaNoMes = set
+          ? set.has(`${r.proximoAniversario.getFullYear()}-${r.proximoAniversario.getMonth()}`)
+          : false;
+      }
+    }
+
+    // Ordenar pelo aniversário mais próximo
+    resultados.sort(
+      (a, b) => a.proximoAniversario.getTime() - b.proximoAniversario.getTime()
+    );
+
+    return resultados;
   },
 };

@@ -26,6 +26,7 @@ const MP = (s: string) => s as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFEREN
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
+import { getSeedUsers } from "./seed-roles";
 
 config({ path: "../../apps/web/.env" });
 
@@ -35,8 +36,13 @@ const seedAuth = betterAuth({
   database: prismaAdapter(prisma, { provider: "mysql" }),
   secret: process.env.BETTER_AUTH_SECRET!,
   trustedOrigins: [process.env.CORS_ORIGIN || "http://localhost:3000"],
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { 
+    enabled: true,
+    // Desativado envio de emails em ambiente de testes/seeds
+    // sendResetPassword: async () => {},
+  },
   emailVerification: {
+    // Desativado envio de emails em ambiente de testes/seeds
     sendVerificationEmail: async () => {},
     sendOnSignUp: false,
   },
@@ -123,19 +129,11 @@ async function main() {
   console.log("\n✅ Dev seed complete!");
 }
 
-// ─── Essential (Users) ────────────────────────────────────────
-async function seedEssential() {
-  console.log("  Creating auth users...");
+  // ─── Essential (Users) — single source of truth: seed-roles.ts ─
+  async function seedEssential() {
+    console.log("  Creating auth users...");
 
-  const users = [
-    { id: "admin-001", name: "Maria Silva", email: "admin@festas.pt", password: "admin123", funcao: "ADMINISTRADOR" as const },
-    { id: "lanche-001", name: "Lanche Teste", email: "lanche@festas.pt", password: "lanche123", funcao: "LANCHE" as const },
-    { id: "cacifos-001", name: "Cacifos Teste", email: "cacifos@festas.pt", password: "cacifos123", funcao: "CACIFOS" as const },
-    { id: "monitor-001", name: "Monitor Teste", email: "monitor@festas.pt", password: "monitor123", funcao: "MONITOR" as const },
-    { id: "festas-acabar-001", name: "Festas Acabar Teste", email: "festas-acabar@festas.pt", password: "festas123", funcao: "FESTAS_ACABAR" as const },
-    { id: "staff-001", name: "Staff Teste", email: "staff@festas.pt", password: "staff123", funcao: "STAFF" as const },
-    { id: "rececao-001", name: "Receção Teste", email: "rececao@festas.pt", password: "rececao123", funcao: "RECECAO" as const },
-  ];
+    const users = getSeedUsers();
 
   await prisma.account.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
   await prisma.session.deleteMany({ where: { user: { email: { in: users.map(u => u.email) } } } });
@@ -183,10 +181,48 @@ async function seedExtras() {
     { id: "extra-menu-002", nome: "Menu Carne", precoUnitario: 15.0, descricao: "Menu com nuggets, pizza, sumo e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
     { id: "extra-menu-003", nome: "Menu Lanche", precoUnitario: 10.0, descricao: "Menu leve com croissants, sumo e pipocas", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
     { id: "extra-menu-004", nome: "Menu Premium", precoUnitario: 25.0, descricao: "Menu premium com pizza, nuggets, sumo natural, pipocas, bolo decorado e surpresa", categoria: "MENU" as const, subcategoria: "Premium", requerTexto: false },
+    // ─── Menus BasyLandy ────────────────────────────────────────
+    { id: "extra-menu-basy-semana", nome: "Menu BasyLandy (Semana)", precoUnitario: 14.0, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Preço de dia de semana (exclui feriados).", categoria: "MENU" as const, subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-basy-fimsemana", nome: "Menu BasyLandy (Fim-de-semana)", precoUnitario: 15.9, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Aplicado a sábados, domingos e feriados.", categoria: "MENU" as const, subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-almoco-jantar", nome: "Almoço/Jantar (Suplemento)", precoUnitario: 3.5, descricao: "Pizza, fruta e nuggets. Suplemento a acrescentar ao menu base (almoço/jantar).", categoria: "MENU" as const, subcategoria: "BasyLandy", requerTexto: false },
+    // ─── Extras ao lanche BasyLandy ────────────────────────────
+    { id: "extra-lanche-cenoura", nome: "Cenoura Baby", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-babybel", nome: "Queijo babybel", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pipocas", nome: "Pipocas", precoUnitario: 0.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pizzas", nome: "Pizzas", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-bolachas", nome: "Bolachas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-nuggets", nome: "Nuggets", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-donuts", nome: "Donuts", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
+    // ─── Extras à diversão BasyLandy ────────────────────────────
+    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-convites", nome: "Convites Personalizados", precoUnitario: 15.0, descricao: "Pacote de 30 convites personalizados. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: true },
+    { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    // ─── Bolos BasyLandy ────────────────────────────────────────
+    { id: "extra-bolo-1kg", nome: "Bolo 1KG", precoUnitario: 17.5, descricao: "Bolo de aniversário de 1kg.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-2kg", nome: "Bolo 2KG (hóstia incluída)", precoUnitario: 30.0, descricao: "Bolo de aniversário de 2kg com hóstia incluída.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-artistico", nome: "Bolo Artístico", precoUnitario: 50.0, descricao: "Bolo artístico personalizado.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: true },
   ];
   for (const extra of extras) {
     await prisma.extra.upsert({ where: { id: extra.id }, update: {}, create: extra });
   }
+
+  // Novos extras/menus BasyLandy → associados a todos os locais
+  const basyLandyIds = [
+    "extra-menu-basy-semana", "extra-menu-basy-fimsemana", "extra-menu-almoco-jantar",
+    "extra-lanche-cenoura", "extra-lanche-babybel", "extra-lanche-pipocas",
+    "extra-lanche-pizzas", "extra-lanche-bolachas", "extra-lanche-nuggets",
+    "extra-lanche-donuts", "extra-lanche-fruta", "extra-lanche-muffins",
+    "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-convites",
+    "extra-diversao-prol1h", "extra-diversao-prol30m",
+    "extra-bolo-1kg", "extra-bolo-2kg", "extra-bolo-artistico",
+  ];
+  const basyLandyLocais = basyLandyIds.flatMap(eid =>
+    [{ extraId: eid, localId: "local-001" }, { extraId: eid, localId: "local-002" }, { extraId: eid, localId: "local-003" }]
+  );
 
   const extraLocals = [
     { extraId: "extra-001", localId: "local-001" }, { extraId: "extra-002", localId: "local-001" },
@@ -198,6 +234,7 @@ async function seedExtras() {
     { extraId: "extra-007", localId: "local-002" },
     { extraId: "extra-001", localId: "local-003" }, { extraId: "extra-003", localId: "local-003" },
     { extraId: "extra-005", localId: "local-003" }, { extraId: "extra-007", localId: "local-003" },
+    ...basyLandyLocais,
   ];
   for (const el of extraLocals) {
     await prisma.extraLocal.upsert({
@@ -205,7 +242,7 @@ async function seedExtras() {
       update: {}, create: el,
     });
   }
-  console.log("  ✓ 13 extras with local associations\n");
+  console.log("  ✓ 31 extras (7 EXTRA + 4 MENU + 3 Menu BasyLandy + 9 Extras ao lanche + 5 Extras à diversão + 3 Bolos) with local associations\n");
 }
 
 // ─── Monitores ────────────────────────────────────────────────
@@ -254,17 +291,21 @@ async function seedConfiguracaoPreco() {
   ];
 
   const existing = await prisma.configuracaoPreco.findFirst();
-  if (!existing) {
+   if (!existing) {
     await prisma.configuracaoPreco.create({
       data: {
-        precoCriancaSemana: 15,
-        precoCriancaFimSemana: 20,
+        precoCriancaSemana: 14,
+        precoCriancaFimSemana: 15.9,
         precoEntradaHoraSemana: 10,
         precoEntradaHoraFimSemana: 12,
+        precoEntrada1h: 6,
+        precoEntrada2h: 10,
+        precoEntradaHoraAdicional: 5,
         minimosCriancasPorAniversariante: minimos,
-        precoMeias: 2,
+        precoMeias: 2.5,
         precoExcessoFixo: 5,
         caucaoDefault: 40,
+        precoLancheEntrada: 4.5,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },
@@ -796,6 +837,7 @@ async function seedReservas() {
   await prisma.reserva.upsert({
     where: { id: "reserva-future-001" },
     update: {},
+    // ── EXEMPLO DE CAUÇÃO PAGA: Total 200€ − Caução 40€ = Faltam 160€ ──
     create: {
       id: "reserva-future-001",
       data: new Date(future3Str),
@@ -1029,7 +1071,9 @@ async function seedReservas() {
   for (const r of todasReservas) {
     let horaLanche: string | null = null;
     if (r.horario) {
-      const [h, m] = r.horario.split(":").map(Number);
+      const [hStr, mStr] = r.horario.split(":").map(Number);
+      const h = hStr ?? 0;
+      const m = mStr ?? 0;
       if (!Number.isNaN(h) && !Number.isNaN(m)) {
         const total = h * 60 + m + 45;
         const hh = String(Math.floor((total % 1440) / 60)).padStart(2, "0");

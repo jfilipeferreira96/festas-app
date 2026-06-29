@@ -6,6 +6,11 @@ export type { LinhaRelatorio, SecaoRelatorio, RelatorioFinanceiro };
 
 // ── Helpers ────────────────────────────────────────────────────
 
+/** Converte um valor (Decimal, string, number, null) em number seguro. */
+function toNum(valor: unknown): number {
+  return valor == null ? 0 : Number(valor);
+}
+
 function criarLinhaVazia(descricao: string): LinhaRelatorio {
   return {
     descricao,
@@ -15,15 +20,22 @@ function criarLinhaVazia(descricao: string): LinhaRelatorio {
     valorMultibanco: 0,
     valorTransferencia: 0,
     valorMbway: 0,
+    valorCartao: 0,
+    valorOutro: 0,
   };
 }
 
 type AccMetodo = Pick<
   LinhaRelatorio,
-  "valorNumerario" | "valorMultibanco" | "valorTransferencia" | "valorMbway"
+  "valorNumerario" | "valorMultibanco" | "valorTransferencia" | "valorMbway" | "valorCartao" | "valorOutro"
 >;
 
+/**
+ * Soma um valor ao acumulador certo, consoante o método de pagamento.
+ * Todos os 6 métodos têm coluna própria — nenhum valor se perde.
+ */
 function somarPorMetodo(acc: AccMetodo, metodo: string | null | undefined, valor: number): void {
+  if (valor <= 0) return;
   switch (metodo) {
     case "DINHEIRO":
       acc.valorNumerario += valor;
@@ -37,7 +49,13 @@ function somarPorMetodo(acc: AccMetodo, metodo: string | null | undefined, valor
     case "MBWAY":
       acc.valorMbway += valor;
       break;
-    // CARTAO e OUTRO não têm coluna própria no relatório
+    case "CARTAO":
+      acc.valorCartao += valor;
+      break;
+    case "OUTRO":
+      acc.valorOutro += valor;
+      break;
+    // método nulo/desconhecido → não soma (não há como classificar)
   }
 }
 
@@ -51,14 +69,14 @@ function somarLinhas(linhas: LinhaRelatorio[], descricaoTotal: string): LinhaRel
       valorMultibanco: acc.valorMultibanco + l.valorMultibanco,
       valorTransferencia: acc.valorTransferencia + l.valorTransferencia,
       valorMbway: acc.valorMbway + l.valorMbway,
+      valorCartao: acc.valorCartao + l.valorCartao,
+      valorOutro: acc.valorOutro + l.valorOutro,
     }),
     criarLinhaVazia(descricaoTotal),
   );
 }
 
-/**
- * Verifica se uma linha tem algum valor (não é all-zeros).
- */
+/** Verifica se uma linha tem algum valor (não é toda zeros). */
 function linhaTemDados(l: LinhaRelatorio): boolean {
   return (
     l.quantidade > 0 ||
@@ -66,17 +84,53 @@ function linhaTemDados(l: LinhaRelatorio): boolean {
     l.valorNumerario > 0 ||
     l.valorMultibanco > 0 ||
     l.valorTransferencia > 0 ||
-    l.valorMbway > 0
+    l.valorMbway > 0 ||
+    l.valorCartao > 0 ||
+    l.valorOutro > 0
   );
 }
 
-/**
- * Remove linhas que são todas zeros de uma secção.
- * Se todas as linhas são zeros, retorna linhas vazias.
- */
+/** Remove linhas que são todas zeros. */
 function filtrarLinhasVazias(linhas: LinhaRelatorio[]): LinhaRelatorio[] {
   const filtradas = linhas.filter(linhaTemDados);
   return filtradas.length > 0 ? filtradas : [];
+}
+
+// ── Tipos das entidades lidas da BD (apenas os campos usados) ──
+
+interface ReservaRelatorio {
+  numCriancas: number;
+  estado: string;
+  pago: boolean;
+  metodoPagamento: string | null;
+  valorPago: unknown;
+  metodoPagamento2: string | null;
+  valorPago2: unknown;
+  // Caução
+  caucao: string;
+  valorCaucao: unknown;
+  // Excesso
+  custoExcesso: unknown;
+  pagoExcesso: boolean;
+  // Meias
+  meiasQuantidade: number | null;
+  meiasPrecoUnit: unknown;
+  menu: { nome: string } | null;
+  extras: Array<{ quantidade: number; extra: { precoUnitario: unknown; subcategoria: string | null } }>;
+}
+
+interface EntradaRelatorio {
+  duracaoMinutos: number;
+  custoTotal: unknown;
+  custoTotalFinal: unknown;
+  metodoPagamento: string | null;
+  metodoPagamento2: string | null;
+  valorPago2: unknown;
+  pago: boolean;
+  criancas: unknown;
+  meiasQuantidade: number | null;
+  meiasPrecoUnit: unknown;
+  extras: Array<{ quantidade: number; extra: { precoUnitario: unknown } }>;
 }
 
 // ── Service ────────────────────────────────────────────────────
@@ -86,6 +140,8 @@ export const relatorioService = {
    * Gera relatório financeiro completo para um intervalo de datas.
    * Agrega dados de Reservas (festas) e Entradas Livres.
    * Só mostra linhas com dados reais — sem linhas hardcoded.
+   *
+   * Inclui festas: CONCLUIDA, EM_CURSO e CONFIRMADAS que estejam pagas.
    */
   async getRelatorioFinanceiro(dataInicio: Date, dataFim: Date): Promise<RelatorioFinanceiro> {
     // O campo Reserva.data é armazenado como meia-noite UTC.
@@ -97,7 +153,11 @@ export const relatorioService = {
       prisma.reserva.findMany({
         where: {
           data: { gte: dataInicio, lt: dataFimEnd },
-          estado: { in: ["CONCLUIDA", "EM_CURSO"] },
+          // CONCLUIDA + EM_CURSO sempre; CONFIRMADO só se já foi paga
+          OR: [
+            { estado: { in: ["CONCLUIDA", "EM_CURSO"] } },
+            { estado: "CONFIRMADO", pago: true },
+          ],
         },
         include: {
           menu: true,
@@ -115,9 +175,14 @@ export const relatorioService = {
       }),
     ]);
 
-    const festas = this.calcularFestas(reservas);
-    const entradasLivresSecao = this.calcularEntradasLivres(entradas);
-    const outros = this.calcularOutros(reservas, entradas);
+    const festas = this.calcularFestas(reservas as unknown as ReservaRelatorio[]);
+    const entradasLivresSecao = this.calcularEntradasLivres(
+      entradas as unknown as EntradaRelatorio[],
+    );
+    const outros = this.calcularOutros(
+      reservas as unknown as ReservaRelatorio[],
+      entradas as unknown as EntradaRelatorio[],
+    );
 
     const totalGeral = somarLinhas(
       [festas.total, entradasLivresSecao.total, outros.total],
@@ -135,19 +200,12 @@ export const relatorioService = {
   },
 
   /**
-   * Secção 1: Festas de Aniversário (MENU + EXTRAS)
-   * Agrupa reservas por tipo de menu (nome real da BD).
+   * Secção 1: Festas de Aniversário
+   * Agrupa reservas por tipo de menu.
+   * Soma o valor pago (método 1 + método 2 do pagamento dividido).
    * Sem fallback hardcoded — se não há festas, não há linhas.
    */
-  calcularFestas(
-    reservas: Array<{
-      numCriancas: number;
-      metodoPagamento: string | null;
-      valorPago: unknown;
-      menu: { nome: string } | null;
-      extras: Array<{ quantidade: number; extra: { nome: string; precoUnitario: unknown; subcategoria: string | null } }>;
-    }>,
-  ): SecaoRelatorio {
+  calcularFestas(reservas: ReservaRelatorio[]): SecaoRelatorio {
     const grupos = new Map<string, LinhaRelatorio>();
 
     for (const r of reservas) {
@@ -158,7 +216,10 @@ export const relatorioService = {
       const linha = grupos.get(menuNome)!;
       linha.quantidade += 1;
       linha.totalCriancas += r.numCriancas;
-      somarPorMetodo(linha, r.metodoPagamento, Number(r.valorPago ?? 0));
+
+      // Pagamento principal + pagamento dividido (até 2 métodos)
+      somarPorMetodo(linha, r.metodoPagamento, toNum(r.valorPago));
+      somarPorMetodo(linha, r.metodoPagamento2, toNum(r.valorPago2));
     }
 
     const linhas = Array.from(grupos.values()).sort((a, b) => b.quantidade - a.quantidade);
@@ -173,18 +234,9 @@ export const relatorioService = {
   /**
    * Secção 2: Entradas Livres
    * Agrupa por duração (1H, 2H, 3H) + lanches (extras).
-   * Filtra linhas sem dados — só mostra o que existe de facto.
+   * Usa custoTotalFinal (já inclui excesso) e soma pagamento dividido.
    */
-  calcularEntradasLivres(
-    entradas: Array<{
-      duracaoMinutos: number;
-      custoTotal: unknown;
-      custoTotalFinal: unknown;
-      metodoPagamento: string | null;
-      criancas: unknown;
-      extras: Array<{ quantidade: number; extra: { precoUnitario: unknown } }>;
-    }>,
-  ): SecaoRelatorio {
+  calcularEntradasLivres(entradas: EntradaRelatorio[]): SecaoRelatorio {
     const l1H = criarLinhaVazia("Entrada 1H");
     const l2H = criarLinhaVazia("Entrada 2H");
     const l3H = criarLinhaVazia("Entrada 3H");
@@ -193,24 +245,26 @@ export const relatorioService = {
     for (const e of entradas) {
       const duracao = e.duracaoMinutos;
       const numCriancas = Array.isArray(e.criancas) ? e.criancas.length : 0;
-      const valor = Number(e.custoTotalFinal ?? e.custoTotal ?? 0);
+      // custoTotalFinal inclui o excesso; fallback para custoTotal
+      const valor = toNum(e.custoTotalFinal ?? e.custoTotal);
 
       // Classificar por duração
       const linha: LinhaRelatorio = duracao <= 60 ? l1H : duracao <= 120 ? l2H : l3H;
 
       linha.quantidade += 1;
       linha.totalCriancas += numCriancas;
+      // Pagamento principal (custoTotalFinal) + pagamento dividido (método 2)
       somarPorMetodo(linha, e.metodoPagamento, valor);
+      somarPorMetodo(linha, e.metodoPagamento2, toNum(e.valorPago2));
 
       // Lanches (extras das entradas livres)
       for (const ex of e.extras) {
-        const extraValor = Number(ex.extra.precoUnitario) * ex.quantidade;
+        const extraValor = toNum(ex.extra.precoUnitario) * ex.quantidade;
         lLanches.quantidade += ex.quantidade;
         somarPorMetodo(lLanches, e.metodoPagamento, extraValor);
       }
     }
 
-    // Filtrar linhas all-zeros — só mostrar as que têm dados reais
     const linhas = filtrarLinhasVazias([l1H, l2H, l3H, lLanches]);
 
     return {
@@ -222,30 +276,19 @@ export const relatorioService = {
 
   /**
    * Secção 3: Outros
-   * Cauções e Brindes — apenas dados reais do schema.
-   * Sem linhas hardcoded sem modelo de dados.
+   * Cauções, Excesso de Tempo (festas), Meias e Brindes — apenas dados reais.
    */
-  calcularOutros(
-    reservas: Array<{
-      numCriancas: number;
-      metodoPagamento: string | null;
-      valorCaucao: unknown;
-      caucao: string;
-      extras: Array<{
-        quantidade: number;
-        extra: { precoUnitario: unknown; subcategoria: string | null };
-      }>;
-    }>,
-    _entradas: unknown[],
-  ): SecaoRelatorio {
+  calcularOutros(reservas: ReservaRelatorio[], entradas: EntradaRelatorio[]): SecaoRelatorio {
     const lCaucoes40 = criarLinhaVazia("Cauções 40€");
     const lCaucoesOutros = criarLinhaVazia("Cauções outros valores");
+    const lExcesso = criarLinhaVazia("Excesso de Tempo");
+    const lMeias = criarLinhaVazia("Meias");
     const lBrindes = criarLinhaVazia("Brindes");
 
     for (const r of reservas) {
-      // Cauções
+      // ── Cauções ──
       if (r.caucao !== "NAO_PAGA" && r.valorCaucao) {
-        const valorCaucao = Number(r.valorCaucao);
+        const valorCaucao = toNum(r.valorCaucao);
         if (valorCaucao === 40) {
           lCaucoes40.quantidade += 1;
           somarPorMetodo(lCaucoes40, r.metodoPagamento, valorCaucao);
@@ -255,10 +298,25 @@ export const relatorioService = {
         }
       }
 
-      // Brindes (extras com subcategoria "Brindes")
+      // ── Excesso de tempo (só se foi pago) ──
+      const custoExcesso = toNum(r.custoExcesso);
+      if (r.pagoExcesso && custoExcesso > 0) {
+        lExcesso.quantidade += 1;
+        somarPorMetodo(lExcesso, r.metodoPagamento, custoExcesso);
+      }
+
+      // ── Meias (festa) ──
+      const qtdMeias = r.meiasQuantidade ?? 0;
+      if (qtdMeias > 0) {
+        const valorMeias = qtdMeias * toNum(r.meiasPrecoUnit);
+        lMeias.quantidade += qtdMeias;
+        somarPorMetodo(lMeias, r.metodoPagamento, valorMeias);
+      }
+
+      // ── Brindes (extras com subcategoria "Brindes") ──
       for (const ex of r.extras) {
         if (ex.extra.subcategoria === "Brindes") {
-          const valor = Number(ex.extra.precoUnitario) * ex.quantidade;
+          const valor = toNum(ex.extra.precoUnitario) * ex.quantidade;
           lBrindes.quantidade += ex.quantidade;
           lBrindes.totalCriancas += r.numCriancas;
           somarPorMetodo(lBrindes, r.metodoPagamento, valor);
@@ -266,8 +324,23 @@ export const relatorioService = {
       }
     }
 
-    // Filtrar linhas all-zeros — só mostrar as que têm dados reais
-    const linhas = filtrarLinhasVazias([lCaucoes40, lCaucoesOutros, lBrindes]);
+    // ── Meias (entradas livres) ──
+    for (const e of entradas) {
+      const qtdMeias = e.meiasQuantidade ?? 0;
+      if (qtdMeias > 0) {
+        const valorMeias = qtdMeias * toNum(e.meiasPrecoUnit);
+        lMeias.quantidade += qtdMeias;
+        somarPorMetodo(lMeias, e.metodoPagamento, valorMeias);
+      }
+    }
+
+    const linhas = filtrarLinhasVazias([
+      lCaucoes40,
+      lCaucoesOutros,
+      lExcesso,
+      lMeias,
+      lBrindes,
+    ]);
 
     return {
       titulo: "Outros",

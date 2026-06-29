@@ -2,11 +2,12 @@
  * Production seed — MINIMUM data to bring the app online.
  *
  * Creates ONLY:
- *   - 1 admin user (via Better Auth)
+ *   - 7 users (admin + role accounts via Better Auth)
+ *   - Locais, Extras, Configuração Preços, Exceções Calendário, Slots Horário
  *   - Cacifos config (40 cacifos LIVRE)
  *
- * NO reservas, clientes, extras, monitores, marketing, entradas livres, etc.
- * Idempotent: safe to re-run.
+ * NO reservas, clientes, monitores, marketing, entradas livres, etc.
+ * ⚠️  WIPES ALL DATA before seeding (idempotent: safe to re-run).
  *
  * Admin credentials (override via env):
  *   SEED_ADMIN_EMAIL     (default: admin@baselandia.pt)
@@ -23,6 +24,7 @@ import { PrismaClient } from "@prisma/client";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
+import { getSeedUsers } from "./seed-roles";
 
 // Load env from apps/web/.env when run directly.
 // (db.js also passes --env-file; dotenv ignores a missing file silently.)
@@ -37,18 +39,42 @@ const seedAuth = betterAuth({
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     process.env.CORS_ORIGIN || "http://localhost:3000",
   ],
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { 
+    enabled: true,
+    // Desativado envio de emails em ambiente de testes/seeds
+    // sendResetPassword: async () => {},
+  },
   emailVerification: {
+    // Desativado envio de emails em ambiente de testes/seeds
     sendVerificationEmail: async () => {},
     sendOnSignUp: false,
   },
 });
 
+// ─── Wipe (idempotent) ────────────────────────────────────────
+async function wipeDatabase() {
+  console.log("🧹 Wiping existing data...");
+  // Truncate every table so the seed is fully idempotent (re-runnable).
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 0;");
+  const tables: { [key: string]: string }[] =
+    await prisma.$queryRawUnsafe(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();`);
+  for (const row of tables) {
+    const table = row.TABLE_NAME ?? row["TABLE_NAME"];
+    if (!table) continue;
+    await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\`;`);
+  }
+  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 1;");
+  console.log("  ✓ All tables truncated\n");
+}
+
 // ─── Main ─────────────────────────────────────────────────────
 async function main() {
   console.log("🌱 Production seed (minimum)...\n");
 
+  await wipeDatabase();
   await seedUsers();
+  await seedLocais();
+  await seedExtras();
   await seedConfiguracaoPreco();
   await seedExcecoesCalendario();
   await seedSlotsHorario();
@@ -57,21 +83,11 @@ async function main() {
   console.log("\n✅ Production seed complete!");
 }
 
-// ─── Users (admin + role accounts) ───────────────────────────
-const DEFAULT_PASSWORD = process.env.SEED_USER_PASSWORD || "Alterar!2025";
-
-const ROLE_USERS: { email: string; funcao: import("@prisma/client").FuncaoUtilizador; name: string }[] = [
-  { email: process.env.SEED_ADMIN_EMAIL || "admin@festas.pt", funcao: "ADMINISTRADOR", name: "Administrador" },
-  { email: "cacifos@festas.pt", funcao: "CACIFOS", name: "Cacifos" },
-  { email: "lanches@festas.pt", funcao: "LANCHE", name: "Lanches" },
-  { email: "monitor@festas.pt", funcao: "MONITOR", name: "Monitor" },
-  { email: "festas-acabar@festas.pt", funcao: "FESTAS_ACABAR", name: "Festas a Acabar" },
-  { email: "staff@festas.pt", funcao: "STAFF", name: "Staff" },
-  { email: "rececao@festas.pt", funcao: "RECECAO", name: "Receção" },
-];
-
+// ─── Users (admin + role accounts) — single source: seed-roles.ts ──
 async function seedUsers() {
   console.log("  Creating users...\n");
+
+  const ROLE_USERS = getSeedUsers();
 
   for (const u of ROLE_USERS) {
     // Idempotent: remove a previous user with the same email before creating.
@@ -79,8 +95,10 @@ async function seedUsers() {
     await prisma.session.deleteMany({ where: { user: { email: u.email } } });
     await prisma.user.deleteMany({ where: { email: u.email } });
 
+    const password = u.password;
+
     const result = await seedAuth.api.signUpEmail({
-      body: { name: u.name, email: u.email, password: DEFAULT_PASSWORD },
+      body: { name: u.name, email: u.email, password },
     });
     if (!result?.user) throw new Error(`Failed to create user ${u.email}`);
 
@@ -89,10 +107,103 @@ async function seedUsers() {
       data: { emailVerified: true, funcao: u.funcao, activo: true },
     });
 
-    console.log(`  ✓ ${u.funcao}: ${u.email} / ${DEFAULT_PASSWORD}`);
+    console.log(`  ✓ ${u.funcao}: ${u.email} / ${password}`);
   }
 
   console.log("\n  ⚠️  Altera as palavras-passe após o primeiro login!\n");
+}
+
+// ─── Locais ───────────────────────────────────────────────────
+async function seedLocais() {
+  console.log("  Creating locais...");
+  const locais = [
+    { id: "local-001", nome: "Sala Azul" },
+    { id: "local-002", nome: "Sala Arco-Íris" },
+    { id: "local-003", nome: "Parque Trampolins" },
+  ];
+  for (const local of locais) {
+    await prisma.local.upsert({ where: { id: local.id }, update: {}, create: local });
+  }
+  console.log("  ✓ 3 locais\n");
+}
+
+// ─── Extras & Menus BasyLandy ────────────────────────────────
+async function seedExtras() {
+  console.log("  Creating extras & menus (BasyLandy)...");
+
+  const extras: {
+    id: string;
+    nome: string;
+    precoUnitario: number;
+    descricao: string;
+    categoria: "MENU" | "EXTRA";
+    subcategoria: string;
+    requerTexto: boolean;
+  }[] = [
+    // ─── Menus BasyLandy ────────────────────────────────────────
+    { id: "extra-menu-basy-semana", nome: "Menu BasyLandy (Semana)", precoUnitario: 14.0, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Preço de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-basy-fimsemana", nome: "Menu BasyLandy (Fim-de-semana)", precoUnitario: 15.9, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Aplicado a sábados, domingos e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-almoco-jantar", nome: "Almoço/Jantar (Suplemento)", precoUnitario: 3.5, descricao: "Pizza, fruta e nuggets. Suplemento a acrescentar ao menu base (almoço/jantar).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
+    // ─── Extras ao lanche BasyLandy ────────────────────────────
+    { id: "extra-lanche-cenoura", nome: "Cenoura Baby", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-babybel", nome: "Queijo babybel", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pipocas", nome: "Pipocas", precoUnitario: 0.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pizzas", nome: "Pizzas", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-bolachas", nome: "Bolachas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-nuggets", nome: "Nuggets", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-donuts", nome: "Donuts", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    // ─── Extras à diversão BasyLandy ────────────────────────────
+    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-convites", nome: "Convites Personalizados", precoUnitario: 15.0, descricao: "Pacote de 30 convites personalizados. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: true },
+    { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
+    // ─── Bolos BasyLandy ────────────────────────────────────────
+    { id: "extra-bolo-1kg", nome: "Bolo 1KG", precoUnitario: 17.5, descricao: "Bolo de aniversário de 1kg.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-2kg", nome: "Bolo 2KG (hóstia incluída)", precoUnitario: 30.0, descricao: "Bolo de aniversário de 2kg com hóstia incluída.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-artistico", nome: "Bolo Artístico", precoUnitario: 50.0, descricao: "Bolo artístico personalizado.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: true },
+  ];
+
+  for (const extra of extras) {
+    await prisma.extra.upsert({
+      where: { id: extra.id },
+      update: {
+        nome: extra.nome,
+        precoUnitario: extra.precoUnitario,
+        descricao: extra.descricao,
+        categoria: extra.categoria,
+        subcategoria: extra.subcategoria,
+        requerTexto: extra.requerTexto,
+      },
+      create: extra,
+    });
+  }
+
+  // Associar todos os extras/menus BasyLandy a todos os locais
+  const basyLandyIds = [
+    "extra-menu-basy-semana", "extra-menu-basy-fimsemana", "extra-menu-almoco-jantar",
+    "extra-lanche-cenoura", "extra-lanche-babybel", "extra-lanche-pipocas",
+    "extra-lanche-pizzas", "extra-lanche-bolachas", "extra-lanche-nuggets",
+    "extra-lanche-donuts", "extra-lanche-fruta", "extra-lanche-muffins",
+    "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-convites",
+    "extra-diversao-prol1h", "extra-diversao-prol30m",
+    "extra-bolo-1kg", "extra-bolo-2kg", "extra-bolo-artistico",
+  ];
+  const basyLandyLocais = basyLandyIds.flatMap(eid =>
+    [{ extraId: eid, localId: "local-001" }, { extraId: eid, localId: "local-002" }, { extraId: eid, localId: "local-003" }]
+  );
+
+  for (const el of basyLandyLocais) {
+    await prisma.extraLocal.upsert({
+      where: { extraId_localId: { extraId: el.extraId, localId: el.localId } },
+      update: {},
+      create: el,
+    });
+  }
+
+  console.log(`  ✓ ${extras.length} extras & menus BasyLandy (globais) + ${basyLandyLocais.length} associações a locais\n`);
 }
 
 // ─── Configuração de Preços (singleton) ───────────────────────
@@ -109,14 +220,18 @@ async function seedConfiguracaoPreco() {
   if (!existing) {
     await prisma.configuracaoPreco.create({
       data: {
-        precoCriancaSemana: 15,
-        precoCriancaFimSemana: 20,
+        precoCriancaSemana: 14,
+        precoCriancaFimSemana: 15.9,
         precoEntradaHoraSemana: 10,
         precoEntradaHoraFimSemana: 12,
+        precoEntrada1h: 6,
+        precoEntrada2h: 10,
+        precoEntradaHoraAdicional: 5,
         minimosCriancasPorAniversariante: minimos,
-        precoMeias: 2,
+        precoMeias: 2.5,
         precoExcessoFixo: 5,
         caucaoDefault: 40,
+        precoLancheEntrada: 4.5,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },

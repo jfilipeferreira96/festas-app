@@ -13,6 +13,7 @@ import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
 import { Select } from "@/components/ui/select";
 import Switch from "@/components/form/switch/Switch";
+import Checkbox from "@/components/form/input/Checkbox";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import type { Cliente } from "@/lib/api/clientes";
 import {
@@ -121,6 +122,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const [custoEdited, setCustoEdited] = React.useState(false);
   // Controla a modal de pesquisa de cliente existente
   const [showClienteSearch, setShowClienteSearch] = React.useState(false);
+  // Controla a expansão do pagamento dividido
+  const [showSplitPayment, setShowSplitPayment] = React.useState(
+    !!entrada?.metodoPagamento2 || !!entrada?.valorPago2
+  );
 
   const defaultValues = useMemo<EntradaLivreFormData>(
     () => ({
@@ -162,18 +167,34 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   // Tarifário global (singleton) — usado para auto-preenchimento do custo
   const { data: configPreco } = useConfigPreco();
 
-  // Custo calculado a partir do tarifário global (precoHora * duração).
+  // Custo calculado a partir do tarifário global:
+  // (precoHora × duração) × nº de pessoas (crianças + adultos).
+  // Se temLanche, adiciona o suplemento de lanche por pessoa.
   // Distingue dia de semana vs fim de semana.
-  const custoCalculado = useMemo(() => {
+  const temLancheWatched = watch("temLanche") ?? false;
+  const numAdultosWatched = watch("numAdultos") ?? 0;
+  // Custo de tempo por pessoa (escalão 1h/2h + hora adicional)
+  const custoTempoPorPessoa = useMemo(() => {
     if (!configPreco) return 0;
-    const hoje = new Date();
-    const dia = hoje.getDay();
-    const isFimSemana = dia === 0 || dia === 6;
-    const precoHora = isFimSemana
-      ? Number(configPreco.precoEntradaHoraFimSemana)
-      : Number(configPreco.precoEntradaHoraSemana);
-    return (precoHora / 60) * (duracaoMinutos || 0);
+    const preco1h = Number(configPreco.precoEntrada1h ?? 6);
+    const preco2h = Number(configPreco.precoEntrada2h ?? 10);
+    const precoHoraAdicional = Number(configPreco.precoEntradaHoraAdicional ?? 5);
+    const dur = duracaoMinutos || 0;
+    return dur <= 60 ? preco1h : dur <= 120 ? preco2h : preco2h + Math.ceil((dur - 120) / 60) * precoHoraAdicional;
   }, [configPreco, duracaoMinutos]);
+
+  // Componentes de custo para o resumo detalhado
+  const custoComponentes = useMemo(() => {
+    const numCriancasComNome = criancas.filter((c) => c.nome.trim()).length;
+    const totalPessoas = Math.max(numCriancasComNome + (numAdultosWatched ?? 0), 1);
+    const custoTempo = custoTempoPorPessoa * totalPessoas;
+    const precoLanche = Number(configPreco?.precoLancheEntrada ?? 3);
+    const custoLanche = temLancheWatched ? precoLanche * totalPessoas : 0;
+    return { totalPessoas, custoTempo, custoLanche, total: custoTempo + custoLanche };
+  }, [custoTempoPorPessoa, criancas, numAdultosWatched, temLancheWatched, configPreco]);
+
+  // Mantém compatibilidade: custoCalculado = total
+  const custoCalculado = custoComponentes.total;
 
   // Sync do custoTotal quando a duração muda (auto-preenchimento).
   // Respeita edições manuais do utilizador (não sobrescreve se já editou).
@@ -352,7 +373,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         >
           <span className="text-sm text-text-primary">{item.nome}</span>
           <span className="text-xs font-medium text-text-secondary">
-            +{formatEuro(item.precoUnitario / 100)}
+            +{formatEuro(item.precoUnitario)}
           </span>
         </button>
       );
@@ -513,32 +534,37 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             </div>
           </div>
 
-          {/* ── Lanche e Adultos ── */}
-          <div className="space-y-2">
+          {/* ── Lanche e Acompanhantes ── */}
+          <div className="space-y-3">
             <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
               <Users size={14} className="text-brand-500" /> Lanche e Acompanhantes
             </label>
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Inclui lanche?
-                </label>
-                <Switch
-                  checked={watch("temLanche") ?? false}
-                  onChange={(checked: boolean) => setValue("temLanche", checked)}
-                />
+            {/* Lanche toggle */}
+            <div className="flex items-center justify-between py-1">
+              <div>
+                <span className="text-sm font-medium text-text-primary">Inclui lanche?</span>
+                <p className="text-xs text-text-muted">
+                  +{formatEuro(Number(configPreco?.precoLancheEntrada ?? 3))} por pessoa
+                </p>
               </div>
-              <div className="flex-1">
-                <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Nº de adultos (pagam)
-                </label>
-                <InputField
-                  type="number"
-                  min={0}
-                  max={20}
-                  placeholder="0"
-                  {...register("numAdultos", { valueAsNumber: true })}
+              <Switch
+                checked={watch("temLanche") ?? false}
+                onChange={(checked: boolean) => setValue("temLanche", checked)}
+              />
+            </div>
+            {/* Adulto acompanhante */}
+            <div className="flex items-center justify-between py-1">
+              <div>
+                <Checkbox
+                  checked={(watch("numAdultos") ?? 0) > 0}
+                  onChange={(checked) => setValue("numAdultos", checked ? 1 : 0, { shouldDirty: true })}
+                  label="Adulto acompanha e paga entrada"
                 />
+                {custoTempoPorPessoa > 0 && (
+                  <p className="text-xs text-text-muted ml-8">
+                    +{formatEuro(custoTempoPorPessoa)} por adulto
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -626,70 +652,133 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             </div>
           </div>
 
-          {/* ── Pagamento (cartão de resumo) ── */}
-          <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+          {/* ── Pagamento ── */}
+          <div className="rounded-xl border border-border bg-surface p-4 space-y-4">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-text-primary">
               <CreditCard size={14} className="text-brand-500" /> Pagamento
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Método
-                </label>
-                <Select
-                  options={METODO_PAGAMENTO_OPTIONS}
-                  placeholder="Método"
-                  value={watch("metodoPagamento") ?? "NONE"}
-                  onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)}
-                />
-              </div>
-              <div className="flex items-end justify-end pb-1">
+
+            {/* Estado + Método */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-text-primary">Estado do pagamento</span>
                 <Switch
- 
-                 checked={pago}
+                  checked={pago}
                   onChange={(checked) => setValue("pago", checked)}
                   label={pago ? "Pago" : "Não pago"}
                 />
               </div>
-            </div>
-            {/* ── Meias (compra obrigatória no parque) ── */}
-            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1">Meias (quantidade)</label>
-                <InputField type="number" min={0} {...register("meiasQuantidade", { valueAsNumber: true })} placeholder="0" />
-              </div>
-              <div className="flex items-end"><p className="text-xs text-text-muted">Preço por par aplicado automaticamente na conclusão.</p></div>
-            </div>
-            {/* ── Pagamento dividido (2º método) ── */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Método de pagamento
+                </label>
                 <Select
                   options={METODO_PAGAMENTO_OPTIONS}
-                  placeholder="2º método"
-                  value={watch("metodoPagamento2") ?? "NONE"}
-                  onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)}
+                  placeholder="Seleccionar método"
+                  value={watch("metodoPagamento") ?? "NONE"}
+                  onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)}
                 />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label>
-                <InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" />
+            </div>
+
+            {/* Meias com stepper */}
+            <div className="border-t border-border pt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-text-primary">Meias</span>
+                <span className="text-xs text-text-muted">
+                  {formatEuro(Number(configPreco?.precoMeias ?? 1.5))} / par
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setValue("meiasQuantidade", Math.max(0, (watch("meiasQuantidade") ?? 0) - 1), { shouldDirty: true })}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                  >
+                    −
+                  </button>
+                  <span className="w-10 text-center text-sm font-medium text-text-primary">
+                    {watch("meiasQuantidade") ?? 0}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setValue("meiasQuantidade", (watch("meiasQuantidade") ?? 0) + 1, { shouldDirty: true })}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                  >
+                    +
+                  </button>
+                </div>
+                <p className="text-xs text-text-muted">Cobradas automaticamente na conclusão</p>
               </div>
             </div>
-            {/* ── Resumo de valores ── */}
+
+            {/* Pagamento dividido (collapsible) */}
+            <div className="border-t border-border pt-3 space-y-2">
+              <Checkbox
+                checked={showSplitPayment}
+                onChange={(checked) => {
+                  setShowSplitPayment(checked);
+                  if (!checked) {
+                    setValue("metodoPagamento2", undefined, { shouldDirty: true });
+                    setValue("valorPago2", 0, { shouldDirty: true });
+                  }
+                }}
+                label="Dividir pagamento (2º método)"
+              />
+              {showSplitPayment && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
+                    <Select
+                      options={METODO_PAGAMENTO_OPTIONS}
+                      placeholder="2º método"
+                      value={watch("metodoPagamento2") ?? "NONE"}
+                      onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label>
+                    <InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Resumo detalhado de valores */}
             <div className="border-t border-border pt-3 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted">Custo base</span>
-                <span className="text-xs text-text-secondary">{formatEuro(custoFinal)}</span>
+                <span className="text-xs text-text-muted">
+                  Tempo ({DURACAO_OPTIONS.find((o) => o.value === String(duracaoMinutos))?.label ?? `${duracaoMinutos}min`} × {custoComponentes.totalPessoas}p)
+                </span>
+                <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoTempo)}</span>
               </div>
+              {custoComponentes.custoLanche > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-text-muted">
+                    Lanche (×{custoComponentes.totalPessoas}p)
+                  </span>
+                  <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoLanche)}</span>
+                </div>
+              )}
               {totalExtras > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-text-muted">Extras</span>
                   <span className="text-xs text-text-secondary">{formatEuro(totalExtras / 100)}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-sm font-semibold text-text-primary">Total a pagar</span>
+              {(watch("meiasQuantidade") ?? 0) > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-text-muted">
+                    Meias ({watch("meiasQuantidade")} {(watch("meiasQuantidade") ?? 0) === 1 ? "par" : "pares"})
+                  </span>
+                  <span className="text-xs text-text-secondary">
+                    {formatEuro((watch("meiasQuantidade") ?? 0) * Number(configPreco?.precoMeias ?? 1.5))}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
+                <span className="text-sm font-semibold text-text-primary">Total</span>
                 <span className="text-base font-bold text-primary-500">
                   {formatEuro(custoFinal + totalExtras / 100)}
                 </span>

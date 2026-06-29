@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Users, CheckCircle, XCircle } from "lucide-react";
+import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Users, CheckCircle, XCircle, Tv, Minimize2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
@@ -11,6 +11,7 @@ import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { useFestasAcabar, useAtualizarFestaAcabar, useFinalizarFesta } from "@/hooks/use-festas-acabar";
+import { useTVMode } from "@/hooks/use-tv-mode";
 import { useReserva } from "@/hooks/use-reservas";
 import type { FestaAcabar } from "@/lib/api/festasAcabar";
 
@@ -32,6 +33,7 @@ export default function FestasAcabarContent() {
   const { data: festasRaw, isLoading } = useFestasAcabar();
   const atualizar = useAtualizarFestaAcabar();
   const finalizar = useFinalizarFesta();
+  const { isTVMode, toggleTVMode } = useTVMode();
   const [editing, setEditing] = useState<EditState | null>(null);
   const [confirmandoFinalizar, setConfirmandoFinalizar] = useState<FestaAcabar | null>(null);
   const [historicoId, setHistoricoId] = useState<string | null>(null);
@@ -142,7 +144,7 @@ export default function FestasAcabarContent() {
       key: "observacoesBrindes",
       label: "Brindes",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesBrindes || "—"}
         </span>
       ),
@@ -151,7 +153,7 @@ export default function FestasAcabarContent() {
       key: "observacoesBrindesPais",
       label: "Brindes dos Pais",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesBrindesPais || "—"}
         </span>
       ),
@@ -160,7 +162,7 @@ export default function FestasAcabarContent() {
       key: "observacoesLesoes",
       label: "Obs. Lesões",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary block max-w-[160px] truncate">
+        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
           {f.observacoesLesoes || "—"}
         </span>
       ),
@@ -168,10 +170,20 @@ export default function FestasAcabarContent() {
   ];
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Festas a Acabar"
         subtitle="Festas em curso ordenadas por hora de saída"
+        actions={
+          <button
+            onClick={toggleTVMode}
+            className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-brand-500/5 transition-colors"
+            title={isTVMode ? "Sair do modo ecrã" : "Modo ecrã"}
+          >
+            {isTVMode ? <Minimize2 size={16} /> : <Tv size={16} />}
+            <span className="hidden sm:inline">{isTVMode ? "Sair" : "Ecrã"}</span>
+          </button>
+        }
       />
 
       <DataTable<FestaAcabar>

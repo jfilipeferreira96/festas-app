@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Clock,
   Users,
@@ -16,11 +16,32 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui";
 import { useEntradaLivre } from "@/hooks/use-entrada-livre";
+import { useConfigPreco } from "@/hooks/use-precos";
 import type { StatusType } from "@/components/ui/status-badge/StatusBadge";
+import type { ConfiguracaoPreco } from "@/lib/api/precos";
 
 function formatCurrency(value: number | undefined | null): string {
   if (value == null) return "—";
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
+}
+
+/** Preço por pessoa conforme o escalão de duração (espelha o service calcularPrecoEntrada). */
+function getTierPricePerPerson(duracaoMin: number, config: ConfiguracaoPreco | undefined): number {
+  const p1 = Number(config?.precoEntrada1h ?? 6);
+  const p2 = Number(config?.precoEntrada2h ?? 10);
+  const pAd = Number(config?.precoEntradaHoraAdicional ?? 5);
+  if (duracaoMin <= 60) return p1;
+  if (duracaoMin <= 120) return p2;
+  const extra = Math.ceil((duracaoMin - 120) / 60);
+  return p2 + extra * pAd;
+}
+
+/** Etiqueta legível do escalão aplicado. */
+function getTierLabel(duracaoMin: number): string {
+  if (duracaoMin <= 60) return "1ª hora";
+  if (duracaoMin <= 120) return "2 horas";
+  const horas = Math.ceil((duracaoMin - 120) / 60);
+  return `2h + ${horas}h adicional${horas > 1 ? "s" : ""}`;
 }
 
 function formatTime(iso: string): string {
@@ -50,8 +71,38 @@ interface EntradaLivreDetailModalProps {
 
 export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices = false }: EntradaLivreDetailModalProps) {
   const { data: entrada, isLoading } = useEntradaLivre(entradaId ?? "");
+  const { data: configPreco } = useConfigPreco();
 
   const now = useCurrentTime();
+
+  // ── Composição do preço (escalão × pessoas + lanche + meias + extras) ──
+  const breakdown = useMemo(() => {
+    if (!entrada) return null;
+    const numCriancas = entrada.criancas?.length ?? 0;
+    const numAdultos = entrada.numAdultos ?? 0;
+    const totalPessoas = numCriancas + numAdultos;
+    const precoPorPessoa = getTierPricePerPerson(entrada.duracaoMinutos, configPreco);
+    const custoTempo = +(precoPorPessoa * totalPessoas).toFixed(2);
+    const precoLanche = Number(configPreco?.precoLancheEntrada ?? 4.5);
+    const custoLanche = entrada.temLanche ? +(precoLanche * totalPessoas).toFixed(2) : 0;
+    const custoMeias = entrada.meiasQuantidade
+      ? +((entrada.meiasPrecoUnit ?? Number(configPreco?.precoMeias ?? 2.5)) * entrada.meiasQuantidade).toFixed(2)
+      : 0;
+    const custoExtras = entrada.extras?.reduce(
+      (sum, e) => sum + Number(e.extra?.precoUnitario ?? 0) * (e.quantidade ?? 1),
+      0,
+    ) ?? 0;
+    return {
+      totalPessoas,
+      precoPorPessoa,
+      tierLabel: getTierLabel(entrada.duracaoMinutos),
+      custoTempo,
+      custoLanche,
+      custoMeias,
+      custoExtras: +custoExtras.toFixed(2),
+      subtotal: +(custoTempo + custoLanche + custoMeias + custoExtras).toFixed(2),
+    };
+  }, [entrada, configPreco]);
 
   if (!entradaId) return null;
 
@@ -113,7 +164,50 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
               {!hidePrices && (
                 <>
                   <div className="border-t border-border my-2" />
-                  <DetailRow icon={<CreditCard size={12} />} label="Custo Base" value={formatCurrency(entrada.custoTotal)} />
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted px-3 mb-1">
+                    Composição do Preço
+                  </p>
+                  {/* Tempo (escalão × pessoas) */}
+                  {breakdown && (
+                    <DetailRow
+                      icon={<Clock size={12} />}
+                      label={`Tempo (${breakdown.tierLabel})`}
+                      value={`${breakdown.totalPessoas}× ${formatCurrency(breakdown.precoPorPessoa)} = ${formatCurrency(breakdown.custoTempo)}`}
+                    />
+                  )}
+                  {/* Lanche */}
+                  {breakdown && breakdown.custoLanche > 0 && (
+                    <DetailRow
+                      label="Lanche"
+                      value={`${breakdown.totalPessoas}× ${formatCurrency(Number(configPreco?.precoLancheEntrada ?? 4.5))} = ${formatCurrency(breakdown.custoLanche)}`}
+                    />
+                  )}
+                  {/* Meias */}
+                  {breakdown && breakdown.custoMeias > 0 && (
+                    <DetailRow
+                      label="Meias"
+                      value={`${entrada.meiasQuantidade}× ${formatCurrency(entrada.meiasPrecoUnit ?? Number(configPreco?.precoMeias ?? 2.5))} = ${formatCurrency(breakdown.custoMeias)}`}
+                    />
+                  )}
+                  {/* Extras */}
+                  {entrada.extras?.length > 0 && entrada.extras.map((e: any, i: number) => (
+                    <DetailRow
+                      key={i}
+                      icon={<Package size={12} />}
+                      label={e.extra?.nome ?? "Extra"}
+                      value={`${e.quantidade ?? 1}× ${formatCurrency(e.extra?.precoUnitario ?? 0)} = ${formatCurrency(Number(e.extra?.precoUnitario ?? 0) * (e.quantidade ?? 1))}`}
+                    />
+                  ))}
+                  {/* Subtotal calculado */}
+                  {breakdown && (
+                    <DetailRow label="Subtotal calculado" value={formatCurrency(breakdown.subtotal)} />
+                  )}
+                  <div className="border-t border-border my-2" />
+                  {/* Custo final (guardado — pode ter override manual) */}
+                  <DetailRow icon={<CreditCard size={12} />} label="Custo Final" value={formatCurrency(entrada.custoTotal)} bold />
+                  {breakdown && Math.abs(breakdown.subtotal - Number(entrada.custoTotal)) > 0.01 && (
+                    <p className="text-[10px] text-text-muted px-3">⚠ Valor ajustado manualmente</p>
+                  )}
                   {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
                     <DetailRow label="Custo Excesso" value={formatCurrency(entrada.custoExcesso)} accent />
                   )}

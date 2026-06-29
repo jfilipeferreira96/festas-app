@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listarUtilizadores, criarUtilizador, atualizarFuncao, atualizarActivo, eliminarUtilizador } from "@/lib/api/utilizadores";
+import { listarUtilizadores, criarUtilizador, atualizarFuncao, atualizarActivo, atualizarPassword, eliminarUtilizador } from "@/lib/api/utilizadores";
 import type { FuncaoUtilizador } from "@saas/shared-types";
 
 interface CreateUtilizadorData {
@@ -41,6 +41,14 @@ export function useUtilizadores() {
     },
   });
 
+  const updatePasswordMutation = useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      atualizarPassword(id, { password }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["utilizadores"] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (id: string) => eliminarUtilizador(id),
     onSuccess: () => {
@@ -61,6 +69,9 @@ export function useUtilizadores() {
     updateActivo: updateActivoMutation.mutateAsync,
     isUpdatingActivo: updateActivoMutation.isPending,
     updateActivoError: updateActivoMutation.error,
+    updatePassword: updatePasswordMutation.mutateAsync,
+    isUpdatingPassword: updatePasswordMutation.isPending,
+    updatePasswordError: updatePasswordMutation.error,
     deleteUtilizador: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
     deleteError: deleteMutation.error,

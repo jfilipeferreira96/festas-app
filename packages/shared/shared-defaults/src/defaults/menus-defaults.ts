@@ -7,17 +7,24 @@ export interface ItemLancheDefault {
   icone?: string;
 }
 
+// Itens base do Menu BasyLandy + extras ao lanche disponíveis
 export const LANCHE_DEFAULTS: ItemLancheDefault[] = [
-  { nome: "Bolo de Aniversário", icone: "🎂" },
-  { nome: "Pipocas", icone: "🍿" },
-  { nome: "Croissants", icone: "🥐" },
-  { nome: "Pizzas", icone: "🍕" },
-  { nome: "Nuggets", icone: "🍗" },
-  { nome: "Sumos", icone: "🧃" },
-  { nome: "Água", icone: "💧" },
-  { nome: "Sandes", icone: "🥪" },
-  { nome: "Fruta", icone: "🍎" },
+  // ─── Base (incluídos no Menu BasyLandy) ───────────────────
   { nome: "Gelatina", icone: "🍮" },
+  { nome: "Água e sumo", icone: "🧃" },
+  { nome: "Batatas fritas", icone: "🍟" },
+  { nome: "Pão de forma (queijo, fiambre, chocolate ou manteiga)", icone: "🍞" },
+  { nome: "Bolo de Aniversário", icone: "🎂" },
+  // ─── Extras ao lanche (suplemento) ────────────────────────
+  { nome: "Cenoura Baby", icone: "🥕" },
+  { nome: "Queijo babybel", icone: "🧀" },
+  { nome: "Pipocas", icone: "🍿" },
+  { nome: "Pizzas", icone: "🍕" },
+  { nome: "Bolachas", icone: "🍪" },
+  { nome: "Nuggets", icone: "🍗" },
+  { nome: "Donuts", icone: "🍩" },
+  { nome: "Fruta da época", icone: "🍎" },
+  { nome: "Muffins", icone: "🧁" },
 ];
 
 export const DURACAO_OPCOES = [

@@ -65,6 +65,47 @@ describe("Cliente Service", () => {
       await testPrisma.cliente.delete({ where: { id: cliente.id } });
     });
 
+    it("should create a cliente with aniversariantes (filhos)", async () => {
+      const cliente = await clienteService.create({
+        nome: "Cliente Com Filhos",
+        telefone: "965000111",
+        email: "filhos@email.pt",
+        aniversariantes: [
+          { nome: "Filho A", dataNascimento: "2018-05-10" },
+          { nome: "Filho B", dataNascimento: "2020-09-21" },
+        ],
+      });
+
+      expect(cliente.aniversariantes).toBeDefined();
+      expect(cliente.aniversariantes!.length).toBe(2);
+      expect(cliente.aniversariantes![0]!.nome).toBe("Filho A");
+
+      // Confirmar persistência na BD
+      const fetched = await testPrisma.cliente.findUnique({
+        where: { id: cliente.id },
+        include: { aniversariantes: true },
+      });
+      expect(fetched!.aniversariantes.length).toBe(2);
+      expect(new Date(fetched!.aniversariantes[0]!.dataNascimento!).getMonth()).toBe(4); // Maio (0-indexed)
+
+      await testPrisma.cliente.delete({ where: { id: cliente.id } });
+    });
+
+    it("should ignore aniversariantes without nome", async () => {
+      const cliente = await clienteService.create({
+        nome: "Cliente Filhos Parciais",
+        telefone: "965000222",
+        email: "parciais@email.pt",
+        aniversariantes: [
+          { nome: "Válido", dataNascimento: "2019-01-01" },
+          { nome: "", dataNascimento: "2019-01-01" },
+        ],
+      });
+      expect(cliente.aniversariantes!.length).toBe(1);
+
+      await testPrisma.cliente.delete({ where: { id: cliente.id } });
+    });
+
     it("should throw NOME_REQUIRED if nome is empty", async () => {
       await expect(
         clienteService.create({ nome: "", telefone: "912345678", email: "a@b.pt" })
@@ -109,6 +150,36 @@ describe("Cliente Service", () => {
       await expect(
         clienteService.update("non-existent", { nome: "X" })
       ).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should sync aniversariantes on update (add/remove)", async () => {
+      // Criar cliente com 2 filhos
+      const cliente = await clienteService.create({
+        nome: "Cliente Sync Filhos",
+        telefone: "965000333",
+        email: "sync@email.pt",
+        aniversariantes: [
+          { nome: "Filho 1", dataNascimento: "2017-03-03" },
+          { nome: "Filho 2", dataNascimento: "2019-07-07" },
+        ],
+      });
+
+      // Substituir por apenas 1 filho novo
+      const updated = await clienteService.update(cliente.id, {
+        aniversariantes: [{ nome: "Filho Novo", dataNascimento: "2021-12-12" }],
+      });
+      expect(updated.aniversariantes!.length).toBe(1);
+      expect(updated.aniversariantes![0]!.nome).toBe("Filho Novo");
+
+      // Confirmar na BD
+      const fetched = await testPrisma.cliente.findUnique({
+        where: { id: cliente.id },
+        include: { aniversariantes: true },
+      });
+      expect(fetched!.aniversariantes.length).toBe(1);
+      expect(fetched!.aniversariantes[0]!.nome).toBe("Filho Novo");
+
+      await testPrisma.cliente.delete({ where: { id: cliente.id } });
     });
   });
 

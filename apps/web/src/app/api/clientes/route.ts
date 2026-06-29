@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const { nome, email, telefone, contribuinte, codigoPostal, observacao } = await request.json();
+    const { nome, email, telefone, contribuinte, codigoPostal, observacao, aniversariantes } =
+      await request.json();
     const cliente = await clienteService.create({
       nome,
       email,
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
       contribuinte,
       codigoPostal,
       observacao,
+      aniversariantes,
     });
     return NextResponse.json(cliente, { status: 201 });
   } catch (error) {

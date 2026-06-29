@@ -60,6 +60,35 @@ async function findOrCreateCliente(
   return novo.id;
 }
 
+/**
+ * Regista as crianças de uma entrada livre como filhos (Aniversariante) do cliente,
+ * para que fiquem disponíveis para avisos de aniversário. Evita duplicados por nome.
+ * Como a entrada livre só recolhe `idade`, a dataNascimento fica nula (a completar depois).
+ */
+async function registarCriancasComoAniversariantes(
+  clienteId: string,
+  criancas: CriancaInput[]
+): Promise<void> {
+  const nomesValidos = criancas
+    .map((c) => c.nome?.trim())
+    .filter((n): n is string => !!n && n.length > 0);
+  if (nomesValidos.length === 0) return;
+
+  // Nomes já registados como filhos deste cliente
+  const existentes = await prisma.aniversariante.findMany({
+    where: { clienteId },
+    select: { nome: true },
+  });
+  const nomesExistentes = new Set(existentes.map((a) => a.nome.toLowerCase()));
+
+  const novos = nomesValidos.filter((n) => !nomesExistentes.has(n.toLowerCase()));
+  if (novos.length === 0) return;
+
+  await prisma.aniversariante.createMany({
+    data: novos.map((nome) => ({ nome, clienteId })),
+  });
+}
+
 export const entradaLivreService = {
   // ── Listar entradas livres ──────────────────────
   async list(filtros?: {
@@ -172,20 +201,26 @@ export const entradaLivreService = {
   async create(data: CriarEntradaLivreDTO) {
     const { criancas, duracaoMinutos, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
-    // Tarifário global: calcular preço/hora a partir da data atual (semana vs fim de semana)
+    // Tarifário global: preço por escalão (1h/2h + hora adicional) — aplica-se a todos os dias.
     const configPreco = await configuracaoPrecoService.getConfig();
-    const hoje = new Date();
-    const isFimSemana = hoje.getDay() === 0 || hoje.getDay() === 6;
-    const custoHora = isFimSemana
-      ? Number(configPreco.precoEntradaHoraFimSemana)
-      : Number(configPreco.precoEntradaHoraSemana);
+    // custoHora mantém-se para registo histórico (linelegado); usa o escalão aplicável.
+    const custoHora = Number(configPreco.precoEntrada1h ?? 6);
 
     // Preço: usa valor manual do utilizador se fornecido, senão calcula a partir
-    // do tarifário global (precoHora × duração).
+    // do tarifário por escalão × nº de pessoas (crianças + adultos).
+    // Se temLanche, adiciona o suplemento de lanche por pessoa.
+    const numAdultos = data.numAdultos ?? 0;
+    const totalPessoas = criancas.length + numAdultos;
+    const custoTempoPorPessoa = await configuracaoPrecoService.calcularPrecoEntrada(duracaoMinutos, new Date());
+    const custoTempo = custoTempoPorPessoa * totalPessoas;
+    const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
+    const custoLanche = data.temLanche ? precoLanche * totalPessoas : 0;
+    const custoCalculado = custoTempo + custoLanche;
+
     const custoTotal =
       typeof custoTotalInput === "number" && custoTotalInput >= 0
         ? custoTotalInput
-        : (custoHora / 60) * duracaoMinutos;
+        : custoCalculado;
 
     const inicioEm = new Date();
     const fimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
@@ -218,6 +253,10 @@ export const entradaLivreService = {
         },
       },
     });
+
+    // Registar as crianças como filhos (Aniversariante) do cliente, para que
+    // fiquem disponíveis para avisos de aniversário. Evita duplicados por nome.
+    await registarCriancasComoAniversariantes(clienteId, criancas);
 
     // Associar extras
     if (extrasIds && extrasIds.length > 0) {
