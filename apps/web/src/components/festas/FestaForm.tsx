@@ -94,7 +94,20 @@ const reservaSchema = z.object({
 
 type ReservaFormData = z.infer<typeof reservaSchema>;
 
-interface ReservaFormProps { reserva?: Reserva | null; onClose: () => void; }
+/** Valores iniciais opcionais (ex: ao clicar num slot vazio). */
+export interface FestaFormInitialValues {
+  data?: string;
+  horario?: string;
+  duracaoMinutos?: number;
+  horaLanche?: string;
+  cor?: string;
+}
+
+interface ReservaFormProps {
+  reserva?: Reserva | null;
+  onClose: () => void;
+  initialValues?: FestaFormInitialValues;
+}
 
 const DURACAO_OPTIONS = [
   { value: "60", label: "1h" }, { value: "90", label: "1h30" },
@@ -143,7 +156,7 @@ function groupBySubcategoria(items: ExtraItem[]) {
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
+export default function FestaForm({ reserva, onClose, initialValues }: ReservaFormProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const createReserva = useCreateReserva();
   const updateReserva = useUpdateReserva();
@@ -194,9 +207,9 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
   const [showClienteSearch, setShowClienteSearch] = useState(false);
 
   const defaultValues = useMemo<ReservaFormData>(() => ({
-    tema: reserva?.tema ?? "", data: reserva?.data ?? "", horario: reserva?.horario ?? "",
-    duracaoMinutos: reserva?.duracaoMinutos ?? 120, localId: reserva?.localId ?? "",
-    horaLanche: reserva?.horaLanche ?? "",
+    tema: reserva?.tema ?? "", data: reserva?.data ?? initialValues?.data ?? "", horario: reserva?.horario ?? initialValues?.horario ?? "",
+    duracaoMinutos: reserva?.duracaoMinutos ?? initialValues?.duracaoMinutos ?? 120, localId: reserva?.localId ?? "",
+    horaLanche: reserva?.horaLanche ?? initialValues?.horaLanche ?? "",
     encarregadoNome: reserva?.cliente?.nome ?? "",
     encarregadoContacto: reserva?.cliente?.telefone ?? "",
     encarregadoEmail: reserva?.cliente?.email ?? "",
@@ -204,7 +217,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     adicionarCliente: true,
     monitoresIds: reserva?.monitores?.map((m) => m.monitor.id) ?? [],
     etapasIds: reserva?.etapas?.map((e) => e.etapa.id) ?? [],
-    cor: reserva?.cor ?? "", menuId: "",
+    cor: reserva?.cor ?? initialValues?.cor ?? "", menuId: "",
     previsaoCriancas: reserva?.numCriancas ?? reserva?.previsaoCriancas ?? 10,
     metodoPagamento: reserva?.metodoPagamento ?? "", valorPago: reserva?.valorPago ?? 0,
     pago: reserva?.pago ?? false,
@@ -217,7 +230,7 @@ export default function FestaForm({ reserva, onClose }: ReservaFormProps) {
     valorCaucao: reserva?.valorCaucao ? Number(reserva.valorCaucao) : undefined,
     descontoPercentagem: reserva?.descontoPercentagem ?? undefined,
     descontoMotivo: reserva?.descontoMotivo ?? "",
-  }), [reserva]);
+  }), [reserva, initialValues]);
 
   const { register, handleSubmit, setValue, watch, trigger, formState: { errors, isSubmitting } } = useForm<ReservaFormData>({
     resolver: zodResolver(reservaSchema), defaultValues,

@@ -43,7 +43,7 @@ function formatDate(iso: string): string {
 
 export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" | "cacifos" }) {
   const isCacifos = mode === "cacifos";
-  const [filtro, setFiltro] = useState("");
+  const [filtro, setFiltro] = useState("hoje");
   const [showForm, setShowForm] = useState(false);
   const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
   const [viewingEntradaId, setViewingEntradaId] = useState<string | null>(null);

@@ -21,6 +21,15 @@ export function useSlotsHorarioAll() {
   });
 }
 
+export function useSlotsDia(data: string) {
+  return useQuery({
+    queryKey: ["slots-horario", "dia", data],
+    queryFn: () => slotsHorarioApi.getDia(data),
+    enabled: !!data,
+    refetchInterval: 30000, // Refresh every 30s
+  });
+}
+
 export function useCreateSlotHorario() {
   const queryClient = useQueryClient();
   return useMutation({
