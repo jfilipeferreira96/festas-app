@@ -4,7 +4,8 @@ import React, { useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 // Paleta de cores da marca BasyLandy
-const FESTA_COLORS = [
+export const FESTA_COLORS = [
+  // ── Cores originais (preservadas) ──
   { name: "Azul", value: "#0095C8" },
   { name: "Verde", value: "#5CBE4A" },
   { name: "Amarelo", value: "#FCE12D" },
@@ -13,6 +14,15 @@ const FESTA_COLORS = [
   { name: "Verde-água", value: "#00A68A" },
   { name: "Roxo", value: "#993B98" },
   { name: "Cinzento", value: "#8A8E91" },
+  // ── Cores adicionais ──
+  { name: "Azul-marinho", value: "#1E40AF" },
+  { name: "Vermelho", value: "#DC2626" },
+  { name: "Rosa-claro", value: "#FF69B4" },
+  { name: "Violeta", value: "#8B5CF6" },
+  { name: "Âmbar", value: "#F59E0B" },
+  { name: "Ciano", value: "#06B6D4" },
+  { name: "Castanho", value: "#7C2D12" },
+  { name: "Preto", value: "#000000" },
 ];
 
 interface FestaColorPickerProps {
@@ -54,7 +64,7 @@ const FestaColorPicker: React.FC<FestaColorPickerProps> = React.memo(
 
 FestaColorPicker.displayName = "FestaColorPicker";
 
-export { FestaColorPicker, FESTA_COLORS };
+export { FestaColorPicker };
 
 /** Small color dot for displaying festa color in lists/tables */
 interface FestaColorDotProps {

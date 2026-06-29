@@ -19,7 +19,7 @@ import Switch from "@/components/form/switch/Switch";
 import MultiSelect from "@/components/form/MultiSelect";
 import Checkbox from "@/components/form/input/Checkbox";
 import { FormStepper } from "@/components/ui/stepper/FormStepper";
-import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade, useReservas } from "@/hooks/use-reservas";
+import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useExtras } from "@/hooks/use-extras";
 import { useMonitores } from "@/hooks/use-monitores";
@@ -27,6 +27,7 @@ import { useEtapasFesta } from "@/hooks/use-etapasFesta";
 import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
 import { useConfigPreco } from "@/hooks/use-precos";
 import { useSlotsHorario, useSlotsDia } from "@/hooks/use-slots-horario";
+import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva, MetodoPagamento, DisponibilidadeResult } from "@/lib/api/reservas";
@@ -43,16 +44,8 @@ interface ExtraItem {
 
 // ── Cores pré-definidas ────────────────────────────────────────
 
-const CORES_PREDEFINIDAS = [
-  { value: "#0095C8", label: "Azul" },
-  { value: "#5CBE4A", label: "Verde" },
-  { value: "#FCE12D", label: "Amarelo" },
-  { value: "#F59253", label: "Laranja" },
-  { value: "#E54796", label: "Rosa" },
-  { value: "#00A68A", label: "Verde-água (Teal)" },
-  { value: "#993B98", label: "Roxo" },
-  { value: "#8A8E91", label: "Cinzento" },
-];
+// Cores predefinidas derivadas da paleta partilhada (FestaColorPicker)
+const CORES_PREDEFINIDAS = FESTA_COLORS.map((c) => ({ value: c.value, label: c.name }));
 
 // ── Zod Schema ─────────────────────────────────────────────────
 const reservaSchema = z.object({
@@ -244,7 +237,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     descontoMotivo: reserva?.descontoMotivo ?? "",
   }), [reserva, initialValues]);
 
-  const { register, handleSubmit, setValue, watch, trigger, formState: { errors, isSubmitting } } = useForm<ReservaFormData>({
+  const { register, handleSubmit, setValue, watch, getValues, trigger, formState: { errors, isSubmitting } } = useForm<ReservaFormData>({
     resolver: zodResolver(reservaSchema), defaultValues,
   });
 
@@ -266,18 +259,17 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     excludeId: reserva?.id,
   });
 
-  // ── Cores em uso no mesmo dia (para avisar pulseiras repetidas) ──
-  const { data: reservasDoDia } = useReservas(watchedData ? { data: watchedData, pageSize: 100 } : undefined);
-  const coresEmUso = useMemo(() => {
-    if (!reservasDoDia?.items) return [] as string[];
-    return reservasDoDia.items
-      .filter((r) => r.id !== reserva?.id && r.cor)
-      .map((r) => r.cor as string);
-  }, [reservasDoDia, reserva?.id]);
-
-  // ── Slots de horário (Select de slots disponíveis p/ a data) ──
+  // ── Slots de horário e cores em uso no mesmo dia ──
   const { data: slotsHorario } = useSlotsHorario();
   const { data: slotsDia } = useSlotsDia(watchedData);
+
+  // Cores já ocupadas por outras festas activas neste dia.
+  // coresUsadas vem do endpoint /api/slots-horario/dia (testado no service).
+  // Em modo edição, excluímos a cor da própria reserva para que permaneça seleccionável.
+  const coresEmUso = useMemo(() => {
+    const todas = slotsDia?.coresUsadas ?? [];
+    return reserva?.cor ? todas.filter((c) => c !== reserva.cor) : todas;
+  }, [slotsDia?.coresUsadas, reserva?.cor]);
   const [horarioCustom, setHorarioCustom] = useState(false);
 
   // Determina se o horário actual corresponde a um slot; caso contrário,
@@ -317,14 +309,18 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     [slotsHorario, setValue],
   );
 
-  // ── Auto-preencher a primeira cor disponível ao criar festa ──
+  // ── Auto-preencher / auto-trocar cor conforme disponibilidade do dia ──
   React.useEffect(() => {
-    // Só em modo criação e quando ainda não há cor definida
+    // Em modo edição, a cor da reserva já está excluída de coresEmUso — nada a fazer.
     if (reserva) return;
-    if (defaultValues.cor) return;
-    const primeiraLivre = CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value));
-    if (primeiraLivre) setValue("cor", primeiraLivre.value);
-  }, [reserva, defaultValues.cor, coresEmUso, setValue]);
+    const corAtual = getValues("cor");
+    // Se não há cor definida OU a cor actual passou a estar ocupada (mudança de data),
+    // seleccionar automaticamente a primeira cor livre.
+    if (!corAtual || coresEmUso.includes(corAtual)) {
+      const primeiraLivre = CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value));
+      setValue("cor", primeiraLivre?.value ?? "");
+    }
+  }, [reserva, coresEmUso, setValue, getValues]);
 
   // ── Tarifário global (auto-preenchimento do valor) ──
   const { data: configPreco } = useConfigPreco();
@@ -513,17 +509,14 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   }, [cacifosDisponiveis]);
   const corOptions = useMemo(() => [
     { value: "NONE", label: "Sem cor" },
-    ...CORES_PREDEFINIDAS.map((c) => {
-      // A própria reserva em edição mantém a sua cor activa.
-      const usadaPorOutra = coresEmUso.includes(c.value) && c.value !== reserva?.cor;
-      return {
+    ...CORES_PREDEFINIDAS
+      .filter((c) => !coresEmUso.includes(c.value))
+      .map((c) => ({
         value: c.value,
-        label: usadaPorOutra ? `${c.label} · em uso` : c.label,
+        label: c.label,
         color: c.value,
-        disabled: usadaPorOutra,
-      };
-    })
-  ], [coresEmUso, reserva?.cor]);
+      })),
+  ], [coresEmUso]);
 
   return (
     <div className="flex flex-col max-h-[70vh]">
@@ -868,12 +861,6 @@ function Step1Geral({
             <Select options={corOptions} placeholder="Escolher cor" value={currentCor || "NONE"} onChange={(val) => setValue("cor", val === "NONE" ? "" : val)} showColorIndicators={true} />
             {currentCor && (<div className="absolute right-10 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: currentCor }} />)}
           </div>
-          {currentCor && coresEmUso.includes(currentCor) && (
-            <div className="mt-1 flex items-center gap-1 text-xs text-accent-orange-700 bg-orange-50 border border-orange-200 rounded-md px-2 py-1">
-              <AlertTriangle size={12} />
-              <span>Cor já em uso noutra festa neste dia</span>
-            </div>
-          )}
         </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
