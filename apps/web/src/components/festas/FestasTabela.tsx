@@ -1,14 +1,15 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History, LayoutGrid, Table2, Calendar } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva } from "@/hooks/use-reservas";
-import FestaForm from "./FestaForm";
+import FestaForm, { type FestaFormInitialValues } from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
+import FestasSlotsGrid from "./FestasSlotsGrid";
 import CheckInModal from "./CheckInModal";
 import HistoricoModal from "./HistoricoModal";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
@@ -39,7 +40,10 @@ const FILTER_OPTIONS = [
 
 export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacifos" }) {
   const isCacifos = mode === "cacifos";
-  const [filtro, setFiltro] = useState("");
+  const [filtro, setFiltro] = useState("hoje");
+  const [viewMode, setViewMode] = useState<"tabela" | "slots">("tabela");
+  const [slotDate, setSlotDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [formInitialValues, setFormInitialValues] = useState<FestaFormInitialValues | undefined>(undefined);
   const [showForm, setShowForm] = useState(false);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
   const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
@@ -87,6 +91,13 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
 
   const handleCreate = useCallback(() => {
     setEditingReserva(null);
+    setFormInitialValues(undefined);
+    setShowForm(true);
+  }, []);
+
+  const handleSlotClick = useCallback((initialValues: FestaFormInitialValues) => {
+    setEditingReserva(null);
+    setFormInitialValues(initialValues);
     setShowForm(true);
   }, []);
 
@@ -111,6 +122,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const handleFormClose = useCallback(() => {
     setShowForm(false);
     setEditingReserva(null);
+    setFormInitialValues(undefined);
   }, []);
 
   // ── Quick Actions ──────────────────────────────────────────────
@@ -157,21 +169,65 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       <div className="flex items-center justify-between gap-4 mt-4 mb-6 flex-wrap">
         {/* Left: Filter pills group */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto filter-scrollbar max-w-full">
-            {FILTER_OPTIONS.map((opt) => (
+          {/* View mode toggle (hidden in CACIFOS read-only mode) */}
+          {!isCacifos && (
+            <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs shrink-0">
               <button
-                key={opt.value}
-                onClick={() => setFiltro(opt.value)}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
-                  filtro === opt.value
+                onClick={() => setViewMode("tabela")}
+                className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                  viewMode === "tabela"
                     ? "bg-brand-500 text-white shadow-theme-sm"
                     : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                {opt.label}
+                <Table2 size={15} />
+                <span className="hidden sm:inline">Tabela</span>
               </button>
-            ))}
-          </div>
+              <button
+                onClick={() => setViewMode("slots")}
+                className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
+                  viewMode === "slots"
+                    ? "bg-brand-500 text-white shadow-theme-sm"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                <LayoutGrid size={15} />
+                <span className="hidden sm:inline">Slots</span>
+              </button>
+            </div>
+          )}
+
+          {/* Filter pills (only in tabela mode) */}
+          {viewMode === "tabela" && (
+            <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto filter-scrollbar max-w-full">
+              {FILTER_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFiltro(opt.value)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+                    filtro === opt.value
+                      ? "bg-brand-500 text-white shadow-theme-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Date selector (only in slots mode) */}
+          {viewMode === "slots" && (
+            <div className="flex items-center gap-2 rounded-xl bg-white border border-gray-200 p-1.5 shadow-theme-xs shrink-0">
+              <Calendar size={16} className="text-text-muted ml-1" />
+              <input
+                type="date"
+                value={slotDate}
+                onChange={(e) => setSlotDate(e.target.value)}
+                className="text-sm font-medium text-text-primary bg-transparent border-none outline-none cursor-pointer"
+              />
+            </div>
+          )}
         </div>
 
         {/* Right: Action button (hidden in CACIFOS read-only mode) */}
@@ -183,7 +239,15 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         )}
       </div>
 
-      {/* Table */}
+      {/* Slots Grid View */}
+      {viewMode === "slots" && !isCacifos && (
+        <div className="mb-6">
+          <FestasSlotsGrid data={slotDate} onSlotClick={handleSlotClick} />
+        </div>
+      )}
+
+      {/* Table (only in tabela view mode) */}
+      {viewMode === "tabela" && (
       <DataTable<Reserva>
         data={reservas?.items || []}
         itemLabel="festas"
@@ -444,6 +508,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         }}
       />
 
+      )}
+
       {/* Form Modal */}
       {showForm && (
         <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
@@ -451,7 +517,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             <h2 className="text-lg font-semibold text-text-primary mb-4">
               {editingReserva ? "Editar Festa" : "Nova Festa"}
             </h2>
-            <FestaForm reserva={editingReserva} onClose={handleFormClose} />
+            <FestaForm reserva={editingReserva} onClose={handleFormClose} initialValues={formInitialValues} />
           </div>
         </Modal>
       )}
