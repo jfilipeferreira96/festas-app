@@ -304,7 +304,7 @@ export default function FestasSlotsGrid({ data, onSlotClick, onFestaAction, isCa
           <strong className="text-text-primary">{ocupados}</strong> ocupado{ocupados !== 1 ? "s" : ""}
         </span>
         <span className="text-text-muted">
-          <strong className="text-text-primary">{slots.length - ocupados}</strong> disponível{slots.length - ocupados !== 1 ? "eis" : ""}
+          <strong className="text-text-primary">{slots.length - ocupados}</strong> {slots.length - ocupados !== 1 ? "disponíveis" : "disponível"}
         </span>
         {festasSemSlot.length > 0 && (
           <span className="text-text-muted">
