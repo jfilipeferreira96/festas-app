@@ -1047,9 +1047,7 @@ async function seedMarketing() {
 async function seedEntradasLivres() {
   console.log("  Creating entrada livre data...");
 
-  const now = new Date();
   const todayDate = today();
-  const todayStr = toDateStr(todayDate);
 
   // ─── Entrada ATIVA (hoje, às 9:00) ───────────────────────────────
   const ativaInicio = dateAt(todayDate, 9, 0);

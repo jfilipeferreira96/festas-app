@@ -141,16 +141,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const iniciarFesta = useIniciarReserva();
   const finalizarReserva = useFinalizarReserva();
 
-  // Contagens por estado (para os tabs) — computadas das festas carregadas
-  const counts = useMemo(() => {
-    const items = reservas?.items ?? [];
-    const c: Record<string, number> = { RESERVA: 0, CONFIRMADO: 0, EM_CURSO: 0, CONCLUIDA: 0 };
-    for (const r of items) {
-      if (r.estado in c) c[r.estado]++;
-    }
-    return c;
-  }, [reservas]);
-
   const handleCreate = useCallback(() => {
     setEditingReserva(null);
     // Pré-preencher a data do dia único (para que cores/slots sejam correctos)
@@ -302,7 +292,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       <FestasToolbar
         tab={tab}
         onTabChange={handleTabChange}
-        counts={counts}
         onPrint={() => window.print()}
         onCreate={!isCacifos ? handleCreate : undefined}
       />

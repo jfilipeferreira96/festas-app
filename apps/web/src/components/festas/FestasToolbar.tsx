@@ -17,24 +17,22 @@ export type FestaTab =
 interface TabOption {
   value: FestaTab;
   label: string;
-  countKey?: "RESERVA" | "CONFIRMADO" | "EM_CURSO" | "CONCLUIDA";
 }
 
 const TAB_OPTIONS: TabOption[] = [
   { value: "hoje", label: "Hoje" },
   { value: "amanha", label: "Amanhã" },
   { value: "semana", label: "Esta Semana" },
-  { value: "em_curso", label: "Em Curso", countKey: "EM_CURSO" },
+  { value: "em_curso", label: "Em Curso" },
   { value: "todos", label: "Todas" },
-  { value: "concluidos", label: "Concluídas", countKey: "CONCLUIDA" },
-  { value: "RESERVA", label: "Pendentes", countKey: "RESERVA" },
-  { value: "CONFIRMADO", label: "Confirmadas", countKey: "CONFIRMADO" },
+  { value: "concluidos", label: "Concluídas" },
+  { value: "RESERVA", label: "Pendentes" },
+  { value: "CONFIRMADO", label: "Confirmadas" },
 ];
 
 interface FestasToolbarProps {
   tab: FestaTab;
   onTabChange: (tab: FestaTab) => void;
-  counts: Record<string, number>;
   onPrint: () => void;
   /** Callback para criar nova festa (botão à direita). Se omitido, não mostra o botão. */
   onCreate?: () => void;
@@ -42,7 +40,7 @@ interface FestasToolbarProps {
 
 /** Barra de tabs + acções (Nova Festa + Imprimir). DatePicker é renderizada separadamente. */
 const FestasToolbar: React.FC<FestasToolbarProps> = React.memo(
-  ({ tab, onTabChange, counts, onPrint, onCreate }) => {
+  ({ tab, onTabChange, onPrint, onCreate }) => {
     return (
       <div className="flex items-center justify-between gap-4 mt-4 mb-6 flex-wrap no-print">
         <div className="flex items-center gap-3 min-w-0">
@@ -59,7 +57,6 @@ const FestasToolbar: React.FC<FestasToolbarProps> = React.memo(
                   }`}
                 >
                   {opt.label}
-                  {opt.countKey && <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${isActive ? "bg-white/20 text-white" : "bg-gray-100 text-text-muted"}`}>{counts[opt.countKey] ?? 0}</span>}
                 </button>
               );
             })}
