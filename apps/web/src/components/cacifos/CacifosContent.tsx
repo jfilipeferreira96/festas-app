@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Package, Download, LockKeyhole, AlertTriangle, Unlock } from "lucide-react";
+import { Package, Download, LockKeyhole, AlertTriangle, Unlock, Printer } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
@@ -148,7 +148,7 @@ export default function CacifosContent() {
 
       {/* Alerta de cacifos esquecidos */}
       {esquecidosList.length > 0 && (
-        <div className="p-4 rounded-xl bg-accent-red-50 border border-accent-red-200">
+        <div className="p-4 rounded-xl bg-accent-red-50 border border-accent-red-200 no-print">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <AlertTriangle size={18} className="text-accent-red-500 shrink-0" />
@@ -176,7 +176,7 @@ export default function CacifosContent() {
       )}
 
       {/* Stats + Legend Card */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 no-print">
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-green-50">
             <Package size={20} className="text-accent-green-500" />
@@ -207,7 +207,7 @@ export default function CacifosContent() {
       </div>
 
       {/* Filters Card */}
-      <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs">
+      <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
             {/* Date Picker */}
@@ -250,19 +250,28 @@ export default function CacifosContent() {
             </div>
           </div>
 
-          <button
-            onClick={() => handleExportCSV()}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
-          >
-            <Download size={16} />
-            <span>Exportar CSV</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
+            >
+              <Printer size={16} />
+              <span>Imprimir</span>
+            </button>
+            <button
+              onClick={() => handleExportCSV()}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
+            >
+              <Download size={16} />
+              <span>Exportar CSV</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Festas summary for selected date */}
       {festas.length > 0 && (
-        <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs">
+        <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-text-primary uppercase tracking-wider">
               Festas do dia — {formattedDate}
@@ -302,6 +311,7 @@ export default function CacifosContent() {
       )}
 
       {/* Grid */}
+      <div className="no-print">
       {isLoading ? (
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
           {Array.from({ length: 20 }).map((_, i) => (
@@ -355,6 +365,38 @@ export default function CacifosContent() {
           </p>
         </div>
       )}
+      </div>
+
+      {/* Print-only: tabela de cacifos para impressão */}
+      <div className="print-only">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Nº</th>
+              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Nome</th>
+              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Estado</th>
+              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Crianças</th>
+              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Festa / Cliente</th>
+              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Notas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cacifos?.map((cacifo) => (
+              <tr key={cacifo.id}>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.numero}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.nome ?? "—"}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{ESTADO_LABELS[cacifo.estado] ?? cacifo.estado}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.criancas ?? "—"}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.reserva?.cliente?.nome ?? "—"}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.notas ?? "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {(!cacifos || cacifos.length === 0) && (
+          <p className="text-sm text-center py-4">Sem cacifos para mostrar.</p>
+        )}
+      </div>
 
       {/* Cacifo Detail Modal */}
       {selectedCacifo && (

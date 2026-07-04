@@ -45,6 +45,9 @@ interface DataTableProps<T> {
     key: string;
     direction: "asc" | "desc";
   };
+  /** Custom accessor for the sort value (overrides direct key access).
+   *  Use to sort by a composite key (e.g. date+time). */
+  sortAccessor?: (item: T) => string | number;
 }
 
 const PAGINATION_OPTIONS = [10, 25, 50, 100];
@@ -76,6 +79,7 @@ function DataTable<T extends { id: string }>({
   canManage = true,
   itemLabel = "itens",
   defaultSort,
+  sortAccessor,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(initialPageSize);
@@ -107,8 +111,9 @@ function DataTable<T extends { id: string }>({
 
     if (sortConfig !== null) {
       sortableData.sort((a, b) => {
-        const aValue = a[sortConfig.key as keyof T];
-        const bValue = b[sortConfig.key as keyof T];
+        // Permite uma função de acesso personalizada (ex.: ordenar por data+hora combinados)
+        const aValue = sortAccessor ? sortAccessor(a) : a[sortConfig.key as keyof T];
+        const bValue = sortAccessor ? sortAccessor(b) : b[sortConfig.key as keyof T];
 
         if (aValue < bValue) {
           return sortConfig.direction === "asc" ? -1 : 1;
@@ -121,7 +126,7 @@ function DataTable<T extends { id: string }>({
     }
 
     return sortableData;
-  }, [filteredData, sortConfig]);
+  }, [filteredData, sortConfig, sortAccessor]);
 
   const totalPages = Math.ceil(sortedData.length / rowsPerPage);
   const currentData = pagination

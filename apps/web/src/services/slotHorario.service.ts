@@ -48,20 +48,34 @@ export interface SlotsDiaResult {
   coresUsadas: string[];
 }
 
+// Mapeia o resultado do Prisma para o tipo partilhado SlotHorario,
+// desnormalizando salaLanche.nome → salaLancheNome.
+function mapSlot<T extends { salaLanche?: { nome: string } | null }>(
+  s: T,
+): Omit<T, "salaLanche"> & { salaLancheNome: string | null } {
+  const { salaLanche, ...rest } = s;
+  return {
+    ...rest,
+    salaLancheNome: salaLanche?.nome ?? null,
+  };
+}
+
 export const slotHorarioService = {
   async list() {
-    return prisma.slotHorario.findMany({
+    const slots = await prisma.slotHorario.findMany({
       where: { activo: true },
       orderBy: { ordem: "asc" },
       include: { salaLanche: true },
     });
+    return slots.map(mapSlot);
   },
 
   async listAll() {
-    return prisma.slotHorario.findMany({
+    const slots = await prisma.slotHorario.findMany({
       orderBy: { ordem: "asc" },
       include: { salaLanche: true },
     });
+    return slots.map(mapSlot);
   },
 
   /**
@@ -76,7 +90,7 @@ export const slotHorarioService = {
     const festasAtivas = result.items.filter((f) => f.estado !== "CANCELADA");
 
     // Cores já usadas por festas activas neste dia (sugestão de cor disponível)
-    const coresUsadas = new Set(
+    const coresUsadas = new Set<string>(
       festasAtivas.filter((f) => f.cor).map((f) => f.cor as string),
     );
 
@@ -132,7 +146,7 @@ export const slotHorarioService = {
         corDefault: slot.corDefault,
         horaLancheDefault: slot.horaLancheDefault,
         salaLancheId: slot.salaLancheId,
-        salaLancheNome: slot.salaLanche?.nome ?? null,
+        salaLancheNome: slot.salaLancheNome ?? null,
         festa: festa
           ? {
               id: festa.id,

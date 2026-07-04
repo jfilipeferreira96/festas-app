@@ -1,17 +1,19 @@
-"use client";
+ "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History, LayoutGrid, Table2 } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History, Clock } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva } from "@/hooks/use-reservas";
+import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
-import FestasSlotsGrid from "./FestasSlotsGrid";
 import CheckInModal from "./CheckInModal";
 import HistoricoModal from "./HistoricoModal";
+import FestasToolbar, { type FestaTab } from "./FestasToolbar";
+import SlotsPorPreencher from "./SlotsPorPreencher";
 import DatePicker from "@/components/form/date-picker";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
 import { getAniversarianteNome } from "@/lib/api/reservas";
@@ -29,24 +31,25 @@ const ESTADO_LABELS: Record<string, string> = {
   CANCELADA: "Cancelada",
 };
 
-const FILTER_OPTIONS = [
-  { value: "", label: "Todas" },
-  { value: "hoje", label: "Hoje" },
-  { value: "semana", label: "Esta semana" },
-  { value: "RESERVA", label: "Pendentes" },
-  { value: "CONFIRMADO", label: "Confirmadas" },
-  { value: "EM_CURSO", label: "Em curso" },
-  { value: "CONCLUIDA", label: "Concluídas" },
-];
+function addMinutosToTime(hora: string, minutos: number): string {
+  const [h, m] = hora.split(":").map(Number);
+  const total = h * 60 + m + minutos;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return `${String(nh).padStart(2, "0")}:${String(nm).padStart(2, "0")}`;
+}
+
+function slotLabel(horaInicio: string): string {
+  const h = Number(horaInicio.split(":")[0]);
+  if (h < 12) return "Manhã";
+  if (h < 18) return "Tarde";
+  return "Noite";
+}
 
 export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacifos" }) {
   const isCacifos = mode === "cacifos";
-  const [filtro, setFiltro] = useState("hoje");
-  const [viewMode, setViewMode] = useState<"tabela" | "slots">("tabela");
-  const [slotDate, setSlotDate] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  });
+  const [tab, setTab] = useState<FestaTab>("hoje");
+  const [dataSelecionada, setDataSelecionada] = useState<string | null>(null);
   const [formInitialValues, setFormInitialValues] = useState<FestaFormInitialValues | undefined>(undefined);
   const [showForm, setShowForm] = useState(false);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
@@ -58,59 +61,131 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const [finalizarModal, setFinalizarModal] = useState<Reserva | null>(null);
   const [iniciarFestaReserva, setIniciarFestaReserva] = useState<Reserva | null>(null);
 
-  const todayStr = useMemo(
-    () => new Date().toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" }),
-    []
-  );
+  // Formatar uma data YYYY-MM-DD por extenso (pt-PT)
+  const formatarData = useCallback((iso: string) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("pt-PT", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }, []);
 
   // Helper: Date → YYYY-MM-DD (local, sem timezone shift)
   const toLocalISO = useCallback((d: Date) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
   []);
 
+  // Helper: amanhã em YYYY-MM-DD
+  const tomorrowISO = useCallback(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return toLocalISO(d);
+  }, [toLocalISO]);
+
+  // Determinar o dia único mostrado (para slots vazios): dataSelecionada tem prioridade,
+  // seguida dos tabs "hoje"/"amanha". Null = vista de range/estado (sem slots vazios).
+  const diaUnico = useMemo<string | null>(() => {
+    if (dataSelecionada) return dataSelecionada;
+    if (tab === "hoje") return toLocalISO(new Date());
+    if (tab === "amanha") return tomorrowISO();
+    return null;
+  }, [dataSelecionada, tab, toLocalISO, tomorrowISO]);
+
+  // Subtítulo dinâmico conforme a vista seleccionada (hoje, amanhã, data, semana, estado...)
+  const periodoLabel = useMemo(() => {
+    if (diaUnico) return formatarData(diaUnico);
+    switch (tab) {
+      case "semana": return "Esta semana";
+      case "em_curso": return "Festas em curso";
+      case "concluidos": return "Festas concluídas";
+      case "RESERVA": return "Festas pendentes";
+      case "CONFIRMADO": return "Festas confirmadas";
+      case "todos": return "Todas as festas";
+      default: return formatarData(toLocalISO(new Date()));
+    }
+  }, [diaUnico, tab, formatarData, toLocalISO]);
+
   // Build filter params
   const filtros = React.useMemo(() => {
-    // Em modo slots, carregar todas as festas do dia para lookup de acções
-    if (viewMode === "slots") return { data: slotDate, pageSize: 100 };
-    if (filtro === "hoje") return { data: toLocalISO(new Date()) };
-    if (filtro === "semana") {
-      // Segunda → domingo da semana atual
-      const now = new Date();
-      const dow = now.getDay(); // 0 = domingo
-      const diffToMonday = dow === 0 ? -6 : 1 - dow;
-      const monday = new Date(now);
-      monday.setDate(now.getDate() + diffToMonday);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      return {
-        dataInicio: toLocalISO(monday),
-        dataFim: toLocalISO(sunday),
-      };
+    if (dataSelecionada) return { data: dataSelecionada, pageSize: 200 };
+    switch (tab) {
+      case "hoje":    return { data: toLocalISO(new Date()), pageSize: 200 };
+      case "amanha":  return { data: tomorrowISO(), pageSize: 200 };
+      case "semana": {
+        const now = new Date();
+        const dow = now.getDay();
+        const diffToMonday = dow === 0 ? -6 : 1 - dow;
+        const monday = new Date(now);
+        monday.setDate(now.getDate() + diffToMonday);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        return { dataInicio: toLocalISO(monday), dataFim: toLocalISO(sunday), pageSize: 200 };
+      }
+      case "em_curso":   return { estado: "EM_CURSO" as EstadoReserva, pageSize: 200 };
+      case "concluidos": return { estado: "CONCLUIDA" as EstadoReserva, pageSize: 200 };
+      case "RESERVA":    return { estado: "RESERVA" as EstadoReserva, pageSize: 200 };
+      case "CONFIRMADO": return { estado: "CONFIRMADO" as EstadoReserva, pageSize: 200 };
+      case "todos":
+      default:           return { pageSize: 200 };
     }
-    if (["RESERVA", "CONFIRMADO", "EM_CURSO", "CONCLUIDA"].includes(filtro)) {
-      return { estado: filtro as EstadoReserva };
-    }
-    return undefined;
-  }, [filtro, viewMode, slotDate, toLocalISO]);
+  }, [tab, dataSelecionada, toLocalISO, tomorrowISO]);
 
   const { data: reservas, isLoading } = useReservas(filtros);
+  // Slots do dia (para slots vazios) — só quando há dia único
+  const { data: slotsDia } = useSlotsDia(diaUnico ?? "");
+  // Definições estáticas de slots (para label do slot na coluna Data/Hora)
+  const { data: slotsHorario } = useSlotsHorario();
   const deleteReserva = useDeleteReserva();
   const updateStatus = useUpdateReservaStatus();
   const iniciarFesta = useIniciarReserva();
   const finalizarReserva = useFinalizarReserva();
 
+  // Contagens por estado (para os tabs) — computadas das festas carregadas
+  const counts = useMemo(() => {
+    const items = reservas?.items ?? [];
+    const c: Record<string, number> = { RESERVA: 0, CONFIRMADO: 0, EM_CURSO: 0, CONCLUIDA: 0 };
+    for (const r of items) {
+      if (r.estado in c) c[r.estado]++;
+    }
+    return c;
+  }, [reservas]);
+
   const handleCreate = useCallback(() => {
     setEditingReserva(null);
-    // Em modo slots, pré-preencher a data seleccionada para que cores/slots sejam correctos
-    setFormInitialValues(viewMode === "slots" ? { data: slotDate } : undefined);
+    // Pré-preencher a data do dia único (para que cores/slots sejam correctos)
+    setFormInitialValues(diaUnico ? { data: diaUnico } : undefined);
     setShowForm(true);
-  }, [viewMode, slotDate]);
+  }, [diaUnico]);
 
   const handleSlotClick = useCallback((initialValues: FestaFormInitialValues) => {
     setEditingReserva(null);
     setFormInitialValues(initialValues);
     setShowForm(true);
   }, []);
+
+  const handleTabChange = useCallback((newTab: FestaTab) => {
+    setDataSelecionada(null);
+    setTab(newTab);
+  }, []);
+
+  // Quando o utilizador escolhe uma data no DatePicker, salta para esse dia.
+  // Tab fica "data" para nenhuma tab (Hoje/Amanhã) aparecer activa.
+  const handleDataChange = useCallback((selectedDates: Date[]) => {
+    if (selectedDates.length > 0) {
+      setDataSelecionada(toLocalISO(selectedDates[0]));
+      setTab("data");
+    }
+  }, [toLocalISO]);
+
+  const handlePreencherSlot = useCallback(
+    (initialValues: FestaFormInitialValues) => {
+      setEditingReserva(null);
+      setFormInitialValues(initialValues);
+      setShowForm(true);
+    },
+    [],
+  );
 
   const handleEdit = useCallback((reserva: Reserva) => {
     setEditingReserva(reserva);
@@ -190,100 +265,64 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
     <div>
       <PageHeader
         title="Festas"
-        subtitle={`Gestão de festas — ${todayStr}`}
+        subtitle={`Gestão de festas — ${periodoLabel}`}
       />
 
-      {/* Filters */}
-      <div className="flex items-center justify-between gap-4 mt-4 mb-6 flex-wrap">
-        {/* Left: Filter pills group */}
-        <div className="flex items-center gap-3 min-w-0">
-          {/* View mode toggle (hidden in CACIFOS read-only mode) */}
-          {!isCacifos && (
-            <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs shrink-0">
-              <button
-                onClick={() => setViewMode("tabela")}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
-                  viewMode === "tabela"
-                    ? "bg-brand-500 text-white shadow-theme-sm"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <Table2 size={15} />
-                <span className="hidden sm:inline">Tabela</span>
-              </button>
-              <button
-                onClick={() => setViewMode("slots")}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-1.5 ${
-                  viewMode === "slots"
-                    ? "bg-brand-500 text-white shadow-theme-sm"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                <LayoutGrid size={15} />
-                <span className="hidden sm:inline">Slots</span>
-              </button>
-            </div>
-          )}
-
-          {/* Filter pills (only in tabela mode) */}
-          {viewMode === "tabela" && (
-            <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto filter-scrollbar max-w-full">
-              {FILTER_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setFiltro(opt.value)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
-                    filtro === opt.value
-                      ? "bg-brand-500 text-white shadow-theme-sm"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Date selector (only in slots mode) */}
-          {viewMode === "slots" && (
-            <div className="rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs shrink-0">
+      {/* Navegação por data (card próprio, separado das tabs) */}
+      {!isCacifos && (
+        <div className="mt-4 p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-text-secondary whitespace-nowrap">
+              Ir para o dia:
+            </span>
+            <div className="w-52">
               <DatePicker
-                id="festas-slot-date-picker"
-                defaultDate={slotDate}
-                onChange={([date]: Date[]) => {
-                  const y = date.getFullYear();
-                  const m = String(date.getMonth() + 1).padStart(2, "0");
-                  const d = String(date.getDate()).padStart(2, "0");
-                  setSlotDate(`${y}-${m}-${d}`);
-                }}
-                className="w-40 text-sm font-medium text-text-primary border-none outline-none cursor-pointer"
+                id="festas-data-picker"
+                defaultDate={diaUnico ?? undefined}
+                onChange={handleDataChange}
+                placeholder="dd-mm-aaaa"
               />
             </div>
-          )}
-        </div>
-
-        {/* Right: Action button (hidden in CACIFOS read-only mode) */}
-        {!isCacifos && (
-          <Button onClick={handleCreate} className="flex items-center gap-2">
-            <Plus size={16} />
-            Nova Festa
-          </Button>
-        )}
-      </div>
-
-      {/* Slots Grid View */}
-      {viewMode === "slots" && !isCacifos && (
-        <div className="mb-6">
-          <FestasSlotsGrid data={slotDate} onSlotClick={handleSlotClick} onFestaAction={handleFestaAction} />
+            {/* Badge visual quando sincronizado com Hoje/Amanhã */}
+            {tab === "hoje" && (
+              <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-full">
+                Hoje
+              </span>
+            )}
+            {tab === "amanha" && (
+              <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-full">
+                Amanhã
+              </span>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Table (only in tabela view mode) */}
-      {viewMode === "tabela" && (
+      {/* Toolbar: tabs + Nova Festa + Imprimir */}
+      <FestasToolbar
+        tab={tab}
+        onTabChange={handleTabChange}
+        counts={counts}
+        onPrint={() => window.print()}
+        onCreate={!isCacifos ? handleCreate : undefined}
+      />
+
+      {/* Slots vazios do dia (apenas em vista de dia único, não-CACIFOS) */}
+      {!isCacifos && diaUnico && slotsDia && slotsDia.slots.length > 0 && (
+        <SlotsPorPreencher
+          data={diaUnico}
+          slots={slotsDia.slots}
+          coresUsadas={slotsDia.coresUsadas}
+          onPreencher={handlePreencherSlot}
+        />
+      )}
+
+      {/* Tabela unificada */}
       <DataTable<Reserva>
         data={reservas?.items || []}
         itemLabel="festas"
-        defaultSort={{ key: "data", direction: "desc" }}
+        defaultSort={{ key: "data", direction: "asc" }}
+        sortAccessor={(r) => `${r.data ?? ""}T${r.horario ?? ""}`}
         columns={([
           {
             key: "aniversariante",
@@ -326,12 +365,24 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             key: "data",
             label: "Data / Hora",
             sortable: true,
-            render: (_v, r) => (
-              <div>
-                <p className="text-sm text-text-primary">{formatDate(r.data)}</p>
-                <p className="text-xs text-text-muted">{r.horario} · {formatDuration(r.duracaoMinutos)}</p>
-              </div>
-            ),
+            render: (_v, r) => {
+              // Procurar slot correspondente para mostrar label (manhã/tarde/noite)
+              const slot = slotsHorario?.find((s) => s.horaInicio === r.horario);
+              const label = slot ? slotLabel(r.horario) : "Personalizado";
+              const intervalo = `${r.horario}–${addMinutosToTime(r.horario, r.duracaoMinutos)}`;
+              return (
+                <div className="flex items-start gap-2 min-w-[150px]">
+                  <FestaColorDot color={r.cor} className="w-4 h-4 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary leading-tight">{formatDate(r.data)}</p>
+                    <p className="inline-flex items-center px-2 py-0.5 text-sm font-semibold text-brand-700 bg-brand-50 rounded-md w-fit">{intervalo}</p>
+                    <p className="text-[11px] text-text-muted">
+                      {label} · {formatDuration(r.duracaoMinutos)}
+                    </p>
+                  </div>
+                </div>
+              );
+            },
           },
           {
             key: "local",
@@ -339,6 +390,28 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             render: (_v, r) => (
               <span className="text-sm text-text-secondary">{r.local?.nome ?? "—"}</span>
             ),
+          },
+          {
+            key: "lanche",
+            label: "Lanche",
+            render: (_v, r) => {
+              if (!r.horaLanche && !r.salaLancheNome) {
+                return <span className="text-sm text-text-muted">—</span>;
+              }
+              return (
+                <div className="min-w-[90px]">
+                  {r.horaLanche && (
+                    <p className="text-sm font-medium text-text-primary flex items-center gap-1">
+                      <Clock size={13} className="text-text-muted" />
+                      {r.horaLanche}
+                    </p>
+                  )}
+                  {r.salaLancheNome && (
+                    <p className="text-xs text-text-muted">{r.salaLancheNome}</p>
+                  )}
+                </div>
+              );
+            },
           },
           {
             key: "numCriancas",
@@ -540,8 +613,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         }}
       />
 
-      )}
-
       {/* Form Modal */}
       {showForm && (
         <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
@@ -684,3 +755,4 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
     </div>
   );
 }
+

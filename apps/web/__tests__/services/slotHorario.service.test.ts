@@ -159,11 +159,11 @@ describe("SlotHorario Service", () => {
       expect(atualizado.salaLancheId).toBe(salaIdRef.current);
     });
 
-    it("list() deve incluir a relação salaLanche", async () => {
+    it("list() deve incluir a relação salaLanche (denormalizada em salaLancheNome)", async () => {
       const lista = await slotHorarioService.list();
       const slot = lista.find((s: { id: string }) => s.id === slotIdRef.current);
       expect(slot).toBeDefined();
-      expect((slot as { salaLanche?: { nome: string } }).salaLanche?.nome).toBe(
+      expect((slot as { salaLancheNome?: string }).salaLancheNome).toBe(
         "Sala Teste Defaults"
       );
     });
