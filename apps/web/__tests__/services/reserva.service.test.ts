@@ -864,4 +864,62 @@ describe("Reserva Service", () => {
       await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
     });
   });
+
+  // ── salaLanche (sala de lanche na reserva) ─────────────────────
+  describe("create() / update() — salaLancheId", () => {
+    const salaIdRef = { current: "" };
+    const reservaIdRef = { current: "" };
+    const futuroStr = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 90);
+      return d.toISOString().split("T")[0]!;
+    })();
+
+    beforeAll(async () => {
+      const sala = await testPrisma.salaLanche.create({
+        data: { nome: "Sala Lanche Reserva Test" },
+      });
+      salaIdRef.current = sala.id;
+    }, 60000);
+
+    afterAll(async () => {
+      if (reservaIdRef.current) {
+        await testPrisma.reserva.delete({ where: { id: reservaIdRef.current } }).catch(() => {});
+      }
+      if (salaIdRef.current) {
+        await testPrisma.salaLanche.delete({ where: { id: salaIdRef.current } }).catch(() => {});
+      }
+    });
+
+    it("deve criar reserva com salaLancheId", async () => {
+      const reserva = await reservaService.create({
+        data: futuroStr,
+        horario: "13:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        aniversariantes: [TEST_ANIVERSARIANTE],
+        numCriancas: 10,
+        salaLancheId: salaIdRef.current,
+      });
+      reservaIdRef.current = reserva.id;
+
+      expect(reserva.salaLancheId).toBe(salaIdRef.current);
+    });
+
+    it("deve actualizar salaLancheId via update()", async () => {
+      // Criar segunda sala
+      const sala2 = await testPrisma.salaLanche.create({
+        data: { nome: "Sala Lanche Reserva Test 2" },
+      });
+
+      const atualizada = await reservaService.update(reservaIdRef.current, {
+        salaLancheId: sala2.id,
+      });
+
+      expect(atualizada.salaLancheId).toBe(sala2.id);
+
+      // Limpar segunda sala
+      await testPrisma.salaLanche.delete({ where: { id: sala2.id } }).catch(() => {});
+    });
+  });
 });

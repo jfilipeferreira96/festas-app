@@ -18,6 +18,7 @@ interface CreateReservaData {
   data: string;
   horario: string;
   horaLanche?: string;
+  salaLancheId?: string;
   duracaoMinutos: number;
   localId: string;
   clienteId?: string;
@@ -70,6 +71,7 @@ interface UpdateReservaData {
   data?: string;
   horario?: string;
   horaLanche?: string;
+  salaLancheId?: string;
   duracaoMinutos?: number;
   localId?: string;
   clienteId?: string;
@@ -384,6 +386,7 @@ export const reservaService = {
         cor: data.cor,
         bolo: data.bolo,
         horaLanche: data.horaLanche,
+        salaLancheId: data.salaLancheId,
         observacoesGerais: data.observacoesGerais,
         observacoesLesoes: data.observacoesLesoes,
         observacoesBrindes: data.observacoesBrindes,
@@ -420,6 +423,7 @@ export const reservaService = {
       },
       include: {
         local: true,
+        salaLanche: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
         extras: { include: { extra: true } },
@@ -487,6 +491,7 @@ export const reservaService = {
         data: data.data ? new Date(data.data) : undefined,
         horario: data.horario,
         horaLanche: data.horaLanche,
+        salaLancheId: data.salaLancheId,
         duracaoMinutos: data.duracaoMinutos,
         localId: data.localId,
         clienteId: data.clienteId,
@@ -528,6 +533,7 @@ export const reservaService = {
       },
       include: {
         local: true,
+        salaLanche: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
         extras: { include: { extra: true } },

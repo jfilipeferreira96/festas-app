@@ -102,6 +102,83 @@ describe("SlotHorario Service", () => {
     });
   });
 
+  // ── Defaults (cor, hora lanche, sala lanche) ───────────────────
+  describe("Defaults do slot (cor, hora lanche, sala lanche)", () => {
+    const salaIdRef = { current: "" };
+    const slotIdRef = { current: "" };
+    const DIA_DEFAULT = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 200);
+      return d.toISOString().split("T")[0]!;
+    })();
+
+    beforeAll(async () => {
+      // Criar sala de lanche de teste
+      const sala = await testPrisma.salaLanche.create({
+        data: { nome: "Sala Teste Defaults" },
+      });
+      salaIdRef.current = sala.id;
+
+      // Criar slot com defaults
+      const slot = await slotHorarioService.create({
+        horaInicio: "15:30",
+        duracaoMin: 135,
+        corDefault: "#0095C8",
+        horaLancheDefault: "16:30",
+        salaLancheId: sala.id,
+      });
+      slotIdRef.current = slot.id;
+    }, 60000);
+
+    afterAll(async () => {
+      await testPrisma.reserva.deleteMany({
+        where: { horario: "15:30", data: new Date(DIA_DEFAULT) },
+      });
+      if (slotIdRef.current) {
+        await testPrisma.slotHorario.delete({ where: { id: slotIdRef.current } }).catch(() => {});
+      }
+      if (salaIdRef.current) {
+        await testPrisma.salaLanche.delete({ where: { id: salaIdRef.current } }).catch(() => {});
+      }
+    });
+
+    it("deve persistir defaults ao criar slot", async () => {
+      const slot = await slotHorarioService.getById(slotIdRef.current);
+      expect(slot.corDefault).toBe("#0095C8");
+      expect(slot.horaLancheDefault).toBe("16:30");
+      expect(slot.salaLancheId).toBe(salaIdRef.current);
+    });
+
+    it("deve actualizar defaults via update()", async () => {
+      const atualizado = await slotHorarioService.update(slotIdRef.current, {
+        corDefault: "#5CBE4A",
+        horaLancheDefault: "17:00",
+      });
+      expect(atualizado.corDefault).toBe("#5CBE4A");
+      expect(atualizado.horaLancheDefault).toBe("17:00");
+      expect(atualizado.salaLancheId).toBe(salaIdRef.current);
+    });
+
+    it("list() deve incluir a relação salaLanche", async () => {
+      const lista = await slotHorarioService.list();
+      const slot = lista.find((s: { id: string }) => s.id === slotIdRef.current);
+      expect(slot).toBeDefined();
+      expect((slot as { salaLanche?: { nome: string } }).salaLanche?.nome).toBe(
+        "Sala Teste Defaults"
+      );
+    });
+
+    it("getSlotsDia() deve retornar defaults no SlotDiaItem", async () => {
+      const dia = await slotHorarioService.getSlotsDia(DIA_DEFAULT);
+      const slot = dia.slots.find((s) => s.slotId === slotIdRef.current);
+      expect(slot).toBeDefined();
+      expect(slot!.corDefault).toBe("#5CBE4A");
+      expect(slot!.horaLancheDefault).toBe("17:00");
+      expect(slot!.salaLancheId).toBe(salaIdRef.current);
+      expect(slot!.salaLancheNome).toBe("Sala Teste Defaults");
+    });
+  });
+
   // ── Ligação slots ↔ festas (getSlotsDia) ────────────────────────
   describe("getSlotsDia() — ligação slots ↔ festas", () => {
     const DIA_TESTE = (() => {

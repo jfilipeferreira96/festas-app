@@ -365,6 +365,8 @@ model Reserva {
   estado          EstadoReserva @default(RESERVA)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  // ── Sala do Lanche (FK opcional para SalaLanche) ──
+  salaLancheId    String?
 
   // Runtime fields (preenchidos quando estado passa a EM_CURSO)
   inicioEm        DateTime?
@@ -428,6 +430,9 @@ model Reserva {
 
   localId         String
   local           Local         @relation(fields: [localId], references: [id])
+
+  // Sala do lanche (opcional — tabela separada SalaLanche)
+  salaLanche      SalaLanche?   @relation(fields: [salaLancheId], references: [id])
 
   // Relations
   menu            Menu?
@@ -716,13 +721,20 @@ model ExcecaoCalendario {
 // ============================================
 
 model SlotHorario {
-  id         String   @id @default(cuid())
-  horaInicio String   // HH:MM
-  duracaoMin Int      // default 135 (2h15m)
-  activo     Boolean  @default(true)
-  ordem      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                String   @id @default(cuid())
+  horaInicio        String   // HH:MM
+  duracaoMin        Int      // default 135 (2h15m)
+  activo            Boolean  @default(true)
+  ordem             Int      @default(0)
+  // ── Defaults aplicados ao criar uma festa neste slot ──
+  corDefault        String?  // Cor sugerida para a festa (ex: "#0095C8")
+  horaLancheDefault String?  // HH:MM — hora sugerida do lanche
+  salaLancheId      String?  // FK opcional para SalaLanche
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Sala do lanche sugerida para festas neste slot
+  salaLanche        SalaLanche? @relation(fields: [salaLancheId], references: [id])
 
   @@map("slot_horario")
 }
@@ -827,4 +839,23 @@ model NotaDiaria {
 
   @@index([data])
   @@map("nota_diaria")
+}
+
+// ============================================
+// SALAS DE LANCHE — tabela separada de Locais
+// ============================================
+// Espaços dedicados ao lanche das festas (ex: Sala 1, Sala 2).
+// Usada como default nos Slots de Horário e associada às Reservas.
+
+model SalaLanche {
+  id        String   @id @default(cuid())
+  nome      String
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slots     SlotHorario[]
+  reservas  Reserva[]
+
+  @@map("sala_lanche")
 }

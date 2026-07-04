@@ -13,6 +13,8 @@ export interface Reserva {
   data: string;
   horario: string;
   horaLanche?: string;
+  salaLancheId?: string;
+  salaLancheNome?: string;
   duracaoMinutos: number;
   numCriancas: number;
   notas?: string;
@@ -114,6 +116,7 @@ export interface CriarReservaDTO {
   data: string;
   horario: string;
   horaLanche?: string;
+  salaLancheId?: string;
   duracaoMinutos: number;
   numCriancas?: number;
   notas?: string;

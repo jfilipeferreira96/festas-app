@@ -29,6 +29,11 @@ export interface SlotDiaItem {
   ordem: number;
   ocupado: boolean;
   festa: SlotDiaFesta | null;
+  // ── Defaults do slot (para auto-preencher ao criar festa) ──
+  corDefault?: string | null;
+  horaLancheDefault?: string | null;
+  salaLancheId?: string | null;
+  salaLancheNome?: string | null;
 }
 
 export interface FestaSemSlotItem extends SlotDiaFesta {
@@ -48,12 +53,14 @@ export const slotHorarioService = {
     return prisma.slotHorario.findMany({
       where: { activo: true },
       orderBy: { ordem: "asc" },
+      include: { salaLanche: true },
     });
   },
 
   async listAll() {
     return prisma.slotHorario.findMany({
       orderBy: { ordem: "asc" },
+      include: { salaLanche: true },
     });
   },
 
@@ -121,6 +128,11 @@ export const slotHorarioService = {
         duracaoMin: slot.duracaoMin,
         ordem: slot.ordem,
         ocupado: !!festa,
+        // Defaults do slot para auto-preencher festas
+        corDefault: slot.corDefault,
+        horaLancheDefault: slot.horaLancheDefault,
+        salaLancheId: slot.salaLancheId,
+        salaLancheNome: slot.salaLanche?.nome ?? null,
         festa: festa
           ? {
               id: festa.id,
@@ -183,7 +195,11 @@ export const slotHorarioService = {
         duracaoMin: data.duracaoMin ?? 135,
         activo: data.activo ?? true,
         ordem,
+        corDefault: data.corDefault ?? null,
+        horaLancheDefault: data.horaLancheDefault ?? null,
+        salaLancheId: data.salaLancheId ?? null,
       },
+      include: { salaLanche: true },
     });
   },
 
@@ -196,7 +212,11 @@ export const slotHorarioService = {
         ...(data.duracaoMin !== undefined && { duracaoMin: data.duracaoMin }),
         ...(data.activo !== undefined && { activo: data.activo }),
         ...(data.ordem !== undefined && { ordem: data.ordem }),
+        ...(data.corDefault !== undefined && { corDefault: data.corDefault }),
+        ...(data.horaLancheDefault !== undefined && { horaLancheDefault: data.horaLancheDefault }),
+        ...(data.salaLancheId !== undefined && { salaLancheId: data.salaLancheId }),
       },
+      include: { salaLanche: true },
     });
   },
 

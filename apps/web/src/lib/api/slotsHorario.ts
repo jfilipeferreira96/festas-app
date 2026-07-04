@@ -30,6 +30,11 @@ export interface SlotDia {
   ordem: number;
   ocupado: boolean;
   festa: FestaSlotInfo | null;
+  // ── Defaults do slot (para auto-preencher ao criar festa) ──
+  corDefault?: string | null;
+  horaLancheDefault?: string | null;
+  salaLancheId?: string | null;
+  salaLancheNome?: string | null;
 }
 
 /** Resposta do endpoint /api/slots-horario/dia */

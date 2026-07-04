@@ -27,6 +27,7 @@ import { useEtapasFesta } from "@/hooks/use-etapasFesta";
 import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
 import { useConfigPreco } from "@/hooks/use-precos";
 import { useSlotsHorario, useSlotsDia } from "@/hooks/use-slots-horario";
+import { useSalasLanche } from "@/hooks/use-salas-lanche";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import type { Cliente } from "@/lib/api/clientes";
@@ -55,6 +56,7 @@ const reservaSchema = z.object({
   horaLanche: z.string().optional(),
   duracaoMinutos: z.number().min(30, "Duração mínima é 30 minutos"),
   localId: z.string().min(1, "Seleccione uma sala"),
+  salaLancheId: z.string().optional(),
   encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
   encarregadoContacto: z.string().min(9, "Contacto inválido"),
   encarregadoEmail: z.string().min(1, "Email é obrigatório").email("Email inválido"),
@@ -94,6 +96,7 @@ export interface FestaFormInitialValues {
   duracaoMinutos?: number;
   horaLanche?: string;
   cor?: string;
+  salaLancheId?: string;
 }
 
 interface ReservaFormProps {
@@ -180,6 +183,14 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     () => (locais ?? []).map((l) => ({ value: l.id, label: l.nome })),
     [locais]
   );
+  const { data: salasLanche } = useSalasLanche();
+  const salaLancheOptions = useMemo(
+    () => [
+      { value: "", label: "Sem sala de lanche" },
+      ...(salasLanche ?? []).map((s) => ({ value: s.id, label: s.nome })),
+    ],
+    [salasLanche]
+  );
   const monitorOptions = useMemo(
     () => (monitores ?? []).filter((m) => m.activo).map((m) => ({ value: m.id, text: m.nome, selected: false })),
     [monitores]
@@ -215,6 +226,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     horario: reserva?.horario ?? initialValues?.horario ?? "",
     duracaoMinutos: reserva?.duracaoMinutos ?? initialValues?.duracaoMinutos ?? 120, localId: reserva?.localId ?? "",
     horaLanche: reserva?.horaLanche ?? initialValues?.horaLanche ?? "",
+    salaLancheId: reserva?.salaLancheId ?? initialValues?.salaLancheId ?? "",
     encarregadoNome: reserva?.cliente?.nome ?? "",
     encarregadoContacto: reserva?.cliente?.telefone ?? "",
     encarregadoEmail: reserva?.cliente?.email ?? "",
@@ -304,9 +316,24 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     (horaInicio: string) => {
       const slot = slotsHorario?.find((s) => s.horaInicio === horaInicio);
       setValue("horario", horaInicio, { shouldDirty: true });
-      if (slot) setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true });
+      if (slot) {
+        setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true });
+        // Auto-preencher defaults do slot (cor, hora lanche, sala lanche) — todos editáveis.
+        if (slot.horaLancheDefault) setValue("horaLanche", slot.horaLancheDefault, { shouldDirty: true });
+        if (slot.salaLancheId) setValue("salaLancheId", slot.salaLancheId, { shouldDirty: true });
+        // Cor: usar o default do slot apenas se ainda estiver livre nesse dia;
+        // caso contrário seleccionar automaticamente a primeira cor disponível
+        // (evita cores repetidas no mesmo dia).
+        const corSlot = slot.corDefault;
+        if (corSlot && !coresEmUso.includes(corSlot)) {
+          setValue("cor", corSlot, { shouldDirty: true });
+        } else {
+          const primeiraLivre = CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value));
+          setValue("cor", primeiraLivre?.value ?? "", { shouldDirty: true });
+        }
+      }
     },
-    [slotsHorario, setValue],
+    [slotsHorario, setValue, coresEmUso],
   );
 
   // ── Auto-preencher / auto-trocar cor conforme disponibilidade do dia ──

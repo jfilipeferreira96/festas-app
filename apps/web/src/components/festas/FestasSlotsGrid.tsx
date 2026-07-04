@@ -130,8 +130,13 @@ const SlotCard = React.memo(function SlotCard({
     onSlotClick({
       horario: slot.horaInicio,
       duracaoMinutos: slot.duracaoMin,
-      horaLanche: calcHoraLanche(slot.horaInicio),
-      cor: findAvailableColor(coresUsadas),
+      // Defaults do slot (cor, hora lanche, sala lanche) com fallback para heurística
+      horaLanche: slot.horaLancheDefault || calcHoraLanche(slot.horaInicio),
+      cor:
+        slot.corDefault && !coresUsadas.includes(slot.corDefault)
+          ? slot.corDefault
+          : findAvailableColor(coresUsadas),
+      salaLancheId: slot.salaLancheId || undefined,
     });
   }, [slot, coresUsadas, onSlotClick]);
 

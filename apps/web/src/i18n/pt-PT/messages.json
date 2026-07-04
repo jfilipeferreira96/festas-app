@@ -101,6 +101,13 @@
     "hasActiveReservas": "Existem reservas activas neste local",
     "inactive": "O local selecionado está inactivo"
   },
+  "salaLanche": {
+    "notFound": "Sala de lanche não encontrada",
+    "createdSuccessfully": "Sala de lanche criada com sucesso",
+    "updatedSuccessfully": "Sala de lanche atualizada com sucesso",
+    "nameRequired": "Nome da sala de lanche é obrigatório",
+    "deleted": "Sala de lanche eliminada com sucesso"
+  },
   "monitor": {
     "notFound": "Monitor não encontrado",
     "createdSuccessfully": "Monitor criado com sucesso",

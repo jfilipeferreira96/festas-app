@@ -8,6 +8,7 @@ export type { EstadoReserva, ReservaExtra, MetodoPagamento };
 // API response type (base + relations from API)
 export interface Reserva extends ReservaBase {
   local: Local;
+  salaLanche?: { id: string; nome: string } | null;
   cliente: { id: string; nome: string; email?: string; telefone: string; codigoPostal?: string };
   aniversariantes: { id: string; aniversarianteId: string; aniversariante: { id: string; nome: string; dataNascimento?: string | null } }[];
   extras: (ReservaExtra & { extra: Extra })[];
@@ -48,6 +49,7 @@ export interface CreateReservaData {
   horaLanche?: string;
   duracaoMinutos: number;
   localId: string;
+  salaLancheId?: string;
   numCriancas?: number;
   extrasIds?: string[];
   monitoresIds?: string[];
