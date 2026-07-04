@@ -34,6 +34,7 @@ export function useCreateReserva() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["slots-horario", "dia"] });
     },
   });
 }
@@ -46,6 +47,7 @@ export function useUpdateReserva() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["slots-horario", "dia"] });
     },
   });
 }
@@ -58,6 +60,7 @@ export function useUpdateReservaStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["slots-horario", "dia"] });
     },
   });
 }
@@ -69,6 +72,7 @@ export function useDeleteReserva() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["slots-horario", "dia"] });
     },
   });
 }
@@ -81,6 +85,7 @@ export function useIniciarReserva() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["slots-horario", "dia"] });
     },
   });
 }
@@ -93,6 +98,7 @@ export function useFinalizarReserva() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["slots-horario", "dia"] });
     },
   });
 }

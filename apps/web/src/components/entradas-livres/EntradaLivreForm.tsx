@@ -39,6 +39,7 @@ const entradaLivreSchema = z.object({
   observacoesLesoes: z.string().optional(),
   // Lanche
   temLanche: z.boolean().optional(),
+  horaLanche: z.string().optional(),
   // Adultos (encarregados que acompanham e pagam)
   numAdultos: z.number().min(0).optional(),
   // Pagamento dividido (2º método)
@@ -140,6 +141,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       observacoes: entrada?.observacoes ?? "",
       observacoesLesoes: entrada?.observacoesLesoes ?? "",
       temLanche: entrada?.temLanche ?? false,
+      horaLanche: (entrada?.horaLanche as string | undefined) ?? "",
       numAdultos: entrada?.numAdultos ?? 0,
       metodoPagamento2: entrada?.metodoPagamento2 ?? "",
       valorPago2: entrada?.valorPago2 ?? 0,
@@ -341,6 +343,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         observacoes: data.observacoes || undefined,
         observacoesLesoes: data.observacoesLesoes || undefined,
         temLanche: data.temLanche,
+        horaLanche: data.horaLanche || undefined,
         numAdultos: data.numAdultos,
         metodoPagamento2: data.metodoPagamento2 && data.metodoPagamento2 !== "NONE" ? data.metodoPagamento2 : undefined,
         valorPago2: data.valorPago2 || undefined,
@@ -552,6 +555,16 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                 onChange={(checked: boolean) => setValue("temLanche", checked)}
               />
             </div>
+            {/* Hora do lanche (visível apenas se temLanche) */}
+            {(watch("temLanche") ?? false) && (
+              <div className="w-40">
+                <label className="block text-xs font-medium text-text-secondary mb-1">Hora do lanche</label>
+                <InputField
+                  type="time"
+                  {...register("horaLanche")}
+                />
+              </div>
+            )}
             {/* Adulto acompanhante */}
             <div className="flex items-center justify-between py-1">
               <div>

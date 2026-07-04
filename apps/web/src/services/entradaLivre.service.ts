@@ -24,6 +24,7 @@ interface CriarEntradaLivreDTO {
   observacoesLesoes?: string;
   // Lanche
   temLanche?: boolean;
+  horaLanche?: string;
   // Adultos (encarregados que acompanham e pagam)
   numAdultos?: number;
   // Pagamento dividido (até 2 métodos)

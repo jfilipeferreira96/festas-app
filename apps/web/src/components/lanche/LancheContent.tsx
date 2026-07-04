@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Sandwich, AlertTriangle, Save, Pencil, Printer, Clock, CookingPot, CheckCheck } from "lucide-react";
+import { Sandwich, AlertTriangle, Save, Pencil, Printer, Clock, CookingPot, CheckCheck, Cake, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
 import { PageHeader, Button } from "@/components/ui";
@@ -61,6 +61,14 @@ export default function LancheContent() {
   const [notasEdit, setNotasEdit] = useState("");
   const [lesoesEdit, setLesoesEdit] = useState("");
   const [horaLancheEdit, setHoraLancheEdit] = useState<string>("");
+
+  // Stable handler for DatePicker — avoids flatpickr re-init on every render.
+  const handleDataChange = useCallback((selectedDates: Date[]) => {
+    if (selectedDates.length > 0) {
+      const d = selectedDates[0];
+      setDataSel(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+    }
+  }, []);
 
   const { data: lanches, isLoading } = useLanchesDoDia(dataSel);
   const { data: alergias } = useAlergias(dataSel);
@@ -197,6 +205,13 @@ export default function LancheContent() {
         <span className="text-xs text-text-secondary">
           {f.extrasNomes?.length ? f.extrasNomes.join(", ") : "—"}
         </span>
+      ),
+    },
+    {
+      key: "salaLancheNome",
+      label: "Sala Lanche",
+      render: (_v, f) => (
+        <span className="text-xs text-text-secondary">{f.salaLancheNome ?? "—"}</span>
       ),
     },
     {
@@ -354,9 +369,7 @@ export default function LancheContent() {
             <DatePicker
               id="lanche-date-picker"
               defaultDate={dataSel}
-              onChange={([date]: Date[]) => {
-                if (date) setDataSel(date.toISOString().split("T")[0]);
-              }}
+              onChange={handleDataChange}
               className="w-44"
             />
             <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-1">
@@ -415,8 +428,17 @@ export default function LancheContent() {
         </div>
       )}
 
-      {/* Tabela de Festas — DataTable (mesmo padrão do FestasTabela) */}
-      <div className="mt-6">
+      {/* Tabela de Festas */}
+      <div className="flex items-center gap-2 mt-6 mb-3">
+        <Cake size={18} className="text-brand-500" />
+        <h3 className="text-base font-semibold text-text-primary">Festas</h3>
+        {filteredFestas.length > 0 && (
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-600">
+            {filteredFestas.length}
+          </span>
+        )}
+      </div>
+      <div>
         {filteredFestas.length > 0 || isLoading ? (
           <DataTable<LancheFestaRow>
             data={filteredFestas}
@@ -449,9 +471,17 @@ export default function LancheContent() {
         ) : null}
       </div>
 
-      {/* Tabela de Entradas Livres — DataTable */}
+      {/* Tabela de Entradas Livres */}
       {filteredEntradas.length > 0 && (
-        <div className="mt-6">
+        <>
+        <div className="flex items-center gap-2 mt-6 mb-3">
+          <Users size={18} className="text-accent-green-500" />
+          <h3 className="text-base font-semibold text-text-primary">Entradas Livres</h3>
+          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-text-muted">
+            {filteredEntradas.length}
+          </span>
+        </div>
+        <div>
           <DataTable<LancheEntradaRow>
             data={filteredEntradas}
             columns={entradasColumns}
@@ -464,6 +494,7 @@ export default function LancheContent() {
             pageSize={10}
           />
         </div>
+        </>
       )}
 
       {/* Empty state */}

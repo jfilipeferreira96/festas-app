@@ -40,6 +40,7 @@ export const lancheService = {
         },
         include: {
           local: true,
+          salaLanche: true,
           aniversariantes: { include: { aniversariante: true } },
           menu: true,
           extras: { include: { extra: true } },
@@ -96,6 +97,7 @@ export const lancheService = {
         horario: r.horario,
         horaLanche: r.horaLanche ?? undefined,
         localNome: r.local?.nome ?? "—",
+        salaLancheNome: r.salaLanche?.nome ?? undefined,
         cor: r.cor ?? undefined,
         numCriancas: r.numCriancas,
         previsaoCriancas: r.previsaoCriancas ?? undefined,
@@ -138,6 +140,7 @@ export const lancheService = {
       where: { id: reservaId },
       include: {
         local: true,
+        salaLanche: true,
         aniversariantes: { include: { aniversariante: true } },
         menu: true,
       },
@@ -164,6 +167,7 @@ export const lancheService = {
       horario: reserva.horario,
       horaLanche: reserva.horaLanche ?? undefined,
       localNome: reserva.local?.nome ?? "—",
+      salaLancheNome: reserva.salaLanche?.nome ?? undefined,
       cor: reserva.cor ?? undefined,
       numCriancas: reserva.numCriancas,
       previsaoCriancas: reserva.previsaoCriancas ?? undefined,

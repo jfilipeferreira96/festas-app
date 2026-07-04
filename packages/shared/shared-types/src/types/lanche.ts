@@ -15,6 +15,7 @@ export interface LancheFesta {
   horario: string;
   horaLanche?: string;
   localNome: string;
+  salaLancheNome?: string;
   cor?: string;
   numCriancas: number;
   previsaoCriancas?: number;
