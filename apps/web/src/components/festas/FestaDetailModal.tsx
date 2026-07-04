@@ -198,6 +198,12 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
           <DetailRow icon={<Calendar size={13} />} label="Data" value={formatDate(reserva.data)} />
           <DetailRow icon={<Clock size={13} />} label="Horário" value={`${reserva.horario} (${formatDuration(reserva.duracaoMinutos)})`} />
           <DetailRow icon={<MapPin size={13} />} label="Sala" value={reserva.local?.nome ?? "—"} />
+          {reserva.horaLanche && (
+            <DetailRow icon={<Clock size={13} />} label="Hora Lanche" value={reserva.horaLanche} />
+          )}
+          {reserva.salaLanche?.nome && (
+            <DetailRow icon={<MapPin size={13} />} label="Sala Lanche" value={reserva.salaLanche.nome} />
+          )}
           <DetailRow icon={<Users size={13} />} label="Nº Crianças" value={String(reserva.numCriancas ?? 0)} />
           {reserva.previsaoCriancas != null && reserva.previsaoCriancas !== reserva.numCriancas && (
             <DetailRow icon={<Users size={13} />} label="Previsão" value={String(reserva.previsaoCriancas)} />

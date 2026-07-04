@@ -12,6 +12,7 @@ import {
   FileText,
   AlertTriangle,
   Timer,
+  Sandwich,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge } from "@/components/ui";
@@ -155,6 +156,13 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
               <DetailRow icon={<Clock size={12} />} label="Início" value={`${formatDate(entrada.inicioEm)} ${formatTime(entrada.inicioEm)}`} />
               <DetailRow icon={<Timer size={12} />} label="Duração" value={`${entrada.duracaoMinutos} min`} />
               <DetailRow label="Fim Previsto" value={formatTime(entrada.fimPrevisto)} />
+              {entrada.temLanche && (
+                <DetailRow
+                  icon={<Sandwich size={12} />}
+                  label="Lanche"
+                  value={entrada.horaLanche ? `Às ${entrada.horaLanche}` : "Incluído"}
+                />
+              )}
               {entrada.fimReal && (
                 <DetailRow label="Fim Real" value={formatTime(entrada.fimReal)} />
               )}
