@@ -41,6 +41,7 @@ interface EncarregadoInput { nome: string; contacto: string; email: string; codi
 interface ExtraItem {
   id: string; nome: string; precoUnitario: number;
   subcategoria?: string; requerTexto?: boolean; icone?: string;
+  fimDeSemana?: boolean | null;
 }
 
 // ── Cores pré-definidas ────────────────────────────────────────
@@ -376,6 +377,50 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     setValue("valorPago", precoCrianca * criancasFaturadas);
   }, [watchedData, configPreco, setValue, reserva?.valorPago, previsaoCriancas, aniversariantes]);
 
+  // ── Auto-selecionar menu conforme dia da semana vs fim-de-semana ──
+  const menuExtras = useMemo(
+    () => (extras ?? []).filter((e) => e.categoria === "MENU" && e.activo),
+    [extras]
+  );
+  const [menuWarning, setMenuWarning] = useState("");
+  const watchedMenuId = watch("menuId");
+
+  React.useEffect(() => {
+    if (!watchedData || menuExtras.length === 0) return;
+    if (reserva) return; // Não sobrescrever em modo edição inicialmente
+
+    const dataObj = new Date(watchedData + "T00:00:00");
+    const dia = dataObj.getDay();
+    const isFimSemana = dia === 0 || dia === 6;
+
+    // Procurar menu correspondente (fimDeSemana=true para fds, false para semana)
+    const matchingMenu = menuExtras.find((m) => m.fimDeSemana === isFimSemana);
+    if (matchingMenu) {
+      setValue("menuId", matchingMenu.id);
+      setMenuWarning("");
+    }
+  }, [watchedData, menuExtras, setValue, reserva]);
+
+  // ── Aviso quando o utilizador seleciona um menu que não corresponde ao dia ──
+  React.useEffect(() => {
+    if (!watchedData || !watchedMenuId) { setMenuWarning(""); return; }
+
+    const dataObj = new Date(watchedData + "T00:00:00");
+    const dia = dataObj.getDay();
+    const isFimSemana = dia === 0 || dia === 6;
+
+    const selectedMenu = menuExtras.find((m) => m.id === watchedMenuId);
+    if (!selectedMenu) { setMenuWarning(""); return; }
+
+    if (selectedMenu.fimDeSemana === true && !isFimSemana) {
+      setMenuWarning("Este menu é apenas para fins-de-semana/feriados.");
+    } else if (selectedMenu.fimDeSemana === false && isFimSemana) {
+      setMenuWarning("Este menu é apenas para dias de semana.");
+    } else {
+      setMenuWarning("");
+    }
+  }, [watchedData, watchedMenuId, menuExtras]);
+
   // ── Pré-preencher valorCaucao com o default das configurações ──
   React.useEffect(() => {
     if (reserva?.valorCaucao && Number(reserva.valorCaucao) > 0) return;
@@ -577,6 +622,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
               setHorarioCustom={setHorarioCustom}
               onSelectSlot={handleSelectSlot}
               currentHorario={watchedHorario}
+              menuWarning={menuWarning}
             />
           )}
           {currentStep === 1 && (
@@ -652,6 +698,7 @@ interface Step1Props {
   watchedData: string;
   corOptions: { value: string; label: string; color?: string; disabled?: boolean }[];
   menuOptions: { value: string; label: string }[];
+  menuWarning?: string;
   showAniversarianteError: boolean;
   showDataNascimentoError: boolean;
   disponibilidade?: DisponibilidadeResult;
@@ -673,7 +720,7 @@ function Step1Geral({
   salaOptions, monitorOptions, currentMonitoresIds, handleMonitoresChange,
   etapaOptions, currentEtapasIds, handleEtapasChange,
   extraItems, extraGroups, selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto,
-  totalEstimado, watchedData, corOptions, menuOptions,
+  totalEstimado, watchedData, corOptions, menuOptions, menuWarning,
   showAniversarianteError, showDataNascimentoError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
   coresEmUso,
   slotOptions, horarioCustom, setHorarioCustom, onSelectSlot, currentHorario,
@@ -903,6 +950,12 @@ function Step1Geral({
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
           <Select options={menuOptions} placeholder="Seleccionar menu" value={defaultValues.menuId ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
+          {menuWarning && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <AlertTriangle size={12} className="text-accent-orange shrink-0" />
+              <p className="text-[11px] text-accent-orange-700">{menuWarning}</p>
+            </div>
+          )}
         </div>
         <div className="w-28">
           <label className="block text-xs font-medium text-text-secondary mb-1">Bolo (qtd)</label>

@@ -12,6 +12,7 @@ export interface CreateExtraInput {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  fimDeSemana?: boolean | null;
   locaisIds?: string[];
 }
 
@@ -23,6 +24,7 @@ export interface UpdateExtraInput {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  fimDeSemana?: boolean | null;
   locaisIds?: string[];
 }
 

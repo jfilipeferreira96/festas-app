@@ -228,6 +228,8 @@ model Extra {
   categoria     CategoriaItem @default(EXTRA)
   subcategoria  String?       // Ex: "Diversão", "Premium" — para agrupar extras no formulário
   requerTexto   Boolean       @default(false) // Se true, mostra input de texto ao selecionar
+  // Flag para menus: true = apenas fim-de-semana/feriados, false = apenas dias de semana, null = todos os dias
+  fimDeSemana   Boolean?
   activo        Boolean       @default(true)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt

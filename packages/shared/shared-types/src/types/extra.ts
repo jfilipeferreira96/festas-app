@@ -13,6 +13,7 @@ export interface Extra {
   categoria: CategoriaItem;
   subcategoria?: string;
   requerTexto: boolean;
+  fimDeSemana?: boolean | null;
   activo: boolean;
   createdAt: string;
   updatedAt: string;

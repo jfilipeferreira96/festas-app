@@ -27,6 +27,7 @@ export default function MenusContent() {
   const [formCategoria, setFormCategoria] = useState<"MENU" | "EXTRA">("MENU");
   const [formSubcategoria, setFormSubcategoria] = useState("");
   const [formRequerTexto, setFormRequerTexto] = useState(false);
+  const [formFimDeSemana, setFormFimDeSemana] = useState<"TODOS" | "SEMANA" | "FIM_SEMANA">("TODOS");
 
   const menuItems = useMemo(
     () => (extras ?? []).filter((e) => e.categoria === "MENU" && e.activo),
@@ -61,6 +62,7 @@ export default function MenusContent() {
     setFormCategoria("MENU");
     setFormSubcategoria("");
     setFormRequerTexto(false);
+    setFormFimDeSemana("TODOS");
     setShowForm(true);
   }, []);
 
@@ -71,6 +73,11 @@ export default function MenusContent() {
     setFormCategoria(extra.categoria as "MENU" | "EXTRA");
     setFormSubcategoria(extra.subcategoria ?? "");
     setFormRequerTexto(extra.requerTexto ?? false);
+    setFormFimDeSemana(
+      extra.fimDeSemana === true ? "FIM_SEMANA"
+      : extra.fimDeSemana === false ? "SEMANA"
+      : "TODOS"
+    );
     setShowForm(true);
   }, []);
 
@@ -85,6 +92,11 @@ export default function MenusContent() {
         categoria: formCategoria,
         subcategoria: formSubcategoria.trim() || undefined,
         requerTexto: formRequerTexto,
+        ...(formCategoria === "MENU" && {
+          fimDeSemana: formFimDeSemana === "FIM_SEMANA" ? true
+            : formFimDeSemana === "SEMANA" ? false
+            : null,
+        }),
       };
       if (editingExtra) {
         await updateExtra.mutateAsync({ id: editingExtra.id, data: commonData });
@@ -248,6 +260,20 @@ export default function MenusContent() {
                   <label className="text-xs font-medium text-text-secondary">Permitir texto personalizado</label>
                 </div>
               </div>
+              {formCategoria === "MENU" && (
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Aplica-se a</label>
+                  <Select
+                    value={formFimDeSemana}
+                    onChange={(val) => setFormFimDeSemana(val as "TODOS" | "SEMANA" | "FIM_SEMANA")}
+                    options={[
+                      { value: "TODOS", label: "Todos os dias" },
+                      { value: "SEMANA", label: "Apenas dias de semana" },
+                      { value: "FIM_SEMANA", label: "Apenas fins-de-semana/feriados" },
+                    ]}
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
                 <Button variant="outline" onClick={() => setShowForm(false)}>
                   Cancelar
@@ -302,6 +328,12 @@ function ItemCard({
           <p className="text-xs text-text-secondary">{formatCurrency(Number(item.precoUnitario))}</p>
           {item.requerTexto && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary-100 text-primary-600 font-medium">Texto</span>
+          )}
+          {item.categoria === "MENU" && item.fimDeSemana === true && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-medium">Fim-de-semana</span>
+          )}
+          {item.categoria === "MENU" && item.fimDeSemana === false && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Semana</span>
           )}
           {item.subcategoria && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-text-muted font-medium">{item.subcategoria}</span>

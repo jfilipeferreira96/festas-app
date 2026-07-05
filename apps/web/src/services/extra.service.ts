@@ -8,6 +8,7 @@ interface CreateExtraData {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  fimDeSemana?: boolean | null;
   activo?: boolean;
   locaisIds?: string[];
 }
@@ -20,6 +21,7 @@ interface UpdateExtraData {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  fimDeSemana?: boolean | null;
   activo?: boolean;
   locaisIds?: string[];
 }
@@ -67,6 +69,7 @@ export const extraService = {
         categoria: data.categoria ?? "EXTRA",
         subcategoria: data.subcategoria,
         requerTexto: data.requerTexto ?? false,
+        fimDeSemana: data.fimDeSemana ?? null,
         activo: data.activo !== undefined ? data.activo : true,
         locais: data.locaisIds
           ? { create: data.locaisIds.map((localId) => ({ localId })) }
@@ -93,6 +96,7 @@ export const extraService = {
         categoria: data.categoria,
         subcategoria: data.subcategoria,
         requerTexto: data.requerTexto,
+        fimDeSemana: data.fimDeSemana,
         activo: data.activo,
         locais: data.locaisIds
           ? { create: data.locaisIds.map((localId) => ({ localId })) }
