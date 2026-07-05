@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Trash2, Check, CheckCircle, XCircle, Users, Clock, Pencil, CreditCard } from "lucide-react";
+import { Plus, Eye, Trash2, CheckCircle, XCircle, Users, Clock, Pencil, CreditCard } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -119,10 +119,6 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
     await cancelar.mutateAsync(cancelarModal.id);
     setCancelarModal({ isOpen: false, id: "" });
   }, [cancelar, cancelarModal.id]);
-
-  const handleMarcarPago = useCallback(async (id: string) => {
-    await atualizarPagamento.mutateAsync({ id, data: { pago: true } });
-  }, [atualizarPagamento]);
 
   const handlePagarExcesso = useCallback(async (id: string) => {
     await atualizarPagamento.mutateAsync({ id, data: { pagoExcesso: true } });
@@ -292,18 +288,8 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
           }
           return (
           <div className="flex items-center justify-end gap-1">
-            {/* Quick action: Marcar Pago (ATIVA não paga) */}
-            {r.estado === "ATIVA" && !r.pago && (
-              <Tooltip content="Marcar como paga" position="top" theme="dark">
-                <button
-                  onClick={() => handleMarcarPago(r.id)}
-                  disabled={atualizarPagamento.isPending}
-                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors disabled:opacity-50"
-                >
-                  <Check size={15} />
-                </button>
-              </Tooltip>
-            )}
+            {/* Marcar como paga foi removido: só é possível marcar pago através do
+                modal de detalhe, onde o método de pagamento é obrigatório. */}
             {/* Quick action: Pagar Excesso (CONCLUIDA com excesso em falta) */}
             {r.estado === "CONCLUIDA" && r.custoExcesso != null && r.custoExcesso > 0 && !r.pagoExcesso && (
               <Tooltip content="Marcar excesso pago" position="top" theme="dark">

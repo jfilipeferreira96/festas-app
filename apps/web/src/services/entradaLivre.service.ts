@@ -388,6 +388,13 @@ export const entradaLivreService = {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
 
+    // Não é possível marcar como paga sem indicar o método de pagamento.
+    // O método pode vir no próprio payload OU já estar guardado na entrada.
+    const metodoFinal = data.metodoPagamento ?? entrada.metodoPagamento;
+    if (data.pago === true && !metodoFinal) {
+      throw new Error("METODO_PAGAMENTO_REQUIRED");
+    }
+
     const updated = await prisma.entradaLivre.update({
       where: { id },
       data,
