@@ -10,6 +10,7 @@ import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import InputField from "@/components/form/input/InputField";
+import DatePicker from "@/components/form/date-picker";
 import Switch from "@/components/form/switch/Switch";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
@@ -438,18 +439,22 @@ export default function MonitoresContent() {
             <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">Data Início</label>
-                <InputField
-                  type="date"
-                  value={horasInicio}
-                  onChange={(e) => setHorasInicio(e.target.value)}
+                <DatePicker
+                  id="horas-inicio"
+                  mode="single"
+                  defaultDate={horasInicio ? new Date(horasInicio + "T00:00:00") : undefined}
+                  onChange={(_dates, dateStr) => setHorasInicio(dateStr)}
+                  placeholder="Seleccionar data"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">Data Fim</label>
-                <InputField
-                  type="date"
-                  value={horasFim}
-                  onChange={(e) => setHorasFim(e.target.value)}
+                <DatePicker
+                  id="horas-fim"
+                  mode="single"
+                  defaultDate={horasFim ? new Date(horasFim + "T00:00:00") : undefined}
+                  onChange={(_dates, dateStr) => setHorasFim(dateStr)}
+                  placeholder="Seleccionar data"
                 />
               </div>
             </div>
