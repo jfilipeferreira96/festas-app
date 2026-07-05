@@ -117,4 +117,83 @@ export const excecaoCalendarioService = {
       return e.data.getTime() === normalizada.getTime();
     });
   },
+  /**
+   * Importa feriados nacionais de Portugal para um ano específico,
+   * usando a API Nager.Date. Apenas cria feriados que ainda não existem.
+   * @returns { criados: number; ignorados: number; total: number }
+   */
+  async importarFeriados(ano: number): Promise<{ criados: number; ignorados: number; total: number }> {
+    const response = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${ano}/PT`);
+    if (!response.ok) {
+      throw new Error("FERIADOS_API_ERROR");
+    }
+    const feriados: Array<{
+      date: string;
+      localName: string;
+      name: string;
+      countryCode: string;
+      fixed: boolean;
+      global: boolean;
+      counties: string[] | null;
+      launchYear: number | null;
+      types: string[] | null;
+    }> = await response.json();
+
+    // Apenas feriados globais (nacionais), sem dependência regional
+    const nacionais = feriados.filter((f) => f.global !== false);
+
+    let criados = 0;
+    let ignorados = 0;
+
+    for (const feriado of nacionais) {
+      const dataNormalizada = normalizarData(new Date(feriado.date));
+
+      // Verifica se já existe (procura exacta ou recorrência anual mesmo mês/dia)
+      const existente = await prisma.excecaoCalendario.findFirst({
+        where: {
+          OR: [
+            { data: dataNormalizada },
+            { recorrenciaAnual: true },
+          ],
+        },
+      });
+
+      const jaExiste = existente?.some((e) => {
+        if (e.recorrenciaAnual) {
+          return (
+            e.data.getUTCMonth() === dataNormalizada.getUTCMonth() &&
+            e.data.getUTCDate() === dataNormalizada.getUTCDate()
+          );
+        }
+        return e.data.getTime() === dataNormalizada.getTime();
+      });
+
+      if (jaExiste) {
+        ignorados++;
+        continue;
+      }
+
+      // Feriados com data fixa usam recorrência anual
+      const recorrenciaAnual = feriado.fixed;
+
+      try {
+        await prisma.excecaoCalendario.create({
+          data: {
+            data: dataNormalizada,
+            tipo: "FERIADO",
+            nome: feriado.localName,
+            afectaPreco: true,
+            bloqueiaReserva: false,
+            recorrenciaAnual,
+          },
+        });
+        criados++;
+      } catch {
+        // Se falhar (duplicate), conta como ignorado
+        ignorados++;
+      }
+    }
+
+    return { criados, ignorados, total: nacionais.length };
+  },
 };

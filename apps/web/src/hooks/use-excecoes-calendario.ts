@@ -44,3 +44,13 @@ export function useDeleteExcecaoCalendario() {
     },
   });
 }
+
+export function useImportarFeriados() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ano: number) => excecoesCalendarioApi.importarFeriados(ano),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["excecoes-calendario"] });
+    },
+  });
+}
