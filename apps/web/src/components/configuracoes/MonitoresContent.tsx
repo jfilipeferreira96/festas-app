@@ -387,7 +387,7 @@ export default function MonitoresContent() {
                   <label className="block text-sm font-medium text-text-primary mb-1.5">Valor/Hora (€)</label>
                   <InputField
                     type="number"
-                    step="0.01"
+                    step={0.01}
                     min="0"
                     {...register("valorHora", {
                       setValueAs: (v) => {

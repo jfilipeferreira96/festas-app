@@ -222,7 +222,7 @@ export default function MenusContent() {
                   <label className="block text-xs font-medium text-text-secondary mb-1">Preço (€) *</label>
                   <input
                     type="number"
-                    step="0.01"
+                    step={0.01}
                     min="0"
                     value={formPreco}
                     onChange={(e) => setFormPreco(e.target.value)}

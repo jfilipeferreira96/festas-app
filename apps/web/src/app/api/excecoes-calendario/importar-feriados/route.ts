@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const funcaoCheck = checkFuncao(auth.session, "ADMINISTRADOR");
-    if (!funcaoCheck.ok) return funcaoCheck.response;
+    const denied = checkFuncao(auth.user, "ADMINISTRADOR");
+    if (denied) return denied;
 
     const { ano } = await request.json();
 

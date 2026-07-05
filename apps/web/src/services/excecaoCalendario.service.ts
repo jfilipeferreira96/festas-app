@@ -149,7 +149,7 @@ export const excecaoCalendarioService = {
       const dataNormalizada = normalizarData(new Date(feriado.date));
 
       // Verifica se já existe (procura exacta ou recorrência anual mesmo mês/dia)
-      const existente = await prisma.excecaoCalendario.findFirst({
+      const existente = await prisma.excecaoCalendario.findMany({
         where: {
           OR: [
             { data: dataNormalizada },

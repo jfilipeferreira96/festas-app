@@ -239,7 +239,7 @@ export default function ConcluirResumoModal({
                       <input
                         type="number"
                         min="0"
-                        step="0.50"
+                        step={0.5}
                         value={custoExcessoInput}
                         onChange={(e) => setCustoExcessoInput(e.target.value)}
                         className="h-9 w-full rounded-lg border border-border bg-surface px-3 pr-7 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
