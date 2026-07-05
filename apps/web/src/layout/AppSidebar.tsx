@@ -354,6 +354,31 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
             ))}
           </ul>
 
+          {/* Perfil do utilizador (visível quando expandida) */}
+          {showExpanded && (
+            <div className="mt-2 px-2 py-2 rounded-lg bg-brand-500/5 flex items-center gap-2">
+              {user?.image ? (
+                <img
+                  src={user.image}
+                  alt={user.name || "Utilizador"}
+                  className="w-8 h-8 rounded-full object-cover shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-500 font-semibold text-sm shrink-0">
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-medium text-text-primary truncate">
+                  {user?.name || "Utilizador"}
+                </p>
+                <p className="text-[11px] text-text-muted truncate">
+                  {user?.email}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Sign Out */}
           <button onClick={handleSignOutClick} className="menu-item menu-item-inactive">
             <span className="menu-item-icon-inactive">
