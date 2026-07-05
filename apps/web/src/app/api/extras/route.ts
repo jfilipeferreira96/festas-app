@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const { nome, descricao, precoUnitario, icone, categoria, subcategoria, requerTexto, locaisIds } =
+    const { nome, descricao, precoUnitario, icone, categoria, subcategoria, requerTexto, fimDeSemana, locaisIds } =
       await request.json();
     const extra = await extraService.create({
       nome,
@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       categoria,
       subcategoria,
       requerTexto,
+      fimDeSemana,
       locaisIds: locaisIds || [],
     });
     return NextResponse.json(extra, { status: 201 });

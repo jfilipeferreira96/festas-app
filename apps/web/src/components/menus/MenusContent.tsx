@@ -335,8 +335,8 @@ function ItemCard({
           {item.categoria === "MENU" && item.fimDeSemana === false && (
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">Semana</span>
           )}
-          {item.subcategoria && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-text-muted font-medium">{item.subcategoria}</span>
+          {item.categoria === "MENU" && item.fimDeSemana == null && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-text-muted font-medium">Todos os dias</span>
           )}
         </div>
       </div>

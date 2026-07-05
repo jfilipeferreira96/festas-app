@@ -33,7 +33,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
-    const { nome, descricao, precoUnitario, icone, categoria, subcategoria, requerTexto, locaisIds } =
+    const { nome, descricao, precoUnitario, icone, categoria, subcategoria, requerTexto, fimDeSemana, locaisIds } =
       await request.json();
     const extra = await extraService.update(id, {
       nome,
@@ -43,6 +43,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       categoria,
       subcategoria,
       requerTexto,
+      fimDeSemana,
       locaisIds,
     });
     return NextResponse.json(extra);
