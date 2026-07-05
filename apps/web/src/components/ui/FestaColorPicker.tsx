@@ -22,23 +22,61 @@ const FestaColorPicker: React.FC<FestaColorPickerProps> = React.memo(
       [onChange]
     );
 
+    // Garante um hex válido (#RRGGBB) para o input nativo de cor
+    const safeColorForInput = React.useMemo(() => {
+      const hex = value ?? "";
+      return /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : "#000000";
+    }, [value]);
+
     return (
-      <div className={cn("flex flex-wrap gap-2", className)}>
-        {FESTA_COLORS.map((color) => (
-          <button
-            key={color.value}
-            type="button"
-            title={color.name}
-            onClick={() => handleChange(color.value)}
-            className={cn(
-              "w-8 h-8 rounded-full border-2 transition-all duration-150 hover:scale-110",
-              value === color.value
-                ? "border-text-primary ring-2 ring-primary-300 scale-110"
-                : "border-transparent hover:border-border"
-            )}
-            style={{ backgroundColor: color.value }}
+      <div className={cn("flex flex-col gap-2", className)}>
+        <div className="flex flex-wrap gap-2">
+          {FESTA_COLORS.map((color) => (
+            <button
+              key={color.value}
+              type="button"
+              title={color.name}
+              onClick={() => handleChange(color.value)}
+              className={cn(
+                "w-8 h-8 rounded-full border-2 transition-all duration-150 hover:scale-110",
+                value === color.value
+                  ? "border-text-primary ring-2 ring-primary-300 scale-110"
+                  : "border-transparent hover:border-border"
+              )}
+              style={{ backgroundColor: color.value }}
+            />
+          ))}
+        </div>
+
+        {/* Selector de cor personalizado: colorpicker nativo + input de código hex */}
+        <div className="flex items-center gap-2">
+          <label
+            className="relative w-8 h-8 rounded-full border-2 border-border cursor-pointer overflow-hidden shrink-0"
+            title="Escolher cor personalizada"
+            style={{ backgroundColor: value ?? "#ffffff" }}
+          >
+            <input
+              type="color"
+              value={safeColorForInput}
+              onChange={(e) => handleChange(e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              aria-label="Seleccionar cor personalizada"
+            />
+          </label>
+          <input
+            type="text"
+            value={value ?? ""}
+            onChange={(e) => {
+              const v = e.target.value;
+              // Normaliza: adiciona # se o utilizador escrever sem
+              const normalized = v.startsWith("#") ? v : `#${v}`;
+              handleChange(normalized);
+            }}
+            placeholder="#0095C8"
+            className="w-24 px-2 py-1 text-sm border border-border rounded-md bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-300 font-mono"
+            aria-label="Código de cor (hex)"
           />
-        ))}
+        </div>
       </div>
     );
   }

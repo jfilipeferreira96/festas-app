@@ -255,17 +255,21 @@ async function seedExtras() {
 async function seedMonitores() {
   console.log("  Creating monitores...");
   const monitores = [
-    { id: "monitor-001", nome: "João Ferreira", contacto: "912345678" },
-    { id: "monitor-002", nome: "Carolina Santos", contacto: "923456789" },
-    { id: "monitor-003", nome: "Pedro Oliveira", contacto: "934567890" },
-    { id: "monitor-004", nome: "Luísa Almeida", contacto: "945678901" },
-    { id: "monitor-005", nome: "Tiago Moreira", contacto: "956789012" },
-    { id: "monitor-006", nome: "Inês Cardoso", contacto: "967890123" },
+    { id: "monitor-001", nome: "João Ferreira", contacto: "912345678", valorHora: 8.50 },
+    { id: "monitor-002", nome: "Carolina Santos", contacto: "923456789", valorHora: 9.00 },
+    { id: "monitor-003", nome: "Pedro Oliveira", contacto: "934567890", valorHora: 7.75 },
+    { id: "monitor-004", nome: "Luísa Almeida", contacto: "945678901", valorHora: 8.00 },
+    { id: "monitor-005", nome: "Tiago Moreira", contacto: "956789012", valorHora: null },
+    { id: "monitor-006", nome: "Inês Cardoso", contacto: "967890123", valorHora: 8.50 },
   ];
   for (const mon of monitores) {
-    await prisma.monitor.upsert({ where: { id: mon.id }, update: {}, create: mon });
+    await prisma.monitor.upsert({
+      where: { id: mon.id },
+      update: { valorHora: mon.valorHora },
+      create: mon,
+    });
   }
-  console.log("  ✓ 6 monitores\n");
+  console.log("  ✓ 6 monitores (com valor/hora)\n");
 }
 
 // ─── Cacifos ──────────────────────────────────────────────────
@@ -312,6 +316,7 @@ async function seedConfiguracaoPreco() {
         precoExcessoFixo: 5,
         caucaoDefault: 40,
         precoLancheEntrada: 4.5,
+        valorHoraMonitorDefault: 8,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },

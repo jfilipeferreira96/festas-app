@@ -38,6 +38,7 @@ import { DropdownItem } from "@/components/ui/dropdown/DropdownItem";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservasAtivas, useFinalizarReserva, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
+import { useDashboardKPIs } from "@/hooks/use-dashboard";
 import { useCacifos } from "@/hooks/use-cacifos";
 import { useParticipantes, useConfirmarPresenca, useAdicionarParticipante } from "@/hooks/use-participantes";
 import FestaForm from "./FestaForm";
@@ -49,6 +50,7 @@ import type { StatusType } from "@/components/ui";
 
 export default function FestasContent() {
   const { data: festas, isLoading } = useReservasAtivas();
+  const { data: kpis } = useDashboardKPIs();
   const finalizarFesta = useFinalizarReserva();
 
   const [confirmFinalizar, setConfirmFinalizar] = useState<Reserva | null>(null);
@@ -77,10 +79,37 @@ export default function FestasContent() {
 
   return (
     <div>
-      <PageHeader
+     <PageHeader
         title="Festas"
         subtitle={`Acompanhe em tempo real — ${todayStr}`}
       />
+
+      {/* KPI: Crianças no parque (em festas + entradas livres). Exclui canceladas. */}
+      <div className="mt-4 flex flex-wrap gap-3">
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface border border-border shadow-card">
+          <div className="w-10 h-10 rounded-full bg-accent-teal-100 flex items-center justify-center">
+            <Users className="w-5 h-5 text-accent-teal-600" />
+          </div>
+          <div>
+            <p className="text-[11px] text-text-muted leading-tight">Crianças em festas</p>
+            <p className="text-xl font-bold text-text-primary font-poppins leading-tight">
+              {kpis?.criancasFestas ?? "—"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface border border-border shadow-card">
+          <div className="w-10 h-10 rounded-full bg-accent-orange-100 flex items-center justify-center">
+            <PartyPopper className="w-5 h-5 text-accent-orange-600" />
+          </div>
+          <div>
+            <p className="text-[11px] text-text-muted leading-tight">Total no parque</p>
+            <p className="text-xl font-bold text-text-primary font-poppins leading-tight">
+              {kpis?.totalCriancasNoParque ?? "—"}
+              <span className="text-xs font-normal text-text-muted ml-1">crianças</span>
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Festas Em Curso */}
       <div className="mt-6">
@@ -328,26 +357,37 @@ function FestaCard({
 
   return (
     <div
-      className={`bg-surface rounded-[14px] shadow-card border overflow-hidden ${
-        isOverdue ? "border-accent-red" : isWaitingStart ? "border-primary-300" : "border-border"
-      }`}
-    >
-      {/* Color bar */}
-      {festa.cor && (
-        <div className="h-1.5" style={{ backgroundColor: festa.cor }} />
-      )}
+     className={`bg-surface rounded-[14px] shadow-card border overflow-hidden ${
+       isOverdue ? "border-accent-red" : isWaitingStart ? "border-primary-300" : "border-border"
+     }`}
+   >
+     {/* Color bar — cor da festa para identificação das pulseiras */}
+     {festa.cor && (
+       <div className="h-3" style={{ backgroundColor: festa.cor }} />
+     )}
 
-      {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-text-primary truncate">
-              {getAniversarianteNome(festa)}
-            </h3>
-            <StatusBadge status={isOverdue ? "INSUFICIENTE" : isWaitingStart ? ("RESERVA" as StatusType) : ("EM_CURSO" as StatusType)}>
-              {isOverdue ? "Ultrapassou" : isWaitingStart ? "Aguarda início" : "Em curso"}
-            </StatusBadge>
-          </div>
+     {/* Header */}
+     <div className="p-4 border-b border-border">
+       <div className="flex items-start justify-between gap-3 mb-1">
+         <div className="flex items-center gap-2 min-w-0 flex-1">
+           {/* Chip de cor com código (para entrega de pulseiras) */}
+           {festa.cor && (
+             <span
+               className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold shrink-0"
+               style={{ backgroundColor: `${festa.cor}1A`, color: festa.cor }}
+               title="Cor da festa"
+             >
+               <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: festa.cor }} />
+               {festa.cor.toUpperCase()}
+             </span>
+           )}
+           <h3 className="text-sm font-semibold text-text-primary truncate">
+             {getAniversarianteNome(festa)}
+           </h3>
+           <StatusBadge status={isOverdue ? "INSUFICIENTE" : isWaitingStart ? ("RESERVA" as StatusType) : ("EM_CURSO" as StatusType)}>
+             {isOverdue ? "Ultrapassou" : isWaitingStart ? "Aguarda início" : "Em curso"}
+           </StatusBadge>
+         </div>
           {/* 3-dots dropdown — acções secundárias */}
           <div className="relative shrink-0">
             <button

@@ -472,12 +472,16 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     setValue("previsaoCriancas", Math.max(0, (previsaoCriancas ?? 1) - 1));
   }, [previsaoCriancas, setValue]);
 
+  const [showDataNascimentoError, setShowDataNascimentoError] = useState(false);
+
   const validateStep = useCallback(async (): Promise<boolean> => {
     if (currentStep === 0) {
       const valid = await trigger(["data", "horario", "duracaoMinutos", "localId", "encarregadoNome", "encarregadoContacto", "encarregadoEmail"]);
       const hasAniversariante = aniversariantes.some((a) => a.nome.trim().length > 0);
       setShowAniversarianteError(!hasAniversariante);
-      return valid && hasAniversariante;
+      const missingDataNascimento = aniversariantes.some((a) => a.nome.trim().length > 0 && !a.dataNascimento);
+      setShowDataNascimentoError(missingDataNascimento);
+      return valid && hasAniversariante && !missingDataNascimento;
     }
     if (currentStep === 1) return (await trigger(["previsaoCriancas"]));
     return true;
@@ -562,6 +566,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
               handleExtrasChange={handleExtrasChange} extrasTexto={extrasTexto} setExtrasTexto={setExtrasTexto}
               totalEstimado={totalEstimado} watchedData={watchedData} corOptions={corOptions} menuOptions={menuOptions}
               showAniversarianteError={showAniversarianteError}
+              showDataNascimentoError={showDataNascimentoError}
               disponibilidade={disponibilidade.data}
               disponibilidadeLoading={disponibilidade.isLoading}
               onVerificarDisponibilidade={() => disponibilidade.refetch()}
@@ -648,6 +653,7 @@ interface Step1Props {
   corOptions: { value: string; label: string; color?: string; disabled?: boolean }[];
   menuOptions: { value: string; label: string }[];
   showAniversarianteError: boolean;
+  showDataNascimentoError: boolean;
   disponibilidade?: DisponibilidadeResult;
   disponibilidadeLoading: boolean;
   onVerificarDisponibilidade: () => void;
@@ -668,7 +674,7 @@ function Step1Geral({
   etapaOptions, currentEtapasIds, handleEtapasChange,
   extraItems, extraGroups, selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto,
   totalEstimado, watchedData, corOptions, menuOptions,
-  showAniversarianteError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
+  showAniversarianteError, showDataNascimentoError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
   coresEmUso,
   slotOptions, horarioCustom, setHorarioCustom, onSelectSlot, currentHorario,
 }: Step1Props) {
@@ -734,6 +740,9 @@ function Step1Geral({
         ))}
         {showAniversarianteError && (
           <p className="text-xs text-error-500">É obrigatório indicar pelo menos um aniversariante.</p>
+        )}
+        {showDataNascimentoError && (
+          <p className="text-xs text-error-500">A data de nascimento de cada aniversariante é obrigatória.</p>
         )}
       </div>
 
@@ -882,7 +891,9 @@ function Step1Geral({
           <label className="block text-xs font-medium text-text-secondary mb-1">Tema da Festa</label>
           <InputField {...register("tema")} placeholder="Ex: Princesas, Super-Heróis..." />
         </div>
-        <div className="flex-1">
+        {/* Cor: oculta no formulário (definida automaticamente pelo slot de horário).
+            A lógica de auto-preenchimento (onSelectSlot / useEffect) continua a correr em background. */}
+        <div className="flex-1 hidden" aria-hidden="true">
           <label className="block text-xs font-medium text-text-secondary mb-1">Cor</label>
           <div className="relative">
             <Select options={corOptions} placeholder="Escolher cor" value={currentCor || "NONE"} onChange={(val) => setValue("cor", val === "NONE" ? "" : val)} showColorIndicators={true} />
@@ -899,9 +910,11 @@ function Step1Geral({
         </div>
       </div>
 
-      {/* ── Monitores · Etapas ── */}
+      {/* ── Etapas ── (Monitores removidos da festa — são alocados ao parque) */}
       <div className="flex gap-4">
-        <div className="flex-1">
+        {/* Monitores: oculto — os monitores são do parque, não da festa.
+            O campo mantém-se para retrocompatibilidade do formulário. */}
+        <div className="flex-1 hidden" aria-hidden="true">
           <label className="block text-xs font-medium text-text-secondary mb-1">Monitores</label>
           <MultiSelect label="Monitores" options={monitorOptions} defaultSelected={currentMonitoresIds} onChange={handleMonitoresChange} placeholder="Seleccionar..." />
         </div>

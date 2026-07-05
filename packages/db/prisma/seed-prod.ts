@@ -3,8 +3,10 @@
  *
  * Creates ONLY:
  *   - 7 users (admin + role accounts via Better Auth)
- *   - Locais, Extras, Configuração Preços, Exceções Calendário, Slots Horário
- *   - Cacifos config (40 cacifos LIVRE)
+ *   - Locais, Extras, Configuração Preços, Exceções Calendário
+ *   - Salas Lanche, Slots Horário (com defaults de cor/lanche/sala)
+ *   - Etapas de Festa (configuração padrão)
+ *   - Cacifos config (200 cacifos LIVRE)
  *
  * NO reservas, clientes, monitores, marketing, entradas livres, etc.
  * ⚠️  WIPES ALL DATA before seeding (idempotent: safe to re-run).
@@ -77,7 +79,9 @@ async function main() {
   await seedExtras();
   await seedConfiguracaoPreco();
   await seedExcecoesCalendario();
+  await seedSalasLanche();
   await seedSlotsHorario();
+  await seedEtapasFestaConfig();
   await seedCacifos();
 
   console.log("\n✅ Production seed complete!");
@@ -277,34 +281,98 @@ async function seedExcecoesCalendario() {
   console.log(`  ✓ ${feriadosFixos.length} feriados PT × 2 anos (recorrência anual)\n`);
 }
 
-// ─── Slots Horários (festa default 2h15m) ─────────────────────
+// ─── Salas de Lanche ──────────────────────────────────────────
+async function seedSalasLanche() {
+  console.log("  Creating salas de lanche...");
+
+  const salas = [
+    { id: "sala-lanche-1", nome: "Sala 1", activo: true },
+    { id: "sala-lanche-2", nome: "Sala 2", activo: true },
+  ];
+
+  for (const s of salas) {
+    await prisma.salaLanche.upsert({
+      where: { id: s.id },
+      update: { nome: s.nome, activo: s.activo },
+      create: s,
+    });
+  }
+
+  console.log(`  ✓ ${salas.length} salas de lanche\n`);
+}
+
+// ─── Slots Horários (festa default 2h15m + defaults de cor/lanche) ──
 async function seedSlotsHorario() {
   console.log("  Creating time slots...");
 
+  // Defaults: cada slot tem cor/hora-ler lanche/sala de lanche sugeridos.
+  // Cores alinhadas com a paleta FESTA_COLORS (@saas/shared-defaults).
+  const COR = {
+    AZUL: "#0095C8",
+    VERDE: "#5CBE4A",
+    AMARELO: "#FCE12D",
+    ROSA: "#E54796",
+  } as const;
+
   const slots = [
-    { horaInicio: "10:00", duracaoMin: 135, ordem: 1 },
-    { horaInicio: "14:00", duracaoMin: 135, ordem: 2 },
-    { horaInicio: "16:30", duracaoMin: 135, ordem: 3 },
-    { horaInicio: "18:30", duracaoMin: 135, ordem: 4 },
+    { horaInicio: "10:00", duracaoMin: 135, ordem: 1, corDefault: COR.AZUL,    horaLancheDefault: "11:00", salaLancheId: "sala-lanche-1" },
+    { horaInicio: "14:00", duracaoMin: 135, ordem: 2, corDefault: COR.VERDE,   horaLancheDefault: "15:00", salaLancheId: "sala-lanche-2" },
+    { horaInicio: "16:30", duracaoMin: 135, ordem: 3, corDefault: COR.AMARELO, horaLancheDefault: "17:30", salaLancheId: "sala-lanche-1" },
+    { horaInicio: "18:30", duracaoMin: 135, ordem: 4, corDefault: COR.ROSA,    horaLancheDefault: "19:30", salaLancheId: "sala-lanche-2" },
   ];
 
   for (const s of slots) {
     const existing = await prisma.slotHorario.findFirst({
       where: { horaInicio: s.horaInicio },
     });
-    if (!existing) {
+    if (existing) {
+      await prisma.slotHorario.update({
+        where: { id: existing.id },
+        data: {
+          duracaoMin: s.duracaoMin,
+          ordem: s.ordem,
+          corDefault: s.corDefault,
+          horaLancheDefault: s.horaLancheDefault,
+          salaLancheId: s.salaLancheId,
+        },
+      });
+    } else {
       await prisma.slotHorario.create({ data: s });
     }
   }
 
-  console.log(`  ✓ ${slots.length} slots horários (default 2h15m)\n`);
+  console.log(`  ✓ ${slots.length} slots horários (2h15m + defaults cor/lanche)\n`);
+}
+
+// ─── Etapas de Festa (configuração padrão) ────────────────────
+async function seedEtapasFestaConfig() {
+  console.log("  Creating etapas config...");
+
+  const etapas = [
+    { id: "etapa-001", nome: "Receção dos Convidados", descricao: "Receção e acolhimento", ordem: 1, icone: "Users" },
+    { id: "etapa-002", nome: "Jogos e Actividades", descricao: "Jogos dirigidos pelos monitores", ordem: 2, icone: "Gamepad2" },
+    { id: "etapa-003", nome: "Lanche Servido", descricao: "Serviço do lanche", ordem: 3, icone: "UtensilsCrossed" },
+    { id: "etapa-004", nome: "Bolo de Aniversário", descricao: "Parabéns e corte do bolo", ordem: 4, icone: "Cake" },
+    { id: "etapa-005", nome: "Parabéns Cantados", descricao: "Momento dos parabéns com música", ordem: 5, icone: "Music" },
+    { id: "etapa-006", nome: "Entrega de Lembranças", descricao: "Distribuição das lembranças", ordem: 6, icone: "Package" },
+  ];
+
+  for (const etapa of etapas) {
+    await prisma.etapaFesta.upsert({
+      where: { id: etapa.id },
+      update: { nome: etapa.nome, descricao: etapa.descricao, ordem: etapa.ordem, icone: etapa.icone },
+      create: etapa,
+    });
+  }
+
+  console.log(`  ✓ ${etapas.length} etapas de festa\n`);
 }
 
 // ─── Cacifos ──────────────────────────────────────────────────
 async function seedCacifos() {
   console.log("  Creating cacifos config...");
 
-  const total = 40;
+  const total = 200;
   await prisma.configuracaoCacifo.upsert({
     where: { id: "config-cacifo-001" },
     update: { totalCacifos: total },

@@ -5,7 +5,7 @@ import { cacifoService } from "@/services/cacifo.service";
 
 interface AniversarianteInput {
   nome: string;
-  dataNascimento?: string;
+  dataNascimento: string;
   // Parent/encarregado data
   encarregadoNome: string;
   encarregadoEmail: string;
@@ -325,6 +325,8 @@ export const reservaService = {
     const aniversarianteIds: string[] = [];
     if (data.aniversariantes && data.aniversariantes.length > 0) {
       for (const anvInput of data.aniversariantes) {
+        if (!anvInput.dataNascimento) throw new Error("DATA_NASCIMENTO_REQUIRED");
+
         // Find or create cliente
         const cId = await findOrCreateCliente(anvInput);
         if (!clienteId) clienteId = cId;
@@ -333,7 +335,7 @@ export const reservaService = {
         const anv = await prisma.aniversariante.create({
           data: {
             nome: anvInput.nome,
-            dataNascimento: anvInput.dataNascimento ? new Date(anvInput.dataNascimento) : null,
+            dataNascimento: new Date(anvInput.dataNascimento),
             clienteId: cId,
           },
         });
@@ -442,11 +444,12 @@ export const reservaService = {
     const aniversarianteIds: string[] = [];
     if (data.aniversariantes && data.aniversariantes.length > 0) {
       for (const anvInput of data.aniversariantes) {
+        if (!anvInput.dataNascimento) throw new Error("DATA_NASCIMENTO_REQUIRED");
         const cId = await findOrCreateCliente(anvInput);
         const anv = await prisma.aniversariante.create({
           data: {
             nome: anvInput.nome,
-            dataNascimento: anvInput.dataNascimento ? new Date(anvInput.dataNascimento) : null,
+            dataNascimento: new Date(anvInput.dataNascimento),
             clienteId: cId,
           },
         });

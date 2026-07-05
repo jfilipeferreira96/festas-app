@@ -26,6 +26,7 @@ const tomorrowStr = tomorrow.toISOString().split("T")[0]!;
 
 const TEST_ANIVERSARIANTE = {
   nome: "Criança Teste Create",
+  dataNascimento: "2018-05-15",
   encarregadoNome: "Enc Teste",
   encarregadoEmail: "enc-teste-create@test.com",
   encarregadoTelefone: "919999999",

@@ -260,6 +260,8 @@ model Monitor {
   contacto  String
   fotoUrl   String?
   activo    Boolean  @default(true)
+  // Valor que o monitor recebe por hora (para cálculo de vencimento mensal)
+  valorHora Decimal? @db.Decimal(10, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -342,6 +344,8 @@ model ConfiguracaoPreco {
   caucaoDefault                 Decimal  @db.Decimal(10, 2) @default(40)
   // Lanche em entrada livre (suplemento por pessoa quando temLanche = true)
   precoLancheEntrada            Decimal  @db.Decimal(10, 2) @default(3)
+  // Valor/hora default para monitores (usado quando o monitor não tem valor individual)
+  valorHoraMonitorDefault       Decimal? @db.Decimal(10, 2)
   // Durações default
   duracaoDefaultFestaMin        Int      @default(135) // 2h15m
   duracaoExcessoBlocoMin        Int      @default(30)
@@ -859,3 +863,4 @@ model SalaLanche {
 
   @@map("sala_lanche")
 }
+

@@ -17,3 +17,4 @@ export interface Menu {
   createdAt: string;
   updatedAt: string;
 }
+

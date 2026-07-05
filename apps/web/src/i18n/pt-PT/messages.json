@@ -26,6 +26,7 @@
     "endedSuccessfully": "Festa concluída com sucesso",
     "idRequired": "ID da reserva é obrigatório",
     "aniversarianteRequired": "Nome do aniversariante é obrigatório",
+    "dataNascimentoRequired": "A data de nascimento do aniversariante é obrigatória",
     "dataRequired": "Data da reserva é obrigatória",
     "horarioRequired": "Horário da reserva é obrigatório",
     "localRequired": "Local é obrigatório",
