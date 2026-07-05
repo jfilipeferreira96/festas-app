@@ -25,7 +25,6 @@ const slotSchema = z
     horaInicio: z.string().min(1, "Hora de entrada é obrigatória").regex(/^\d{2}:\d{2}$/, "Formato HH:MM"),
     horaFim: z.string().min(1, "Hora de saída é obrigatória").regex(/^\d{2}:\d{2}$/, "Formato HH:MM"),
     activo: z.boolean(),
-    ordem: z.number().min(0).max(100),
     corDefault: z.string().nullable().optional(),
     horaLancheDefault: z.string().nullable().optional(),
     salaLancheId: z.string().nullable().optional(),
@@ -85,15 +84,14 @@ export default function SlotsHorarioContent() {
     formState: { errors, isSubmitting },
   } = useForm<SlotFormData>({
     resolver: zodResolver(slotSchema),
-    defaultValues: {
-      horaInicio: "15:00",
-      horaFim: "17:15",
-      activo: true,
-      ordem: 0,
-      corDefault: null,
-      horaLancheDefault: null,
-      salaLancheId: null,
-    },
+   defaultValues: {
+     horaInicio: "15:00",
+     horaFim: "17:15",
+     activo: true,
+     corDefault: null,
+     horaLancheDefault: null,
+     salaLancheId: null,
+   },
   });
 
   const watchedActivo = watch("activo");
@@ -112,9 +110,9 @@ export default function SlotsHorarioContent() {
     [salasLanche]
   );
 
-  // Ordenar por ordem (campo explícito)
+  // Ordenar por horário (ordem cronológica — sem campo explícito de ordem)
   const sortedSlots = useMemo(
-    () => [...(slots ?? [])].sort((a, b) => a.ordem - b.ordem),
+    () => [...(slots ?? [])].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)),
     [slots]
   );
 
@@ -144,12 +142,7 @@ export default function SlotsHorarioContent() {
         render: (_value, s) => (
           <div className="flex items-center gap-2">
             {s.corDefault ? (
-              <>
-                <FestaColorDot color={s.corDefault} className="w-4 h-4" />
-                <span className="text-sm text-text-secondary">
-                  {s.corDefault}
-                </span>
-              </>
+              <FestaColorDot color={s.corDefault} className="w-5 h-5" />
             ) : (
               <span className="text-sm text-text-muted">-</span>
             )}
@@ -192,18 +185,16 @@ export default function SlotsHorarioContent() {
 
   const handleCreate = useCallback(() => {
     setEditingSlot(null);
-    const nextOrdem = (slots?.length ?? 0);
     reset({
       horaInicio: "15:00",
       horaFim: "17:15",
       activo: true,
-      ordem: nextOrdem,
       corDefault: null,
       horaLancheDefault: null,
       salaLancheId: null,
     });
     setShowForm(true);
-  }, [reset, slots]);
+  }, [reset]);
 
   const handleEdit = useCallback(
     (slot: SlotHorario) => {
@@ -212,7 +203,6 @@ export default function SlotsHorarioContent() {
         horaInicio: slot.horaInicio,
         horaFim: addMinutosToTime(slot.horaInicio, slot.duracaoMin),
         activo: slot.activo,
-        ordem: slot.ordem,
         corDefault: slot.corDefault ?? null,
         horaLancheDefault: slot.horaLancheDefault ?? null,
         salaLancheId: slot.salaLancheId ?? null,
@@ -279,8 +269,6 @@ export default function SlotsHorarioContent() {
           searchPlaceholder="Pesquisar slots..."
           searchableFields={["horaInicio"]}
           itemLabel="slots"
-          pagination
-          pageSize={10}
           onEdit={handleEdit}
           onDelete={handleDelete}
           emptyState={{
@@ -339,18 +327,6 @@ export default function SlotsHorarioContent() {
                   </p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-1.5">Ordem de apresentação</label>
-                <InputField
-                  type="number"
-                  {...register("ordem", { valueAsNumber: true })}
-                  min={0}
-                  max={100}
-                  error={!!errors.ordem}
-                  hint={errors.ordem?.message}
-                />
-              </div>
-
               {/* ── Defaults que auto-preenchem o formulário da festa ── */}
               <div className="border-t border-border pt-4 mt-2">
                 <p className="text-sm font-semibold text-text-primary mb-3">

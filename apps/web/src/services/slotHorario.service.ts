@@ -64,7 +64,7 @@ export const slotHorarioService = {
   async list() {
     const slots = await prisma.slotHorario.findMany({
       where: { activo: true },
-      orderBy: { ordem: "asc" },
+      orderBy: { horaInicio: "asc" },
       include: { salaLanche: true },
     });
     return slots.map(mapSlot);
@@ -72,7 +72,7 @@ export const slotHorarioService = {
 
   async listAll() {
     const slots = await prisma.slotHorario.findMany({
-      orderBy: { ordem: "asc" },
+      orderBy: { horaInicio: "asc" },
       include: { salaLanche: true },
     });
     return slots.map(mapSlot);
