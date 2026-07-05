@@ -494,4 +494,125 @@ describe("AlocacaoMonitorService", () => {
       expect(sobrep).toBe(false);
     });
   });
+
+  // ── calcularHorasMonitor() ─────────────────────────────────────
+  describe("calcularHorasMonitor()", () => {
+    it("deve calcular horas, custo total e nº de alocações", async () => {
+      // Definir valorHora = 8.50 €/h no MONITOR_1
+      await testPrisma.monitor.update({
+        where: { id: TEST_IDS.MONITOR_1 },
+        data: { valorHora: 8.5 },
+      });
+
+      // Criar 3 alocações: 4h + 3h + 2h = 9h total → 9 × 8.50 = 76.50
+      await alocacaoMonitorService.create({
+        data: DATA,
+        horaInicio: H(9),
+        horaFim: H(13),
+        monitorId: TEST_IDS.MONITOR_1,
+        localId: TEST_IDS.LOCAL_1,
+      });
+      await alocacaoMonitorService.create({
+        data: DATA,
+        horaInicio: H(14),
+        horaFim: H(17),
+        monitorId: TEST_IDS.MONITOR_1,
+        localId: TEST_IDS.LOCAL_1,
+      });
+      await alocacaoMonitorService.create({
+        data: DATA_POSTERIOR,
+        horaInicio: H(10),
+        horaFim: H(12),
+        monitorId: TEST_IDS.MONITOR_1,
+        localId: TEST_IDS.LOCAL_1,
+      });
+
+      const resultado = await alocacaoMonitorService.calcularHorasMonitor(
+        TEST_IDS.MONITOR_1,
+        DATA,
+        DATA_POSTERIOR
+      );
+
+      expect(resultado.monitorId).toBe(TEST_IDS.MONITOR_1);
+      expect(resultado.alocacoes).toBe(3);
+      expect(resultado.totalMinutos).toBe(9 * 60); // 540 min
+      expect(resultado.totalHoras).toBeCloseTo(9, 2);
+      expect(resultado.valorHora).toBeCloseTo(8.5, 2);
+      expect(resultado.valorTotal).toBeCloseTo(76.5, 2);
+
+      // Cleanup
+      await testPrisma.monitor.update({
+        where: { id: TEST_IDS.MONITOR_1 },
+        data: { valorHora: null },
+      });
+    });
+
+    it("deve filtrar por intervalo de datas", async () => {
+      await alocacaoMonitorService.create({
+        data: DATA_ANTERIOR,
+        horaInicio: H(9),
+        horaFim: H(12),
+        monitorId: TEST_IDS.MONITOR_1,
+        localId: TEST_IDS.LOCAL_1,
+      });
+      await alocacaoMonitorService.create({
+        data: DATA,
+        horaInicio: H(9),
+        horaFim: H(12),
+        monitorId: TEST_IDS.MONITOR_1,
+        localId: TEST_IDS.LOCAL_1,
+      });
+
+      // Só a alocação em DATA (dentro de DATA..DATA_POSTERIOR)
+      const resultado = await alocacaoMonitorService.calcularHorasMonitor(
+        TEST_IDS.MONITOR_1,
+        DATA,
+        DATA_POSTERIOR
+      );
+
+      expect(resultado.alocacoes).toBe(1);
+      expect(resultado.totalHoras).toBeCloseTo(3, 2);
+    });
+
+    it("deve devolver valorHora=0 e valorTotal=0 quando monitor não tem valor/hora", async () => {
+      await alocacaoMonitorService.create({
+        data: DATA,
+        horaInicio: H(10),
+        horaFim: H(14),
+        monitorId: TEST_IDS.MONITOR_1,
+        localId: TEST_IDS.LOCAL_1,
+      });
+
+      const resultado = await alocacaoMonitorService.calcularHorasMonitor(
+        TEST_IDS.MONITOR_1,
+        DATA,
+        DATA_POSTERIOR
+      );
+
+      expect(resultado.totalHoras).toBeCloseTo(4, 2);
+      expect(resultado.valorHora).toBe(0);
+      expect(resultado.valorTotal).toBe(0);
+    });
+
+    it("deve lançar NOT_FOUND para monitor inexistente", async () => {
+      await expect(
+        alocacaoMonitorService.calcularHorasMonitor("non-existent")
+      ).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("deve calcular todas as alocações sem filtro de datas", async () => {
+      await alocacaoMonitorService.create({
+        data: DATA,
+        horaInicio: H(9),
+        horaFim: H(13),
+        monitorId: TEST_IDS.MONITOR_1,
+        localId: TEST_IDS.LOCAL_1,
+      });
+
+      const resultado = await alocacaoMonitorService.calcularHorasMonitor(TEST_IDS.MONITOR_1);
+
+      expect(resultado.alocacoes).toBeGreaterThanOrEqual(1);
+      expect(resultado.totalMinutos).toBeGreaterThanOrEqual(240);
+    });
+  });
 });

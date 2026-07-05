@@ -4,6 +4,16 @@ import type { AlocacaoMonitor as AlocacaoMonitorBase } from "@saas/shared-types"
 // API response type (base + relations incluídas pela API)
 export type AlocacaoMonitor = AlocacaoMonitorBase;
 
+export interface HorasMonitorResult {
+  monitorId: string;
+  monitorNome: string;
+  totalMinutos: number;
+  totalHoras: number;
+  valorHora: number;
+  valorTotal: number;
+  alocacoes: number;
+}
+
 export interface AlocacaoFiltros {
   data?: string; // "yyyy-MM-dd"
   dataInicio?: string;
@@ -60,6 +70,13 @@ export const alocacaoMonitorApi = {
     api<{ message: string }>(`/api/alocacoes-monitor/${id}`, {
       method: "DELETE",
     }),
+
+  calcularHoras: (monitorId: string, dataInicio?: string, dataFim?: string) => {
+    const params = new URLSearchParams({ monitorId });
+    if (dataInicio) params.set("dataInicio", dataInicio);
+    if (dataFim) params.set("dataFim", dataFim);
+    return api<HorasMonitorResult>(`/api/alocacoes-monitor/horas?${params.toString()}`);
+  },
 };
 
 // ── Helpers de conversão entre "HH:MM" e minutos desde meia-noite ──

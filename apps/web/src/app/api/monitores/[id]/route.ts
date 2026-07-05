@@ -33,11 +33,12 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
-    const { nome, contacto, activo } = await request.json();
+    const { nome, contacto, activo, valorHora } = await request.json();
     const monitor = await monitorService.update(id, {
       nome,
       contacto,
       activo,
+      valorHora,
     });
     return NextResponse.json(monitor);
   } catch (error) {

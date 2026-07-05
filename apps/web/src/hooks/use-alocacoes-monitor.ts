@@ -8,6 +8,21 @@ import {
   type AtualizarAlocacaoData,
 } from "@/lib/api/alocacaoMonitor";
 
+// ── Cálculo de horas/custo (ADMINISTRADOR apenas) ──
+
+/** Calcula horas trabalhadas e custo total de um monitor num intervalo */
+export function useCalcularHorasMonitor(
+  monitorId: string | null,
+  dataInicio?: string,
+  dataFim?: string,
+) {
+  return useQuery({
+    queryKey: [KEY, "horas", monitorId, dataInicio ?? "", dataFim ?? ""],
+    queryFn: () => alocacaoMonitorApi.calcularHoras(monitorId!, dataInicio, dataFim),
+    enabled: !!monitorId,
+  });
+}
+
 const KEY = "alocacoes-monitor";
 
 // ── Queries ───────────────────────────────────────

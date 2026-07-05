@@ -8,6 +8,7 @@ export interface CreateMonitorData {
   nome: string;
   contacto: string;
   activo?: boolean;
+  valorHora?: number | null;
 }
 
 // API calls

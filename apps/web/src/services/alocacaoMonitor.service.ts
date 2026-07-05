@@ -174,6 +174,67 @@ export const alocacaoMonitorService = {
     await this.getById(id);
     return prisma.alocacaoMonitor.delete({ where: { id } });
   },
+
+  /**
+   * Calcula o total de horas trabalhadas e o vencimento de um monitor num período.
+   * Soma (horaFim - horaInicio) de todas as alocações e multiplica pelo valorHora.
+   */
+  async calcularHorasMonitor(
+    monitorId: string,
+    dataInicio?: string,
+    dataFim?: string,
+  ): Promise<{
+    monitorId: string;
+    monitorNome: string;
+    totalMinutos: number;
+    totalHoras: number;
+    valorHora: number;
+    valorTotal: number;
+    alocacoes: number;
+  }> {
+    const monitor = await prisma.monitor.findUnique({ where: { id: monitorId } });
+    if (!monitor) throw new Error("NOT_FOUND");
+
+    const where: Record<string, unknown> = { monitorId };
+    if (dataInicio || dataFim) {
+      const dateFilter: Record<string, Date> = {};
+      if (dataInicio) dateFilter.gte = new Date(dataInicio + "T00:00:00.000Z");
+      if (dataFim) {
+        const end = new Date(dataFim + "T00:00:00.000Z");
+        end.setDate(end.getDate() + 1);
+        dateFilter.lt = end;
+      }
+      where.data = dateFilter;
+    }
+
+    const alocacoes = await prisma.alocacaoMonitor.findMany({
+      where,
+      select: { horaInicio: true, horaFim: true },
+    });
+
+    const totalMinutos = alocacoes.reduce(
+      (sum, a) => sum + (a.horaFim - a.horaInicio),
+      0,
+    );
+    const totalHoras = totalMinutos / 60;
+    // Prioridade: valor individual do monitor → default global (ConfiguracaoPreco) → 0
+    let valorHora = monitor.valorHora ? Number(monitor.valorHora) : 0;
+    if (!monitor.valorHora) {
+      const config = await prisma.configuracaoPreco.findFirst();
+      valorHora = config?.valorHoraMonitorDefault ? Number(config.valorHoraMonitorDefault) : 0;
+    }
+    const valorTotal = totalHoras * valorHora;
+
+    return {
+      monitorId,
+      monitorNome: monitor.nome,
+      totalMinutos,
+      totalHoras: Math.round(totalHoras * 100) / 100,
+      valorHora,
+      valorTotal: Math.round(valorTotal * 100) / 100,
+      alocacoes: alocacoes.length,
+    };
+  },
 };
 
 /** Converte um Date (dia) para "yyyy-MM-dd" */

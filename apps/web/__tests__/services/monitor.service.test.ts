@@ -76,6 +76,29 @@ describe("Monitor Service", () => {
         monitorService.create({ nome: "Teste", contacto: "" })
       ).rejects.toThrow("CONTACTO_REQUIRED");
     });
+
+    it("should create a monitor with valorHora", async () => {
+      const monitor = await monitorService.create({
+        nome: "Monitor Com Valor",
+        contacto: "966666666",
+        valorHora: 7.5,
+      });
+      expect(Number(monitor.valorHora)).toBe(7.5);
+
+      // Cleanup
+      await testPrisma.monitor.delete({ where: { id: monitor.id } });
+    });
+
+    it("should default valorHora to null when not provided", async () => {
+      const monitor = await monitorService.create({
+        nome: "Monitor Sem Valor",
+        contacto: "977777777",
+      });
+      expect(monitor.valorHora).toBeNull();
+
+      // Cleanup
+      await testPrisma.monitor.delete({ where: { id: monitor.id } });
+    });
   });
 
   // ── update ────────────────────────────────────────────────────
@@ -94,6 +117,16 @@ describe("Monitor Service", () => {
       await expect(
         monitorService.update("non-existent", { nome: "X" })
       ).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("should update valorHora", async () => {
+      const updated = await monitorService.update(TEST_IDS.MONITOR_1, {
+        valorHora: 9.0,
+      });
+      expect(Number(updated.valorHora)).toBe(9.0);
+
+      // Restore
+      await monitorService.update(TEST_IDS.MONITOR_1, { valorHora: null });
     });
   });
 

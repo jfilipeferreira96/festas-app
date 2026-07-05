@@ -4,12 +4,14 @@ interface CreateMonitorData {
   nome: string;
   contacto: string;
   activo?: boolean;
+  valorHora?: number | null;
 }
 
 interface UpdateMonitorData {
   nome?: string;
   contacto?: string;
   activo?: boolean;
+  valorHora?: number | null;
 }
 
 export const monitorService = {
@@ -36,6 +38,7 @@ export const monitorService = {
         nome: data.nome,
         contacto: data.contacto,
         activo: data.activo !== undefined ? data.activo : true,
+        valorHora: data.valorHora ?? null,
       },
     });
   },
@@ -46,9 +49,10 @@ export const monitorService = {
     return prisma.monitor.update({
       where: { id },
       data: {
-        nome: data.nome,
-        contacto: data.contacto,
-        activo: data.activo,
+        ...(data.nome !== undefined && { nome: data.nome }),
+        ...(data.contacto !== undefined && { contacto: data.contacto }),
+        ...(data.activo !== undefined && { activo: data.activo }),
+        ...(data.valorHora !== undefined && { valorHora: data.valorHora }),
       },
     });
   },

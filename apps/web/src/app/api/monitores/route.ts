@@ -32,11 +32,12 @@ export async function POST(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const { nome, contacto, activo } = await request.json();
+    const { nome, contacto, activo, valorHora } = await request.json();
     const monitor = await monitorService.create({
       nome,
       contacto,
       activo,
+      valorHora,
     });
     return NextResponse.json(monitor, { status: 201 });
   } catch (error) {
