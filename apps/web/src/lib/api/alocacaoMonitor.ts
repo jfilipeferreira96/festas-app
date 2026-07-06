@@ -4,6 +4,15 @@ import type { AlocacaoMonitor as AlocacaoMonitorBase } from "@saas/shared-types"
 // API response type (base + relations incluídas pela API)
 export type AlocacaoMonitor = AlocacaoMonitorBase;
 
+export interface ResumoMensalMonitor {
+  monitorId: string;
+  monitorNome: string;
+  valorHora: number;
+  dias: number;
+  horas: number;
+  custoTotal: number;
+}
+
 export interface HorasMonitorResult {
   monitorId: string;
   monitorNome: string;
@@ -76,6 +85,11 @@ export const alocacaoMonitorApi = {
     if (dataInicio) params.set("dataInicio", dataInicio);
     if (dataFim) params.set("dataFim", dataFim);
     return api<HorasMonitorResult>(`/api/alocacoes-monitor/horas?${params.toString()}`);
+  },
+
+  resumoMensal: (mes: string) => {
+    const params = new URLSearchParams({ mes });
+    return api<ResumoMensalMonitor[]>(`/api/alocacoes-monitor/resumo-mensal?${params.toString()}`);
   },
 };
 

@@ -15,7 +15,7 @@ import Switch from "@/components/form/switch/Switch";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { useMonitores, useCreateMonitor, useUpdateMonitor, useDeleteMonitor } from "@/hooks/use-monitores";
-import { useCalcularHorasMonitor } from "@/hooks/use-alocacoes-monitor";
+import { useCalcularHorasMonitor, useResumoMensalMonitores } from "@/hooks/use-alocacoes-monitor";
 import type { Monitor } from "@/lib/api/monitores";
 import type { StatusType } from "@/components/ui";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
@@ -56,6 +56,39 @@ export default function MonitoresContent() {
   const [horasInicio, setHorasInicio] = useState("");
   const [horasFim, setHorasFim] = useState("");
   const [fetchTrigger, setFetchTrigger] = useState(0);
+
+  // --- Compensações tab (admin only) ---
+  const [activeTab, setActiveTab] = useState<"lista" | "compensacoes">("lista");
+  const mesAtual = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const [mesSelecionado, setMesSelecionado] = useState(mesAtual);
+  const { data: resumoMensal, isLoading: resumoLoading } = useResumoMensalMonitores(
+    activeTab === "compensacoes" && isAdmin ? mesSelecionado : "",
+  );
+
+  // Gerar opções de meses (6 meses atrás + 1 mês à frente)
+  const mesesOptions = useMemo(() => {
+    const meses: { value: string; label: string }[] = [];
+    const nomesMeses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    const now = new Date();
+    for (let i = -6; i <= 1; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      meses.push({ value, label: `${nomesMeses[d.getMonth()]} ${d.getFullYear()}` });
+    }
+    return meses;
+  }, []);
+
+  const totalMes = useMemo(() => {
+    if (!resumoMensal) return { dias: 0, horas: 0, custo: 0 };
+    return resumoMensal.reduce(
+      (acc, m) => ({
+        dias: acc.dias + m.dias,
+        horas: acc.horas + m.horas,
+        custo: acc.custo + m.custoTotal,
+      }),
+      { dias: 0, horas: 0, custo: 0 },
+    );
+  }, [resumoMensal]);
 
   const horasData = useCalcularHorasMonitor(
     horasModal.monitor?.id ?? null,
@@ -259,6 +292,34 @@ export default function MonitoresContent() {
         }
       />
 
+      {/* Tabs (admin only sees compensações) */}
+      <div className="mt-4 flex gap-1 border-b border-border">
+        <button
+          onClick={() => setActiveTab("lista")}
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            activeTab === "lista"
+              ? "border-primary-500 text-primary-600"
+              : "border-transparent text-text-muted hover:text-text-primary"
+          }`}
+        >
+          Lista de Monitores
+        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab("compensacoes")}
+            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === "compensacoes"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-text-muted hover:text-text-primary"
+            }`}
+          >
+            Compensações
+          </button>
+        )}
+      </div>
+
+      {/* ── Tab: Lista ── */}
+      {activeTab === "lista" && (
       <div className="mt-4">
         <DataTable<Monitor>
           data={monitores || []}
@@ -316,6 +377,73 @@ export default function MonitoresContent() {
           }}
         />
       </div>
+      )}
+
+      {/* ── Tab: Compensações (admin only) ── */}
+      {activeTab === "compensacoes" && isAdmin && (
+        <div className="mt-4">
+          <div className="flex items-center gap-3 mb-4">
+            <label className="text-sm font-medium text-text-secondary">Mês:</label>
+            <select
+              value={mesSelecionado}
+              onChange={(e) => setMesSelecionado(e.target.value)}
+              className="px-3 py-1.5 rounded-lg border border-border bg-surface text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-400"
+            >
+              {mesesOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {resumoLoading ? (
+            <div className="py-12 text-center text-sm text-text-secondary">A carregar dados...</div>
+          ) : resumoMensal && resumoMensal.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50">
+                    <th className="px-4 py-3 text-left font-medium text-text-secondary">Monitor</th>
+                    <th className="px-4 py-3 text-center font-medium text-text-secondary">Dias</th>
+                    <th className="px-4 py-3 text-center font-medium text-text-secondary">Horas</th>
+                    <th className="px-4 py-3 text-right font-medium text-text-secondary">Valor/Hora</th>
+                    <th className="px-4 py-3 text-right font-medium text-text-secondary">Custo Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumoMensal.map((m) => (
+                    <tr key={m.monitorId} className="border-b border-border last:border-0 hover:bg-gray-50/50">
+                      <td className="px-4 py-3 text-text-primary font-medium">{m.monitorNome}</td>
+                      <td className="px-4 py-3 text-center text-text-primary">{m.dias}</td>
+                      <td className="px-4 py-3 text-center text-text-primary">{m.horas.toFixed(1)} h</td>
+                      <td className="px-4 py-3 text-right text-text-primary">
+                        {m.valorHora > 0 ? euro.format(m.valorHora) : "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right text-primary-500 font-semibold">
+                        {euro.format(m.custoTotal)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-gray-50 font-semibold">
+                    <td className="px-4 py-3 text-text-primary">Total</td>
+                    <td className="px-4 py-3 text-center text-text-primary">{totalMes.dias}</td>
+                    <td className="px-4 py-3 text-center text-text-primary">{totalMes.horas.toFixed(1)} h</td>
+                    <td className="px-4 py-3 text-right"></td>
+                    <td className="px-4 py-3 text-right text-primary-500">{euro.format(totalMes.custo)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            <div className="py-12 text-center text-sm text-text-muted">
+              Sem alocações registadas para este mês.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       <ConfirmActionModal

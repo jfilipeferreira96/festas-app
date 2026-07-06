@@ -23,6 +23,15 @@ export function useCalcularHorasMonitor(
   });
 }
 
+/** Resumo mensal de compensações para todos os monitores (ADMINISTRADOR apenas) */
+export function useResumoMensalMonitores(mes: string) {
+  return useQuery({
+    queryKey: [KEY, "resumo-mensal", mes],
+    queryFn: () => alocacaoMonitorApi.resumoMensal(mes),
+    enabled: !!mes,
+  });
+}
+
 const KEY = "alocacoes-monitor";
 
 // ── Queries ───────────────────────────────────────

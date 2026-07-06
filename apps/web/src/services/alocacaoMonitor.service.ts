@@ -235,6 +235,59 @@ export const alocacaoMonitorService = {
       alocacoes: alocacoes.length,
     };
   },
+
+  /**
+   * Resumo mensal de compensações para todos os monitores.
+   * Retorna, para cada monitor, o nº de dias e horas trabalhadas + custo total no mês.
+   */
+  async getResumoMensal(mes: string): Promise<{
+    monitorId: string;
+    monitorNome: string;
+    valorHora: number;
+    dias: number;
+    horas: number;
+    custoTotal: number;
+  }[]> {
+    // Parse "YYYY-MM" → start/end of month
+    const [ano, mesNum] = mes.split("-").map(Number);
+    if (!ano || !mesNum || mesNum < 1 || mesNum > 12) throw new Error("MES_INVALIDO");
+
+    const dataInicio = new Date(Date.UTC(ano, mesNum - 1, 1));
+    const dataFim = new Date(Date.UTC(ano, mesNum, 1)); // first day of next month
+
+    // Get global default valorHora
+    const config = await prisma.configuracaoPreco.findFirst();
+    const valorHoraDefault = config?.valorHoraMonitorDefault ? Number(config.valorHoraMonitorDefault) : 0;
+
+    const monitores = await prisma.monitor.findMany({
+      where: { activo: true },
+      select: { id: true, nome: true, valorHora: true },
+      orderBy: { nome: "asc" },
+    });
+
+    const alocacoes = await prisma.alocacaoMonitor.findMany({
+      where: { data: { gte: dataInicio, lt: dataFim } },
+      select: { monitorId: true, data: true, horaInicio: true, horaFim: true },
+    });
+
+    return monitores.map((m) => {
+      const minhas = alocacoes.filter((a) => a.monitorId === m.id);
+      const diasUnicos = new Set(minhas.map((a) => a.data.toISOString().slice(0, 10)));
+      const totalMinutos = minhas.reduce((sum, a) => sum + (a.horaFim - a.horaInicio), 0);
+      const totalHoras = totalMinutos / 60;
+      const valorHora = m.valorHora ? Number(m.valorHora) : valorHoraDefault;
+      const custoTotal = totalHoras * valorHora;
+
+      return {
+        monitorId: m.id,
+        monitorNome: m.nome,
+        valorHora,
+        dias: diasUnicos.size,
+        horas: Math.round(totalHoras * 100) / 100,
+        custoTotal: Math.round(custoTotal * 100) / 100,
+      };
+    });
+  },
 };
 
 /** Converte um Date (dia) para "yyyy-MM-dd" */
