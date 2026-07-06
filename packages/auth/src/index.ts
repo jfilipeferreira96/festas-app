@@ -92,11 +92,11 @@ export const auth = betterAuth({
     sendOnSignUp: true,
   },
   session: {
-    expiresIn: 60 * 60 * 24 * 90, // 90 days (uso interno)
-    updateAge: 60 * 60 * 24, // 1 day
+    expiresIn: 60 * 60 * 24 * 365, // 365 days (1 ano)
+    updateAge: 60 * 60 * 24, // 1 day (sliding window)
     cookieCache: {
       enabled: true,
-      maxAge: 5 * 60, // 5 minutes
+      maxAge: 60 * 60, // 1 hour (reduz hits à BD em hosting partilhado)
     },
   },
   account: {
