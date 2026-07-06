@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { useMonitores, useCreateMonitor, useUpdateMonitor, useDeleteMonitor } from "@/hooks/use-monitores";
 import { useCalcularHorasMonitor, useResumoMensalMonitores } from "@/hooks/use-alocacoes-monitor";
+import { formatShortDate } from "@/utils/date";
 import type { Monitor } from "@/lib/api/monitores";
 import type { StatusType } from "@/components/ui";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
@@ -635,6 +636,32 @@ export default function MonitoresContent() {
                   <span className="text-text-primary">Custo Total</span>
                   <span className="text-primary-500">{euro.format(horasResultado.valorTotal)}</span>
                 </div>
+
+                {/* Detalhe por dia */}
+                {horasResultado.detalhes.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">
+                      Detalhe por dia
+                    </p>
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                      {horasResultado.detalhes.map((d) => (
+                        <div key={d.data} className="flex items-center justify-between px-3 py-2 text-sm">
+                          <div className="min-w-0">
+                            <span className="font-medium text-text-primary">{formatShortDate(d.data)}</span>
+                            {d.locais.length > 0 && (
+                              <span className="ml-2 text-xs text-text-muted truncate">
+                                {d.locais.join(", ")}
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-medium text-text-primary shrink-0">
+                            {d.horas.toFixed(1)} h
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

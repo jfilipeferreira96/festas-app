@@ -13,6 +13,12 @@ export interface ResumoMensalMonitor {
   custoTotal: number;
 }
 
+export interface HorasDiaDetalhe {
+  data: string; // "yyyy-MM-dd"
+  horas: number;
+  locais: string[];
+}
+
 export interface HorasMonitorResult {
   monitorId: string;
   monitorNome: string;
@@ -21,6 +27,7 @@ export interface HorasMonitorResult {
   valorHora: number;
   valorTotal: number;
   alocacoes: number;
+  detalhes: HorasDiaDetalhe[];
 }
 
 export interface AlocacaoFiltros {

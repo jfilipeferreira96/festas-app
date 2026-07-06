@@ -191,6 +191,7 @@ export const alocacaoMonitorService = {
     valorHora: number;
     valorTotal: number;
     alocacoes: number;
+    detalhes: { data: string; horas: number; locais: string[] }[];
   }> {
     const monitor = await prisma.monitor.findUnique({ where: { id: monitorId } });
     if (!monitor) throw new Error("NOT_FOUND");
@@ -209,7 +210,7 @@ export const alocacaoMonitorService = {
 
     const alocacoes = await prisma.alocacaoMonitor.findMany({
       where,
-      select: { horaInicio: true, horaFim: true },
+      select: { data: true, horaInicio: true, horaFim: true, local: { select: { nome: true } } },
     });
 
     const totalMinutos = alocacoes.reduce(
@@ -225,6 +226,23 @@ export const alocacaoMonitorService = {
     }
     const valorTotal = totalHoras * valorHora;
 
+    // Detalhe por dia: agrupa alocações por data, somando minutos e locais únicos
+    const porDia = new Map<string, { minutos: number; locais: Set<string> }>();
+    for (const a of alocacoes) {
+      const dia = a.data.toISOString().slice(0, 10);
+      const entrada = porDia.get(dia) ?? { minutos: 0, locais: new Set<string>() };
+      entrada.minutos += a.horaFim - a.horaInicio;
+      if (a.local?.nome) entrada.locais.add(a.local.nome);
+      porDia.set(dia, entrada);
+    }
+    const detalhes = [...porDia.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([data, { minutos, locais }]) => ({
+        data,
+        horas: Math.round((minutos / 60) * 100) / 100,
+        locais: [...locais],
+      }));
+
     return {
       monitorId,
       monitorNome: monitor.nome,
@@ -233,6 +251,7 @@ export const alocacaoMonitorService = {
       valorHora,
       valorTotal: Math.round(valorTotal * 100) / 100,
       alocacoes: alocacoes.length,
+      detalhes,
     };
   },
 
