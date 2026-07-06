@@ -40,6 +40,8 @@ interface DataTableProps<T> {
   canManage?: boolean;
   /** Plural label for items (e.g. "utilizadores", "reservas"). Defaults to "itens". */
   itemLabel?: string;
+  /** Optional footer row rendered inside the table card (e.g. totals). */
+  footer?: React.ReactNode;
   /** Default sort configuration applied on mount */
   defaultSort?: {
     key: string;
@@ -80,6 +82,7 @@ function DataTable<T extends { id: string }>({
   itemLabel = "itens",
   defaultSort,
   sortAccessor,
+  footer,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(initialPageSize);
@@ -321,6 +324,11 @@ function DataTable<T extends { id: string }>({
           </TableBody>
         </Table>
       </div>
+
+      {/* Optional footer row (e.g. totals) — rendered inside the table card */}
+      {footer && (
+        <div className="border-t-2 border-border bg-gray-50">{footer}</div>
+      )}
 
       {/* Pagination Footer */}
       {pagination && filteredData.length > 0 && (

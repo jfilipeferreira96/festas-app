@@ -10,16 +10,18 @@ import {
 
 // ── Cálculo de horas/custo (ADMINISTRADOR apenas) ──
 
-/** Calcula horas trabalhadas e custo total de um monitor num intervalo */
+/** Calcula horas trabalhadas e custo total de um monitor num intervalo.
+ *  Só dispara quando `enabled` for true (modal aberto + utilizador clicou em "Calcular"). */
 export function useCalcularHorasMonitor(
   monitorId: string | null,
   dataInicio?: string,
   dataFim?: string,
+  enabled: boolean = !!monitorId,
 ) {
   return useQuery({
     queryKey: [KEY, "horas", monitorId, dataInicio ?? "", dataFim ?? ""],
     queryFn: () => alocacaoMonitorApi.calcularHoras(monitorId!, dataInicio, dataFim),
-    enabled: !!monitorId,
+    enabled: !!monitorId && enabled,
   });
 }
 

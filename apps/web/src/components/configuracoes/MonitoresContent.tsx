@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { UserCog, Plus, Clock, Calculator, Pencil, Trash2 } from "lucide-react";
+import { UserCog, Plus, Clock, Calculator, Pencil, Trash2, Users, Wallet } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,6 +14,8 @@ import DatePicker from "@/components/form/date-picker";
 import Switch from "@/components/form/switch/Switch";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
+import { Select } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
 import { useMonitores, useCreateMonitor, useUpdateMonitor, useDeleteMonitor } from "@/hooks/use-monitores";
 import { useCalcularHorasMonitor, useResumoMensalMonitores } from "@/hooks/use-alocacoes-monitor";
 import type { Monitor } from "@/lib/api/monitores";
@@ -35,6 +37,13 @@ type MonitorFormData = z.infer<typeof monitorSchema>;
 
 // --- Currency helper ---
 const euro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
+
+/** Converte "dd-mm-yyyy" (formato do DatePicker) → "yyyy-mm-dd" (ISO esperado pela API). */
+function dmyToIso(dateStr: string): string {
+  const m = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return dateStr; // já ISO ou vazio — devolver inalterado
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
 
 export default function MonitoresContent() {
   const { data: monitores, isLoading } = useMonitores();
@@ -90,14 +99,15 @@ export default function MonitoresContent() {
     );
   }, [resumoMensal]);
 
+  // Só busca quando o modal está aberto e há um trigger explícito (clicar em "Calcular")
+  const horasEnabled = horasModal.isOpen && fetchTrigger > 0;
+
   const horasData = useCalcularHorasMonitor(
     horasModal.monitor?.id ?? null,
     horasInicio || undefined,
     horasFim || undefined,
+    horasEnabled,
   );
-
-  // Só busca quando o modal está aberto e há um trigger explícito
-  const horasEnabled = horasModal.isOpen && fetchTrigger > 0;
 
   const {
     register,
@@ -266,10 +276,9 @@ export default function MonitoresContent() {
   }, []);
 
   const handleCalcularHoras = useCallback(() => {
+    // Ao incrementar o trigger, `horasEnabled` passa a true e o hook dispara o fetch.
     setFetchTrigger((n) => n + 1);
-    // Força refetch invalidando e re-ativando
-    horasData.refetch();
-  }, [horasData]);
+  }, []);
 
   const closeHorasModal = useCallback(() => {
     setHorasModal({ isOpen: false, monitor: null });
@@ -293,29 +302,33 @@ export default function MonitoresContent() {
       />
 
       {/* Tabs (admin only sees compensações) */}
-      <div className="mt-4 flex gap-1 border-b border-border">
-        <button
-          onClick={() => setActiveTab("lista")}
-          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-            activeTab === "lista"
-              ? "border-primary-500 text-primary-600"
-              : "border-transparent text-text-muted hover:text-text-primary"
-          }`}
-        >
-          Lista de Monitores
-        </button>
-        {isAdmin && (
+      <div className="flex items-center gap-3 mt-4 mb-4">
+        <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto no-scrollbar">
           <button
-            onClick={() => setActiveTab("compensacoes")}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              activeTab === "compensacoes"
-                ? "border-primary-500 text-primary-600"
-                : "border-transparent text-text-muted hover:text-text-primary"
+            onClick={() => setActiveTab("lista")}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+              activeTab === "lista"
+                ? "bg-brand-500 text-white shadow-theme-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
             }`}
           >
-            Compensações
+            <Users size={15} />
+            Lista de Monitores
           </button>
-        )}
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab("compensacoes")}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+                activeTab === "compensacoes"
+                  ? "bg-brand-500 text-white shadow-theme-sm"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              }`}
+            >
+              <Wallet size={15} />
+              Compensações
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Tab: Lista ── */}
@@ -384,63 +397,65 @@ export default function MonitoresContent() {
         <div className="mt-4">
           <div className="flex items-center gap-3 mb-4">
             <label className="text-sm font-medium text-text-secondary">Mês:</label>
-            <select
-              value={mesSelecionado}
-              onChange={(e) => setMesSelecionado(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-border bg-surface text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-400"
-            >
-              {mesesOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <div className="w-52">
+              <Select
+                options={mesesOptions}
+                value={mesSelecionado}
+                onChange={(value) => setMesSelecionado(value)}
+              />
+            </div>
           </div>
 
           {resumoLoading ? (
-            <div className="py-12 text-center text-sm text-text-secondary">A carregar dados...</div>
+            <Card>
+              <div className="py-12 text-center text-sm text-text-secondary">A carregar dados...</div>
+            </Card>
           ) : resumoMensal && resumoMensal.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-gray-50">
-                    <th className="px-4 py-3 text-left font-medium text-text-secondary">Monitor</th>
-                    <th className="px-4 py-3 text-center font-medium text-text-secondary">Dias</th>
-                    <th className="px-4 py-3 text-center font-medium text-text-secondary">Horas</th>
-                    <th className="px-4 py-3 text-right font-medium text-text-secondary">Valor/Hora</th>
-                    <th className="px-4 py-3 text-right font-medium text-text-secondary">Custo Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {resumoMensal.map((m) => (
-                    <tr key={m.monitorId} className="border-b border-border last:border-0 hover:bg-gray-50/50">
-                      <td className="px-4 py-3 text-text-primary font-medium">{m.monitorNome}</td>
-                      <td className="px-4 py-3 text-center text-text-primary">{m.dias}</td>
-                      <td className="px-4 py-3 text-center text-text-primary">{m.horas.toFixed(1)} h</td>
-                      <td className="px-4 py-3 text-right text-text-primary">
-                        {m.valorHora > 0 ? euro.format(m.valorHora) : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right text-primary-500 font-semibold">
-                        {euro.format(m.custoTotal)}
-                      </td>
+            <Card className="overflow-hidden p-0">
+              <div className="overflow-x-auto rounded-[12px]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-gray-50">
+                      <th className="px-4 py-3 text-left font-medium text-text-secondary">Monitor</th>
+                      <th className="px-4 py-3 text-center font-medium text-text-secondary">Dias</th>
+                      <th className="px-4 py-3 text-center font-medium text-text-secondary">Horas</th>
+                      <th className="px-4 py-3 text-right font-medium text-text-secondary">Valor/Hora</th>
+                      <th className="px-4 py-3 text-right font-medium text-text-secondary">Custo Total</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-border bg-gray-50 font-semibold">
-                    <td className="px-4 py-3 text-text-primary">Total</td>
-                    <td className="px-4 py-3 text-center text-text-primary">{totalMes.dias}</td>
-                    <td className="px-4 py-3 text-center text-text-primary">{totalMes.horas.toFixed(1)} h</td>
-                    <td className="px-4 py-3 text-right"></td>
-                    <td className="px-4 py-3 text-right text-primary-500">{euro.format(totalMes.custo)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {resumoMensal.map((m) => (
+                      <tr key={m.monitorId} className="border-b border-border last:border-0 hover:bg-gray-50/50">
+                        <td className="px-4 py-3 text-text-primary font-medium">{m.monitorNome}</td>
+                        <td className="px-4 py-3 text-center text-text-primary">{m.dias}</td>
+                        <td className="px-4 py-3 text-center text-text-primary">{m.horas.toFixed(1)} h</td>
+                        <td className="px-4 py-3 text-right text-text-primary">
+                          {m.valorHora > 0 ? euro.format(m.valorHora) : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-right text-brand-500 font-semibold">
+                          {euro.format(m.custoTotal)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-border bg-gray-50 font-semibold">
+                      <td className="px-4 py-3 text-text-primary">Total</td>
+                      <td className="px-4 py-3 text-center text-text-primary">{totalMes.dias}</td>
+                      <td className="px-4 py-3 text-center text-text-primary">{totalMes.horas.toFixed(1)} h</td>
+                      <td className="px-4 py-3 text-right"></td>
+                      <td className="px-4 py-3 text-right text-brand-500">{euro.format(totalMes.custo)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Card>
           ) : (
-            <div className="py-12 text-center text-sm text-text-muted">
-              Sem alocações registadas para este mês.
-            </div>
+            <Card>
+              <div className="py-12 text-center text-sm text-text-muted">
+                Sem alocações registadas para este mês.
+              </div>
+            </Card>
           )}
         </div>
       )}
@@ -571,7 +586,7 @@ export default function MonitoresContent() {
                   id="horas-inicio"
                   mode="single"
                   defaultDate={horasInicio ? new Date(horasInicio + "T00:00:00") : undefined}
-                  onChange={(_dates, dateStr) => setHorasInicio(dateStr)}
+                  onChange={(_dates, dateStr) => setHorasInicio(dmyToIso(dateStr))}
                   placeholder="Seleccionar data"
                 />
               </div>
@@ -581,7 +596,7 @@ export default function MonitoresContent() {
                   id="horas-fim"
                   mode="single"
                   defaultDate={horasFim ? new Date(horasFim + "T00:00:00") : undefined}
-                  onChange={(_dates, dateStr) => setHorasFim(dateStr)}
+                  onChange={(_dates, dateStr) => setHorasFim(dmyToIso(dateStr))}
                   placeholder="Seleccionar data"
                 />
               </div>
@@ -629,9 +644,9 @@ export default function MonitoresContent() {
               </div>
             )}
 
-            {horasData.isError && !horasData.isFetching && (
+            {horasData.isError && !horasData.isFetching && fetchTrigger > 0 && (
               <div className="py-4 text-center text-sm text-accent-red">
-                Erro ao calcular horas. Verifique as permissões.
+                Erro ao calcular horas. Tente novamente.
               </div>
             )}
           </div>
