@@ -744,49 +744,6 @@ function Step1Geral({
 
   return (
     <div className="space-y-6">
-      {/* ── Bolo de Aniversário ── (MOVIDO PARA TOPO per pedido do cliente 12/07/2026) */}
-      <div className="space-y-2">
-        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-          <Cake size={14} className="text-brand-500" /> Bolo de Aniversário
-        </label>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-text-secondary mb-1">Tipo de Bolo</label>
-            <Select
-              options={[
-                { value: "", label: "Seleccionar..." },
-                { value: "PAIS_TRAZEM", label: "Pais trazem o bolo" },
-                { value: "A_DECIDIR", label: "Ainda vão decidir" },
-                { value: "NOSSO_1KG", label: "Nosso bolo 1kg" },
-                { value: "NOSSO_2KG", label: "Nosso bolo 2kg" },
-                { value: "BOLO_ARTISTICO", label: "Bolo artístico" },
-              ]}
-              placeholder="Seleccionar..."
-              value={watch("bolo") ?? ""}
-              onChange={(val) => setValue("bolo", val)}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs font-medium text-text-secondary mb-1">Tema do Bolo</label>
-            <InputField
-              {...register("boloTema")}
-              placeholder="Ex: Frozen, Cars, Princesas..."
-              disabled={watch("bolo") === "PAIS_TRAZEM" || watch("bolo") === "A_DECIDIR" || !watch("bolo")}
-            />
-          </div>
-          <div className="w-28">
-            <label className="block text-xs font-medium text-text-secondary mb-1">Quantidade</label>
-            <InputField
-              type="number"
-              min={0}
-              {...register("boloQuantidade", { valueAsNumber: true })}
-              placeholder="0"
-              disabled={watch("bolo") === "PAIS_TRAZEM" || watch("bolo") === "A_DECIDIR" || !watch("bolo")}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* ── Aniversariante(s) ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -941,6 +898,49 @@ function Step1Geral({
         </div>
       )}
 
+      {/* ── Bolo de Aniversário ── */}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <Cake size={14} className="text-brand-500" /> Bolo de Aniversário
+        </label>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Tipo de Bolo</label>
+            <Select
+              options={[
+                { value: "", label: "Seleccionar..." },
+                { value: "PAIS_TRAZEM", label: "Pais trazem o bolo" },
+                { value: "A_DECIDIR", label: "Ainda vão decidir" },
+                { value: "NOSSO_1KG", label: "Nosso bolo 1kg" },
+                { value: "NOSSO_2KG", label: "Nosso bolo 2kg" },
+                { value: "BOLO_ARTISTICO", label: "Bolo artístico" },
+              ]}
+              placeholder="Seleccionar..."
+              value={watch("bolo") ?? ""}
+              onChange={(val) => setValue("bolo", val)}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Tema do Bolo</label>
+            <InputField
+              {...register("boloTema")}
+              placeholder="Ex: Frozen, Cars, Princesas..."
+              disabled={watch("bolo") === "PAIS_TRAZEM" || watch("bolo") === "A_DECIDIR" || !watch("bolo")}
+            />
+          </div>
+          <div className="w-28">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Quantidade</label>
+            <InputField
+              type="number"
+              min={0}
+              {...register("boloQuantidade", { valueAsNumber: true })}
+              placeholder="0"
+              disabled={watch("bolo") === "PAIS_TRAZEM" || watch("bolo") === "A_DECIDIR" || !watch("bolo")}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* ── Verificação de disponibilidade (aviso apenas) ── */}
       {watch("data") && watch("horario") && watch("duracaoMinutos") && watch("localId") && (
         <div className="flex flex-wrap items-center gap-2">
@@ -1025,82 +1025,6 @@ function Step1Geral({
         </div>
       </div>
 
-      {/* ── Notas por Equipa ── */}
-      <div className="space-y-3">
-        <div>
-          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-            <Package size={14} className="text-accent-orange-500" /> Notas Importantes — Cacifos
-          </label>
-          <textarea
-            {...register("notasCacifos")}
-            placeholder="Instruções para a equipa de cacifos (ex: alergias, restrições, pedidos especiais)..."
-            rows={2}
-            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-            <Sandwich size={14} className="text-brand-500" /> Notas Importantes — Lanche
-          </label>
-          <textarea
-            {...register("notasLanche")}
-            placeholder="Instruções para a equipa de lanche (ex: alergias, restrições alimentares, pedidos especiais)..."
-            rows={2}
-            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
-          />
-        </div>
-      </div>
-
-      {/* ── Observações Gerais ── */}
-      <div>
-        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-          <FileText size={14} className="text-text-muted" /> Observações Gerais
-        </label>
-        <textarea
-          {...register("observacoesGerais")}
-          placeholder="Outras observações relevantes para a festa..."
-          rows={3}
-          className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
-        />
-      </div>
-
-      {/* ── Outras Observações ── */}
-      <div className="space-y-3">
-        <div>
-          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-            <AlertTriangle size={14} className="text-accent-orange-500" /> Lesões / Alergias
-          </label>
-          <textarea
-            {...register("observacoesLesoes")}
-            placeholder="Alergias alimentares, lesões, condições médicas..."
-            rows={2}
-            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-            <Gift size={14} className="text-accent-purple-500" /> Brindes
-          </label>
-          <textarea
-            {...register("observacoesBrindes")}
-            placeholder="Informações sobre brindes, presentes..."
-            rows={2}
-            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-            <Package size={14} className="text-accent-blue-500" /> Outros Extras
-          </label>
-          <textarea
-            {...register("outrosExtras")}
-            placeholder="Outros itens ou extras não listados..."
-            rows={2}
-            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
-          />
-        </div>
-      </div>
-
       {/* ── Extras agrupados por subcategoria ── */}
       {extraItems.length > 0 && (
         <div>
@@ -1123,12 +1047,77 @@ function Step1Geral({
           </div>
         </div>
       )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1">Outros Extras (não listados)</label>
+          <textarea
+            {...register("outrosExtras")}
+            placeholder="Outros itens ou extras não listados acima..."
+            rows={2}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1">Brindes</label>
+          <textarea
+            {...register("observacoesBrindes")}
+            placeholder="Informações sobre brindes, presentes..."
+            rows={2}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+          />
+        </div>
+      </div>
       {totalEstimado > 0 && (
         <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
           <span className="text-sm font-medium text-text-secondary">Total Extras</span>
           <span className="text-lg font-bold text-primary-500">{formatEuro(totalEstimado / 100)}</span>
         </div>
       )}
+
+      {/* ── Notas & Observações (final da marcação) ── */}
+      <div className="space-y-3">
+        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <FileText size={14} className="text-text-muted" /> Notas & Observações
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Notas — Cacifos</label>
+            <textarea
+              {...register("notasCacifos")}
+              placeholder="Instruções para a equipa de cacifos (alergias, restrições, pedidos especiais)..."
+              rows={2}
+              className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Notas — Lanche</label>
+            <textarea
+              {...register("notasLanche")}
+              placeholder="Instruções para a equipa de lanche (alergias, restrições alimentares)..."
+              rows={2}
+              className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Lesões / Alergias</label>
+            <textarea
+              {...register("observacoesLesoes")}
+              placeholder="Alergias alimentares, lesões, condições médicas..."
+              rows={2}
+              className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Observações Gerais</label>
+            <textarea
+              {...register("observacoesGerais")}
+              placeholder="Outras observações relevantes para a festa..."
+              rows={2}
+              className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
