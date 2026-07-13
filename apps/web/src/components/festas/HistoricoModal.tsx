@@ -298,7 +298,7 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
           </div>
         )}
 
-        {/* Etapas */}
+        {/* Etapas — oculto per pedido do cliente (12/07/2026)
         {reserva.etapas && reserva.etapas.length > 0 && (
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-text-primary mb-2">Etapas</h3>
@@ -323,7 +323,7 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
               ))}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Cacifos Historico */}
         {cacifosHistorico.length > 0 && (

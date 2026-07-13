@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import {
   CheckCircle2, Play, XCircle, Users, MapPin,
   Clock, Cake, Sparkles, Package, CreditCard, Shield,
-  Gift, Star, FileText, MessageSquare,
+  Gift, Star, FileText, MessageSquare, Sandwich,
   SquareCheck, Phone, Mail, Hash, Percent, Tag, Calendar,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -15,6 +15,7 @@ import { useReserva } from "@/hooks/use-reservas";
 import type { Reserva } from "@/lib/api/reservas";
 import { formatDate, formatDuration } from "@/utils/date";
 import { differenceInYears } from "date-fns";
+import { BOLO_LABELS } from "@/lib/constants/bolo";
 
 // ── Constants ──────────────────────────────────────────────────────
 const ESTADO_LABELS: Record<string, string> = {
@@ -208,6 +209,9 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
           {reserva.previsaoCriancas != null && reserva.previsaoCriancas !== reserva.numCriancas && (
             <DetailRow icon={<Users size={13} />} label="Previsão" value={String(reserva.previsaoCriancas)} />
           )}
+          {reserva.numCriancasConfirmadas != null && reserva.numCriancasConfirmadas > 0 && (
+            <DetailRow icon={<Users size={13} />} label="Confirmadas" value={String(reserva.numCriancasConfirmadas)} />
+          )}
         </div>
       </Section>
 
@@ -220,14 +224,14 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
         </div>
       </Section>
 
-      {/* Tema e Bolo */}
-      {(reserva.tema || reserva.bolo) && (
-        <Section title="Tema e Bolo" icon={<Sparkles size={13} />}>
+      {/* Bolo de Aniversário */}
+      {reserva.bolo && (
+        <Section title="Bolo de Aniversário" icon={<Cake size={13} />}>
           <div className="space-y-1.5">
-            {reserva.tema && <DetailRow icon={<Sparkles size={13} />} label="Tema" value={reserva.tema} />}
-            {reserva.bolo && <DetailRow icon={<Gift size={13} />} label="Bolo" value={reserva.bolo} />}
+            <DetailRow icon={<Gift size={13} />} label="Tipo" value={BOLO_LABELS[reserva.bolo] ?? reserva.bolo} />
+            {reserva.boloTema && <DetailRow icon={<Sparkles size={13} />} label="Tema" value={reserva.boloTema} />}
             {reserva.boloQuantidade != null && reserva.boloQuantidade > 0 && (
-              <DetailRow icon={<Gift size={13} />} label="Qtd. Bolo" value={String(reserva.boloQuantidade)} />
+              <DetailRow icon={<Gift size={13} />} label="Quantidade" value={String(reserva.boloQuantidade)} />
             )}
           </div>
         </Section>
@@ -283,7 +287,7 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
         </Section>
       )}
 
-      {/* Etapas */}
+      {/* Etapas — oculto per pedido do cliente (12/07/2026)
       {reserva.etapas && reserva.etapas.length > 0 && (
         <Section title={`Etapas (${reserva.etapas.filter(e => e.concluida).length}/${reserva.etapas.length})`} icon={<CheckCircle2 size={13} />}>
           <div className="space-y-1">
@@ -297,7 +301,7 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
             ))}
           </div>
         </Section>
-      )}
+      )} */}
 
       {/* Pagamento — oculto para CACIFOS (hidePrices) */}
       {!hidePrices && (
@@ -390,6 +394,20 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
             {reserva.observacoesBrindes && <ObsBlock label="Brindes" value={reserva.observacoesBrindes} />}
             {reserva.outrosExtras && <ObsBlock label="Outros Extras" value={reserva.outrosExtras} />}
           </div>
+        </Section>
+      )}
+
+      {/* Notas Importantes — Cacifos */}
+      {reserva.notasCacifos && (
+        <Section title="Notas — Cacifos" icon={<Package size={13} />}>
+          <p className="text-sm text-text-secondary whitespace-pre-wrap">{reserva.notasCacifos}</p>
+        </Section>
+      )}
+
+      {/* Notas Importantes — Lanche */}
+      {reserva.notasLanche && (
+        <Section title="Notas — Lanche" icon={<Sandwich size={13} />}>
+          <p className="text-sm text-text-secondary whitespace-pre-wrap">{reserva.notasLanche}</p>
         </Section>
       )}
 

@@ -441,6 +441,12 @@ export default function CacifosContent() {
                 <>
                   <DetailRow label="Festa" value={selectedCacifo.reserva.cliente?.nome ?? "—"} />
                   <DetailRow label="Sala" value={selectedCacifo.reserva.local?.nome ?? "—"} />
+                  {selectedCacifo.reserva.notasCacifos && (
+                    <div className="px-3 py-2.5 rounded-lg bg-accent-orange-50 border border-accent-orange-200">
+                      <p className="text-[10px] font-semibold text-accent-orange-700 uppercase tracking-wider mb-0.5">Notas Cacifos (Reserva)</p>
+                      <p className="text-sm text-text-secondary whitespace-pre-wrap">{selectedCacifo.reserva.notasCacifos}</p>
+                    </div>
+                  )}
                 </>
               )}
               {selectedCacifo.criancas && (

@@ -206,10 +206,18 @@ export async function seedTestData(): Promise<void> {
       horario: "10:00",
       duracaoMinutos: 150,
       numCriancas: 18,
+      numCriancasConfirmadas: 16,
       notas: "Reserva de teste confirmada",
       estado: "CONFIRMADO",
       clienteId: TEST_IDS.CLIENTE_1,
       localId: TEST_IDS.LOCAL_1,
+      // Bolo
+      bolo: "NOSSO_1KG",
+      boloTema: "Frozen",
+      boloQuantidade: 1,
+      // Notas por equipa
+      notasCacifos: "Criança com alergia a frutos secos",
+      notasLanche: "Sem sumos gaseificados",
       // Preço por criança (cálculo aplicado)
       precoCriancaAplicado: 15,
       minimoCriancas: 10,
@@ -244,6 +252,11 @@ export async function seedTestData(): Promise<void> {
       estado: "RESERVA",
       clienteId: TEST_IDS.CLIENTE_2,
       localId: TEST_IDS.LOCAL_2,
+      // Bolo — pais trazem (tema e quantidade não se aplicam)
+      bolo: "PAIS_TRAZEM",
+      // Notas por equipa
+      notasCacifos: "Gemidos de dois anos",
+      notasLanche: "Bolachas sem açúcar",
     },
   });
   await testPrisma.reservaAniversariante.upsert({

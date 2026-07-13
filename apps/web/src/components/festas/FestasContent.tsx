@@ -602,7 +602,8 @@ function FestaCard({
           </div>
         )}
 
-        {/* Etapas */}
+        {/* Etapas — oculto per pedido do cliente (12/07/2026)
+            O bloco etapas foi removido da UI. Mantém-se comentado para referência.
         {festa.etapas && festa.etapas.length > 0 && (
           <div className="space-y-1.5 pt-1">
             <div className="flex items-center justify-between mb-1">
@@ -667,7 +668,7 @@ function FestaCard({
               </div>
             ))}
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Actions — quick buttons (Cacifos / Crianças / Ver tudo / Finalizar) */}

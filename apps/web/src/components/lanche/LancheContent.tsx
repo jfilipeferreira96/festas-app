@@ -215,20 +215,20 @@ export default function LancheContent() {
       ),
     },
     {
-      key: "notasLanche",
+      key: "notasLancheReserva",
       label: "Obs. Lanche",
       render: (_v, f) => (
         <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.notasLanche || "—"}
+          {f.notasLancheReserva || f.notasLanche || "—"}
         </span>
       ),
     },
     {
-      key: "observacoesCacifo",
-      label: "Obs. Cacifo",
+      key: "notasCacifos",
+      label: "Obs. Cacifos",
       render: (_v, f) => (
         <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.observacoesCacifo || "—"}
+          {f.notasCacifos || f.observacoesCacifo || "—"}
         </span>
       ),
     },

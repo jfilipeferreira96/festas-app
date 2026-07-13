@@ -1,4 +1,5 @@
 import prisma from "@festas/db";
+import type { TipoBolo } from "@saas/shared-types";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 import { cacifoService } from "@/services/cacifo.service";
@@ -28,7 +29,11 @@ interface CreateReservaData {
   tema?: string;
   previsaoCriancas?: number;
   cor?: string;
-  bolo?: string;
+  bolo?: TipoBolo;
+  boloTema?: string;
+  numCriancasConfirmadas?: number;
+  notasCacifos?: string;
+  notasLanche?: string;
   // Observações
   observacoesGerais?: string;
   observacoesLesoes?: string;
@@ -80,8 +85,12 @@ interface UpdateReservaData {
   tema?: string;
   previsaoCriancas?: number;
   cor?: string;
-  bolo?: string;
+  bolo?: TipoBolo;
+  boloTema?: string;
   boloQuantidade?: number;
+  numCriancasConfirmadas?: number;
+  notasCacifos?: string;
+  notasLanche?: string;
   observacoesGerais?: string;
   observacoesLesoes?: string;
   observacoesBrindes?: string;
@@ -387,6 +396,11 @@ export const reservaService = {
         previsaoCriancas: data.previsaoCriancas,
         cor: data.cor,
         bolo: data.bolo,
+        boloTema: data.boloTema,
+        boloQuantidade: data.boloQuantidade,
+        numCriancasConfirmadas: data.numCriancasConfirmadas,
+        notasCacifos: data.notasCacifos,
+        notasLanche: data.notasLanche,
         horaLanche: data.horaLanche,
         salaLancheId: data.salaLancheId,
         observacoesGerais: data.observacoesGerais,
@@ -403,7 +417,6 @@ export const reservaService = {
         valorCaucao: data.valorCaucao,
         descontoPercentagem: data.descontoPercentagem,
         descontoMotivo: data.descontoMotivo,
-        boloQuantidade: data.boloQuantidade,
         meiasQuantidade: data.meiasQuantidade,
         meiasPrecoUnit,
         estado: "RESERVA",
@@ -504,6 +517,11 @@ export const reservaService = {
         previsaoCriancas: data.previsaoCriancas,
         cor: data.cor,
         bolo: data.bolo,
+        boloTema: data.boloTema,
+        boloQuantidade: data.boloQuantidade,
+        numCriancasConfirmadas: data.numCriancasConfirmadas,
+        notasCacifos: data.notasCacifos,
+        notasLanche: data.notasLanche,
         observacoesGerais: data.observacoesGerais,
         observacoesLesoes: data.observacoesLesoes,
         observacoesBrindes: data.observacoesBrindes,
@@ -518,7 +536,6 @@ export const reservaService = {
         valorCaucao: data.valorCaucao,
         descontoPercentagem: data.descontoPercentagem,
         descontoMotivo: data.descontoMotivo,
-        boloQuantidade: data.boloQuantidade,
         meiasQuantidade: data.meiasQuantidade,
         meiasPrecoUnit: data.meiasPrecoUnit,
         extras: data.extrasIds

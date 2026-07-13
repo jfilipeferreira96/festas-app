@@ -23,6 +23,8 @@ export interface LancheFesta {
   idadeAniversariante?: number;
   menu?: Menu;
   notasLanche?: string;
+  notasLancheReserva?: string; // notas do lanche vindas da Reserva (escritas na marcação)
+  notasCacifos?: string;       // notas de cacifos vindas da Reserva
   itensLanche?: unknown;
   observacoesLesoes?: string;
   observacoesCacifo?: string;

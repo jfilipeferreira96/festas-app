@@ -8,6 +8,8 @@ export type MetodoPagamento = "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENC
 
 export type EstadoCaucao = "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA";
 
+export type TipoBolo = "PAIS_TRAZEM" | "NOSSO_1KG" | "NOSSO_2KG" | "BOLO_ARTISTICO" | "A_DECIDIR";
+
 export interface Reserva {
   id: string;
   data: string;
@@ -38,8 +40,14 @@ export interface Reserva {
   tema?: string;
   previsaoCriancas?: number;
   cor?: string;
-  bolo?: string;
+  bolo?: TipoBolo;
+  boloTema?: string;
   boloQuantidade?: number;
+  numCriancasConfirmadas?: number;
+
+  // Notas por equipa
+  notasCacifos?: string;
+  notasLanche?: string;
 
   // Observações
   observacoesGerais?: string;
@@ -127,8 +135,14 @@ export interface CriarReservaDTO {
   tema?: string;
   previsaoCriancas?: number;
   cor?: string;
-  bolo?: string;
+  bolo?: TipoBolo;
+  boloTema?: string;
   boloQuantidade?: number;
+  numCriancasConfirmadas?: number;
+
+  // Notas por equipa
+  notasCacifos?: string;
+  notasLanche?: string;
 
   // Observações
   observacoesGerais?: string;

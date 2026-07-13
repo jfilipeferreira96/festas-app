@@ -278,8 +278,9 @@ const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: 
   const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "—";
 
   // Find the next pending etapa (first one not concluded, ordered by ordem)
-  const proximaEtapa = festa.etapas?.find(e => !e.concluida);
-  const todasConcluidas = festa.etapas?.length > 0 && festa.etapas.every(e => e.concluida);
+  // Etapas — oculto per pedido do cliente (12/07/2026). Mantém-se para retrocompatibilidade.
+  // const proximaEtapa = festa.etapas?.find(e => !e.concluida);
+  // const todasConcluidas = festa.etapas?.length > 0 && festa.etapas.every(e => e.concluida);
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
@@ -291,15 +292,8 @@ const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: 
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {todasConcluidas ? (
-          <StatusBadge status="CONCLUIDA">Todas concluídas ✓</StatusBadge>
-        ) : proximaEtapa ? (
-          <StatusBadge status="A_COMECAR">
-            {proximaEtapa.etapa?.nome ?? "Próxima etapa"}
-          </StatusBadge>
-        ) : (
-          <StatusBadge status="EM_CURSO">Em curso</StatusBadge>
-        )}
+        {/* Etapas badge removido — substituído por estado simples */}
+        <StatusBadge status="EM_CURSO">Em curso</StatusBadge>
       </div>
     </div>
   );

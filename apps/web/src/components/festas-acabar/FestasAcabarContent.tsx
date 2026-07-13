@@ -202,7 +202,7 @@ export default function FestasAcabarContent() {
         pageSize={10}
         renderActions={(f) => (
           <div className="flex items-center justify-end gap-1">
-            <Tooltip content="Histórico (participantes e etapas)" position="top" theme="dark">
+            <Tooltip content="Histórico (participantes)" position="top" theme="dark">
               <button
                 onClick={() => setHistoricoId(f.id)}
                 className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
@@ -322,7 +322,7 @@ function FestaHistoricoModal({ reservaId, onClose }: { reservaId: string | null;
   const etapasConcluidas = etapas.filter((e) => e.concluida).length;
 
   return (
-    <Modal isOpen={!!reservaId} onClose={onClose} size="xl" title="Participantes & Etapas">
+    <Modal isOpen={!!reservaId} onClose={onClose} size="xl" title="Participantes">
       <div className="p-6 max-h-[80vh] overflow-y-auto">
         {isLoading || !reserva ? (
           <div className="flex flex-col items-center justify-center py-12">
@@ -376,7 +376,7 @@ function FestaHistoricoModal({ reservaId, onClose }: { reservaId: string | null;
               )}
             </div>
 
-            {/* Etapas timeline */}
+            {/* Etapas timeline — oculto per pedido do cliente (12/07/2026)
             {etapas.length > 0 && (
               <div>
                 <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
@@ -403,7 +403,7 @@ function FestaHistoricoModal({ reservaId, onClose }: { reservaId: string | null;
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         )}
       </div>

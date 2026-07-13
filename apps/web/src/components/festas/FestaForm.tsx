@@ -5,17 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Plus, Trash2, CreditCard, AlertTriangle, User, Cake, MapPin,
-  Clock, Package, Users, Check, FileText, MessageSquare, Search, CheckCircle,
+  Plus, Trash2, AlertTriangle, User, Cake, MapPin,
+  Package, Users, Check, FileText, Search, CheckCircle, Sandwich, Gift,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { pt } from "date-fns/locale";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
-import TextArea from "@/components/form/input/TextArea";
 import DatePicker from "@/components/form/date-picker";
 import { Select } from "@/components/ui/select";
-import Switch from "@/components/form/switch/Switch";
 import MultiSelect from "@/components/form/MultiSelect";
 import Checkbox from "@/components/form/input/Checkbox";
 import { FormStepper } from "@/components/ui/stepper/FormStepper";
@@ -28,10 +24,11 @@ import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
 import { useConfigPreco } from "@/hooks/use-precos";
 import { useSlotsHorario, useSlotsDia } from "@/hooks/use-slots-horario";
 import { useSalasLanche } from "@/hooks/use-salas-lanche";
+import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import type { Cliente } from "@/lib/api/clientes";
-import type { Reserva, MetodoPagamento, DisponibilidadeResult } from "@/lib/api/reservas";
+import type { Reserva, MetodoPagamento, DisponibilidadeResult, TipoBolo } from "@/lib/api/reservas";
 
 // ── Types ──────────────────────────────────────────────────────
 interface AniversarianteInput { nome: string; dataNascimento: string; }
@@ -67,7 +64,14 @@ const reservaSchema = z.object({
   etapasIds: z.array(z.string()).optional(),
   cor: z.string().optional(),
   menuId: z.string().optional(),
+  // Bolo (enum + tema)
+  bolo: z.string().optional(),
+  boloTema: z.string().optional(),
   previsaoCriancas: z.number().min(1, "Mínimo 1 criança").max(100),
+  numCriancasConfirmadas: z.number().min(0).optional(),
+  // Notas por equipa
+  notasCacifos: z.string().optional(),
+  notasLanche: z.string().optional(),
   metodoPagamento: z.string().optional(),
   valorPago: z.number().min(0).optional(),
   pago: z.boolean().optional(),
@@ -114,9 +118,7 @@ const DURACAO_OPTIONS = [
 
 const STEPS = [
   { key: "geral", label: "Configuração Geral", icon: <Cake size={14} /> },
-  { key: "criancas", label: "Crianças", icon: <Users size={14} /> },
-  { key: "cacifos", label: "Cacifos", icon: <Package size={14} /> },
-  { key: "resumo", label: "Resumo & Pagamento", icon: <CreditCard size={14} /> },
+  { key: "cacifos", label: "Cacifos (visualização)", icon: <Package size={14} /> },
 ];
 
 function formatEuro(value: number): string {
@@ -172,6 +174,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   const { data: monitores } = useMonitores();
   const { data: etapas } = useEtapasFesta();
   const { data: cacifosDisponiveis } = useCacifosDisponiveis();
+  const { isGlobalAdmin } = useMinhasPermissoes();
 
   const extraItems = useMemo<ExtraItem[]>(
     () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo) as ExtraItem[],
@@ -236,7 +239,16 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     monitoresIds: reserva?.monitores?.map((m) => m.monitor.id) ?? [],
     etapasIds: reserva?.etapas?.map((e) => e.etapa.id) ?? [],
     cor: reserva?.cor ?? initialValues?.cor ?? "", menuId: "",
+    // Bolo
+    bolo: reserva?.bolo ?? "",
+    boloTema: reserva?.boloTema ?? "",
+    // Crianças
     previsaoCriancas: reserva?.numCriancas ?? reserva?.previsaoCriancas ?? 10,
+    numCriancasConfirmadas: reserva?.numCriancasConfirmadas ?? undefined,
+    // Notas por equipa
+    notasCacifos: reserva?.notasCacifos ?? "",
+    notasLanche: reserva?.notasLanche ?? "",
+    // Pagamento
     metodoPagamento: reserva?.metodoPagamento ?? "", valorPago: reserva?.valorPago ?? 0,
     pago: reserva?.pago ?? false,
     metodoPagamento2: reserva?.metodoPagamento2 ?? "", valorPago2: reserva?.valorPago2 ?? 0,
@@ -446,16 +458,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     });
   }, [previsaoCriancas, aniversariantes]);
 
-  React.useEffect(() => {
-    if (currentStep !== 2 || !cacifosDisponiveis) return;
-    setCacifoAssignments((prev) => {
-      const next = { ...prev };
-      const available = cacifosDisponiveis.filter((c) => c.estado === "LIVRE");
-      let idx = 0;
-      for (const c of criancas) { if (!next[c.nome] && available[idx]) { next[c.nome] = available[idx].id; idx++; } }
-      return next;
-    });
-  }, [currentStep, cacifosDisponiveis, criancas]);
+  // ── Auto-assignment de cacifos removido (dead code) ──
+  // O stepper tem apenas 2 abas (índices 0 e 1), então currentStep !== 2 é sempre true.
+  // A atribuição de cacifos não acontece na marcação, apenas na página de Cacifos.
 
   const totalEstimado = useMemo(() => {
     let total = 0;
@@ -505,18 +510,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   const updateEncarregadoAdicional = useCallback((i: number, field: keyof EncarregadoInput, value: string) => {
     setEncarregadosAdicionais((p) => { const n = [...p]; n[i] = { ...n[i], [field]: value }; return n; });
   }, []);
-  const updateCrianca = useCallback((i: number, nome: string) => {
-    setCriancas((p) => { const n = [...p]; n[i] = { ...n[i], nome, edited: true }; return n; });
-  }, []);
-  const addCrianca = useCallback(() => {
-    setCriancas((p) => [...p, { nome: "", cacifoId: "", edited: false }]);
-    setValue("previsaoCriancas", (previsaoCriancas ?? 0) + 1);
-  }, [previsaoCriancas, setValue]);
-  const removeCrianca = useCallback((i: number) => {
-    setCriancas((p) => p.filter((_, idx) => idx !== i));
-    setValue("previsaoCriancas", Math.max(0, (previsaoCriancas ?? 1) - 1));
-  }, [previsaoCriancas, setValue]);
-
   const [showDataNascimentoError, setShowDataNascimentoError] = useState(false);
 
   const validateStep = useCallback(async (): Promise<boolean> => {
@@ -528,7 +521,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       setShowDataNascimentoError(missingDataNascimento);
       return valid && hasAniversariante && !missingDataNascimento;
     }
-    if (currentStep === 1) return (await trigger(["previsaoCriancas"]));
+    // Step 1 (Cacifos) — no validation needed (read-only view)
     return true;
   }, [currentStep, trigger, aniversariantes]);
 
@@ -557,6 +550,15 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       extrasTexto: Object.fromEntries(Object.entries(extrasTexto).filter(([, v]) => v.trim())),
       monitoresIds: data.monitoresIds, etapasIds: data.etapasIds,
       cor: data.cor || undefined, menuId: data.menuId || undefined,
+      // Bolo (TipoBolo)
+      bolo: (data.bolo || undefined) as TipoBolo | undefined,
+      boloTema: data.boloTema || undefined,
+      // Crianças
+      numCriancasConfirmadas: data.numCriancasConfirmadas || undefined,
+      // Notas por equipa
+      notasCacifos: data.notasCacifos || undefined,
+      notasLanche: data.notasLanche || undefined,
+      // Pagamento
       metodoPagamento: (data.metodoPagamento || undefined) as MetodoPagamento | undefined,
       valorPago: data.valorPago || undefined, pago: data.pago, notas: obsGerais,
       metodoPagamento2: (data.metodoPagamento2 || undefined) as MetodoPagamento | undefined,
@@ -623,24 +625,13 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
               onSelectSlot={handleSelectSlot}
               currentHorario={watchedHorario}
               menuWarning={menuWarning}
+              isAdmin={isGlobalAdmin}
             />
           )}
           {currentStep === 1 && (
-            <Step2Criancas register={register} errors={errors} watch={watch} criancas={criancas} updateCrianca={updateCrianca}
-              addCrianca={addCrianca} removeCrianca={removeCrianca} aniversariantes={aniversariantes}
-            />
-          )}
-          {currentStep === 2 && (
             <Step3Cacifos criancas={criancas} cacifoAssignments={cacifoAssignments} setCacifoAssignments={setCacifoAssignments}
               cacifoOptions={cacifoOptions} cacifosDisponiveis={cacifosDisponiveis}
-            />
-          )}
-          {currentStep === 3 && (
-            <Step4Resumo register={register} errors={errors} setValue={setValue} watch={watch} defaultValues={defaultValues}
-              aniversariantes={aniversariantes} criancas={criancas} cacifoAssignments={cacifoAssignments}
-              cacifosDisponiveis={cacifosDisponiveis} totalEstimado={totalEstimado} pago={pago}
-              salaOptions={salaOptions} encarregadosAdicionais={encarregadosAdicionais}
-              valorPagoEditedRef={valorPagoEditedRef}
+              isAdmin={isGlobalAdmin}
             />
           )}
         </div>
@@ -711,6 +702,7 @@ interface Step1Props {
   setHorarioCustom: (v: boolean) => void;
   onSelectSlot: (horaInicio: string) => void;
   currentHorario: string;
+  isAdmin: boolean;
 }
 
 function Step1Geral({
@@ -724,6 +716,7 @@ function Step1Geral({
   showAniversarianteError, showDataNascimentoError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
   coresEmUso,
   slotOptions, horarioCustom, setHorarioCustom, onSelectSlot, currentHorario,
+  isAdmin,
 }: Step1Props) {
   const currentCor = watch("cor") || defaultValues.cor || "";
 
@@ -751,6 +744,49 @@ function Step1Geral({
 
   return (
     <div className="space-y-6">
+      {/* ── Bolo de Aniversário ── (MOVIDO PARA TOPO per pedido do cliente 12/07/2026) */}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <Cake size={14} className="text-brand-500" /> Bolo de Aniversário
+        </label>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Tipo de Bolo</label>
+            <Select
+              options={[
+                { value: "", label: "Seleccionar..." },
+                { value: "PAIS_TRAZEM", label: "Pais trazem o bolo" },
+                { value: "A_DECIDIR", label: "Ainda vão decidir" },
+                { value: "NOSSO_1KG", label: "Nosso bolo 1kg" },
+                { value: "NOSSO_2KG", label: "Nosso bolo 2kg" },
+                { value: "BOLO_ARTISTICO", label: "Bolo artístico" },
+              ]}
+              placeholder="Seleccionar..."
+              value={watch("bolo") ?? ""}
+              onChange={(val) => setValue("bolo", val)}
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Tema do Bolo</label>
+            <InputField
+              {...register("boloTema")}
+              placeholder="Ex: Frozen, Cars, Princesas..."
+              disabled={watch("bolo") === "PAIS_TRAZEM" || watch("bolo") === "A_DECIDIR" || !watch("bolo")}
+            />
+          </div>
+          <div className="w-28">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Quantidade</label>
+            <InputField
+              type="number"
+              min={0}
+              {...register("boloQuantidade", { valueAsNumber: true })}
+              placeholder="0"
+              disabled={watch("bolo") === "PAIS_TRAZEM" || watch("bolo") === "A_DECIDIR" || !watch("bolo")}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* ── Aniversariante(s) ── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -878,10 +914,12 @@ function Step1Geral({
             <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" value={String(defaultValues.duracaoMinutos)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
           </div>
         )}
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Hora do Lanche</label>
-          <InputField type="time" {...register("horaLanche")} />
-        </div>
+        {isAdmin && (
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">Hora do Lanche</label>
+            <InputField type="time" {...register("horaLanche")} />
+          </div>
+        )}
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1"><MapPin size={12} /> Sala *</label>
           <Select options={salaOptions} placeholder="Seleccionar" value={defaultValues.localId} onChange={(val) => setValue("localId", val)} />
@@ -890,16 +928,18 @@ function Step1Geral({
       </div>
 
       {/* ── Toggle: horário personalizado (fora dos slots) ── */}
-      <div className="flex items-center gap-3">
-        <Checkbox
-          checked={horarioCustom}
-          onChange={setHorarioCustom}
-          label="Horário personalizado (fora dos slots)"
-        />
-        {!horarioCustom && slotOptions.length === 0 && (
-          <span className="text-xs text-text-muted">Sem slots configurados — active a opção para definir a hora manualmente.</span>
-        )}
-      </div>
+      {isAdmin && (
+        <div className="flex items-center gap-3">
+          <Checkbox
+            checked={horarioCustom}
+            onChange={setHorarioCustom}
+            label="Horário personalizado (fora dos slots)"
+          />
+          {!horarioCustom && slotOptions.length === 0 && (
+            <span className="text-xs text-text-muted">Sem slots configurados — active a opção para definir a hora manualmente.</span>
+          )}
+        </div>
+      )}
 
       {/* ── Verificação de disponibilidade (aviso apenas) ── */}
       {watch("data") && watch("horario") && watch("duracaoMinutos") && watch("localId") && (
@@ -932,21 +972,8 @@ function Step1Geral({
         </div>
       )}
 
-      {/* ── Tema · Cor · Menu · Bolo ── */}
+      {/* ── Menu ── */}
       <div className="flex gap-4">
-        <div className="flex-[2]">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Tema da Festa</label>
-          <InputField {...register("tema")} placeholder="Ex: Princesas, Super-Heróis..." />
-        </div>
-        {/* Cor: oculta no formulário (definida automaticamente pelo slot de horário).
-            A lógica de auto-preenchimento (onSelectSlot / useEffect) continua a correr em background. */}
-        <div className="flex-1 hidden" aria-hidden="true">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Cor</label>
-          <div className="relative">
-            <Select options={corOptions} placeholder="Escolher cor" value={currentCor || "NONE"} onChange={(val) => setValue("cor", val === "NONE" ? "" : val)} showColorIndicators={true} />
-            {currentCor && (<div className="absolute right-10 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: currentCor }} />)}
-          </div>
-        </div>
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
           <Select options={menuOptions} placeholder="Seleccionar menu" value={defaultValues.menuId ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
@@ -957,23 +984,120 @@ function Step1Geral({
             </div>
           )}
         </div>
-        <div className="w-28">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Bolo (qtd)</label>
-          <InputField type="number" min={0} {...register("boloQuantidade", { valueAsNumber: true })} placeholder="0" />
+      </div>
+
+      {/* Tema da Festa: oculto per pedido do cliente (12/07/2026) */}
+      <div className="hidden" aria-hidden="true">
+        <label className="block text-xs font-medium text-text-secondary mb-1">Tema da Festa</label>
+        <InputField {...register("tema")} placeholder="Ex: Princesas, Super-Heróis..." />
+      </div>
+
+      {/* ── Etapas & Monitores: ocultos per pedido do cliente (12/07/2026) ──
+          Monitores são do parque, não da festa. Etapas não são editadas na marcação.
+          Campos mantidos para retrocompatibilidade. */}
+      <div className="hidden" aria-hidden="true">
+        <MultiSelect label="Monitores" options={monitorOptions} defaultSelected={currentMonitoresIds} onChange={handleMonitoresChange} placeholder="Seleccionar..." />
+        <MultiSelect label="Etapas" options={etapaOptions} defaultSelected={currentEtapasIds} onChange={handleEtapasChange} placeholder="Seleccionar..." />
+      </div>
+
+      {/* ── Número de Crianças ── */}
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Nº Crianças Previstas *</label>
+          <InputField
+            type="number"
+            {...register("previsaoCriancas", { valueAsNumber: true })}
+            min={1}
+            max={100}
+            error={!!errors.previsaoCriancas}
+            hint={errors.previsaoCriancas?.message}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Nº Confirmadas</label>
+          <InputField
+            type="number"
+            {...register("numCriancasConfirmadas", { valueAsNumber: true })}
+            min={0}
+            max={100}
+            placeholder="Opcional"
+          />
         </div>
       </div>
 
-      {/* ── Etapas ── (Monitores removidos da festa — são alocados ao parque) */}
-      <div className="flex gap-4">
-        {/* Monitores: oculto — os monitores são do parque, não da festa.
-            O campo mantém-se para retrocompatibilidade do formulário. */}
-        <div className="flex-1 hidden" aria-hidden="true">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Monitores</label>
-          <MultiSelect label="Monitores" options={monitorOptions} defaultSelected={currentMonitoresIds} onChange={handleMonitoresChange} placeholder="Seleccionar..." />
+      {/* ── Notas por Equipa ── */}
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Package size={14} className="text-accent-orange-500" /> Notas Importantes — Cacifos
+          </label>
+          <textarea
+            {...register("notasCacifos")}
+            placeholder="Instruções para a equipa de cacifos (ex: alergias, restrições, pedidos especiais)..."
+            rows={2}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+          />
         </div>
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Etapas de Festa</label>
-          <MultiSelect label="Etapas" options={etapaOptions} defaultSelected={currentEtapasIds} onChange={handleEtapasChange} placeholder="Seleccionar..." />
+        <div>
+          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Sandwich size={14} className="text-brand-500" /> Notas Importantes — Lanche
+          </label>
+          <textarea
+            {...register("notasLanche")}
+            placeholder="Instruções para a equipa de lanche (ex: alergias, restrições alimentares, pedidos especiais)..."
+            rows={2}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+          />
+        </div>
+      </div>
+
+      {/* ── Observações Gerais ── */}
+      <div>
+        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <FileText size={14} className="text-text-muted" /> Observações Gerais
+        </label>
+        <textarea
+          {...register("observacoesGerais")}
+          placeholder="Outras observações relevantes para a festa..."
+          rows={3}
+          className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+        />
+      </div>
+
+      {/* ── Outras Observações ── */}
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <AlertTriangle size={14} className="text-accent-orange-500" /> Lesões / Alergias
+          </label>
+          <textarea
+            {...register("observacoesLesoes")}
+            placeholder="Alergias alimentares, lesões, condições médicas..."
+            rows={2}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Gift size={14} className="text-accent-purple-500" /> Brindes
+          </label>
+          <textarea
+            {...register("observacoesBrindes")}
+            placeholder="Informações sobre brindes, presentes..."
+            rows={2}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Package size={14} className="text-accent-blue-500" /> Outros Extras
+          </label>
+          <textarea
+            {...register("outrosExtras")}
+            placeholder="Outros itens ou extras não listados..."
+            rows={2}
+            className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
+          />
         </div>
       </div>
 
@@ -1010,72 +1134,28 @@ function Step1Geral({
 }
 
 // ════════════════════════════════════════════════════════════════
-// STEP 2 — Crianças
-// ════════════════════════════════════════════════════════════════
-interface Step2Props {
-  register: ReturnType<typeof useForm<ReservaFormData>>["register"];
-  errors: ReturnType<typeof useForm<ReservaFormData>>["formState"]["errors"];
-  watch: ReturnType<typeof useForm<ReservaFormData>>["watch"];
-  criancas: CriancaInput[]; updateCrianca: (i: number, nome: string) => void;
-  addCrianca: () => void; removeCrianca: (i: number) => void;
-  aniversariantes: AniversarianteInput[];
-}
-
-function Step2Criancas({ register, errors, criancas, updateCrianca, addCrianca, removeCrianca, aniversariantes }: Step2Props) {
-  return (
-    <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5"><Users size={16} className="text-brand-500" /> Crianças Participantes</h3>
-          <p className="text-xs text-text-muted mt-0.5">Defina o número previsto e preencha os nomes.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-text-secondary">Nº previsto:</label>
-          <div className="w-20">
-            <InputField type="number" {...register("previsaoCriancas", { valueAsNumber: true })} min={1} max={100} error={!!errors.previsaoCriancas} hint={errors.previsaoCriancas?.message} />
-          </div>
-        </div>
-      </div>
-      {aniversariantes.filter((a) => a.nome.trim()).length > 0 && (
-        <div className="p-2.5 rounded-lg bg-brand-50 border border-brand-200 flex items-center gap-2 shrink-0">
-          <Cake size={14} className="text-brand-500 shrink-0" />
-          <p className="text-xs text-brand-700">Aniversariante(s): <strong>{aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome).join(", ")}</strong> — incluídos automaticamente.</p>
-        </div>
-      )}
-      <div className="max-h-[35vh] space-y-2 overflow-y-auto p-1">
-        {criancas.map((c, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <span className="w-6 text-xs font-medium text-text-muted text-center">{i + 1}</span>
-            <div className="flex-1"><InputField value={c.nome} onChange={(e) => updateCrianca(i, e.target.value)} placeholder={`Nome da criança ${i + 1}`} /></div>
-            {criancas.length > 1 && (<button type="button" onClick={() => removeCrianca(i)} className="p-2 text-text-muted hover:text-accent-red transition-colors"><Trash2 size={14} /></button>)}
-          </div>
-        ))}
-      </div>
-      <button type="button" onClick={addCrianca} className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-brand-500 hover:bg-brand-50 rounded-lg transition-colors shrink-0">
-        <Plus size={14} /> Adicionar criança
-      </button>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════
-// STEP 3 — Cacifos
+// STEP 2 — Cacifos (visualização; read-only para não-admin)
 // ════════════════════════════════════════════════════════════════
 interface Step3Props {
   criancas: CriancaInput[]; cacifoAssignments: Record<string, string>;
   setCacifoAssignments: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   cacifoOptions: { value: string; label: string }[];
   cacifosDisponiveis: { id: string; numero: number; nome?: string | null; estado: string }[] | undefined;
+  isAdmin: boolean;
 }
 
-function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacifoOptions, cacifosDisponiveis }: Step3Props) {
+function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacifoOptions, cacifosDisponiveis, isAdmin }: Step3Props) {
   const named = criancas.filter((c) => c.nome.trim());
   const avail = cacifosDisponiveis?.filter((c) => c.estado === "LIVRE").length ?? 0;
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
       <div className="shrink-0">
         <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5"><Package size={16} className="text-brand-500" /> Atribuição de Cacifos</h3>
-        <p className="text-xs text-text-muted mt-0.5">Cacifos atribuídos automaticamente. Pode alterar manualmente.</p>
+        <p className="text-xs text-text-muted mt-0.5">
+          {isAdmin
+            ? "Cacifos atribuídos automaticamente. Pode alterar manualmente."
+            : "Visualização apenas. A edição de cacifos é feita na página de Cacifos."}
+        </p>
       </div>
       {named.length > avail && (
         <div className="p-2.5 rounded-lg bg-accent-orange-50 border border-accent-orange-200 flex items-center gap-2 shrink-0">
@@ -1091,7 +1171,13 @@ function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacif
             <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface border border-border">
               <span className="w-6 text-xs font-medium text-text-muted text-center">{i + 1}</span>
               <div className="flex-1"><p className="text-sm font-medium text-text-primary">{c.nome}</p></div>
-              <div className="w-44"><Select options={cacifoOptions} placeholder="Atribuir cacifo" value={assignedId} onChange={(val) => setCacifoAssignments((prev) => ({ ...prev, [c.nome]: val }))} /></div>
+              <div className="w-44">
+                {isAdmin ? (
+                  <Select options={cacifoOptions} placeholder="Atribuir cacifo" value={assignedId} onChange={(val) => setCacifoAssignments((prev) => ({ ...prev, [c.nome]: val }))} />
+                ) : (
+                  <span className="text-sm text-text-secondary">{cacifo ? `#${cacifo.numero}${cacifo.nome ? ` — ${cacifo.nome}` : ""}` : "—"}</span>
+                )}
+              </div>
               {cacifo && (<span className="text-xs font-medium text-accent-green-600 flex items-center gap-1"><Check size={12} /> #{cacifo.numero}</span>)}
             </div>
           );
@@ -1102,183 +1188,6 @@ function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacif
       <div className="flex items-center gap-4 text-xs text-text-muted shrink-0">
         <span>Disponíveis: <strong>{avail}</strong></span><span>Crianças: <strong>{named.length}</strong></span>
         <span>Atribuídos: <strong>{Object.values(cacifoAssignments).filter(Boolean).length}</strong></span>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════
-// STEP 4 — Resumo & Pagamento
-// ════════════════════════════════════════════════════════════════
-interface Step4Props {
-  register: ReturnType<typeof useForm<ReservaFormData>>["register"];
-  errors: ReturnType<typeof useForm<ReservaFormData>>["formState"]["errors"];
-  setValue: ReturnType<typeof useForm<ReservaFormData>>["setValue"];
-  watch: ReturnType<typeof useForm<ReservaFormData>>["watch"];
-  defaultValues: ReservaFormData;
-  aniversariantes: AniversarianteInput[]; criancas: CriancaInput[];
-  cacifoAssignments: Record<string, string>;
-  cacifosDisponiveis: { id: string; numero: number; nome?: string | null; estado: string }[] | undefined;
-  totalEstimado: number; pago: boolean;
-  salaOptions: { value: string; label: string }[];
-  encarregadosAdicionais: EncarregadoInput[];
-  valorPagoEditedRef: React.MutableRefObject<boolean>;
-}
-
-function Step4Resumo({ register, setValue, watch, defaultValues, aniversariantes, criancas, cacifoAssignments, cacifosDisponiveis, totalEstimado, pago, salaOptions, encarregadosAdicionais, valorPagoEditedRef }: Step4Props) {
-  const namedCriancas = criancas.filter((c) => c.nome.trim());
-  const sala = salaOptions.find((s) => s.value === watch("localId"));
-  const [showSplitPayment, setShowSplitPayment] = useState(
-    !!defaultValues.metodoPagamento2 || (defaultValues.valorPago2 ?? 0) > 0
-  );
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div className="space-y-4">
-        <div className="p-4 rounded-lg bg-surface border border-border">
-          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5 mb-3"><FileText size={14} className="text-brand-500" /> Resumo</h3>
-          <div className="space-y-2">
-            <div className="flex items-start gap-2"><Cake size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Aniversariante(s)</p><p className="text-sm font-medium text-text-primary">{aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome).join(", ") || "—"}</p></div></div>
-          <div className="flex items-start gap-2"><User size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Encarregado</p><p className="text-sm text-text-primary">{watch("encarregadoNome") || "—"}</p><p className="text-xs text-text-muted">{watch("encarregadoContacto")} · {watch("encarregadoEmail")}{watch("encarregadoCodigoPostal") ? ` · ${watch("encarregadoCodigoPostal")}` : ""}</p></div></div>
-          {encarregadosAdicionais.filter((e) => e.nome.trim()).length > 0 && (
-            <div className="flex items-start gap-2"><Users size={14} className="text-primary-400 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Outros Encarregados</p>{encarregadosAdicionais.filter((e) => e.nome.trim()).map((enc, i) => (<div key={i}><p className="text-sm text-text-primary">{enc.nome}</p><p className="text-xs text-text-muted">{[enc.contacto, enc.email].filter(Boolean).join(" · ")}</p></div>))}</div></div>
-          )}
-          <div className="flex items-start gap-2"><Clock size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Data & Hora</p><p className="text-sm text-text-primary">{watch("data") ? format(parseISO(watch("data")), "d 'de' MMMM 'de' yyyy", { locale: pt }) : "—"} às {watch("horario") || "—"} ({watch("duracaoMinutos")} min)</p></div></div>
-          <div className="flex items-start gap-2"><MapPin size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Sala</p><p className="text-sm text-text-primary">{sala?.label ?? "—"}</p></div></div>
-          <div className="flex items-start gap-2"><Users size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Crianças</p><p className="text-sm text-text-primary">{namedCriancas.length > 0 ? `${namedCriancas.length} — ${namedCriancas.slice(0, 5).map((c) => c.nome).join(", ")}${namedCriancas.length > 5 ? "..." : ""}` : `${watch("previsaoCriancas")} previstas`}</p></div></div>
-            <div className="flex items-start gap-2"><Package size={14} className="text-brand-500 mt-0.5 shrink-0" /><div><p className="text-[10px] text-text-muted uppercase tracking-wider">Cacifos</p><p className="text-sm text-text-primary">{Object.values(cacifoAssignments).filter(Boolean).length > 0 ? cacifosDisponiveis?.filter((c) => Object.values(cacifoAssignments).includes(c.id)).map((c) => `#${c.numero}`).join(", ") ?? "Nenhum" : "Nenhum"}</p></div></div>
-          </div>
-        </div>
-        {(watch("tema") || watch("cor")) && (
-          <div className="p-3 rounded-lg bg-surface border border-border flex items-center gap-3">
-            {watch("cor") && <div className="w-6 h-6 rounded-full border border-border" style={{ backgroundColor: watch("cor") }} />}
-            <span className="text-sm text-text-primary">Tema: {watch("tema") || "—"}</span>
-          </div>
-        )}
-      </div>
-      <div className="space-y-4">
-        <div className="p-4 rounded-lg bg-surface border border-border space-y-3">
-          <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5"><MessageSquare size={14} className="text-brand-500" /> Observações</h3>
-          <div><label className="block text-xs font-medium text-text-secondary mb-1">Observações gerais</label><TextArea placeholder="Notas gerais..." value={watch("observacoesGerais") ?? ""} onChange={(v) => setValue("observacoesGerais", v)} rows={2} /></div>
-          <div className="grid grid-cols-2 gap-2">
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Lesões / Alergias</label><TextArea placeholder="Alergias..." value={watch("observacoesLesoes") ?? ""} onChange={(v) => setValue("observacoesLesoes", v)} rows={2} /></div>
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Brindes</label><TextArea placeholder="Brindes..." value={watch("observacoesBrindes") ?? ""} onChange={(v) => setValue("observacoesBrindes", v)} rows={2} /></div>
-          </div>
-          <div><label className="block text-xs font-medium text-text-secondary mb-1">Outros extras</label><TextArea placeholder="Outros itens..." value={watch("outrosExtras") ?? ""} onChange={(v) => setValue("outrosExtras", v)} rows={2} /></div>
-        </div>
-        <div className="p-4 rounded-lg bg-surface border border-border space-y-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-text-primary"><CreditCard size={14} /> Pagamento</div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Método</label>
-              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="Método" value={defaultValues.metodoPagamento ?? "NONE"} onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)} />
-            </div>
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Total (€)</label><InputField type="number" step={0.01} min={0} value={watch("valorPago") as number} onChange={(e) => { valorPagoEditedRef.current = true; setValue("valorPago", e.target.value === "" ? 0 : parseFloat(e.target.value)); }} placeholder="0,00" /></div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Caução</label>
-              <Select options={[{ value: "NONE", label: "Não definido" }, { value: "NAO_PAGA", label: "Não paga" }, { value: "PAGA", label: "Paga" }, { value: "PAGA_NO_DIA", label: "Paga no dia" }]} placeholder="Caução" value={defaultValues.caucao ?? "NONE"} onChange={(val) => setValue("caucao", val === "NONE" ? undefined : val)} />
-            </div>
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor Caução (€)</label><InputField type="number" step={0.01} min={0} {...register("valorCaucao", { valueAsNumber: true })} placeholder="0,00" /></div>
-          </div>
-          {/* ── Meias com stepper ── */}
-          <div className="border-t border-border pt-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-text-secondary">Meias</span>
-              <span className="text-xs text-text-muted">Preço por par aplicado na finalização</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setValue("meiasQuantidade", Math.max(0, (watch("meiasQuantidade") ?? 0) - 1))} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary">−</button>
-              <span className="w-10 text-center text-sm font-medium text-text-primary">{watch("meiasQuantidade") ?? 0}</span>
-              <button type="button" onClick={() => setValue("meiasQuantidade", (watch("meiasQuantidade") ?? 0) + 1)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary">+</button>
-            </div>
-          </div>
-          {/* ── Pagamento dividido (collapsible) ── */}
-          <div className="border-t border-border pt-3 space-y-2">
-            <Checkbox
-              checked={showSplitPayment}
-              onChange={(checked) => {
-                setShowSplitPayment(checked);
-                if (!checked) {
-                  setValue("metodoPagamento2", undefined);
-                  setValue("valorPago2", 0);
-                }
-              }}
-              label="Dividir pagamento (2º método)"
-            />
-            {showSplitPayment && (
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div><label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
-                  <Select options={[{ value: "NONE", label: "Não definido" }, { value: "DINHEIRO", label: "Dinheiro" }, { value: "MULTIBANCO", label: "Multibanco" }, { value: "MBWAY", label: "MB WAY" }, { value: "TRANSFERENCIA", label: "Transferência" }, { value: "CARTAO", label: "Cartão" }, { value: "OUTRO", label: "Outro" }]} placeholder="2º método" value={defaultValues.metodoPagamento2 ?? "NONE"} onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)} />
-                </div>
-                <div><label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label><InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" /></div>
-              </div>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Desconto Menu (%)</label><InputField type="number" min={0} max={100} {...register("descontoPercentagem", { valueAsNumber: true })} placeholder="0" /></div>
-            <div><label className="block text-xs font-medium text-text-secondary mb-1">Motivo Desconto</label><InputField {...register("descontoMotivo")} placeholder="Motivo do desconto" /></div>
-          </div>
-          <div><label className="block text-xs font-medium text-text-secondary mb-1">Ref. Pagamento</label><InputField {...register("referenciaPagamento")} placeholder="Referência" /></div>
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-text-secondary">Pago</label>
-            <Switch checked={pago} onChange={(checked) => setValue("pago", checked)} label={pago ? "Sim" : "Não"} />
-          </div>
-          {/* ── Discriminação de totais ── */}
-          <div className="pt-2 border-t border-border space-y-1.5">
-            {totalEstimado > 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted">Extras</span>
-                <span className="text-xs text-text-primary">{formatEuro(totalEstimado / 100)}</span>
-              </div>
-            )}
-            {watch("valorCaucao") ? (
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted">Caução</span>
-                <span className="text-xs text-text-primary">{formatEuro(Number(watch("valorCaucao")))}</span>
-              </div>
-            ) : null}
-            {watch("descontoPercentagem") ? (
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-text-muted">Desconto</span>
-                <span className="text-xs text-success-600">−{watch("descontoPercentagem")}%</span>
-              </div>
-            ) : null}
-            <div className="flex items-center justify-between pt-1.5 border-t border-border">
-              <span className="text-sm font-semibold text-text-primary">Total a pagar</span>
-              <span className="text-base font-bold text-primary-500">{formatEuro(Number(watch("valorPago")) || 0)}</span>
-            </div>
-            {/* ── Valor em Falta (total − caução paga − 2º pagamento) ── */}
-            {(() => {
-              const totalFinal = Number(watch("valorPago")) || 0;
-              const caucaoPaga = (watch("caucao") === "PAGA" || watch("caucao") === "PAGA_NO_DIA")
-                ? Number(watch("valorCaucao")) || 0
-                : 0;
-              const segundoPagamento = Number(watch("valorPago2")) || 0;
-              const emFalta = Math.max(totalFinal - caucaoPaga - segundoPagamento, 0);
-              const temCaucao = caucaoPaga > 0 || segundoPagamento > 0;
-              if (!temCaucao || totalFinal <= 0) return null;
-              return (
-                <>
-                  {caucaoPaga > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-success-600">Já pago (caução)</span>
-                      <span className="text-xs text-success-600">−{formatEuro(caucaoPaga)}</span>
-                    </div>
-                  )}
-                  {segundoPagamento > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-success-600">Já pago (2º método)</span>
-                      <span className="text-xs text-success-600">−{formatEuro(segundoPagamento)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-1.5 border-t border-border bg-accent-orange-50 -mx-1 px-1 py-1 rounded-md">
-                    <span className="text-sm font-bold text-accent-orange-700">Falta liquidar</span>
-                    <span className="text-base font-bold text-accent-orange-700">{formatEuro(emFalta)}</span>
-                  </div>
-                </>
-              );
-            })()}
-          </div>
-        </div>
       </div>
     </div>
   );

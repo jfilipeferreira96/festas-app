@@ -22,6 +22,7 @@ import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { formatDate, formatDuration } from "@/utils/date";
 import { differenceInYears } from "date-fns";
+import { BOLO_LABELS_SHORT } from "@/lib/constants/bolo";
 
 const ESTADO_LABELS: Record<string, string> = {
   RESERVA: "Reserva",
@@ -439,20 +440,22 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
           },
           {
             key: "temaMenu",
-            label: "Tema / Menu",
+            label: "Bolo / Menu",
             render: (_v, r) => {
-              const hasTema = !!r.tema;
+              const hasBolo = !!r.bolo;
               const hasMenu = !!r.menu;
-              if (!hasTema && !hasMenu) return <span className="text-sm text-text-muted">—</span>;
+              if (!hasBolo && !hasMenu) return <span className="text-sm text-text-muted">—</span>;
               return (
                 <div>
-                  {hasTema && <p className="text-sm text-text-primary">{r.tema}</p>}
+                  {hasBolo && (
+                    <p className="text-sm text-text-primary flex items-center gap-1">
+                      🎂 {BOLO_LABELS_SHORT[r.bolo!] ?? r.bolo}
+                      {r.boloTema && <span className="text-xs text-text-muted">· {r.boloTema}</span>}
+                    </p>
+                  )}
                   {hasMenu && (
                     <p className="text-xs text-text-muted">
                       🍽 {r.menu!.nome}
-                      {r.menu!.preco != null && (
-                        <span className="ml-1">({new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(r.menu!.preco)})</span>
-                      )}
                     </p>
                   )}
                 </div>

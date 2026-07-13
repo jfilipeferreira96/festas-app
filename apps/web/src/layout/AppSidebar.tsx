@@ -154,12 +154,13 @@ const configItems: NavItem = {
       icon: <UtensilsCrossed className="w-4 h-4" />,
       modulo: "configuracoes",
     },
-    {
-      name: "Etapas Festa",
-      path: "/configuracoes/etapas-festa",
-      icon: <ListChecks className="w-4 h-4" />,
-      modulo: "configuracoes",
-    },
+    // Etapas Festa — hidden per client request (12/07/2026)
+    // {
+    //   name: "Etapas Festa",
+    //   path: "/configuracoes/etapas-festa",
+    //   icon: <ListChecks className="w-4 h-4" />,
+    //   modulo: "configuracoes",
+    // },
     {
       name: "Cacifos",
       path: "/configuracoes/cacifos",

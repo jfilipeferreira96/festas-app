@@ -1,9 +1,9 @@
 import { api } from "./utils";
-import type { Reserva as ReservaBase, EstadoReserva, ReservaExtra, MetodoPagamento } from "@saas/shared-types";
+import type { Reserva as ReservaBase, EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo } from "@saas/shared-types";
 import type { Local, Extra, Menu } from "@saas/shared-types";
 
 // Re-export base types
-export type { EstadoReserva, ReservaExtra, MetodoPagamento };
+export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo };
 
 // API response type (base + relations from API)
 export interface Reserva extends ReservaBase {
@@ -58,6 +58,12 @@ export interface CreateReservaData {
   menuItens?: MenuItemInput[];
   // Festa fields
   cor?: string;
+  bolo?: TipoBolo;
+  boloTema?: string;
+  boloQuantidade?: number;
+  numCriancasConfirmadas?: number;
+  notasCacifos?: string;
+  notasLanche?: string;
   // Pagamento
   metodoPagamento?: MetodoPagamento;
   valorPago?: number;

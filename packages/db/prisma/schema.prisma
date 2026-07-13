@@ -158,6 +158,14 @@ enum TipoExcecaoCalendario {
   BLOQUEADO
 }
 
+enum TipoBolo {
+  PAIS_TRAZEM       // "Pais trazem o bolo"
+  NOSSO_1KG         // "Nosso bolo 1kg"
+  NOSSO_2KG         // "Nosso bolo 2kg"
+  BOLO_ARTISTICO    // "Bolo artístico"
+  A_DECIDIR         // "Ainda vão decidir"
+}
+
 // ============================================
 // CLIENTES & ANIVERSARIANTES
 // ============================================
@@ -384,8 +392,14 @@ model Reserva {
   tema              String?
   previsaoCriancas  Int?
   cor               String?
-  bolo              String?
+  bolo              TipoBolo?
+  boloTema          String?
   boloQuantidade    Int?
+  numCriancasConfirmadas Int?
+
+  // Notas por equipa
+  notasCacifos      String?  @db.Text
+  notasLanche       String?  @db.Text
 
   // Observações
   observacoesGerais    String?  @db.Text
