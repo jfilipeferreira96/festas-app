@@ -65,4 +65,10 @@ export const cacifosApi = {
     api<{ livres: number; ocupados: number; reservados: number; total: number }>("/api/cacifos/contadores"),
 
   getEsquecidos: () => api<Cacifo[]>("/api/cacifos/esquecidos"),
+
+  adicionarAReserva: (reservaId: string, cacifoId?: string) =>
+    api<Cacifo>("/api/cacifos/adicionar-a-reserva", {
+      method: "POST",
+      body: JSON.stringify({ reservaId, cacifoId }),
+    }),
 };

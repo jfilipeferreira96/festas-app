@@ -107,3 +107,16 @@ export function useLibertarTodos() {
     },
   });
 }
+
+/** Adiciona um cacifo a uma reserva (usado no modal de cacifos). */
+export function useAdicionarCacifoReserva() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reservaId, cacifoId }: { reservaId: string; cacifoId?: string }) =>
+      cacifosApi.adicionarAReserva(reservaId, cacifoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+    },
+  });
+}

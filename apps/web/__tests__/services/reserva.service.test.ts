@@ -923,4 +923,114 @@ describe("Reserva Service", () => {
       await testPrisma.salaLanche.delete({ where: { id: sala2.id } }).catch(() => {});
     });
   });
+
+  // ── create() com pré-reserva de cacifos ──────────────────────
+  describe("create() — pré-reserva automática de cacifos", () => {
+    it("deve pré-reservar N cacifos ao criar reserva com numCriancas", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "17:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        aniversariantes: [TEST_ANIVERSARIANTE],
+        numCriancas: 5,
+      });
+
+      // Verificar que 5 cacifos foram pré-reservados
+      const cacifos = await testPrisma.cacifo.findMany({
+        where: { reservaId: reserva.id },
+      });
+      expect(cacifos.length).toBe(5);
+      expect(cacifos.every((c) => c.estado === "RESERVADO")).toBe(true);
+      expect(cacifos.every((c) => c.criancas === "Por preencher")).toBe(true);
+
+      // Cleanup
+      await testPrisma.cacifo.updateMany({
+        where: { reservaId: reserva.id },
+        data: { estado: "LIVRE", reservaId: null, criancas: null },
+      });
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("não deve criar participantes ao criar reserva", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "18:00",
+        duracaoMinutos: 120,
+        localId: TEST_IDS.LOCAL_1,
+        aniversariantes: [TEST_ANIVERSARIANTE],
+        numCriancas: 3,
+      });
+
+      const participantes = await testPrisma.participante.findMany({
+        where: { reservaId: reserva.id },
+      });
+      expect(participantes.length).toBe(0);
+
+      // Cleanup
+      await testPrisma.cacifo.updateMany({
+        where: { reservaId: reserva.id },
+        data: { estado: "LIVRE", reservaId: null, criancas: null },
+      });
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+  });
+
+  // ── actualizarEstadoCacifos ──────────────────────────────────
+  describe("actualizarEstadoCacifos()", () => {
+    it("deve marcar cacifosChamado = true", async () => {
+      const result = await reservaService.actualizarEstadoCacifos(TEST_IDS.RESERVA_EM_CURSO, {
+        chamado: true,
+      });
+
+      expect(result.cacifosChamado).toBe(true);
+    });
+
+    it("deve marcar cacifosConcluido = true e libertar cacifos", async () => {
+      // Pré-reservar alguns cacifos para a reserva
+      const livres = await testPrisma.cacifo.findMany({
+        where: { estado: "LIVRE" },
+        take: 2,
+      });
+      for (const c of livres) {
+        await testPrisma.cacifo.update({
+          where: { id: c.id },
+          data: { estado: "RESERVADO", reservaId: TEST_IDS.RESERVA_EM_CURSO, criancas: "Por preencher" },
+        });
+      }
+
+      // Verificar que os cacifos estão associados
+      const antes = await testPrisma.cacifo.findMany({
+        where: { reservaId: TEST_IDS.RESERVA_EM_CURSO },
+      });
+      expect(antes.length).toBeGreaterThan(0);
+
+      // Marcar como concluído
+      const result = await reservaService.actualizarEstadoCacifos(TEST_IDS.RESERVA_EM_CURSO, {
+        concluido: true,
+      });
+
+      expect(result.cacifosConcluido).toBe(true);
+
+      // Verificar que os cacifos foram libertados
+      const depois = await testPrisma.cacifo.findMany({
+        where: { reservaId: TEST_IDS.RESERVA_EM_CURSO },
+      });
+      expect(depois.length).toBe(0);
+
+      // Verificar que os cacifos estão LIVRE
+      const libertados = await testPrisma.cacifo.findMany({
+        where: { id: { in: antes.map((c) => c.id) } },
+      });
+      expect(libertados.every((c) => c.estado === "LIVRE")).toBe(true);
+
+      // Reset para outros testes
+      await reservaService.actualizarEstadoCacifos(TEST_IDS.RESERVA_EM_CURSO, {
+        chamado: false,
+        concluido: false,
+      });
+    });
+  });
 });

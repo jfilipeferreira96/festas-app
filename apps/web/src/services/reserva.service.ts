@@ -381,7 +381,7 @@ export const reservaService = {
       meiasPrecoUnit = Number((await configuracaoPrecoService.getConfig()).precoMeias);
     }
 
-    return prisma.reserva.create({
+    const created = await prisma.reserva.create({
       data: {
         data: new Date(data.data),
         horario: data.horario,
@@ -432,9 +432,6 @@ export const reservaService = {
         aniversariantes: aniversarianteIds.length > 0
           ? { create: aniversarianteIds.map((aniversarianteId) => ({ aniversarianteId })) }
           : undefined,
-        participantes: data.participantes
-          ? { create: data.participantes.map((p) => ({ nome: p.nome, cacifoId: p.cacifoId })) }
-          : undefined,
       },
       include: {
         local: true,
@@ -447,6 +444,14 @@ export const reservaService = {
         participantes: { include: { cacifo: true } },
       },
     });
+
+    // Pré-reservar cacifos automaticamente
+    const numCriancas = data.numCriancas || data.previsaoCriancas || 0;
+    if (numCriancas > 0) {
+      await cacifoService.preReservarCacifos(created.id, numCriancas);
+    }
+
+    return created;
   },
 
   async update(id: string, data: UpdateReservaData) {
@@ -499,6 +504,11 @@ export const reservaService = {
     // Sync aniversariantes if new ones provided
     if (aniversarianteIds.length > 0) {
       await prisma.reservaAniversariante.deleteMany({ where: { reservaId: id } });
+    }
+
+    // Ajustar pré-reserva de cacifos se numCriancas mudou
+    if (data.numCriancas !== undefined && data.numCriancas !== reserva.numCriancas) {
+      await cacifoService.ajustarPreReserva(id, data.numCriancas);
     }
 
     return prisma.reserva.update({
@@ -793,6 +803,37 @@ export const reservaService = {
       where: { reservaId },
       include: { etapa: true },
       orderBy: { etapa: { ordem: "asc" } },
+    });
+  },
+
+  /**
+   * Actualiza o estado dos cacifos ao nível da festa.
+   * - chamado: marca que a festa foi chamada
+   * - concluido: liberta TODOS os cacifos da reserva (preservando histórico)
+   */
+  async actualizarEstadoCacifos(
+    id: string,
+    options: { chamado?: boolean; concluido?: boolean }
+  ) {
+    const reserva = await this.getById(id);
+
+    // Se concluido está a passar a true, libertar cacifos
+    if (options.concluido === true && !reserva.cacifosConcluido) {
+      await cacifoService.libertarCacifosDaReserva(id);
+    }
+
+    return prisma.reserva.update({
+      where: { id },
+      data: {
+        ...(options.chamado !== undefined ? { cacifosChamado: options.chamado } : {}),
+        ...(options.concluido !== undefined ? { cacifosConcluido: options.concluido } : {}),
+      },
+      include: {
+        local: true,
+        cliente: true,
+        aniversariantes: { include: { aniversariante: true } },
+        cacifos: true,
+      },
     });
   },
 };

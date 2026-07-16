@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Package, Download, LockKeyhole, AlertTriangle, Unlock, Printer } from "lucide-react";
+import { Package, Download, LockKeyhole, AlertTriangle, Unlock, Printer, ClipboardList } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Cacifo, EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 import { formatDate } from "@/utils/date";
+import PreencherCacifosModal from "./PreencherCacifosModal";
 
 const ESTADO_STYLES: Record<string, { base: string; hover: string; icon: string }> = {
   LIVRE: {
@@ -55,6 +56,7 @@ export default function CacifosContent() {
   const [selectedCacifo, setSelectedCacifo] = useState<Cacifo | null>(null);
   const [filtroFesta, setFiltroFesta] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [selectedReservaId, setSelectedReservaId] = useState<string | null>(null);
 
   const toast = useToast();
 
@@ -285,25 +287,42 @@ export default function CacifosContent() {
               const anvNome = festa.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "—";
               const isFiltered = filtroFesta === festa.id;
               return (
-                <button
+                <div
                   key={festa.id}
-                  onClick={() => setFiltroFesta(isFiltered ? "" : festa.id)}
                   className={`flex items-center gap-2 px-3 py-2 text-xs rounded-lg border transition-all duration-200 ${
                     isFiltered
                       ? "bg-brand-500 text-white border-brand-500 shadow-sm"
                       : "bg-white text-text-secondary border-border hover:border-brand-300 hover:text-brand-500 hover:shadow-theme-xs"
                   }`}
                 >
-                  {festa.cor ? (
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/30" style={{ backgroundColor: festa.cor }} />
-                  ) : (
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-gray-200" />
-                  )}
-                  <span className="font-medium">{anvNome}</span>
-                  <span className={`text-[10px] ${isFiltered ? "text-white/70" : "text-text-muted"}`}>
-                    {festa.horario} · {festa.local?.nome ?? ""}
-                  </span>
-                </button>
+                  <button
+                    onClick={() => setFiltroFesta(isFiltered ? "" : festa.id)}
+                    className="flex items-center gap-2"
+                  >
+                    {festa.cor ? (
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/30" style={{ backgroundColor: festa.cor }} />
+                    ) : (
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-gray-200" />
+                    )}
+                    <span className="font-medium">{anvNome}</span>
+                    <span className={`text-[10px] ${isFiltered ? "text-white/70" : "text-text-muted"}`}>
+                      {festa.horario} · {festa.local?.nome ?? ""}
+                    </span>
+                  </button>
+                  {/* Botão Preencher cacifos */}
+                  <button
+                    onClick={() => setSelectedReservaId(festa.id)}
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-all ${
+                      isFiltered
+                        ? "bg-white/20 text-white hover:bg-white/30"
+                        : "bg-brand-50 text-brand-600 hover:bg-brand-100"
+                    }`}
+                    title="Preencher cacifos"
+                  >
+                    <ClipboardList size={12} />
+                    Preencher
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -478,6 +497,12 @@ export default function CacifosContent() {
           </div>
         </Modal>
       )}
+
+      {/* Preencher Cacifos Modal */}
+      <PreencherCacifosModal
+        reservaId={selectedReservaId}
+        onClose={() => setSelectedReservaId(null)}
+      />
     </div>
   );
 }

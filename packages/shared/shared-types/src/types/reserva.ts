@@ -49,6 +49,10 @@ export interface Reserva {
   notasCacifos?: string;
   notasLanche?: string;
 
+  // Estado dos cacifos (controlo ao nível da festa)
+  cacifosChamado?: boolean;
+  cacifosConcluido?: boolean;
+
   // Observações
   observacoesGerais?: string;
   observacoesLesoes?: string;

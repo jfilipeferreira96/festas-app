@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
   Plus, Trash2, AlertTriangle, User, Cake, MapPin,
-  Package, Users, Check, FileText, Search, CheckCircle, Sandwich, Gift,
+  FileText, Search, CheckCircle, Sandwich, Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
@@ -14,13 +14,11 @@ import DatePicker from "@/components/form/date-picker";
 import { Select } from "@/components/ui/select";
 import MultiSelect from "@/components/form/MultiSelect";
 import Checkbox from "@/components/form/input/Checkbox";
-import { FormStepper } from "@/components/ui/stepper/FormStepper";
 import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useExtras } from "@/hooks/use-extras";
 import { useMonitores } from "@/hooks/use-monitores";
 import { useEtapasFesta } from "@/hooks/use-etapasFesta";
-import { useCacifosDisponiveis } from "@/hooks/use-cacifos";
 import { useConfigPreco } from "@/hooks/use-precos";
 import { useSlotsHorario, useSlotsDia } from "@/hooks/use-slots-horario";
 import { useSalasLanche } from "@/hooks/use-salas-lanche";
@@ -32,7 +30,6 @@ import type { Reserva, MetodoPagamento, DisponibilidadeResult, TipoBolo } from "
 
 // ── Types ──────────────────────────────────────────────────────
 interface AniversarianteInput { nome: string; dataNascimento: string; }
-interface CriancaInput { nome: string; cacifoId: string; edited?: boolean; }
 interface EncarregadoInput { nome: string; contacto: string; email: string; codigoPostal: string; }
 
 interface ExtraItem {
@@ -116,11 +113,6 @@ const DURACAO_OPTIONS = [
   { value: "180", label: "3h" },
 ];
 
-const STEPS = [
-  { key: "geral", label: "Configuração Geral", icon: <Cake size={14} /> },
-  { key: "cacifos", label: "Cacifos (visualização)", icon: <Package size={14} /> },
-];
-
 function formatEuro(value: number): string {
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
 }
@@ -166,14 +158,12 @@ function groupBySubcategoria(items: ExtraItem[]) {
 
 // ── Main Component ─────────────────────────────────────────────
 export default function FestaForm({ reserva, onClose, initialValues }: ReservaFormProps) {
-  const [currentStep, setCurrentStep] = useState(0);
   const createReserva = useCreateReserva();
   const updateReserva = useUpdateReserva();
   const { data: locais } = useLocaisAtivos();
   const { data: extras } = useExtras();
   const { data: monitores } = useMonitores();
   const { data: etapas } = useEtapasFesta();
-  const { data: cacifosDisponiveis } = useCacifosDisponiveis();
   const { isGlobalAdmin } = useMinhasPermissoes();
 
   const extraItems = useMemo<ExtraItem[]>(
@@ -218,8 +208,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   const [selectedExtrasIds, setSelectedExtrasIds] = useState<string[]>(() => reserva?.extras?.map((e) => e.extra.id) ?? []);
   const [extrasTexto, setExtrasTexto] = useState<Record<string, string>>({});
   const [encarregadosAdicionais, setEncarregadosAdicionais] = useState<EncarregadoInput[]>([]);
-  const [criancas, setCriancas] = useState<CriancaInput[]>([]);
-  const [cacifoAssignments, setCacifoAssignments] = useState<Record<string, string>>({});
   const [showAniversarianteError, setShowAniversarianteError] = useState(false);
   // Controla a modal de pesquisa de cliente existente
   const [showClienteSearch, setShowClienteSearch] = useState(false);
@@ -440,28 +428,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     setValue("valorCaucao", Number(configPreco.caucaoDefault));
   }, [configPreco, setValue, reserva?.valorCaucao]);
 
-  React.useEffect(() => {
-    const count = previsaoCriancas ?? 0;
-    const anivNames = aniversariantes.filter((a) => a.nome.trim()).map((a) => a.nome);
-    setCriancas((prev) => {
-      const next: CriancaInput[] = [];
-      for (let i = 0; i < count; i++) {
-        const existing = prev[i];
-        const autoName = anivNames[i] ?? "";
-        // Preserva nomes editados manualmente; caso contrário sincroniza
-        // sempre com o nome do aniversariante (ou limpa). Isto evita o bug
-        // em que a 1ª tecla "trancava" o nome da criança numa só letra.
-        if (existing && existing.edited) next.push(existing);
-        else next.push({ nome: autoName, cacifoId: existing?.cacifoId ?? "", edited: false });
-      }
-      return next;
-    });
-  }, [previsaoCriancas, aniversariantes]);
-
-  // ── Auto-assignment de cacifos removido (dead code) ──
-  // O stepper tem apenas 2 abas (índices 0 e 1), então currentStep !== 2 é sempre true.
-  // A atribuição de cacifos não acontece na marcação, apenas na página de Cacifos.
-
   const totalEstimado = useMemo(() => {
     let total = 0;
     for (const extraId of selectedExtrasIds) { const extra = extraItems.find((e) => e.id === extraId); if (extra) total += Number(extra.precoUnitario); }
@@ -511,26 +477,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     setEncarregadosAdicionais((p) => { const n = [...p]; n[i] = { ...n[i], [field]: value }; return n; });
   }, []);
   const [showDataNascimentoError, setShowDataNascimentoError] = useState(false);
-
-  const validateStep = useCallback(async (): Promise<boolean> => {
-    if (currentStep === 0) {
-      const valid = await trigger(["data", "horario", "duracaoMinutos", "localId", "encarregadoNome", "encarregadoContacto", "encarregadoEmail"]);
-      const hasAniversariante = aniversariantes.some((a) => a.nome.trim().length > 0);
-      setShowAniversarianteError(!hasAniversariante);
-      const missingDataNascimento = aniversariantes.some((a) => a.nome.trim().length > 0 && !a.dataNascimento);
-      setShowDataNascimentoError(missingDataNascimento);
-      return valid && hasAniversariante && !missingDataNascimento;
-    }
-    // Step 1 (Cacifos) — no validation needed (read-only view)
-    return true;
-  }, [currentStep, trigger, aniversariantes]);
-
-  const handleNext = useCallback(async () => {
-    if ((await validateStep()) && currentStep < STEPS.length - 1) setCurrentStep((s) => s + 1);
-  }, [currentStep, validateStep]);
-  const handlePrev = useCallback(() => { if (currentStep > 0) setCurrentStep((s) => s - 1); }, [currentStep]);
-
-  const onSubmit = useCallback(async (data: ReservaFormData) => {
+const onSubmit = useCallback(async (data: ReservaFormData) => {
     const primeiroAniv = aniversariantes[0];
     const idade = calcIdade(primeiroAniv?.dataNascimento ?? "", data.data || new Date().toISOString().split("T")[0]);
     const adicionaisText = encarregadosAdicionais.filter((e) => e.nome.trim()).map((e, i) => {
@@ -573,18 +520,13 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       valorCaucao: data.valorCaucao || undefined,
       descontoPercentagem: data.descontoPercentagem || undefined,
       descontoMotivo: data.descontoMotivo || undefined,
-      participantes: criancas.filter((c) => c.nome.trim()).map((c) => ({ nome: c.nome, cacifoId: cacifoAssignments[c.nome] || undefined })),
       aniversariantes: aniversariantes.filter((a) => a.nome.trim()).map((a) => ({ nome: a.nome, dataNascimento: a.dataNascimento || undefined })),
     };
     if (reserva) await updateReserva.mutateAsync({ id: reserva.id, data: payload });
     else await createReserva.mutateAsync(payload);
     onClose();
-  }, [reserva, aniversariantes, encarregadosAdicionais, criancas, cacifoAssignments, selectedExtrasIds, extrasTexto, updateReserva, createReserva, onClose]);
+  }, [reserva, aniversariantes, encarregadosAdicionais, selectedExtrasIds, extrasTexto, updateReserva, createReserva, onClose]);
 
-  const cacifoOptions = useMemo(() => {
-    const available = cacifosDisponiveis?.filter((c) => c.estado === "LIVRE") ?? [];
-    return available.map((c) => ({ value: c.id, label: `#${c.numero}${c.nome ? ` — ${c.nome}` : ""}` }));
-  }, [cacifosDisponiveis]);
   const corOptions = useMemo(() => [
     { value: "NONE", label: "Sem cor" },
     ...CORES_PREDEFINIDAS
@@ -598,50 +540,37 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
 
   return (
     <div className="flex flex-col max-h-[70vh]">
-      <div className="mb-6 shrink-0"><FormStepper steps={STEPS} currentStep={currentStep} onStepChange={setCurrentStep} /></div>
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden overflow-y-auto px-3">
-          {currentStep === 0 && (
-            <Step1Geral register={register} errors={errors} setValue={setValue} watch={watch} defaultValues={defaultValues}
-              aniversariantes={aniversariantes} addAniversariante={addAniversariante} removeAniversariante={removeAniversariante}
-              updateAniversariante={updateAniversariante} encarregadosAdicionais={encarregadosAdicionais}
-              addEncarregadoAdicional={addEncarregadoAdicional} removeEncarregadoAdicional={removeEncarregadoAdicional}
-              updateEncarregadoAdicional={updateEncarregadoAdicional} salaOptions={salaOptions} monitorOptions={monitorOptions}
-              currentMonitoresIds={currentMonitoresIds} handleMonitoresChange={handleMonitoresChange}
-              etapaOptions={etapaOptions} currentEtapasIds={currentEtapasIds} handleEtapasChange={handleEtapasChange}
-              extraItems={extraItems} extraGroups={extraGroups} selectedExtrasIds={selectedExtrasIds}
-              handleExtrasChange={handleExtrasChange} extrasTexto={extrasTexto} setExtrasTexto={setExtrasTexto}
-              totalEstimado={totalEstimado} watchedData={watchedData} corOptions={corOptions} menuOptions={menuOptions}
-              showAniversarianteError={showAniversarianteError}
-              showDataNascimentoError={showDataNascimentoError}
-              disponibilidade={disponibilidade.data}
-              disponibilidadeLoading={disponibilidade.isLoading}
-              onVerificarDisponibilidade={() => disponibilidade.refetch()}
-              onOpenSearchCliente={() => setShowClienteSearch(true)}
-              coresEmUso={coresEmUso}
-              slotOptions={slotOptions}
-              horarioCustom={horarioCustom}
-              setHorarioCustom={setHorarioCustom}
-              onSelectSlot={handleSelectSlot}
-              currentHorario={watchedHorario}
-              menuWarning={menuWarning}
-              isAdmin={isGlobalAdmin}
-            />
-          )}
-          {currentStep === 1 && (
-            <Step3Cacifos criancas={criancas} cacifoAssignments={cacifoAssignments} setCacifoAssignments={setCacifoAssignments}
-              cacifoOptions={cacifoOptions} cacifosDisponiveis={cacifosDisponiveis}
-              isAdmin={isGlobalAdmin}
-            />
-          )}
+          <Step1Geral register={register} errors={errors} setValue={setValue} watch={watch} defaultValues={defaultValues}
+            aniversariantes={aniversariantes} addAniversariante={addAniversariante} removeAniversariante={removeAniversariante}
+            updateAniversariante={updateAniversariante} encarregadosAdicionais={encarregadosAdicionais}
+            addEncarregadoAdicional={addEncarregadoAdicional} removeEncarregadoAdicional={removeEncarregadoAdicional}
+            updateEncarregadoAdicional={updateEncarregadoAdicional} salaOptions={salaOptions} monitorOptions={monitorOptions}
+            currentMonitoresIds={currentMonitoresIds} handleMonitoresChange={handleMonitoresChange}
+            etapaOptions={etapaOptions} currentEtapasIds={currentEtapasIds} handleEtapasChange={handleEtapasChange}
+            extraItems={extraItems} extraGroups={extraGroups} selectedExtrasIds={selectedExtrasIds}
+            handleExtrasChange={handleExtrasChange} extrasTexto={extrasTexto} setExtrasTexto={setExtrasTexto}
+            totalEstimado={totalEstimado} watchedData={watchedData} corOptions={corOptions} menuOptions={menuOptions}
+            showAniversarianteError={showAniversarianteError}
+            showDataNascimentoError={showDataNascimentoError}
+            disponibilidade={disponibilidade.data}
+            disponibilidadeLoading={disponibilidade.isLoading}
+            onVerificarDisponibilidade={() => disponibilidade.refetch()}
+            onOpenSearchCliente={() => setShowClienteSearch(true)}
+            coresEmUso={coresEmUso}
+            slotOptions={slotOptions}
+            horarioCustom={horarioCustom}
+            setHorarioCustom={setHorarioCustom}
+            onSelectSlot={handleSelectSlot}
+            currentHorario={watchedHorario}
+            menuWarning={menuWarning}
+            isAdmin={isGlobalAdmin}
+          />
         </div>
         <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end shrink-0">
           <Button variant="outline" onClick={onClose} type="button">Cancelar</Button>
-          {currentStep > 0 && <Button variant="outline" onClick={handlePrev} type="button">← Anterior</Button>}
-          {currentStep < STEPS.length - 1
-            ? <Button onClick={handleNext} type="button">Próximo →</Button>
-            : <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "A guardar..." : reserva ? "Guardar Alterações" : "Criar Reserva"}</Button>
-          }
+          <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "A guardar..." : reserva ? "Guardar Alterações" : "Criar Reserva"}</Button>
         </div>
       </form>
 
@@ -1117,66 +1046,6 @@ function Step1Geral({
             />
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════
-// STEP 2 — Cacifos (visualização; read-only para não-admin)
-// ════════════════════════════════════════════════════════════════
-interface Step3Props {
-  criancas: CriancaInput[]; cacifoAssignments: Record<string, string>;
-  setCacifoAssignments: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  cacifoOptions: { value: string; label: string }[];
-  cacifosDisponiveis: { id: string; numero: number; nome?: string | null; estado: string }[] | undefined;
-  isAdmin: boolean;
-}
-
-function Step3Cacifos({ criancas, cacifoAssignments, setCacifoAssignments, cacifoOptions, cacifosDisponiveis, isAdmin }: Step3Props) {
-  const named = criancas.filter((c) => c.nome.trim());
-  const avail = cacifosDisponiveis?.filter((c) => c.estado === "LIVRE").length ?? 0;
-  return (
-    <div className="flex flex-col gap-4 flex-1 min-h-0">
-      <div className="shrink-0">
-        <h3 className="text-sm font-semibold text-text-primary flex items-center gap-1.5"><Package size={16} className="text-brand-500" /> Atribuição de Cacifos</h3>
-        <p className="text-xs text-text-muted mt-0.5">
-          {isAdmin
-            ? "Cacifos atribuídos automaticamente. Pode alterar manualmente."
-            : "Visualização apenas. A edição de cacifos é feita na página de Cacifos."}
-        </p>
-      </div>
-      {named.length > avail && (
-        <div className="p-2.5 rounded-lg bg-accent-orange-50 border border-accent-orange-200 flex items-center gap-2 shrink-0">
-          <AlertTriangle size={14} className="text-accent-orange shrink-0" />
-          <p className="text-xs text-accent-orange-700"><strong>{named.length}</strong> crianças mas apenas <strong>{avail}</strong> cacifos disponíveis.</p>
-        </div>
-      )}
-      <div className="flex-1 min-h-0 space-y-2 overflow-y-auto pr-3">
-        {named.length > 0 ? named.map((c, i) => {
-          const assignedId = cacifoAssignments[c.nome] ?? "";
-          const cacifo = cacifosDisponiveis?.find((cf) => cf.id === assignedId);
-          return (
-            <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface border border-border">
-              <span className="w-6 text-xs font-medium text-text-muted text-center">{i + 1}</span>
-              <div className="flex-1"><p className="text-sm font-medium text-text-primary">{c.nome}</p></div>
-              <div className="w-44">
-                {isAdmin ? (
-                  <Select options={cacifoOptions} placeholder="Atribuir cacifo" value={assignedId} onChange={(val) => setCacifoAssignments((prev) => ({ ...prev, [c.nome]: val }))} />
-                ) : (
-                  <span className="text-sm text-text-secondary">{cacifo ? `#${cacifo.numero}${cacifo.nome ? ` — ${cacifo.nome}` : ""}` : "—"}</span>
-                )}
-              </div>
-              {cacifo && (<span className="text-xs font-medium text-accent-green-600 flex items-center gap-1"><Check size={12} /> #{cacifo.numero}</span>)}
-            </div>
-          );
-        }) : (
-          <div className="text-center py-8"><Users size={32} className="mx-auto text-text-muted mb-2" /><p className="text-sm text-text-muted">Nenhuma criança com nome preenchido.</p></div>
-        )}
-      </div>
-      <div className="flex items-center gap-4 text-xs text-text-muted shrink-0">
-        <span>Disponíveis: <strong>{avail}</strong></span><span>Crianças: <strong>{named.length}</strong></span>
-        <span>Atribuídos: <strong>{Object.values(cacifoAssignments).filter(Boolean).length}</strong></span>
       </div>
     </div>
   );

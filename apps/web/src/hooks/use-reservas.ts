@@ -160,6 +160,19 @@ export function useMarcarEtapasConcluidas() {
   });
 }
 
+/** Actualiza o estado dos cacifos ao nível da festa (Chamar/Concluído). */
+export function useActualizarEstadoCacifos() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; chamado?: boolean; concluido?: boolean }) =>
+      reservasApi.actualizarEstadoCacifos(id, body),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+    },
+  });
+}
+
 export function useReservasConcluidas(data?: string) {
   return useQuery({
     queryKey: ["reservas", "concluidas", data],

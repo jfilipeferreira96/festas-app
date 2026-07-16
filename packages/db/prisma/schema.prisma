@@ -400,6 +400,10 @@ model Reserva {
   // Notas por equipa
   notasCacifos      String?  @db.Text
   notasLanche       String?  @db.Text
+  
+  // Estado dos cacifos (ao nível da festa)
+  cacifosChamado    Boolean  @default(false)
+  cacifosConcluido  Boolean  @default(false)
 
   // Observações
   observacoesGerais    String?  @db.Text

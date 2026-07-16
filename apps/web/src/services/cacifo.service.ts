@@ -239,4 +239,92 @@ export const cacifoService = {
       orderBy: { numero: "asc" },
     });
   },
+
+  /**
+   * Pré-reserva N cacifos para uma reserva, marcando como RESERVADO
+   * com criancas = "Por preencher". Não faz throw se faltarem cacifos.
+   */
+  async preReservarCacifos(reservaId: string, quantidade: number) {
+    const livres = await prisma.cacifo.findMany({
+      where: { estado: "LIVRE" },
+      orderBy: { numero: "asc" },
+      take: quantidade,
+    });
+
+    const reservados = await Promise.all(
+      livres.map((cacifo) =>
+        prisma.cacifo.update({
+          where: { id: cacifo.id },
+          data: {
+            estado: "RESERVADO",
+            reservaId,
+            criancas: "Por preencher",
+          },
+        })
+      )
+    );
+
+    return {
+      reservados,
+      indisponiveis: Math.max(0, quantidade - reservados.length),
+    };
+  },
+
+  /**
+   * Ajusta o número de cacifos pré-reservados para uma reserva.
+   * Se novaQuantidade > actual: reserva cacifos adicionais.
+   * Se novaQuantidade < actual: liberta os excedentes (preservando histórico).
+   */
+  async ajustarPreReserva(reservaId: string, novaQuantidade: number) {
+    const actuais = await prisma.cacifo.findMany({
+      where: { reservaId, estado: "RESERVADO" },
+      orderBy: { numero: "asc" },
+    });
+
+    if (novaQuantidade > actuais.length) {
+      // Reservar adicionais
+      const faltam = novaQuantidade - actuais.length;
+      const result = await this.preReservarCacifos(reservaId, faltam);
+      return { reservados: result.reservados, libertados: [], indisponiveis: result.indisponiveis };
+    }
+
+    if (novaQuantidade < actuais.length) {
+      // Libertar excedentes (os últimos)
+      const excedentes = actuais.slice(novaQuantidade);
+      for (const cacifo of excedentes) {
+        await this.libertar(cacifo.id);
+      }
+      return { reservados: [], libertados: excedentes, indisponiveis: 0 };
+    }
+
+    return { reservados: [], libertados: [], indisponiveis: 0 };
+  },
+
+  /**
+   * Adiciona um cacifo específico (ou o próximo livre) a uma reserva.
+   * Usado no modal de cacifos quando se junta uma criança no dia.
+   */
+  async adicionarCacifoAReserva(reservaId: string, cacifoId?: string) {
+    let cacifo;
+    if (cacifoId) {
+      cacifo = await prisma.cacifo.findUnique({ where: { id: cacifoId } });
+      if (!cacifo) throw new Error("NOT_FOUND");
+      if (cacifo.estado !== "LIVRE") throw new Error("CACIFO_NOT_AVAILABLE");
+    } else {
+      cacifo = await prisma.cacifo.findFirst({
+        where: { estado: "LIVRE" },
+        orderBy: { numero: "asc" },
+      });
+      if (!cacifo) throw new Error("NO_CACIFOS_AVAILABLE");
+    }
+
+    return prisma.cacifo.update({
+      where: { id: cacifo.id },
+      data: {
+        estado: "RESERVADO",
+        reservaId,
+        criancas: "Por preencher",
+      },
+    });
+  },
 };

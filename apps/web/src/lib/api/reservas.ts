@@ -199,4 +199,10 @@ export const reservasApi = {
     api<unknown[]>(`/api/reservas/${id}/etapas/concluir-todas`, {
       method: "POST",
     }),
+
+  actualizarEstadoCacifos: (id: string, body: { chamado?: boolean; concluido?: boolean }) =>
+    api<Reserva>(`/api/reservas/${id}/estado-cacifos`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
 };
