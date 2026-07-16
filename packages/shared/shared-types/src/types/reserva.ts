@@ -178,5 +178,4 @@ export interface CriarReservaDTO {
   // Related data
   extras?: { extraId: string; quantidade: number; textoPersonalizado?: string }[];
   aniversariantes?: { aniversarianteId: string }[];
-  participantes?: { nome: string }[];
 }

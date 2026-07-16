@@ -464,7 +464,6 @@ export async function cleanTestData(): Promise<void> {
   await testPrisma.newsletterContacto.deleteMany().catch(() => {});
   await testPrisma.segmento.deleteMany().catch(() => {});
 
-  await testPrisma.participante.deleteMany().catch(() => {});
   await testPrisma.menu.deleteMany().catch(() => {});
 
   await testPrisma.reservaEtapa.deleteMany().catch(() => {});

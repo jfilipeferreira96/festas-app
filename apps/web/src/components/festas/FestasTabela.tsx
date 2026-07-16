@@ -1,7 +1,7 @@
  "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, UserCheck, SquareCheck, History, Clock, ClipboardList } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCheck, History, Clock, ClipboardList, Bell } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -10,7 +10,6 @@ import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserv
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
-import CheckInModal from "./CheckInModal";
 import HistoricoModal from "./HistoricoModal";
 import PreencherCacifosModal from "@/components/cacifos/PreencherCacifosModal";
 import FestasToolbar, { type FestaTab } from "./FestasToolbar";
@@ -56,7 +55,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const [showForm, setShowForm] = useState(false);
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
   const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
-  const [checkInReserva, setCheckInReserva] = useState<Reserva | null>(null);
   const [historicoReserva, setHistoricoReserva] = useState<Reserva | null>(null);
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
@@ -247,7 +245,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       case "confirm": handleConfirmar(reserva.id); break;
       case "iniciar": setIniciarFestaReserva(reserva); break;
       case "finalizar": handleFinalizar(reserva); break;
-      case "checkin": setCheckInReserva(reserva); break;
       case "historico": setHistoricoReserva(reserva); break;
       case "cancel": handleCancelar(reserva.id); break;
       case "delete": handleDelete(reserva.id); break;
@@ -407,22 +404,13 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
           },
           {
             key: "numCriancas",
-            label: isCacifos ? "Cacifos" : "Participantes",
+            label: "Cacifos",
             sortable: true,
             render: (_v, r) => {
               // CACIFOS mode: progresso de preenchimento de cacifos
               if (isCacifos) {
                 const cacifos = r.cacifos ?? [];
                 const total = cacifos.length;
-                if (r.cacifosConcluido) {
-                  return (
-                    <div className="min-w-[100px]">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-accent-green-600">
-                        <SquareCheck size={13} /> Concluído
-                      </span>
-                    </div>
-                  );
-                }
                 if (total === 0) {
                   return <span className="text-sm text-text-muted">0 cacifos</span>;
                 }
@@ -440,43 +428,56 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                     </div>
                     <div className="w-full h-1.5 rounded-full bg-gray-100 dark:bg-gray-800">
                       <div
-                        className={`h-1.5 rounded-full transition-all duration-500 ${pct === 100 ? "bg-accent-green-500" : pct > 0 ? "bg-accent-orange" : "bg-brand-400"}`}
+                        className={`h-1.5 rounded-full transition-all duration-500 ${pct === 100 ? "bg-accent-green-500" : pct > 0 ? "bg-accent-orange-500" : "bg-brand-400"}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <p className="text-[11px] text-text-muted mt-1">
-                      {pct === 100 ? "Todos preenchidos" : `${pct}% cacifos`}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <p className="text-[11px] text-text-muted">
+                        {pct === 100 ? "Todos preenchidos" : `${pct}% cacifos`}
+                      </p>
+                      {(r.cacifosConcluido || r.cacifosChamado) && (
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${r.cacifosConcluido ? "bg-accent-green-100 text-accent-green-600" : "bg-accent-orange-100 text-accent-orange-600"}`}>
+                          {r.cacifosConcluido ? <SquareCheck size={10} /> : <Bell size={10} />}
+                          {r.cacifosConcluido ? "Concluído" : "Chamado"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               }
-              // Modo completo: progresso de check-in de participantes
-              const previstos = r.numCriancas ?? 0;
-              const participantes = r.participantes;
-              const total = participantes?.length ?? 0;
-              const presentes = participantes?.filter((p) => p.presente).length ?? 0;
-              const pct = total > 0 ? Math.round((presentes / total) * 100) : 0;
+              // Modo completo: crianças previstas vs cacifos atribuídos
+              const previstos = r.numCriancas ?? r.previsaoCriancas ?? 0;
+              const cacifos = r.cacifos ?? [];
+              const totalCacifos = cacifos.length;
+              const cacifosAtribuidos = cacifos.filter(
+                (c) => c.criancas && c.criancas.trim() && c.criancas !== "Por preencher",
+              ).length;
               return (
-                <div className="min-w-[100px]">
+                <div className="min-w-[110px]">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-semibold text-text-primary">
-                      {presentes}<span className="text-text-muted font-normal">/{total || previstos}</span>
+                      {cacifosAtribuidos}<span className="text-text-muted font-normal">/{previstos}</span>
                     </span>
                     <Users size={13} className="text-text-muted" />
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-gray-100 dark:bg-gray-800">
                     <div
-                      className={`h-1.5 rounded-full transition-all duration-500 ${pct === 100 ? "bg-accent-green-500" : pct > 0 ? "bg-primary-400" : ""}`}
-                      style={{ width: `${pct}%` }}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${cacifosAtribuidos >= previstos && previstos > 0 ? "bg-accent-green-500" : cacifosAtribuidos > 0 ? "bg-accent-orange-500" : "bg-brand-400"}`}
+                      style={{ width: `${previstos > 0 ? Math.min(100, Math.round((cacifosAtribuidos / previstos) * 100)) : 0}%` }}
                     />
                   </div>
-                  {total > 0 ? (
-                    <p className="text-[11px] text-text-muted mt-1">
-                      {pct === 100 ? "Todos presentes" : `${pct}% check-in`}
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <p className="text-[11px] text-text-muted">
+                      {previstos} previstas{totalCacifos > 0 ? ` · ${cacifosAtribuidos} cacifos` : ""}
                     </p>
-                  ) : (
-                    <p className="text-[11px] text-text-muted mt-1">{previstos} previstos</p>
-                  )}
+                    {(r.cacifosConcluido || r.cacifosChamado) && (
+                      <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${r.cacifosConcluido ? "bg-accent-green-100 text-accent-green-600" : "bg-accent-orange-100 text-accent-orange-600"}`}>
+                        {r.cacifosConcluido ? <SquareCheck size={10} /> : <Bell size={10} />}
+                        {r.cacifosConcluido ? "Concluído" : "Chamado"}
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             },
@@ -593,14 +594,14 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                 </button>
               </Tooltip>
             )}
-            {/* Quick action: Check-in (CONFIRMADO / EM_CURSO) */}
+            {/* Quick action: Preencher cacifos (CONFIRMADO / EM_CURSO) */}
             {(r.estado === "CONFIRMADO" || r.estado === "EM_CURSO") && (
-              <Tooltip content="Check-in participantes" position="top" theme="dark">
+              <Tooltip content="Preencher cacifos" position="top" theme="dark">
                 <button
-                  onClick={() => setCheckInReserva(r)}
-                  className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
+                  onClick={() => setPreencherCacifosReservaId(r.id)}
+                  className="p-1.5 rounded-lg hover:bg-blue-50 text-text-muted hover:text-brand-500 transition-colors"
                 >
-                  <UserCheck size={15} />
+                  <ClipboardList size={15} />
                 </button>
               </Tooltip>
             )}
@@ -682,11 +683,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         reservaId={preencherCacifosReservaId}
         onClose={() => setPreencherCacifosReservaId(null)}
       />
-
-      {/* Check-in Modal */}
-      {checkInReserva && (
-        <CheckInModal reserva={checkInReserva} onClose={() => setCheckInReserva(null)} />
-      )}
 
       {/* Histórico Modal */}
       {historicoReserva && (

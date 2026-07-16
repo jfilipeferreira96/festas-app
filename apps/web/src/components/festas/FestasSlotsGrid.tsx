@@ -13,7 +13,6 @@ type FestaAction =
   | "confirm"
   | "iniciar"
   | "finalizar"
-  | "checkin"
   | "historico"
   | "cancel"
   | "delete";
@@ -97,8 +96,6 @@ const FestaActionsRow = React.memo(function FestaActionsRow({
         btn(<Play size={13} />, "Iniciar festa", "iniciar", "hover:bg-blue-50 hover:text-brand-500")}
       {estado === "EM_CURSO" &&
         btn(<SquareCheck size={13} />, "Finalizar festa", "finalizar", "hover:bg-green-50 hover:text-accent-green-400")}
-      {(estado === "CONFIRMADO" || estado === "EM_CURSO") &&
-        btn(<UserCheck size={13} />, "Check-in participantes", "checkin", "hover:bg-green-50 hover:text-accent-green-400")}
       {estado === "CONCLUIDA" &&
         btn(<History size={13} />, "Ver histórico", "historico", "hover:bg-gray-100 hover:text-primary-500")}
       {(estado === "RESERVA" || estado === "CONFIRMADO") &&

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Users, CheckCircle, XCircle, Tv, Minimize2 } from "lucide-react";
+import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Package, Tv, Minimize2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
@@ -310,19 +310,22 @@ export default function FestasAcabarContent() {
   );
 }
 
-// ── Histórico Modal (participantes + etapas) ───────────────────────
+// ── Histórico Modal (cacifos preenchidos) ──────────────────────────
 function FestaHistoricoModal({ reservaId, onClose }: { reservaId: string | null; onClose: () => void }) {
   const { data: reserva, isLoading } = useReserva(reservaId ?? "");
 
   if (!reservaId) return null;
 
-  const participantes = reserva?.participantes ?? [];
-  const presentes = participantes.filter((p) => p.presente).length;
-  const etapas = reserva?.etapas ?? [];
-  const etapasConcluidas = etapas.filter((e) => e.concluida).length;
+  const cacifos = reserva?.cacifos ?? [];
+  const historico = reserva?.cacifosHistorico ?? [];
+  const totalCacifos = cacifos.length;
+  const preenchidos = cacifos.filter(
+    (c) => c.criancas && c.criancas.trim() && c.criancas !== "Por preencher",
+  ).length;
+  const pctCacifos = totalCacifos > 0 ? Math.round((preenchidos / totalCacifos) * 100) : 0;
 
   return (
-    <Modal isOpen={!!reservaId} onClose={onClose} size="xl" title="Participantes">
+    <Modal isOpen={!!reservaId} onClose={onClose} size="xl" title="Cacifos">
       <div className="p-6 max-h-[80vh] overflow-y-auto">
         {isLoading || !reserva ? (
           <div className="flex flex-col items-center justify-center py-12">
@@ -331,79 +334,68 @@ function FestaHistoricoModal({ reservaId, onClose }: { reservaId: string | null;
           </div>
         ) : (
           <div className="space-y-5">
-            {/* Resumo de presenças */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Users size={16} className="text-brand-500" />
-                <span className="text-sm font-medium text-text-primary">
-                  {presentes}/{participantes.length || (reserva.numCriancas ?? 0)} presentes
-                </span>
+            {/* Resumo de cacifos */}
+            {totalCacifos > 0 && (
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Package size={16} className="text-brand-500" />
+                  <span className="text-sm font-medium text-text-primary">
+                    {preenchidos}/{totalCacifos} cacifos preenchidos
+                  </span>
+                </div>
+                <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${pctCacifos === 100 ? "bg-accent-green-500" : "bg-brand-400"}`}
+                    style={{ width: `${pctCacifos}%` }}
+                  />
+                </div>
               </div>
-              <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${presentes === participantes.length && participantes.length > 0 ? "bg-accent-green-500" : "bg-primary-400"}`}
-                  style={{ width: `${participantes.length > 0 ? (presentes / participantes.length) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
+            )}
 
-            {/* Participantes */}
+            {/* Cacifos activos */}
             <div>
               <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-                Participantes ({participantes.length})
+                Cacifos activos ({totalCacifos})
               </h3>
-              {participantes.length === 0 ? (
-                <p className="text-sm text-text-muted py-4 text-center">Sem participantes registados.</p>
+              {totalCacifos === 0 ? (
+                <p className="text-sm text-text-muted py-4 text-center">Sem cacifos atribuídos.</p>
               ) : (
-                <div className="space-y-1">
-                  {participantes.map((p, i) => (
-                    <div key={p.id ?? i} className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-border transition-all">
-                      <span className={`shrink-0 ${p.presente ? "text-accent-green-500" : "text-text-muted"}`}>
-                        {p.presente ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                      </span>
-                      <span className="text-sm text-text-primary flex-1">{p.nome}</span>
-                      {p.cacifo && (
-                        <span className="text-xs px-2 py-0.5 bg-primary-50 text-primary-500 rounded-full">
-                          Cacifo #{p.cacifo.numero}
-                        </span>
-                      )}
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.presente ? "bg-accent-green-50 text-accent-green-600" : "bg-gray-100 text-text-muted"}`}>
-                        {p.presente ? "Presente" : "Ausente"}
-                      </span>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-4 gap-2">
+                  {cacifos.map((c) => {
+                    const porPreencher = !c.criancas || !c.criancas.trim() || c.criancas === "Por preencher";
+                    return (
+                      <div key={c.id} className={`rounded-lg p-3 text-center text-xs shadow-sm border-2 ${
+                        c.estado === "OCUPADO" ? "bg-accent-red-400 text-white border-accent-red-400"
+                          : porPreencher ? "bg-white text-text-secondary border-dashed border-accent-orange"
+                          : c.estado === "RESERVADO" ? "bg-brand-500 text-white border-brand-500"
+                          : "bg-gray-200 text-gray-500 border-gray-200"
+                      }`}>
+                        <div className="font-bold text-sm">#{c.numero}</div>
+                        <div className="text-[10px] opacity-80">{porPreencher ? "Por preencher" : c.estado}</div>
+                        {c.criancas && !porPreencher && <div className="text-[10px] mt-1 opacity-90 truncate" title={c.criancas}>{c.criancas}</div>}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            {/* Etapas timeline — oculto per pedido do cliente (12/07/2026)
-            {etapas.length > 0 && (
+            {/* Cacifos histórico */}
+            {historico.length > 0 && (
               <div>
                 <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-                  Etapas ({etapasConcluidas}/{etapas.length})
+                  Histórico de cacifos ({historico.length})
                 </h3>
-                <div className="space-y-1">
-                  {etapas.map((etapa, i) => (
-                    <div key={etapa.id ?? i} className="flex items-center gap-2 py-2 px-3 rounded-lg border border-transparent">
-                      <span className={`shrink-0 ${etapa.concluida ? "text-accent-green-500" : "text-text-muted"}`}>
-                        {etapa.concluida ? <CheckCircle size={16} /> : <Clock size={16} />}
-                      </span>
-                      <span className={`text-sm flex-1 ${etapa.concluida ? "text-text-primary" : "text-text-muted"}`}>
-                        {etapa.etapa?.nome ?? "—"}
-                      </span>
-                      {etapa.concluidaEm && (
-                        <span className="text-xs text-text-muted">
-                          {new Date(etapa.concluidaEm).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      )}
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${etapa.concluida ? "bg-accent-green-50 text-accent-green-600" : "bg-gray-100 text-text-muted"}`}>
-                        {etapa.concluida ? "Concluída" : "Pendente"}
-                      </span>
+                <div className="grid grid-cols-4 gap-2">
+                  {historico.map((c, i) => (
+                    <div key={`hist-${i}`} className="bg-gray-50 border border-border rounded-lg p-3 text-center text-xs">
+                      <div className="font-bold text-sm text-text-primary">#{c.numero}</div>
+                      {c.criancas && <div className="text-[10px] text-text-secondary truncate" title={c.criancas}>{c.criancas}</div>}
                     </div>
                   ))}
                 </div>
               </div>
-            )} */}
+            )}
           </div>
         )}
       </div>

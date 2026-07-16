@@ -16,7 +16,6 @@ export interface Reserva extends ReservaBase {
   monitores?: { id: string; monitor: { id: string; nome: string } }[];
   cacifos?: { id: string; numero: number; estado: string; notas?: string | null; criancas?: string | null }[];
   etapas?: { id: string; concluida: boolean; concluidaEm?: string | null; etapa: { id: string; nome: string; ordem: number } }[];
-  participantes?: { id: string; nome: string; presente?: boolean; cacifoId?: string | null; cacifo?: { id: string; numero: number } | null }[];
 }
 
 // Helper to get first aniversariante name from array

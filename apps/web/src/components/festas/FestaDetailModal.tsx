@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import {
-  CheckCircle2, Play, XCircle, Users, MapPin,
+  CheckCircle2, Play, Users, MapPin,
   Clock, Cake, Sparkles, Package, CreditCard, Shield,
-  Gift, Star, FileText, MessageSquare, Sandwich,
+  Gift, FileText, MessageSquare, Sandwich,
   SquareCheck, Phone, Mail, Hash, Percent, Tag, Calendar,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -101,7 +101,6 @@ function DetailContent({
   hidePrices?: boolean;
 }) {
   const estado = reserva.estado;
-  const numParticipantes = reserva.participantes?.length ?? 0;
   const numCacifos = (reserva.cacifos?.length ?? 0) + (reserva.cacifosHistorico?.length ?? 0);
 
   return (
@@ -159,8 +158,8 @@ function DetailContent({
           }`}
         >
           <Users size={12} />
-          Crianças {(numParticipantes > 0 || numCacifos > 0) && (
-            <span className="ml-0.5 text-[10px] opacity-70">({numParticipantes} crianças, {numCacifos} cacifos)</span>
+          Crianças {numCacifos > 0 && (
+            <span className="ml-0.5 text-[10px] opacity-70">({numCacifos} cacifos)</span>
           )}
         </button>
       </div>
@@ -221,20 +220,6 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
             {reserva.boloQuantidade != null && reserva.boloQuantidade > 0 && (
               <DetailRow icon={<Gift size={13} />} label="Quantidade" value={String(reserva.boloQuantidade)} />
             )}
-          </div>
-        </Section>
-      )}
-
-      {/* Monitores */}
-      {reserva.monitores && reserva.monitores.length > 0 && (
-        <Section title="Monitores" icon={<Star size={13} />}>
-          <div className="flex flex-wrap gap-1.5">
-            {reserva.monitores.map((m) => (
-              <span key={m.id} className="inline-flex items-center gap-1 px-2.5 py-1 bg-primary-50 text-primary-600 text-xs rounded-full font-medium">
-                <Star size={11} />
-                {m.monitor.nome}
-              </span>
-            ))}
           </div>
         </Section>
       )}
@@ -300,7 +285,7 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
             label="Estado"
             value={reserva.pago
               ? <span className="text-accent-green-500 font-medium">Pago</span>
-              : <span className="text-accent-orange font-medium">Por pagar</span>
+              : <span className="text-accent-orange-500 font-medium">Por pagar</span>
             }
           />
           {reserva.metodoPagamento && (
@@ -326,7 +311,7 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
             value={
               <span className={`font-medium ${
                 reserva.caucao === "PAGA" ? "text-accent-green-500"
-                  : reserva.caucao === "PAGA_NO_DIA" ? "text-accent-orange"
+                  : reserva.caucao === "PAGA_NO_DIA" ? "text-accent-orange-500"
                   : "text-text-muted"
               }`}>
                 {CAUCAO_LABELS[reserva.caucao] ?? reserva.caucao}
@@ -374,21 +359,15 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
       )}
 
       {/* Observações */}
-      {(reserva.observacoesGerais || reserva.observacoesLesoes || reserva.observacoesBrindes || reserva.outrosExtras) && (
+      {(reserva.observacoesGerais || reserva.observacoesLesoes || reserva.observacoesBrindes || reserva.outrosExtras || reserva.notasCacifos) && (
         <Section title="Observações" icon={<FileText size={13} />}>
           <div className="space-y-2">
             {reserva.observacoesGerais && <ObsBlock label="Gerais" value={reserva.observacoesGerais} />}
+            {reserva.notasCacifos && <ObsBlock label="Cacifos" value={reserva.notasCacifos} />}
             {reserva.observacoesLesoes && <ObsBlock label="Lesões / Alergias" value={reserva.observacoesLesoes} />}
             {reserva.observacoesBrindes && <ObsBlock label="Brindes" value={reserva.observacoesBrindes} />}
             {reserva.outrosExtras && <ObsBlock label="Outros Extras" value={reserva.outrosExtras} />}
           </div>
-        </Section>
-      )}
-
-      {/* Notas Importantes — Cacifos */}
-      {reserva.notasCacifos && (
-        <Section title="Notas — Cacifos" icon={<Package size={13} />}>
-          <p className="text-sm text-text-secondary whitespace-pre-wrap">{reserva.notasCacifos}</p>
         </Section>
       )}
 
@@ -427,10 +406,8 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
   );
 }
 
-// ── Crianças Tab (unified Participantes + Cacifos) ───────────────────
+// ── Crianças Tab (Cacifos) ───────────────────────────────────────
 function CriancasTab({ reserva }: { reserva: Reserva }) {
-  const participantes = reserva.participantes ?? [];
-  const presentes = participantes.filter(p => p.presente).length;
   const cacifos = reserva.cacifos ?? [];
   const historico = reserva.cacifosHistorico ?? [];
 
@@ -439,6 +416,7 @@ function CriancasTab({ reserva }: { reserva: Reserva }) {
     (c) => c.criancas && c.criancas.trim() && c.criancas !== "Por preencher",
   ).length;
   const pctCacifos = totalCacifos > 0 ? Math.round((preenchidos / totalCacifos) * 100) : 0;
+  const previstos = reserva.numCriancas ?? reserva.previsaoCriancas ?? 0;
 
   return (
     <div className="space-y-4">
@@ -453,12 +431,12 @@ function CriancasTab({ reserva }: { reserva: Reserva }) {
           </div>
           <div className="flex items-center gap-2">
             {reserva.cacifosChamado && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 text-accent-orange">
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-accent-orange-100 text-accent-orange-600">
                 🔔 Chamado
               </span>
             )}
             {reserva.cacifosConcluido && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-accent-green-50 text-accent-green-600">
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-accent-green-100 text-accent-green-600">
                 ✓ Concluído
               </span>
             )}
@@ -472,28 +450,46 @@ function CriancasTab({ reserva }: { reserva: Reserva }) {
         </div>
       )}
 
-      {/* Cacifos Grid */}
+      {/* Cacifos Tabela */}
       {totalCacifos > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Cacifos Activos ({totalCacifos})</h4>
-          <div className="grid grid-cols-4 gap-2">
-            {cacifos.map((c) => {
-              const porPreencher = !c.criancas || !c.criancas.trim() || c.criancas === "Por preencher";
-              return (
-                <div key={c.id} className={`rounded-lg p-3 text-center text-xs shadow-sm border-2 ${
-                  c.estado === "OCUPADO" ? "bg-accent-red-400 text-white border-accent-red-400"
-                    : porPreencher ? "bg-white text-text-secondary border-dashed border-accent-orange"
-                    : c.estado === "RESERVADO" ? "bg-brand-500 text-white border-brand-500"
-                    : c.estado === "LIVRE" ? "bg-accent-green-400 text-white border-accent-green-400"
-                    : "bg-gray-200 text-gray-500 border-gray-200"
-                }`}>
-                  <div className="font-bold text-sm">#{c.numero}</div>
-                  <div className="text-[10px] opacity-80">{porPreencher ? "Por preencher" : c.estado}</div>
-                  {c.criancas && !porPreencher && <div className="text-[10px] mt-1 opacity-90 truncate" title={c.criancas}>{c.criancas}</div>}
-                  {c.notas && <div className="text-[10px] mt-0.5 opacity-75 truncate" title={c.notas}>📝 {c.notas}</div>}
-                </div>
-              );
-            })}
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-text-muted">Nº</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-text-muted">Estado</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-text-muted">Crianças</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold text-text-muted">Notas</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {cacifos.map((c) => {
+                  const porPreencher = !c.criancas || !c.criancas.trim() || c.criancas === "Por preencher";
+                  return (
+                    <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="px-3 py-2 font-bold text-text-primary whitespace-nowrap">#{c.numero}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${
+                            c.estado === "OCUPADO" ? "bg-accent-red-400"
+                              : porPreencher ? "bg-accent-orange-400"
+                              : c.estado === "RESERVADO" ? "bg-brand-400"
+                              : "bg-accent-green-400"
+                          }`} />
+                          <span className="text-xs text-text-secondary">{porPreencher ? "Por preencher" : c.estado}</span>
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-text-primary">
+                        {porPreencher ? <span className="text-text-muted">—</span> : c.criancas}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-text-muted">{c.notas ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -514,62 +510,12 @@ function CriancasTab({ reserva }: { reserva: Reserva }) {
         </div>
       )}
 
-      {/* Separador */}
-      {participantes.length > 0 && totalCacifos > 0 && <hr className="border-gray-200" />}
-
-      {/* Participantes Check-in */}
-      {participantes.length === 0 ? (
+      {/* Sem cacifos — placeholder */}
+      {totalCacifos === 0 && (
         <div className="py-8 text-center">
           <Users size={32} className="mx-auto text-text-muted mb-2" />
-          <p className="text-sm text-text-muted">Nenhum participante registado.</p>
-          <p className="text-xs text-text-muted mt-1">Previstos: {reserva.numCriancas ?? reserva.previsaoCriancas ?? 0} crianças</p>
-          {totalCacifos > 0 && (
-            <p className="text-xs text-text-muted mt-3 max-w-xs mx-auto">
-              Os cacifos podem ser preenchidos directamente (ver acima).
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Users size={16} className="text-brand-500" />
-              <span className="text-sm font-medium text-text-primary">
-                {presentes}/{participantes.length} presentes
-              </span>
-            </div>
-            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${presentes === participantes.length ? "bg-accent-green-500" : "bg-primary-400"}`}
-                style={{ width: `${(presentes / participantes.length) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            {participantes.map((p) => (
-              <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-border transition-all">
-                <div className="flex items-center gap-2">
-                  <span className={`shrink-0 ${p.presente ? "text-accent-green-500" : "text-text-muted"}`}>
-                    {p.presente ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-                  </span>
-                  <span className="text-sm text-text-primary">{p.nome}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  {p.cacifo && (
-                    <span className="text-xs px-2 py-0.5 bg-primary-50 text-primary-500 rounded-full">
-                      Cacifo #{p.cacifo.numero}
-                    </span>
-                  )}
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                    p.presente ? "bg-accent-green-50 text-accent-green-600" : "bg-gray-100 text-text-muted"
-                  }`}>
-                    {p.presente ? "Presente" : "Ausente"}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-text-muted">Nenhum cacifo atribuído.</p>
+          <p className="text-xs text-text-muted mt-1">Previstos: {previstos} crianças</p>
         </div>
       )}
     </div>

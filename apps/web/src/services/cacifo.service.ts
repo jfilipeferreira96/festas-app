@@ -32,7 +32,6 @@ export const cacifoService = {
       orderBy: { numero: "asc" },
       include: {
         reserva: { include: { cliente: true, aniversariantes: { include: { aniversariante: true } } } },
-        participante: true,
       },
     });
   },
@@ -42,7 +41,6 @@ export const cacifoService = {
       where: { id },
       include: {
         reserva: { include: { cliente: true, aniversariantes: { include: { aniversariante: true } }, local: true } },
-        participante: true,
       },
     });
     if (!cacifo) throw new Error("NOT_FOUND");
@@ -326,5 +324,67 @@ export const cacifoService = {
         criancas: "Por preencher",
       },
     });
+  },
+
+  /**
+   * Troca um cacifo atribuído a uma reserva por outro cacifo livre.
+   * Preserva os dados (criancas, notas) e o estado (RESERVADO/OCUPADO).
+   */
+  async trocarCacifo(reservaId: string, cacifoAtualId: string, novoCacifoId: string) {
+    const atual = await prisma.cacifo.findUnique({ where: { id: cacifoAtualId } });
+    if (!atual) throw new Error("NOT_FOUND");
+    if (atual.reservaId !== reservaId) throw new Error("CACIFO_NOT_FROM_RESERVA");
+
+    const novo = await prisma.cacifo.findUnique({ where: { id: novoCacifoId } });
+    if (!novo) throw new Error("NOT_FOUND");
+    if (novo.id === atual.id) throw new Error("SAME_CACIFO");
+    if (novo.estado !== "LIVRE") throw new Error("CACIFO_NOT_AVAILABLE");
+
+    // Mover dados para o novo cacifo
+    const criancas = atual.criancas;
+    const notas = atual.notas;
+    const estado = atual.estado;
+
+    await prisma.cacifo.update({
+      where: { id: novo.id },
+      data: { estado, reservaId, criancas, notas },
+    });
+
+    // Libertar o cacifo antigo
+    await prisma.cacifo.update({
+      where: { id: atual.id },
+      data: { estado: "LIVRE", reservaId: null, criancas: null, notas: null },
+    });
+
+    return prisma.cacifo.findUnique({ where: { id: novo.id } });
+  },
+
+  /**
+   * Realoca TODOS os cacifos de uma reserva para cacifos livres diferentes
+   * dos actuais. Retorna quantos foram trocados.
+   */
+  async realocarTodos(reservaId: string) {
+    const actuais = await prisma.cacifo.findMany({
+      where: { reservaId },
+      orderBy: { numero: "asc" },
+    });
+
+    if (actuais.length === 0) return { trocados: 0, total: 0 };
+
+    const numerosAtuais = actuais.map((c) => c.numero);
+    const livres = await prisma.cacifo.findMany({
+      where: { estado: "LIVRE", numero: { notIn: numerosAtuais } },
+      orderBy: { numero: "asc" },
+    });
+
+    let trocados = 0;
+    for (const cacifo of actuais) {
+      const novo = livres.shift();
+      if (!novo) break;
+      await this.trocarCacifo(reservaId, cacifo.id, novo.id);
+      trocados++;
+    }
+
+    return { trocados, total: actuais.length };
   },
 };

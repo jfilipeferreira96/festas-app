@@ -123,7 +123,7 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
           <InfoItem
             icon={<Users size={14} />}
             label="Crianças"
-            value={`${reserva.participantes?.filter((p) => p.presente).length ?? 0}/${reserva.numCriancas ?? 0} presentes`}
+            value={`${reserva.numCriancas ?? 0} previstas`}
           />
           <InfoItem
             icon={<Users size={14} />}
@@ -131,47 +131,6 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
             value={monitores}
           />
         </div>
-
-        {/* Participantes */}
-        {reserva.participantes && reserva.participantes.length > 0 && (
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-text-primary mb-2 flex items-center gap-2">
-              <PartyPopper size={14} />
-              Participantes ({reserva.participantes.length})
-            </h3>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-1 gap-1.5">
-                {reserva.participantes.map((p, i) => (
-                  <div key={p.id ?? i} className="flex items-center gap-2">
-                    {p.presente ? (
-                      <CheckCircle size={13} className="text-accent-green-500 shrink-0" />
-                    ) : (
-                      <XCircle size={13} className="text-text-muted shrink-0" />
-                    )}
-                    <span className="text-xs text-text-primary flex-1">{p.nome}</span>
-                    {p.cacifo && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-purple-100 text-accent-purple-600 font-medium">
-                        Cacifo #{p.cacifo.numero}
-                      </span>
-                    )}
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                      p.presente
-                        ? "bg-accent-green-100 text-accent-green-600"
-                        : "bg-gray-100 text-text-muted"
-                    }`}>
-                      {p.presente ? "Presente" : "Ausente"}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-3 mt-2 pt-2 border-t border-gray-200 text-[10px] text-text-muted">
-                <span>Total: <strong>{reserva.participantes.length}</strong></span>
-                <span>Presentes: <strong className="text-accent-green-600">{reserva.participantes.filter((p) => p.presente).length}</strong></span>
-                <span>Ausentes: <strong>{reserva.participantes.filter((p) => !p.presente).length}</strong></span>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Detalhes da Festa */}
         {(reserva.tema || reserva.bolo || reserva.menu || (reserva.extras && reserva.extras.length > 0)) && (

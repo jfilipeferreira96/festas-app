@@ -464,7 +464,6 @@ model Reserva {
   cacifos         Cacifo[]
   monitores       ReservaMonitor[]
   etapas          ReservaEtapa[]
-  participantes   Participante[]
   aniversariantes ReservaAniversariante[]
 
   @@index([data, localId])
@@ -542,24 +541,6 @@ model ReservaEtapa {
 }
 
 // ============================================
-// PARTICIPANTES (crianças na festa)
-// ============================================
-
-model Participante {
-  id        String   @id @default(cuid())
-  nome      String
-  presente  Boolean  @default(false)
-  cacifoId  String?  @unique
-  reservaId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  reserva   Reserva  @relation(fields: [reservaId], references: [id], onDelete: Cascade)
-  cacifo    Cacifo?  @relation(fields: [cacifoId], references: [id])
-
-  @@map("participante")
-}
-
 // ============================================
 // CACIFOS
 // ============================================
@@ -582,7 +563,6 @@ model Cacifo {
   reservaId       String?
   reserva         Reserva?          @relation(fields: [reservaId], references: [id])
 
-  participante    Participante?
   entradaLivre    EntradaLivre?
 
   @@index([estado])

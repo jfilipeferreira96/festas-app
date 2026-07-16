@@ -199,7 +199,6 @@ export const dashboardService = {
         monitores: { include: { monitor: true } },
         cacifos: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
       orderBy: { inicioEm: "asc" },
     });

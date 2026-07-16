@@ -120,3 +120,28 @@ export function useAdicionarCacifoReserva() {
     },
   });
 }
+
+/** Troca um cacifo atribuído por outro cacifo livre. */
+export function useTrocarCacifo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ reservaId, cacifoAtualId, novoCacifoId }: { reservaId: string; cacifoAtualId: string; novoCacifoId: string }) =>
+      cacifosApi.trocar(reservaId, cacifoAtualId, novoCacifoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+    },
+  });
+}
+
+/** Realoca TODOS os cacifos de uma reserva para cacifos livres diferentes. */
+export function useRealocarTodos() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reservaId: string) => cacifosApi.realocar(reservaId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+    },
+  });
+}

@@ -959,30 +959,6 @@ describe("Reserva Service", () => {
       await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
-
-    it("não deve criar participantes ao criar reserva", async () => {
-      const reserva = await reservaService.create({
-        data: tomorrowStr,
-        horario: "18:00",
-        duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
-        aniversariantes: [TEST_ANIVERSARIANTE],
-        numCriancas: 3,
-      });
-
-      const participantes = await testPrisma.participante.findMany({
-        where: { reservaId: reserva.id },
-      });
-      expect(participantes.length).toBe(0);
-
-      // Cleanup
-      await testPrisma.cacifo.updateMany({
-        where: { reservaId: reserva.id },
-        data: { estado: "LIVRE", reservaId: null, criancas: null },
-      });
-      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
-      await testPrisma.reserva.delete({ where: { id: reserva.id } });
-    });
   });
 
   // ── actualizarEstadoCacifos ──────────────────────────────────

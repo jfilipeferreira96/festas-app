@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import {
   Package, Printer, Plus, Trash2, Bell, CheckCircle2,
-  Loader2, AlertTriangle,
+  Loader2, AlertTriangle, RefreshCw,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui";
@@ -12,7 +12,8 @@ import { useReserva } from "@/hooks/use-reservas";
 import { useUpdateReserva } from "@/hooks/use-reservas";
 import {
   useCacifos, useActualizarCacifo, useLibertar,
-  useAdicionarCacifoReserva,
+  useAdicionarCacifoReserva, useCacifosDisponiveis,
+  useTrocarCacifo, useRealocarTodos,
 } from "@/hooks/use-cacifos";
 import { useActualizarEstadoCacifos } from "@/hooks/use-reservas";
 import { useToast } from "@/hooks/use-toast";
@@ -32,10 +33,12 @@ export default React.memo(function PreencherCacifosModal({
 }: PreencherCacifosModalProps) {
   const { data: reserva, isLoading } = useReserva(reservaId ?? "");
   const { data: cacifos } = useCacifos(reservaId ? { reservaId } : undefined);
+  const { data: disponiveis } = useCacifosDisponiveis();
 
   const toast = useToast();
   const actualizarEstado = useActualizarEstadoCacifos();
   const adicionarCacifo = useAdicionarCacifoReserva();
+  const realocar = useRealocarTodos();
 
   const [showAddDropdown, setShowAddDropdown] = useState(false);
 
@@ -83,6 +86,22 @@ export default React.memo(function PreencherCacifosModal({
     setShowAddDropdown(false);
   }, [reservaId, adicionarCacifo, toast]);
 
+  const handleRealocar = useCallback(() => {
+    if (!reservaId) return;
+    realocar.mutate(reservaId, {
+      onSuccess: (res) => {
+        if (res.trocados === 0) {
+          toast.info("Não há cacifos livres suficientes para realocar.");
+        } else if (res.trocados < res.total) {
+          toast.info(`Realocados ${res.trocados} de ${res.total} cacifos.`);
+        } else {
+          toast.success(`Realocados todos os ${res.trocados} cacifos.`);
+        }
+      },
+      onError: () => toast.error("Erro ao realocar cacifos."),
+    });
+  }, [reservaId, realocar, toast]);
+
   // ── Render ───────────────────────────────────────────────────────
   if (!reservaId) return null;
 
@@ -112,10 +131,10 @@ export default React.memo(function PreencherCacifosModal({
             />
 
             {/* Lista de cacifos */}
-            <CacifosList cacifos={cacifosList} reservaId={reservaId} />
+            <CacifosList cacifos={cacifosList} reservaId={reservaId} disponiveis={disponiveis ?? []} />
 
-            {/* Adicionar cacifo */}
-            <div className="flex items-center gap-2">
+            {/* Acções: adicionar + realocar todos */}
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => setShowAddDropdown((v) => !v)}
@@ -134,6 +153,18 @@ export default React.memo(function PreencherCacifosModal({
                 >
                   <Package size={16} />
                   Próximo livre
+                </Button>
+              )}
+              {(disponiveis?.length ?? 0) > 0 && cacifosList.length > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={handleRealocar}
+                  loading={realocar.isPending}
+                  className="flex items-center gap-2 ml-auto"
+                  title="Atribui novos cacifos livres a todas as crianças"
+                >
+                  <RefreshCw size={16} />
+                  Realocar todos
                 </Button>
               )}
             </div>
@@ -274,7 +305,15 @@ function ControloFesta({
 }
 
 // ── Lista de Cacifos ───────────────────────────────────────────────
-function CacifosList({ cacifos, reservaId }: { cacifos: Cacifo[]; reservaId: string }) {
+function CacifosList({
+  cacifos,
+  reservaId,
+  disponiveis,
+}: {
+  cacifos: Cacifo[];
+  reservaId: string;
+  disponiveis: Cacifo[];
+}) {
   if (cacifos.length === 0) {
     return (
       <div className="py-6 text-center rounded-lg bg-gray-50">
@@ -293,16 +332,30 @@ function CacifosList({ cacifos, reservaId }: { cacifos: Cacifo[]; reservaId: str
         Cacifos ({cacifos.length})
       </h4>
       {cacifos.map((cacifo) => (
-        <CacifoRow key={cacifo.id} cacifo={cacifo} />
+        <CacifoRow
+          key={cacifo.id}
+          cacifo={cacifo}
+          reservaId={reservaId}
+          disponiveis={disponiveis}
+        />
       ))}
     </div>
   );
 }
 
 // ── Cacifo Row ─────────────────────────────────────────────────────
-function CacifoRow({ cacifo }: { cacifo: Cacifo }) {
+function CacifoRow({
+  cacifo,
+  reservaId,
+  disponiveis,
+}: {
+  cacifo: Cacifo;
+  reservaId: string;
+  disponiveis: Cacifo[];
+}) {
   const actualizar = useActualizarCacifo();
   const libertar = useLibertar();
+  const trocar = useTrocarCacifo();
   const [nome, setNome] = useState(cacifo.criancas ?? "");
   const isPlaceholder = !nome || nome === "Por preencher";
 
@@ -319,12 +372,34 @@ function CacifoRow({ cacifo }: { cacifo: Cacifo }) {
     libertar.mutate(cacifo.id);
   }, [cacifo.id, libertar]);
 
+  const handleTrocar = useCallback(
+    (novoCacifoId: string) => {
+      if (!novoCacifoId || novoCacifoId === cacifo.id) return;
+      trocar.mutate(
+        { reservaId, cacifoAtualId: cacifo.id, novoCacifoId },
+        { onError: () => {} }
+      );
+    },
+    [reservaId, cacifo.id, trocar]
+  );
+
+  // Opções do Select: cacifo actual + cacifos livres
+  const opcoes = [
+    { value: cacifo.id, label: `#${cacifo.numero}` },
+    ...disponiveis.map((c) => ({ value: c.id, label: `#${c.numero}` })),
+  ];
+
   return (
     <div className="flex items-center gap-2 p-2 rounded-lg border border-border bg-white hover:border-brand-200 transition-all">
-      {/* Badge número */}
-      <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-brand-50 text-brand-600 text-sm font-bold shrink-0">
-        #{cacifo.numero}
-      </span>
+      {/* Select número (trocar cacifo) */}
+      <div className="w-24 shrink-0">
+        <Select
+          options={opcoes}
+          value={cacifo.id}
+          onChange={handleTrocar}
+          className="!h-9 !text-sm !font-bold"
+        />
+      </div>
 
       {/* Input nome */}
       <input
@@ -333,10 +408,10 @@ function CacifoRow({ cacifo }: { cacifo: Cacifo }) {
         placeholder="Por preencher"
         onChange={(e) => setNome(e.target.value)}
         onBlur={handleBlur}
-        disabled={cacifo.estado === "LIVRE"}
+        disabled={cacifo.estado === "LIVRE" || trocar.isPending}
         className={`flex-1 px-3 py-2 text-sm rounded-lg border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-200 ${
           isPlaceholder ? "italic text-text-muted" : "text-text-primary"
-        }`}
+        } ${trocar.isPending ? "opacity-50" : ""}`}
       />
 
       {/* Remove */}

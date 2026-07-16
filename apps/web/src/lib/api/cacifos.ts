@@ -71,4 +71,16 @@ export const cacifosApi = {
       method: "POST",
       body: JSON.stringify({ reservaId, cacifoId }),
     }),
+
+  trocar: (reservaId: string, cacifoAtualId: string, novoCacifoId: string) =>
+    api<Cacifo>("/api/cacifos/trocar", {
+      method: "POST",
+      body: JSON.stringify({ reservaId, cacifoAtualId, novoCacifoId }),
+    }),
+
+  realocar: (reservaId: string) =>
+    api<{ trocados: number; total: number }>("/api/cacifos/realocar", {
+      method: "POST",
+      body: JSON.stringify({ reservaId }),
+    }),
 };

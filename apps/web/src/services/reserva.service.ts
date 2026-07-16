@@ -62,8 +62,6 @@ interface CreateReservaData {
   etapasIds?: string[];
   // Aniversariantes (multiple)
   aniversariantes?: AniversarianteInput[];
-  // Participantes
-  participantes?: { nome: string; cacifoId?: string }[];
   // Cliente
   clienteNome?: string;
   clienteContacto?: string;
@@ -114,7 +112,6 @@ interface UpdateReservaData {
   monitoresIds?: string[];
   etapasIds?: string[];
   aniversariantes?: AniversarianteInput[];
-  participantes?: { nome: string; cacifoId?: string }[];
   clienteNome?: string;
   clienteContacto?: string;
   clienteEmail?: string;
@@ -270,7 +267,6 @@ export const reservaService = {
           extras: { include: { extra: true } },
           monitores: { include: { monitor: true } },
           cacifos: true,
-          participantes: { include: { cacifo: true } },
         },
       }),
       prisma.reserva.count({ where }),
@@ -291,7 +287,6 @@ export const reservaService = {
         cacifos: true,
         menu: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
     });
     if (!reserva) throw new Error("NOT_FOUND");
@@ -441,7 +436,6 @@ export const reservaService = {
         extras: { include: { extra: true } },
         monitores: { include: { monitor: true } },
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
     });
 
@@ -569,7 +563,6 @@ export const reservaService = {
         extras: { include: { extra: true } },
         monitores: { include: { monitor: true } },
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
     });
   },
@@ -596,7 +589,6 @@ export const reservaService = {
     await prisma.reservaExtra.deleteMany({ where: { reservaId: id } });
     await prisma.reservaMonitor.deleteMany({ where: { reservaId: id } });
     await prisma.reservaEtapa.deleteMany({ where: { reservaId: id } });
-    await prisma.participante.deleteMany({ where: { reservaId: id } });
     return prisma.reserva.delete({ where: { id } });
   },
 
@@ -639,7 +631,6 @@ export const reservaService = {
         monitores: { include: { monitor: true } },
         cacifos: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
     });
   },
@@ -708,7 +699,6 @@ export const reservaService = {
         monitores: { include: { monitor: true } },
         cacifos: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
     });
   },
@@ -753,7 +743,6 @@ export const reservaService = {
         cacifos: true,
         menu: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
       orderBy: { inicioEm: "asc" },
     });
@@ -777,7 +766,6 @@ export const reservaService = {
         monitores: { include: { monitor: true } },
         menu: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        participantes: { include: { cacifo: true } },
       },
       orderBy: { fimReal: "desc" },
     });

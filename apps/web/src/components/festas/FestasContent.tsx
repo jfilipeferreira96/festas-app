@@ -24,8 +24,6 @@ import {
   Eye,
   Trash2,
   Pencil,
-  UserCheck,
-  UserX,
   Check,
   Plus,
   MoreVertical,
@@ -40,7 +38,6 @@ import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservasAtivas, useFinalizarReserva, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
 import { useDashboardKPIs } from "@/hooks/use-dashboard";
 import { useCacifos } from "@/hooks/use-cacifos";
-import { useParticipantes, useConfirmarPresenca, useAdicionarParticipante } from "@/hooks/use-participantes";
 import FestaForm from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
 import type { Reserva } from "@/lib/api/reservas";
@@ -238,7 +235,6 @@ function FestaCard({
   const [isOverdue, setIsOverdue] = useState(false);
   const [isWaitingStart, setIsWaitingStart] = useState(false);
   const [showCacifos, setShowCacifos] = useState(false);
-  const [showCheckIn, setShowCheckIn] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -251,28 +247,6 @@ function FestaCard({
   const { data: cacifos } = useCacifos(
     showCacifos ? { reservaId: festa.id } : undefined
   );
-
-  // Participantes para check-in inline
-  const { data: participantes } = useParticipantes(showCheckIn ? festa.id : "");
-  const confirmarPresenca = useConfirmarPresenca(festa.id);
-  const adicionarParticipante = useAdicionarParticipante(festa.id);
-  const [novoNome, setNovoNome] = useState("");
-  const [filtroParticipantes, setFiltroParticipantes] = useState("");
-
-  const participantesFiltrados = React.useMemo(() => {
-    if (!participantes) return [];
-    if (!filtroParticipantes.trim()) return participantes;
-    return participantes.filter(p =>
-      p.nome.toLowerCase().includes(filtroParticipantes.toLowerCase())
-    );
-  }, [participantes, filtroParticipantes]);
-
-  // Reset filter when panel closes
-  React.useEffect(() => {
-    if (!showCheckIn) {
-      setFiltroParticipantes("");
-    }
-  }, [showCheckIn]);
 
   React.useEffect(() => {
     if (!festa.inicioEm || !festa.fimPrevisto) return;
@@ -342,23 +316,10 @@ function FestaCard({
     [festa.monitores]
   );
 
-  const handleTogglePresenca = useCallback((participanteId: string, currentState: boolean) => {
-    confirmarPresenca.mutate({ participanteId, presenca: !currentState });
-  }, [confirmarPresenca]);
-
-  const handleAdicionar = useCallback(() => {
-    const nome = novoNome.trim();
-    if (!nome) return;
-    adicionarParticipante.mutate({ nome }, { onSuccess: () => setNovoNome("") });
-  }, [novoNome, adicionarParticipante]);
-
-  const presentes = participantes?.filter(p => p.presente).length ?? 0;
-  const total = participantes?.length ?? 0;
-
   return (
     <div
      className={`bg-surface rounded-[14px] shadow-card border overflow-hidden ${
-       isOverdue ? "border-accent-red" : isWaitingStart ? "border-primary-300" : "border-border"
+       isOverdue ? "border-accent-red-400" : isWaitingStart ? "border-primary-300" : "border-border"
      }`}
    >
      {/* Color bar — cor da festa para identificação das pulseiras */}
@@ -447,8 +408,18 @@ function FestaCard({
           <span>·</span>
           <span>{festa.duracaoMinutos} min</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5">
-          <span>{festa.participantes?.filter((p) => p.presente).length ?? 0}/{festa.numCriancas ?? 0} crianças presentes</span>
+        <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5 flex-wrap">
+          <span>{(festa.cacifos?.filter((c) => c.criancas && c.criancas.trim() && c.criancas !== "Por preencher").length ?? 0)}/{festa.numCriancas ?? 0} cacifos preenchidos</span>
+          {festa.cacifosConcluido && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent-green-100 text-accent-green-600">
+              ✓ Concluído
+            </span>
+          )}
+          {!festa.cacifosConcluido && festa.cacifosChamado && (
+            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-accent-orange-100 text-accent-orange-600">
+              🔔 Chamado
+            </span>
+          )}
           {festa.cliente && (
             <>
               <span>·</span>
@@ -475,7 +446,7 @@ function FestaCard({
             </p>
             <p
               className={`text-2xl font-bold font-mono ${
-                isOverdue ? "text-accent-red" : isWaitingStart ? "text-text-secondary" : "text-accent-orange"
+                isOverdue ? "text-accent-red-500" : isWaitingStart ? "text-text-secondary" : "text-accent-orange-500"
               }`}
             >
               {isWaitingStart ? `${festa.duracaoMinutos} min` : remaining}
@@ -485,7 +456,7 @@ function FestaCard({
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
-              isOverdue ? "bg-accent-red" : isWaitingStart ? "bg-primary-400" : "bg-accent-green"
+              isOverdue ? "bg-accent-red-500" : isWaitingStart ? "bg-primary-400" : "bg-accent-green-500"
             }`}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
@@ -685,17 +656,6 @@ function FestaCard({
           {showCacifos ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </button>
         <button
-          onClick={() => setShowCheckIn(!showCheckIn)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg transition-colors ${
-            showCheckIn ? "text-accent-green-600 bg-accent-green-50" : "text-text-secondary hover:text-accent-green-600 hover:bg-accent-green-50"
-          }`}
-          title="Check-in crianças"
-        >
-          <UserCheck size={13} />
-          <span>Crianças</span>
-          {showCheckIn ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-        </button>
-        <button
           onClick={onView}
           className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-text-secondary hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"
           title="Ver tudo"
@@ -757,104 +717,6 @@ function FestaCard({
         </div>
       )}
 
-      {/* Check-in Panel */}
-      {showCheckIn && (
-        <div className="p-4 border-t border-border bg-gray-50">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-semibold text-text-primary flex items-center gap-2">
-              <UserCheck size={14} />
-              Check-in ({presentes}/{total})
-            </h4>
-            {total > 0 && (
-              <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-all ${presentes === total ? "bg-accent-green-500" : "bg-primary-400"}`}
-                  style={{ width: `${(presentes / total) * 100}%` }}
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Search/Filter */}
-          <div className="mb-3">
-            <input
-              type="text"
-              value={filtroParticipantes}
-              onChange={(e) => setFiltroParticipantes(e.target.value)}
-              placeholder="Filtrar crianças..."
-              className="w-full text-xs px-3 py-1.5 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary-400"
-            />
-          </div>
-
-          {/* Add participant */}
-          <div className="flex items-center gap-2 mb-3">
-            <input
-              type="text"
-              value={novoNome}
-              onChange={(e) => setNovoNome(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdicionar(); } }}
-              placeholder="Nome da criança..."
-              className="flex-1 text-xs px-3 py-1.5 border border-border rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-primary-400"
-            />
-            <Tooltip content="Adicionar" position="top" theme="dark">
-              <button
-                onClick={handleAdicionar}
-                disabled={!novoNome.trim() || adicionarParticipante.isPending}
-                className="p-1.5 text-accent-green-600 hover:bg-accent-green-50 rounded-lg transition-colors disabled:opacity-50"
-              >
-                <Plus size={14} />
-              </button>
-            </Tooltip>
-          </div>
-
-          {/* Participants list */}
-          {participantesFiltrados.length > 0 ? (
-            <div className="space-y-1 max-h-[200px] overflow-y-auto">
-              {participantesFiltrados.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-white transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Tooltip
-                      content={p.presente ? "Desmarcar presença" : "Marcar presente"}
-                      position="top"
-                      theme="dark"
-                    >
-                      <button
-                        onClick={() => handleTogglePresenca(p.id, p.presente ?? false)}
-                        disabled={confirmarPresenca.isPending}
-                        className={`shrink-0 transition-all ${p.presente ? "text-accent-green-500" : "text-text-muted hover:text-accent-green-400"}`}
-                      >
-                        {p.presente ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                      </button>
-                    </Tooltip>
-                    <span className={`text-xs ${p.presente ? "text-text-primary font-medium" : "text-text-secondary"}`}>
-                      {p.nome}
-                    </span>
-                  </div>
-                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                    p.presente ? "bg-accent-green-50 text-accent-green-600" : "bg-gray-100 text-text-muted"
-                  }`}>
-                    {p.presente ? "Presente" : "Ausente"}
-                  </span>
-                </div>
-              ))}
-              {filtroParticipantes && participantesFiltrados.length === 0 && participantes && participantes.length > 0 && (
-                <p className="text-xs text-text-muted text-center py-2">
-                  Nenhum participante encontrado.
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-xs text-text-muted text-center py-4">
-              {participantes && participantes.length > 0
-                ? "Nenhum participante encontrado."
-                : "Nenhum participante registado."}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

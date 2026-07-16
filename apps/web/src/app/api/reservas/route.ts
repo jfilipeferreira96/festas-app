@@ -120,7 +120,6 @@ export async function POST(request: NextRequest) {
       monitoresIds,
       etapasIds,
       aniversariantes,
-      participantes,
       // Cliente fields
       clienteNome,
       clienteContacto,
@@ -167,7 +166,6 @@ export async function POST(request: NextRequest) {
       monitoresIds: monitoresIds || undefined,
       etapasIds: etapasIds || undefined,
       aniversariantes: aniversariantes || undefined,
-      participantes: participantes || undefined,
       clienteNome,
       clienteContacto,
       clienteEmail,

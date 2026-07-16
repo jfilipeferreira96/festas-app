@@ -9,7 +9,6 @@ export type { Aniversariante } from "./types/aniversariante";
 export type { EstadoReserva, MetodoPagamento, EstadoCaucao, TipoBolo, Reserva, ReservaExtra, ReservaMonitor, ReservaEtapa, ReservaAniversariante, CriarReservaDTO, CacifoHistoricoEntry } from "./types/reserva";
 export type { EstadoCacifo, Cacifo, ConfiguracaoCacifo, UpdateConfiguracaoCacifoDTO } from "./types/cacifo";
 export type { CategoriaItem, Menu } from "./types/menu";
-export type { Participante, CriarParticipanteDTO } from "./types/participante";
 export type { Local } from "./types/local";
 export type { SalaLanche, CriarSalaLancheDTO } from "./types/salaLanche";
 export type { Monitor, CriarMonitorDTO, AtualizarMonitorDTO, HorasMonitorResult } from "./types/monitor";
