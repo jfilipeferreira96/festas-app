@@ -348,21 +348,33 @@ export default function CacifosContent() {
               hover: "hover:bg-gray-100 hover:shadow-md hover:scale-[1.04]",
               icon: "text-gray-400",
             };
+            const porPreencher =
+              cacifo.estado === "RESERVADO" &&
+              (!cacifo.criancas || !cacifo.criancas.trim() || cacifo.criancas === "Por preencher");
             return (
               <button
                 key={cacifo.id}
                 onClick={() => setSelectedCacifo(cacifo)}
-                className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 border relative cursor-pointer active:scale-95 ${style.base} ${style.hover}`}
+                className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 border-2 relative cursor-pointer active:scale-95 ${
+                  porPreencher
+                    ? "border-dashed border-accent-orange bg-brand-50 text-brand-700"
+                    : style.base
+                } ${style.hover}`}
                 title={cacifo.criancas || `Cacifo ${cacifo.numero}`}
               >
                 <Package size={14} className={style.icon} />
                 <span className="text-xs font-bold mt-0.5">{cacifo.numero}</span>
+                {porPreencher && (
+                  <span className="text-[9px] leading-tight text-center mt-0.5 max-w-[95%] truncate text-accent-orange font-medium">
+                    Por preencher
+                  </span>
+                )}
                 {cacifo.estado === "OCUPADO" && cacifo.criancas && (
                   <span className="text-[11px] leading-tight text-center mt-0.5 max-w-[95%] truncate font-medium">
                     {cacifo.criancas}
                   </span>
                 )}
-                {cacifo.reserva && (
+                {cacifo.reserva && !porPreencher && (
                   <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
                     {cacifo.reserva.cliente?.nome ?? ""}
                   </span>

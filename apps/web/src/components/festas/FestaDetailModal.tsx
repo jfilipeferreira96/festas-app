@@ -42,7 +42,7 @@ const CAUCAO_LABELS: Record<string, string> = {
 };
 
 // ── Quick nav tabs ─────────────────────────────────────────────────
-type QuickTab = "geral" | "participantes" | "cacifos";
+type QuickTab = "geral" | "criancas";
 
 // ── Props ──────────────────────────────────────────────────────────
 interface FestaDetailModalProps {
@@ -151,26 +151,17 @@ function DetailContent({
           Geral
         </button>
         <button
-          onClick={() => setActiveTab("participantes")}
+          onClick={() => setActiveTab("criancas")}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-            activeTab === "participantes"
+            activeTab === "criancas"
               ? "bg-white text-text-primary shadow-sm"
               : "text-text-muted hover:text-text-secondary"
           }`}
         >
           <Users size={12} />
-          Participantes {numParticipantes > 0 && <span className="ml-0.5 text-[10px] opacity-70">({numParticipantes})</span>}
-        </button>
-        <button
-          onClick={() => setActiveTab("cacifos")}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-            activeTab === "cacifos"
-              ? "bg-white text-text-primary shadow-sm"
-              : "text-text-muted hover:text-text-secondary"
-          }`}
-        >
-          <Package size={12} />
-          Cacifos {numCacifos > 0 && <span className="ml-0.5 text-[10px] opacity-70">({numCacifos})</span>}
+          Crianças {(numParticipantes > 0 || numCacifos > 0) && (
+            <span className="ml-0.5 text-[10px] opacity-70">({numParticipantes} crianças, {numCacifos} cacifos)</span>
+          )}
         </button>
       </div>
 
@@ -178,11 +169,8 @@ function DetailContent({
       {activeTab === "geral" && (
         <GeralTab reserva={reserva} hidePrices={hidePrices} />
       )}
-      {activeTab === "participantes" && (
-        <ParticipantesTab reserva={reserva} />
-      )}
-      {activeTab === "cacifos" && (
-        <CacifosTab reserva={reserva} />
+      {activeTab === "criancas" && (
+        <CriancasTab reserva={reserva} />
       )}
 
     </div>
@@ -439,107 +427,78 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
   );
 }
 
-// ── Participantes Tab ──────────────────────────────────────────────
-function ParticipantesTab({ reserva }: { reserva: Reserva }) {
+// ── Crianças Tab (unified Participantes + Cacifos) ───────────────────
+function CriancasTab({ reserva }: { reserva: Reserva }) {
   const participantes = reserva.participantes ?? [];
   const presentes = participantes.filter(p => p.presente).length;
-
-  if (participantes.length === 0) {
-    return (
-      <div className="py-8 text-center">
-        <Users size={32} className="mx-auto text-text-muted mb-2" />
-        <p className="text-sm text-text-muted">Nenhum participante registado.</p>
-        <p className="text-xs text-text-muted mt-1">Previstos: {reserva.numCriancas ?? reserva.previsaoCriancas ?? 0} crianças</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {/* Summary */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-        <div className="flex items-center gap-2">
-          <Users size={16} className="text-brand-500" />
-          <span className="text-sm font-medium text-text-primary">
-            {presentes}/{participantes.length} presentes
-          </span>
-        </div>
-        <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${presentes === participantes.length ? "bg-accent-green-500" : "bg-primary-400"}`}
-            style={{ width: `${(presentes / participantes.length) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      {/* List */}
-      <div className="space-y-1">
-        {participantes.map((p) => (
-          <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-border transition-all">
-            <div className="flex items-center gap-2">
-              <span className={`shrink-0 ${p.presente ? "text-accent-green-500" : "text-text-muted"}`}>
-                {p.presente ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-              </span>
-              <span className="text-sm text-text-primary">{p.nome}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {p.cacifo && (
-                <span className="text-xs px-2 py-0.5 bg-primary-50 text-primary-500 rounded-full">
-                  Cacifo #{p.cacifo.numero}
-                </span>
-              )}
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                p.presente ? "bg-accent-green-50 text-accent-green-600" : "bg-gray-100 text-text-muted"
-              }`}>
-                {p.presente ? "Presente" : "Ausente"}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Cacifos Tab ────────────────────────────────────────────────────
-function CacifosTab({ reserva }: { reserva: Reserva }) {
   const cacifos = reserva.cacifos ?? [];
   const historico = reserva.cacifosHistorico ?? [];
 
-  if (cacifos.length === 0 && historico.length === 0) {
-    return (
-      <div className="py-8 text-center">
-        <Package size={32} className="mx-auto text-text-muted mb-2" />
-        <p className="text-sm text-text-muted">Nenhum cacifo atribuído.</p>
-      </div>
-    );
-  }
+  const totalCacifos = cacifos.length;
+  const preenchidos = cacifos.filter(
+    (c) => c.criancas && c.criancas.trim() && c.criancas !== "Por preencher",
+  ).length;
+  const pctCacifos = totalCacifos > 0 ? Math.round((preenchidos / totalCacifos) * 100) : 0;
 
   return (
     <div className="space-y-4">
-      {/* Active Cacifos */}
-      {cacifos.length > 0 && (
-        <div>
-          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Cacifos Activos ({cacifos.length})</h4>
-          <div className="grid grid-cols-4 gap-2">
-            {cacifos.map((c) => (
-              <div key={c.id} className={`rounded-lg p-3 text-center text-xs shadow-sm ${
-                c.estado === "LIVRE" ? "bg-accent-green-400 text-white"
-                  : c.estado === "OCUPADO" ? "bg-accent-red-400 text-white"
-                  : c.estado === "RESERVADO" ? "bg-brand-500 text-white"
-                  : "bg-gray-200 text-gray-500"
-              }`}>
-                <div className="font-bold text-sm">#{c.numero}</div>
-                <div className="text-[10px] opacity-80">{c.estado}</div>
-                {c.criancas && <div className="text-[10px] mt-1 opacity-90 truncate" title={c.criancas}>{c.criancas}</div>}
-                {c.notas && <div className="text-[10px] mt-0.5 opacity-75 truncate" title={c.notas}>📝 {c.notas}</div>}
-              </div>
-            ))}
+      {/* Cacifos Progress + Badges */}
+      {totalCacifos > 0 && (
+        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Package size={16} className="text-brand-500" />
+            <span className="text-sm font-medium text-text-primary">
+              {preenchidos}/{totalCacifos} cacifos preenchidos
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {reserva.cacifosChamado && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-orange-50 text-accent-orange">
+                🔔 Chamado
+              </span>
+            )}
+            {reserva.cacifosConcluido && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-accent-green-50 text-accent-green-600">
+                ✓ Concluído
+              </span>
+            )}
+            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${pctCacifos === 100 ? "bg-accent-green-500" : "bg-brand-400"}`}
+                style={{ width: `${pctCacifos}%` }}
+              />
+            </div>
           </div>
         </div>
       )}
 
-      {/* History Cacifos */}
+      {/* Cacifos Grid */}
+      {totalCacifos > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Cacifos Activos ({totalCacifos})</h4>
+          <div className="grid grid-cols-4 gap-2">
+            {cacifos.map((c) => {
+              const porPreencher = !c.criancas || !c.criancas.trim() || c.criancas === "Por preencher";
+              return (
+                <div key={c.id} className={`rounded-lg p-3 text-center text-xs shadow-sm border-2 ${
+                  c.estado === "OCUPADO" ? "bg-accent-red-400 text-white border-accent-red-400"
+                    : porPreencher ? "bg-white text-text-secondary border-dashed border-accent-orange"
+                    : c.estado === "RESERVADO" ? "bg-brand-500 text-white border-brand-500"
+                    : c.estado === "LIVRE" ? "bg-accent-green-400 text-white border-accent-green-400"
+                    : "bg-gray-200 text-gray-500 border-gray-200"
+                }`}>
+                  <div className="font-bold text-sm">#{c.numero}</div>
+                  <div className="text-[10px] opacity-80">{porPreencher ? "Por preencher" : c.estado}</div>
+                  {c.criancas && !porPreencher && <div className="text-[10px] mt-1 opacity-90 truncate" title={c.criancas}>{c.criancas}</div>}
+                  {c.notas && <div className="text-[10px] mt-0.5 opacity-75 truncate" title={c.notas}>📝 {c.notas}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Cacifos Histórico */}
       {historico.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Histórico de Cacifos ({historico.length})</h4>
@@ -554,9 +513,69 @@ function CacifosTab({ reserva }: { reserva: Reserva }) {
           </div>
         </div>
       )}
+
+      {/* Separador */}
+      {participantes.length > 0 && totalCacifos > 0 && <hr className="border-gray-200" />}
+
+      {/* Participantes Check-in */}
+      {participantes.length === 0 ? (
+        <div className="py-8 text-center">
+          <Users size={32} className="mx-auto text-text-muted mb-2" />
+          <p className="text-sm text-text-muted">Nenhum participante registado.</p>
+          <p className="text-xs text-text-muted mt-1">Previstos: {reserva.numCriancas ?? reserva.previsaoCriancas ?? 0} crianças</p>
+          {totalCacifos > 0 && (
+            <p className="text-xs text-text-muted mt-3 max-w-xs mx-auto">
+              Os cacifos podem ser preenchidos directamente (ver acima).
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-brand-500" />
+              <span className="text-sm font-medium text-text-primary">
+                {presentes}/{participantes.length} presentes
+              </span>
+            </div>
+            <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${presentes === participantes.length ? "bg-accent-green-500" : "bg-primary-400"}`}
+                style={{ width: `${(presentes / participantes.length) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            {participantes.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-border transition-all">
+                <div className="flex items-center gap-2">
+                  <span className={`shrink-0 ${p.presente ? "text-accent-green-500" : "text-text-muted"}`}>
+                    {p.presente ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                  </span>
+                  <span className="text-sm text-text-primary">{p.nome}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {p.cacifo && (
+                    <span className="text-xs px-2 py-0.5 bg-primary-50 text-primary-500 rounded-full">
+                      Cacifo #{p.cacifo.numero}
+                    </span>
+                  )}
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                    p.presente ? "bg-accent-green-50 text-accent-green-600" : "bg-gray-100 text-text-muted"
+                  }`}>
+                    {p.presente ? "Presente" : "Ausente"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 // ── Runtime Timer Component ────────────────────────────────────────
 function RuntimeTimer({ reserva }: { reserva: Reserva }) {

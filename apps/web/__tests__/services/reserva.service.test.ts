@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import testPrisma from "../helpers/test-prisma";
 import { seedTestData, cleanTestData, TEST_IDS } from "../helpers/seed";
 
@@ -60,7 +60,8 @@ describe("Reserva Service", () => {
       expect(reserva.estado).toBe("RESERVA");
       expect(reserva.local.id).toBe(TEST_IDS.LOCAL_1);
 
-      // Cleanup
+      // Cleanup — release pre-reserved cacifos (create() now auto pre-reserves)
+      await testPrisma.cacifo.updateMany({ where: { reservaId: reserva.id }, data: { estado: "LIVRE", reservaId: null, criancas: null } });
       await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
@@ -926,6 +927,12 @@ describe("Reserva Service", () => {
 
   // ── create() com pré-reserva de cacifos ──────────────────────
   describe("create() — pré-reserva automática de cacifos", () => {
+    // Garante uma pool de cacifos limpa (LIVRE) — testes anteriores podem ter deixado
+    // cacifos pré-reservados que não foram limpos.
+    beforeEach(async () => {
+      await testPrisma.cacifo.updateMany({ where: {}, data: { estado: "LIVRE", reservaId: null, criancas: null, notas: null } });
+    });
+
     it("deve pré-reservar N cacifos ao criar reserva com numCriancas", async () => {
       const reserva = await reservaService.create({
         data: tomorrowStr,

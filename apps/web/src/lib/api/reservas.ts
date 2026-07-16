@@ -64,6 +64,9 @@ export interface CreateReservaData {
   numCriancasConfirmadas?: number;
   notasCacifos?: string;
   notasLanche?: string;
+  observacoesGerais?: string;
+  observacoesLesoes?: string;
+  observacoesBrindes?: string;
   // Pagamento
   metodoPagamento?: MetodoPagamento;
   valorPago?: number;
