@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Plus, Mail, Phone, Cake, Search, Users, CalendarHeart } from "lucide-react";
+import { Plus, Mail, Phone, Cake, Search, Users, CalendarHeart, Lock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import InputField from "@/components/form/input/InputField";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { useClientes, useCreateCliente, useUpdateCliente, useDeleteCliente } from "@/hooks/use-clientes";
+import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import type { Cliente } from "@/lib/api/clientes";
 import { AniversariosTabela } from "@/components/aniversarios/AniversariosContent";
 import HistoricoFestasModal from "./HistoricoFestasModal";
@@ -110,6 +111,9 @@ export default function ClientesContent() {
   const createCliente = useCreateCliente();
   const updateCliente = useUpdateCliente();
   const deleteCliente = useDeleteCliente();
+  const { canWrite } = useMinhasPermissoes();
+  // Apenas administradores têm permissão de escrita no módulo clientes
+  const canEdit = canWrite("clientes");
 
   const [showForm, setShowForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"clientes" | "aniversarios">("clientes");
@@ -217,10 +221,17 @@ export default function ClientesContent() {
         title="Clientes"
         subtitle="Gestão de pais/encarregados de educação e contactos para newsletters"
         actions={
-          <Button onClick={handleCreate} className="flex items-center gap-2">
-            <Plus size={16} />
-            Novo Cliente
-          </Button>
+          canEdit ? (
+            <Button onClick={handleCreate} className="flex items-center gap-2">
+              <Plus size={16} />
+              Novo Cliente
+            </Button>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-xs text-text-muted px-3 py-2 rounded-lg bg-gray-50 border border-border">
+              <Lock size={13} />
+              Apenas leitura — contacte a administração para alterações
+            </span>
+          )
         }
       />
 
@@ -264,18 +275,18 @@ export default function ClientesContent() {
             itemLabel="clientes"
             pagination
             pageSize={10}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={canEdit ? handleEdit : undefined}
+            onDelete={canEdit ? handleDelete : undefined}
             onView={handleView}
             emptyState={{
               title: "Nenhum cliente encontrado",
               description: "Os clientes são adicionados automaticamente ao criar festas. Também pode adicionar manualmente.",
-              action: (
+              action: canEdit ? (
                 <Button onClick={handleCreate} className="flex items-center gap-2">
                   <Plus size={16} />
                   Novo Cliente
                 </Button>
-              ),
+              ) : undefined,
             }}
           />
         ) : (

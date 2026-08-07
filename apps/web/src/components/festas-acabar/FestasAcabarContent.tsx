@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Package, Tv, Minimize2 } from "lucide-react";
+import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Package, Tv, Minimize2, Gift } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
@@ -143,29 +143,41 @@ export default function FestasAcabarContent() {
     {
       key: "observacoesBrindes",
       label: "Brindes",
-      render: (_v, f) => (
-        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.observacoesBrindes || "—"}
-        </span>
-      ),
+      render: (_v, f) =>
+        f.observacoesBrindes ? (
+          <div className="inline-flex items-start gap-1.5 max-w-[280px] rounded-lg bg-brand-50 border border-brand-200 px-2.5 py-1.5">
+            <Gift size={13} className="text-brand-600 shrink-0 mt-0.5" />
+            <span className="text-xs text-brand-800 whitespace-normal">{f.observacoesBrindes}</span>
+          </div>
+        ) : (
+          <span className="text-xs text-text-muted/50">—</span>
+        ),
     },
     {
       key: "observacoesBrindesPais",
-      label: "Brindes dos Pais",
-      render: (_v, f) => (
-        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.observacoesBrindesPais || "—"}
-        </span>
-      ),
+      label: "Brindes Pais",
+      render: (_v, f) =>
+        f.observacoesBrindesPais ? (
+          <div className="inline-flex items-start gap-1.5 max-w-[280px] rounded-lg bg-brand-50 border border-brand-200 px-2.5 py-1.5">
+            <Gift size={13} className="text-brand-600 shrink-0 mt-0.5" />
+            <span className="text-xs text-brand-800 whitespace-normal">{f.observacoesBrindesPais}</span>
+          </div>
+        ) : (
+          <span className="text-xs text-text-muted/50">—</span>
+        ),
     },
     {
       key: "observacoesLesoes",
-      label: "Obs. Lesões",
-      render: (_v, f) => (
-        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.observacoesLesoes || "—"}
-        </span>
-      ),
+      label: "⚠ Lesões",
+      render: (_v, f) =>
+        f.observacoesLesoes ? (
+          <div className="inline-flex items-start gap-1.5 max-w-[280px] rounded-lg bg-accent-orange-50 border border-accent-orange-200 px-2.5 py-1.5">
+            <AlertTriangle size={13} className="text-accent-orange-600 shrink-0 mt-0.5" />
+            <span className="text-xs text-accent-orange-800 whitespace-normal">{f.observacoesLesoes}</span>
+          </div>
+        ) : (
+          <span className="text-xs text-text-muted/50">—</span>
+        ),
     },
   ];
 

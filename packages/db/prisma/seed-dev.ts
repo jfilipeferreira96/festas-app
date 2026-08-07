@@ -13,7 +13,7 @@
  *   → cor, tema, bolo, previsaoCriancas, observações
  *   → pagamento (metodo, valor, pago, caução)
  *   → menus
- *   → participantes (crianças) com cacifos associados
+ *   → cacifos preenchidos com nomes das crianças
  *   → extras, monitores, etapas
  * - 6 Etapas de festa config
  * - Marketing: segmento + newsletter + campanha
@@ -283,7 +283,7 @@ async function seedCacifos() {
   for (let i = 1; i <= 40; i++) {
     await prisma.cacifo.upsert({
       where: { numero: i },
-      update: { estado: "LIVRE", reservaId: null, criancas: null, notas: null, participante: { disconnect: true } },
+      update: { estado: "LIVRE", reservaId: null, criancas: null, notas: null },
       create: { numero: i, estado: "LIVRE", configuracaoId: "config-cacifo-001" },
     });
   }
@@ -518,7 +518,6 @@ async function seedReservas() {
     "reserva-ontem-1", "reserva-ontem-2", "reserva-ontem-3", "reserva-ontem-4", "reserva-ontem-5", "reserva-ontem-6",
     "reserva-today-3", "reserva-tmr-2",
   ];
-  await prisma.participante.deleteMany({ where: { reservaId: { in: oldReservaIds } } });
   await prisma.reservaEtapa.deleteMany({ where: { reservaId: { in: oldReservaIds } } });
   await prisma.reservaMonitor.deleteMany({ where: { reservaId: { in: oldReservaIds } } });
   await prisma.reservaAniversariante.deleteMany({ where: { reservaId: { in: oldReservaIds } } });
@@ -531,58 +530,25 @@ async function seedReservas() {
   const todayDate = today();
   const todayStr = toDateStr(todayDate);
 
-  // Helper to create participantes + assign cacifos for a reserva
-  async function createParticipantes(
+  // Helper to fill cacifos with children names for a reserva
+  async function fillCacifos(
     reservaId: string,
     numCriancas: number,
-    numPresentes: number,
+    numPreenchidos: number,
     startCacifo: number,
-    allPresent: boolean = false
+    allPreenchidos: boolean = false
   ) {
     const names = pickNames(numCriancas);
-    const participantes: { id: string; nome: string; presente: boolean; cacifoNum: number | null }[] = [];
+    const numToFill = allPreenchidos ? numCriancas : numPreenchidos;
 
-    for (let i = 0; i < numCriancas; i++) {
-      const presente = allPresent ? true : i < numPresentes;
-      const pId = `part-${reservaId}-${i + 1}`;
-      const cacifoNum = presente ? startCacifo + i : null;
-      participantes.push({ id: pId, nome: names[i] ?? `Criança ${i + 1}`, presente, cacifoNum });
-    }
-
-    // Limpar participantes antigos associados aos cacifos que vamos usar
-    const cacifosToUse = participantes
-      .filter(p => p.presente && p.cacifoNum !== null)
-      .map(p => p.cacifoNum!);
-    if (cacifosToUse.length > 0) {
-      await prisma.participante.updateMany({
-        where: { cacifo: { numero: { in: cacifosToUse } } },
-        data: { cacifoId: null },
-      });
-    }
-
-    // Create participantes with cacifo lookup
-    for (const p of participantes) {
-      let cacifoId: string | null = null;
-      if (p.presente && p.cacifoNum !== null) {
-        const cacifo = await prisma.cacifo.findUnique({ where: { numero: p.cacifoNum } });
-        cacifoId = cacifo?.id ?? null;
-      }
-
-      await prisma.participante.upsert({
-        where: { id: p.id },
-        update: { cacifoId },
-        create: { id: p.id, nome: p.nome, presente: p.presente, reservaId, cacifoId },
-      });
-    }
-
-    // Update cacifos for present kids
-    for (const p of participantes.filter(p => p.presente && p.cacifoNum !== null)) {
+    for (let i = 0; i < numToFill; i++) {
+      const cacifoNum = startCacifo + i;
       await prisma.cacifo.update({
-        where: { numero: p.cacifoNum! },
+        where: { numero: cacifoNum },
         data: {
           estado: "OCUPADO",
           reservaId,
-          criancas: p.nome,
+          criancas: names[i] ?? `Criança ${i + 1}`,
         },
       });
     }
@@ -806,8 +772,8 @@ async function seedReservas() {
   await prisma.reservaExtra.upsert({ where: { id: "rext-001-1" }, update: {}, create: { id: "rext-001-1", reservaId: "reserva-001", extraId: "extra-004", quantidade: 1 } });
   await prisma.reservaExtra.upsert({ where: { id: "rext-001-2" }, update: {}, create: { id: "rext-001-2", reservaId: "reserva-001", extraId: "extra-005", quantidade: 18 } });
   await prisma.reservaExtra.upsert({ where: { id: "rext-001-3" }, update: {}, create: { id: "rext-001-3", reservaId: "reserva-001", extraId: "extra-006", quantidade: 18 } });
-  // Participantes: 15 presentes de 18, cacifos 1-15
-  await createParticipantes("reserva-001", 18, 15, 1, false);
+  // Cacifos: 15 preenchidos de 18, cacifos 1-15
+  await fillCacifos("reserva-001", 18, 15, 1, false);
   // Etapas: 2/6 concluídas
   await createEtapas("reserva-001", 2, 6, tEmCurso);
 
@@ -1001,7 +967,7 @@ async function seedReservas() {
 
   console.log("  ✓ 24 reservas (6 ontem + 3 hoje + 2 amanhã + 3 futuras + 5 esta semana + 5 semana passada)");
   console.log("  ✓ ~92% em slots horários (10:00/14:00/16:30/18:30), 2 com horário custom");
-  console.log("  ✓ Menus, extras, participantes, etapas, horaLanche e brindes-pais para todas\n");
+  console.log("  ✓ Menus, extras, cacifos preenchidos, etapas, horaLanche e brindes-pais para todas\n");
 }
 
 // ─── Marketing ────────────────────────────────────────────────

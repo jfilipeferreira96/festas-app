@@ -18,6 +18,7 @@ import {
 import { useActualizarEstadoCacifos } from "@/hooks/use-reservas";
 import { useToast } from "@/hooks/use-toast";
 import { formatDate } from "@/utils/date";
+import { imprimirListaConvidados } from "@/utils/print-lista";
 import type { Cacifo } from "@/lib/api/cacifos";
 
 // ── Props ──────────────────────────────────────────────────────────
@@ -489,68 +490,4 @@ function NotasSection({
   );
 }
 
-// ── Impressão Lista Convidados ─────────────────────────────────────
-function imprimirListaConvidados(
-  reserva: NonNullable<ReturnType<typeof useReserva>["data"]>,
-  cacifos: Cacifo[]
-) {
-  const anvNomes = reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "—";
-  const data = formatDate(reserva.data);
-  const linhas = cacifos.length > 0 ? cacifos : [];
-  const total = linhas.length;
-
-  const nomesHtml = linhas
-    .map((c, i) => {
-      const nome = c.criancas && c.criancas !== "Por preencher" ? c.criancas : "";
-      return `<tr>
-        <td style="border:1px solid #999;padding:6px 10px;font-weight:bold;width:40px;text-align:center;">${i + 1}</td>
-        <td style="border:1px solid #999;padding:6px 10px;">${nome || "&nbsp;"}</td>
-        <td style="border:1px solid #999;padding:6px 10px;text-align:center;width:60px;">#${c.numero}</td>
-      </tr>`;
-    })
-    .join("");
-
-  const html = `<!DOCTYPE html>
-<html lang="pt">
-<head>
-  <meta charset="utf-8">
-  <title>Lista de Convidados — ${anvNomes}</title>
-  <style>
-    * { font-family: 'Inter', Arial, sans-serif; }
-    body { padding: 30px; color: #1a1a1a; }
-    h1 { font-size: 20px; margin-bottom: 4px; }
-    .info { font-size: 13px; color: #666; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th { background: #f0f0f0; padding: 8px 10px; text-align: left; border: 1px solid #999; font-size: 12px; text-transform: uppercase; }
-    .footer { margin-top: 20px; font-size: 12px; color: #999; }
-    @media print { body { padding: 15px; } }
-  </style>
-</head>
-<body>
-  <h1>🎉 Festa de ${anvNomes}</h1>
-  <div class="info">
-    Data: ${data} · Horário: ${reserva.horario} · Sala: ${reserva.local?.nome ?? "—"}
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:40px;text-align:center;">Nº</th>
-        <th>Nome da Criança</th>
-        <th style="width:60px;text-align:center;">Cacifo</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${nomesHtml || '<tr><td colspan="3" style="border:1px solid #999;padding:20px;text-align:center;color:#999;">Sem cacifos reservados</td></tr>'}
-    </tbody>
-  </table>
-  <div class="footer">Total de crianças: ${total} · Gerado em ${new Date().toLocaleString("pt-PT")}</div>
-  <script>window.onload = () => { window.print(); }</script>
-</body>
-</html>`;
-
-  const printWindow = window.open("", "_blank", "width=600,height=800");
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-  }
-}
+// impressão movida para @/utils/print-lista (partilhada com FestasContent)

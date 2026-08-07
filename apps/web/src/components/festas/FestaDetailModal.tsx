@@ -6,6 +6,7 @@ import {
   Clock, Cake, Sparkles, Package, CreditCard, Shield,
   Gift, FileText, MessageSquare, Sandwich,
   SquareCheck, Phone, Mail, Hash, Percent, Tag, Calendar,
+  Printer,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { StatusBadge, type StatusType } from "@/components/ui";
@@ -16,6 +17,7 @@ import type { Reserva } from "@/lib/api/reservas";
 import { formatDate, formatDuration } from "@/utils/date";
 import { differenceInYears } from "date-fns";
 import { BOLO_LABELS } from "@/lib/constants/bolo";
+import { imprimirListaConvidados } from "@/utils/print-lista";
 
 // ── Constants ──────────────────────────────────────────────────────
 const ESTADO_LABELS: Record<string, string> = {
@@ -161,6 +163,16 @@ function DetailContent({
           Crianças {numCacifos > 0 && (
             <span className="ml-0.5 text-[10px] opacity-70">({numCacifos} cacifos)</span>
           )}
+        </button>
+        {/* Botão de impressão — sempre visível */}
+        <button
+          type="button"
+          onClick={() => imprimirListaConvidados(reserva, reserva.cacifos ?? [])}
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md text-brand-700 hover:bg-brand-50 transition-colors"
+          title="Imprimir lista de crianças"
+        >
+          <Printer size={12} />
+          Imprimir
         </button>
       </div>
 

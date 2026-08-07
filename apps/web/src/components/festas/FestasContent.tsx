@@ -9,6 +9,7 @@ import {
   Users,
   Timer,
   Package,
+  Printer,
   ChevronDown,
   ChevronUp,
   CheckCircle,
@@ -42,6 +43,7 @@ import FestaForm from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
 import type { Reserva } from "@/lib/api/reservas";
 import { getAniversarianteNome, getAniversarianteNomes } from "@/lib/api/reservas";
+import { imprimirListaConvidados } from "@/utils/print-lista";
 import type { EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 
@@ -316,6 +318,11 @@ function FestaCard({
     [festa.monitores]
   );
 
+  const handleImprimir = useCallback(() => {
+    imprimirListaConvidados(festa, festa.cacifos ?? []);
+    setIsDropdownOpen(false);
+  }, [festa]);
+
   return (
     <div
      className={`bg-surface rounded-[14px] shadow-card border overflow-hidden ${
@@ -349,6 +356,16 @@ function FestaCard({
              {isOverdue ? "Ultrapassou" : isWaitingStart ? "Aguarda início" : "Em curso"}
            </StatusBadge>
          </div>
+          {/* Botão de impressão rápido — visível directamente no card */}
+          <button
+            type="button"
+            onClick={handleImprimir}
+            className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-text-muted hover:bg-brand-50 hover:text-brand-600 transition-colors shrink-0"
+            title="Imprimir lista de crianças"
+            aria-label="Imprimir lista de crianças"
+          >
+            <Printer size={16} />
+          </button>
           {/* 3-dots dropdown — acções secundárias */}
           <div className="relative shrink-0">
             <button
@@ -385,6 +402,15 @@ function FestaCard({
                   >
                     <Eye size={14} className="text-text-muted" />
                     Ver tudo
+                  </DropdownItem>
+                </li>
+                <li>
+                  <DropdownItem
+                    onItemClick={handleImprimir}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <Printer size={14} className="text-text-muted" />
+                    Imprimir Lista
                   </DropdownItem>
                 </li>
                 <li className="my-1 border-t border-gray-100" />

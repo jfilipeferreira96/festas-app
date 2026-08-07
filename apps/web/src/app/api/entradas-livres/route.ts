@@ -34,6 +34,12 @@ export async function POST(request: NextRequest) {
     const entrada = await entradaLivreService.create(await request.json());
     return NextResponse.json(entrada, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "PAGAMENTO_OBRIGATORIO") {
+      return NextResponse.json(
+        { error: "É obrigatório indicar o estado do pagamento" },
+        { status: 400 }
+      );
+    }
     return handleError(error);
   }
 }

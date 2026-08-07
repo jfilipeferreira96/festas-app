@@ -111,7 +111,7 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
   },
   RECECAO: {
     reservas: "escrita",
-    clientes: "escrita",
+    clientes: "leitura",
     cacifos: "leitura",
   },
   STAFF: {

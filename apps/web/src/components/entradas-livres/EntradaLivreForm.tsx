@@ -33,7 +33,8 @@ const entradaLivreSchema = z.object({
   duracaoMinutos: z.number().min(60, "Duração mínima é 1 hora"),
   custoTotal: z.number().min(0, "O custo não pode ser negativo").optional(),
   metodoPagamento: z.string().optional(),
-  pago: z.boolean().optional(),
+  // pago é obrigatório: o utilizador tem de seleccionar explicitamente "Pago" ou "Não pago".
+  pago: z.boolean({ message: "É obrigatório indicar o estado do pagamento" }),
   cacifoId: z.string().optional(),
   observacoes: z.string().optional(),
   observacoesLesoes: z.string().optional(),
@@ -70,6 +71,13 @@ const METODO_PAGAMENTO_OPTIONS = [
   { value: "TRANSFERENCIA", label: "Transferência" },
   { value: "CARTAO", label: "Cartão" },
   { value: "OUTRO", label: "Outro" },
+];
+
+// Estado de pagamento — Select de 3 estados para obrigar selecção explícita
+const ESTADO_PAGAMENTO_OPTIONS = [
+  { value: "", label: "Seleccionar..." },
+  { value: "true", label: "Pago" },
+  { value: "false", label: "Não pago" },
 ];
 
 interface ExtraItem {
@@ -128,7 +136,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     !!entrada?.metodoPagamento2 || !!entrada?.valorPago2
   );
 
-  const defaultValues = useMemo<EntradaLivreFormData>(
+  const defaultValues = useMemo<Partial<EntradaLivreFormData>>(
     () => ({
       encarregadoNome: entrada?.encarregadoNome ?? "",
       encarregadoTelefone: entrada?.encarregadoTelefone ?? "",
@@ -136,7 +144,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       duracaoMinutos: entrada?.duracaoMinutos ?? 60,
       custoTotal: entrada?.custoTotal,
       metodoPagamento: entrada?.metodoPagamento ?? "",
-      pago: entrada?.pago ?? false,
+      // undefined enquanto o utilizador não seleccionar (obrigatório)
+      pago: entrada?.pago,
       cacifoId: entrada?.cacifoId ?? "",
       observacoes: entrada?.observacoes ?? "",
       observacoesLesoes: entrada?.observacoesLesoes ?? "",
@@ -163,7 +172,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   // ── Derived data ──
   const duracaoMinutos = watch("duracaoMinutos");
-  const pago = watch("pago") ?? false;
+  const pago = watch("pago");
   const cacifoIdWatched = watch("cacifoId");
 
   // Tarifário global (singleton) — usado para auto-preenchimento do custo
@@ -673,13 +682,19 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
             {/* Estado + Método */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-text-primary">Estado do pagamento</span>
-                <Switch
-                  checked={pago}
-                  onChange={(checked) => setValue("pago", checked)}
-                  label={pago ? "Pago" : "Não pago"}
+              <div>
+                <label className="block text-xs font-medium text-text-secondary mb-1">
+                  Estado do pagamento *
+                </label>
+                <Select
+                  options={ESTADO_PAGAMENTO_OPTIONS}
+                  placeholder="Seleccionar..."
+                  value={pago === undefined ? "" : pago ? "true" : "false"}
+                  onChange={(val) => setValue("pago", val === "true", { shouldValidate: true, shouldDirty: true })}
                 />
+                {errors.pago && (
+                  <p className="text-xs text-error-500 mt-1">{errors.pago.message}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-text-secondary mb-1">

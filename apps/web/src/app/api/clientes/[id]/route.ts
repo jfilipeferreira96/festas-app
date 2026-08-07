@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clienteService } from "@/services/cliente.service";
-import { requireAuth } from "@/lib/auth-server";
+import { requireAuth, checkModulo } from "@/lib/auth-server";
 import { createRouteErrorHandler } from "@/lib/route-error";
 import { t } from "@/lib/i18n-server";
 
@@ -48,6 +48,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
+    // Apenas administradores podem editar clientes (privacidade de dados)
+    const denied = checkModulo(auth.user, "clientes", "administracao");
+    if (denied) return denied;
+
     const { id } = await params;
     const { nome, email, telefone, contribuinte, codigoPostal, observacao, aniversariantes } =
       await request.json();
@@ -71,6 +75,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
+
+    // Apenas administradores podem apagar clientes (privacidade de dados)
+    const denied = checkModulo(auth.user, "clientes", "administracao");
+    if (denied) return denied;
 
     const { id } = await params;
     await clienteService.delete(id);

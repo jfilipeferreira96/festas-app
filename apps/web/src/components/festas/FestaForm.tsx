@@ -166,8 +166,13 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   const { data: etapas } = useEtapasFesta();
   const { isGlobalAdmin } = useMinhasPermissoes();
 
+  // Filtra extras da subcategoria "Bolos" — a informação do bolo é capturada
+  // pela secção "Bolo de Aniversário" (TipoBolo + tema + quantidade), pelo que
+  // ter extras duplicados (Bolo 1KG, Bolo 2KG, etc.) é redundante.
   const extraItems = useMemo<ExtraItem[]>(
-    () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo) as ExtraItem[],
+    () => (extras ?? []).filter(
+      (e) => e.categoria === "EXTRA" && e.activo && e.subcategoria !== "Bolos"
+    ) as ExtraItem[],
     [extras]
   );
 
@@ -477,7 +482,16 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     setEncarregadosAdicionais((p) => { const n = [...p]; n[i] = { ...n[i], [field]: value }; return n; });
   }, []);
   const [showDataNascimentoError, setShowDataNascimentoError] = useState(false);
-const onSubmit = useCallback(async (data: ReservaFormData) => {
+  const [submitError, setSubmitError] = useState("");
+
+  const onSubmit = useCallback(async (data: ReservaFormData) => {
+    // ── Validação manual de aniversariantes (fora do schema Zod) ──
+    if (!aniversariantes.some((a) => a.nome.trim())) {
+      setShowAniversarianteError(true);
+      return; // Não submete — o utilizador precisa de preencher o nome
+    }
+    setSubmitError("");
+
     const primeiroAniv = aniversariantes[0];
     const idade = calcIdade(primeiroAniv?.dataNascimento ?? "", data.data || new Date().toISOString().split("T")[0]);
     const adicionaisText = encarregadosAdicionais.filter((e) => e.nome.trim()).map((e, i) => {
@@ -522,10 +536,28 @@ const onSubmit = useCallback(async (data: ReservaFormData) => {
       descontoMotivo: data.descontoMotivo || undefined,
       aniversariantes: aniversariantes.filter((a) => a.nome.trim()).map((a) => ({ nome: a.nome, dataNascimento: a.dataNascimento || undefined })),
     };
-    if (reserva) await updateReserva.mutateAsync({ id: reserva.id, data: payload });
-    else await createReserva.mutateAsync(payload);
-    onClose();
+    try {
+      if (reserva) await updateReserva.mutateAsync({ id: reserva.id, data: payload });
+      else await createReserva.mutateAsync(payload);
+      onClose();
+    } catch (err) {
+      // O erro já é tratado pelo TanStack Query (toast/notificação).
+      // O catch evita que `isSubmitting` fique preso e bloqueie o botão.
+      setSubmitError(
+        err instanceof Error && err.message
+          ? `Erro ao guardar: ${err.message}`
+          : "Erro ao guardar a festa. Tente novamente."
+      );
+    }
   }, [reserva, aniversariantes, encarregadosAdicionais, selectedExtrasIds, extrasTexto, updateReserva, createReserva, onClose]);
+
+  /** Handler chamado quando a validação Zod falha — mostra erros e faz scroll. */
+  const onInvalid = useCallback(() => {
+    setShowAniversarianteError(true);
+    // Scroll para o primeiro campo com erro
+    const firstError = document.querySelector("[data-error='true'], .border-accent-red-400");
+    if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
   const corOptions = useMemo(() => [
     { value: "NONE", label: "Sem cor" },
@@ -540,7 +572,7 @@ const onSubmit = useCallback(async (data: ReservaFormData) => {
 
   return (
     <div className="flex flex-col max-h-[70vh]">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden overflow-y-auto px-3">
           <Step1Geral register={register} errors={errors} setValue={setValue} watch={watch} defaultValues={defaultValues}
             aniversariantes={aniversariantes} addAniversariante={addAniversariante} removeAniversariante={removeAniversariante}
@@ -572,6 +604,9 @@ const onSubmit = useCallback(async (data: ReservaFormData) => {
           <Button variant="outline" onClick={onClose} type="button">Cancelar</Button>
           <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "A guardar..." : reserva ? "Guardar Alterações" : "Criar Reserva"}</Button>
         </div>
+        {submitError && (
+          <p className="text-xs text-error-500 px-2 mt-1">{submitError}</p>
+        )}
       </form>
 
       {/* ── Modal: Pesquisar cliente existente ── */}
@@ -797,7 +832,7 @@ function Step1Geral({
         {horarioCustom && (
           <div className="flex-1">
             <label className="block text-xs font-medium text-text-secondary mb-1">Duração *</label>
-            <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" value={String(defaultValues.duracaoMinutos)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
+            <Select options={DURACAO_OPTIONS} placeholder="Seleccionar" value={String(watch("duracaoMinutos") ?? 120)} onChange={(val) => setValue("duracaoMinutos", Number(val))} />
           </div>
         )}
         {isAdmin && (
@@ -808,7 +843,7 @@ function Step1Geral({
         )}
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1"><MapPin size={12} /> Sala *</label>
-          <Select options={salaOptions} placeholder="Seleccionar" value={defaultValues.localId} onChange={(val) => setValue("localId", val)} />
+          <Select options={salaOptions} placeholder="Seleccionar" value={watch("localId") || ""} onChange={(val) => setValue("localId", val)} error={!!errors.localId} />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
         </div>
       </div>
@@ -905,7 +940,7 @@ function Step1Geral({
       <div className="flex gap-4">
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
-          <Select options={menuOptions} placeholder="Seleccionar menu" value={defaultValues.menuId ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
+          <Select options={menuOptions} placeholder="Seleccionar menu" value={watch("menuId") ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
           {menuWarning && (
             <div className="flex items-center gap-1.5 mt-1">
               <AlertTriangle size={12} className="text-accent-orange shrink-0" />

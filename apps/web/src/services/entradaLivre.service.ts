@@ -200,6 +200,12 @@ export const entradaLivreService = {
 
   // ── Criar entrada livre ─────────────────────────
   async create(data: CriarEntradaLivreDTO) {
+    // O estado de pagamento é obrigatório: o utilizador tem de escolher
+    // explicitamente "Pago" (true) ou "Não pago" (false).
+    if (data.pago === undefined || data.pago === null) {
+      throw new Error("PAGAMENTO_OBRIGATORIO");
+    }
+
     const { criancas, duracaoMinutos, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
     // Tarifário global: preço por escalão (1h/2h + hora adicional) — aplica-se a todos os dias.

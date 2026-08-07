@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clienteService } from "@/services/cliente.service";
-import { requireAuth } from "@/lib/auth-server";
+import { requireAuth, checkModulo } from "@/lib/auth-server";
 import { createRouteErrorHandler } from "@/lib/route-error";
 
 const handleError = createRouteErrorHandler({
@@ -59,6 +59,10 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
+
+    // Apenas administradores podem criar clientes (privacidade de dados)
+    const denied = checkModulo(auth.user, "clientes", "administracao");
+    if (denied) return denied;
 
     const { nome, email, telefone, contribuinte, codigoPostal, observacao, aniversariantes } =
       await request.json();
