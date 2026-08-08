@@ -160,6 +160,61 @@ describe("Dashboard Service", () => {
         await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
       }
     });
+
+    it("deve somar pagamento dividido (2 métodos) correctamente", async () => {
+      const hoje = new Date();
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: hoje,
+          horario: "19:00",
+          duracaoMinutos: 135,
+          numCriancas: 10,
+          estado: "CONCLUIDA",
+          pago: true,
+          metodoPagamento: "DINHEIRO",
+          valorPago: 80,
+          metodoPagamento2: "MBWAY",
+          valorPago2: 40,
+          clienteId: TEST_IDS.CLIENTE_1,
+          localId: TEST_IDS.LOCAL_1,
+        },
+      });
+
+      try {
+        const receitas = await dashboardService.getReceitasHoje();
+        // 80€ DINHEIRO + 40€ MBWAY
+        expect(receitas.DINHEIRO ?? 0).toBeGreaterThanOrEqual(80);
+        expect(receitas.MBWAY ?? 0).toBeGreaterThanOrEqual(40);
+      } finally {
+        await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+      }
+    });
+
+    it("NÃO deve incluir festas por pagar (pago=false) nas receitas", async () => {
+      const hoje = new Date();
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: hoje,
+          horario: "20:00",
+          duracaoMinutos: 135,
+          numCriancas: 5,
+          estado: "CONFIRMADO",
+          pago: false,
+          metodoPagamento: "DINHEIRO",
+          valorPago: 999, // não deve contar
+          clienteId: TEST_IDS.CLIENTE_1,
+          localId: TEST_IDS.LOCAL_1,
+        },
+      });
+
+      try {
+        const receitas = await dashboardService.getReceitasHoje();
+        // 999 não deve aparecer em DINHEIRO
+        expect(receitas.DINHEIRO ?? 0).toBeLessThan(999);
+      } finally {
+        await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+      }
+    });
   });
 
   // ── festasHoje inclui CONCLUIDA ──────────────────────────────

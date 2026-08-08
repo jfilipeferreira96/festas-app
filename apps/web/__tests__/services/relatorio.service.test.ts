@@ -136,5 +136,102 @@ describe("Relatório Service", () => {
         expect(hasData).toBe(true);
       }
     });
+
+    it("deve somar pagamento dividido (2 métodos) nas festas", async () => {
+      const { ontem, amanha } = getIntervaloTeste();
+      const hoje = new Date();
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: hoje,
+          horario: "15:00",
+          duracaoMinutos: 135,
+          numCriancas: 8,
+          estado: "CONCLUIDA",
+          pago: true,
+          metodoPagamento: "DINHEIRO",
+          valorPago: 100,
+          metodoPagamento2: "MBWAY",
+          valorPago2: 50,
+          clienteId: "test-cliente-001",
+          localId: "test-local-001",
+        },
+      });
+
+      try {
+        const relatorio = await relatorioService.getRelatorioFinanceiro(ontem, amanha);
+        // A festa deve contribuir 100€ DINHEIRO + 50€ MBWAY
+        expect(relatorio.festas.total.valorNumerario).toBeGreaterThanOrEqual(100);
+        expect(relatorio.festas.total.valorMbway).toBeGreaterThanOrEqual(50);
+      } finally {
+        await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+      }
+    });
+
+    it("deve incluir caução paga na secção Outros", async () => {
+      const { ontem, amanha } = getIntervaloTeste();
+      const hoje = new Date();
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: hoje,
+          horario: "16:00",
+          duracaoMinutos: 135,
+          numCriancas: 10,
+          estado: "CONCLUIDA",
+          pago: true,
+          metodoPagamento: "DINHEIRO",
+          valorPago: 100,
+          caucao: "PAGA",
+          valorCaucao: 40,
+          clienteId: "test-cliente-001",
+          localId: "test-local-001",
+        },
+      });
+
+      try {
+        const relatorio = await relatorioService.getRelatorioFinanceiro(ontem, amanha);
+        // Deve ter uma linha de caução com pelo menos 1 entrada
+        const linhasCaucao = relatorio.outros.linhas.filter(l => l.descricao.includes("Cauções"));
+        expect(linhasCaucao.length).toBeGreaterThan(0);
+        const totalCaucoes = linhasCaucao.reduce((sum, l) => sum + l.valorNumerario, 0);
+        expect(totalCaucoes).toBeGreaterThanOrEqual(40);
+      } finally {
+        await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+      }
+    });
+
+    it("deve incluir excesso de tempo pago na secção Outros", async () => {
+      const { ontem, amanha } = getIntervaloTeste();
+      const hoje = new Date();
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: hoje,
+          horario: "17:00",
+          duracaoMinutos: 135,
+          numCriancas: 10,
+          estado: "CONCLUIDA",
+          pago: true,
+          metodoPagamento: "MULTIBANCO",
+          valorPago: 100,
+          custoExcesso: 15,
+          pagoExcesso: true,
+          clienteId: "test-cliente-001",
+          localId: "test-local-001",
+        },
+      });
+
+      try {
+        const relatorio = await relatorioService.getRelatorioFinanceiro(ontem, amanha);
+        // Deve ter uma linha de excesso
+        const linhaExcesso = relatorio.outros.linhas.find(l => l.descricao === "Excesso de Tempo");
+        expect(linhaExcesso).toBeDefined();
+        expect(linhaExcesso!.quantidade).toBeGreaterThanOrEqual(1);
+        expect(linhaExcesso!.valorMultibanco).toBeGreaterThanOrEqual(15);
+      } finally {
+        await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+      }
+    });
   });
 });
