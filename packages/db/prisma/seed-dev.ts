@@ -955,6 +955,76 @@ async function seedReservas() {
     });
   }
 
+  const reservasParaSplit = await prisma.reserva.findMany({
+    where: { pago: true, metodoPagamento: { not: null } },
+    take: 3,
+    orderBy: { data: "desc" },
+  });
+  for (const [i, r] of reservasParaSplit.entries()) {
+    const metodos2 = [MP("DINHEIRO"), MP("MBWAY"), MP("TRANSFERENCIA")];
+    const valorOriginal = Number(r.valorPago ?? 0);
+    const valor2 = Math.round(valorOriginal * 0.3 * 100) / 100; // 30% no 2º método
+    const valor1 = Math.round((valorOriginal - valor2) * 100) / 100;
+    await prisma.reserva.update({
+      where: { id: r.id },
+      data: {
+        valorPago: valor1,
+        metodoPagamento2: metodos2[i],
+        valorPago2: valor2,
+        referenciaPagamento: i === 0 ? `REF-${r.id.slice(-6).toUpperCase()}` : null,
+      },
+    });
+  }
+
+  // Descontos em 2 reservas
+  const reservasParaDesconto = await prisma.reserva.findMany({
+    where: { pago: true },
+    take: 2,
+    skip: 3, // Diferentes das do split
+    orderBy: { data: "desc" },
+  });
+  for (const [i, r] of reservasParaDesconto.entries()) {
+    await prisma.reserva.update({
+      where: { id: r.id },
+      data: {
+        descontoPercentagem: i === 0 ? 10 : 5,
+        descontoMotivo: i === 0 ? "Cliente habitual" : "Promoção de temporada",
+      },
+    });
+  }
+
+  // Meias em 4 reservas (compra obrigatória no parque)
+  const reservasParaMeias = await prisma.reserva.findMany({
+    where: { estado: { in: ["CONCLUIDA", "EM_CURSO", "CONFIRMADO"] } },
+    take: 4,
+    orderBy: { data: "desc" },
+  });
+  for (const r of reservasParaMeias) {
+    const qtd = Math.max(2, Math.floor((r.numCriancas ?? 5) / 2));
+    await prisma.reserva.update({
+      where: { id: r.id },
+      data: {
+        meiasQuantidade: qtd,
+        meiasPrecoUnit: 2.5,
+      },
+    });
+  }
+
+  // Meias em 2 entradas livres ativas
+  const entradasParaMeias = await prisma.entradaLivre.findMany({
+    where: { estado: "ATIVA" },
+    take: 2,
+  });
+  for (const e of entradasParaMeias) {
+    await prisma.entradaLivre.update({
+      where: { id: e.id },
+      data: {
+        meiasQuantidade: 2,
+        meiasPrecoUnit: 2.5,
+      },
+    });
+  }
+
   // horaLanche para entradas livres (45 min após início)
   const entradas = await prisma.entradaLivre.findMany({ select: { id: true, inicioEm: true } });
   for (const e of entradas) {
