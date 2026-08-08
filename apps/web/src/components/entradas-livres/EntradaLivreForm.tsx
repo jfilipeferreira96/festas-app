@@ -325,6 +325,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     [setValue]
   );
 
+  const [submitError, setSubmitError] = React.useState("");
+
   const onSubmit = useCallback(
     async (data: EntradaLivreFormData) => {
       // "Crianças" é obrigatório: impedir submissão sem pelo menos um nome.
@@ -333,6 +335,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         return;
       }
       setShowCriancasError(false);
+      setSubmitError("");
       const payload = {
         criancas: criancas
           .filter((c) => c.nome.trim())
@@ -359,15 +362,30 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         meiasQuantidade: data.meiasQuantidade || undefined,
       };
 
-      if (isEdit && entrada) {
-        await atualizar.mutateAsync({ id: entrada.id, data: payload });
-      } else {
-        await criar.mutateAsync(payload);
+      try {
+        if (isEdit && entrada) {
+          await atualizar.mutateAsync({ id: entrada.id, data: payload });
+        } else {
+          await criar.mutateAsync(payload);
+        }
+        onClose();
+      } catch (err) {
+ 
+        setSubmitError(
+          err instanceof Error && err.message
+            ? `Erro ao guardar: ${err.message}`
+            : "Erro ao guardar a entrada. Tente novamente."
+        );
       }
-      onClose();
     },
     [criancas, selectedExtrasIds, isEdit, entrada, atualizar, criar, onClose]
   );
+
+  const onInvalid = useCallback(() => {
+    setShowCriancasError(true);
+    const firstError = document.querySelector("[data-error='true'], .border-accent-red-400");
+    if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, []);
 
   const isLoading = isSubmitting || criar.isPending || atualizar.isPending;
 
@@ -395,7 +413,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   return (
     <div className="flex flex-col max-h-[70vh]">
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
         {/* ── Scrollable Content ── */}
         <div className="flex-1 min-h-0 overflow-hidden overflow-y-auto px-3 space-y-6">
           {/* ── Crianças ── */}
@@ -767,7 +785,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label>
-                    <InputField type="number" step={0.01} min={0} value={watch("valorPago2") as number} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" />
+                    <InputField type="number" step={0.01} min={0} value={watch("valorPago2") ?? 0} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" />
                   </div>
                 </div>
               )}
@@ -828,6 +846,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                 : "Criar Entrada"}
           </Button>
         </div>
+        {submitError && (
+          <p className="text-sm text-error-500 text-right lg:pr-2">{submitError}</p>
+        )}
       </form>
 
       {/* ── Modal: Pesquisar cliente existente ── */}

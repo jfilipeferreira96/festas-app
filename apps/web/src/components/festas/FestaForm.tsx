@@ -255,7 +255,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     descontoMotivo: reserva?.descontoMotivo ?? "",
   }), [reserva, initialValues]);
 
-  const { register, handleSubmit, setValue, watch, getValues, trigger, formState: { errors, isSubmitting } } = useForm<ReservaFormData>({
+  const { register, handleSubmit, setValue, watch, getValues, formState: { errors, isSubmitting } } = useForm<ReservaFormData>({
     resolver: zodResolver(reservaSchema), defaultValues,
   });
 
@@ -321,21 +321,21 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   const handleSelectSlot = useCallback(
     (horaInicio: string) => {
       const slot = slotsHorario?.find((s) => s.horaInicio === horaInicio);
-      setValue("horario", horaInicio, { shouldDirty: true });
+      setValue("horario", horaInicio, { shouldDirty: true, shouldValidate: true });
       if (slot) {
-        setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true });
+        setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true, shouldValidate: true });
         // Auto-preencher defaults do slot (cor, hora lanche, sala lanche) — todos editáveis.
         if (slot.horaLancheDefault) setValue("horaLanche", slot.horaLancheDefault, { shouldDirty: true });
-        if (slot.salaLancheId) setValue("salaLancheId", slot.salaLancheId, { shouldDirty: true });
+        if (slot.salaLancheId) setValue("salaLancheId", slot.salaLancheId, { shouldDirty: true, shouldValidate: true });
         // Cor: usar o default do slot apenas se ainda estiver livre nesse dia;
         // caso contrário seleccionar automaticamente a primeira cor disponível
         // (evita cores repetidas no mesmo dia).
         const corSlot = slot.corDefault;
         if (corSlot && !coresEmUso.includes(corSlot)) {
-          setValue("cor", corSlot, { shouldDirty: true });
+          setValue("cor", corSlot, { shouldDirty: true, shouldValidate: true });
         } else {
           const primeiraLivre = CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value));
-          setValue("cor", primeiraLivre?.value ?? "", { shouldDirty: true });
+          setValue("cor", primeiraLivre?.value ?? "", { shouldDirty: true, shouldValidate: true });
         }
       }
     },
@@ -811,7 +811,7 @@ function Step1Geral({
             id="festa-data"
             placeholder="Selecionar data"
             defaultDate={defaultValues.data || undefined}
-            onChange={([date]) => { if (date) setValue("data", toISODate(date)); }}
+            onChange={([date]) => { if (date) setValue("data", toISODate(date), { shouldValidate: true }); }}
           />
           {errors.data && <p className="mt-1 text-xs text-error-500">{errors.data.message}</p>}
         </div>
