@@ -6,9 +6,10 @@ import {
   Clock, Cake, Sparkles, Package, CreditCard, Shield,
   Gift, FileText, MessageSquare, Sandwich,
   SquareCheck, Phone, Mail, Hash, Percent, Tag, Calendar,
-  Printer,
+  Printer, Pencil,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui";
 import { StatusBadge, type StatusType } from "@/components/ui";
 import { StatusStepper } from "@/components/ui/status-stepper/StatusStepper";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
@@ -18,6 +19,7 @@ import { formatDate, formatDuration } from "@/utils/date";
 import { differenceInYears } from "date-fns";
 import { BOLO_LABELS } from "@/lib/constants/bolo";
 import { imprimirListaConvidados } from "@/utils/print-lista";
+import PagamentoModal from "./PagamentoModal";
 
 // ── Constants ──────────────────────────────────────────────────────
 const ESTADO_LABELS: Record<string, string> = {
@@ -60,6 +62,7 @@ export default function FestaDetailModal({ reservaId, onClose, hidePrices = fals
 
   // Quick nav
   const [activeTab, setActiveTab] = useState<QuickTab>("geral");
+  const [showPagamento, setShowPagamento] = useState(false);
 
   // ── Render ─────────────────────────────────────────────────────────
   if (!reservaId) return null;
@@ -79,6 +82,7 @@ export default function FestaDetailModal({ reservaId, onClose, hidePrices = fals
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             hidePrices={hidePrices}
+            onEditPagamento={() => setShowPagamento(true)}
           />
         ) : (
           <div className="text-center text-text-muted py-8">
@@ -86,6 +90,11 @@ export default function FestaDetailModal({ reservaId, onClose, hidePrices = fals
           </div>
         )}
       </div>
+
+      {/* Pagamento Modal — edita pagamento dentro do modal de detalhes */}
+      {showPagamento && reserva && (
+        <PagamentoModal reserva={reserva} onClose={() => setShowPagamento(false)} />
+      )}
     </Modal>
   );
 }
@@ -96,11 +105,13 @@ function DetailContent({
   activeTab,
   setActiveTab,
   hidePrices = false,
+  onEditPagamento,
 }: {
   reserva: Reserva;
   activeTab: QuickTab;
   setActiveTab: (tab: QuickTab) => void;
   hidePrices?: boolean;
+  onEditPagamento: () => void;
 }) {
   const estado = reserva.estado;
   const numCacifos = (reserva.cacifos?.length ?? 0) + (reserva.cacifosHistorico?.length ?? 0);
@@ -178,7 +189,7 @@ function DetailContent({
 
       {/* Tab Content */}
       {activeTab === "geral" && (
-        <GeralTab reserva={reserva} hidePrices={hidePrices} />
+        <GeralTab reserva={reserva} hidePrices={hidePrices} onEditPagamento={onEditPagamento} />
       )}
       {activeTab === "criancas" && (
         <CriancasTab reserva={reserva} />
@@ -189,7 +200,7 @@ function DetailContent({
 }
 
 // ── Geral Tab ──────────────────────────────────────────────────────
-function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrices?: boolean }) {
+function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: Reserva; hidePrices?: boolean; onEditPagamento: () => void }) {
   return (
     <div className="space-y-4">
       {/* Configuração Geral */}
@@ -290,7 +301,16 @@ function GeralTab({ reserva, hidePrices = false }: { reserva: Reserva; hidePrice
 
       {/* Pagamento — oculto para CACIFOS (hidePrices) */}
       {!hidePrices && (
-      <Section title="Pagamento" icon={<CreditCard size={13} />}>
+      <Section title="Pagamento" icon={<CreditCard size={13} />} action={
+        <button
+          type="button"
+          onClick={onEditPagamento}
+          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-brand-700 hover:bg-brand-50 transition-colors normal-case tracking-normal"
+        >g
+          <Pencil size={11} />
+          Editar
+        </button>
+      }>
         <div className="space-y-1.5">
           <DetailRow
             icon={<CreditCard size={13} />}
@@ -602,12 +622,13 @@ function RuntimeTimer({ reserva }: { reserva: Reserva }) {
 }
 
 // ── Section Component ──────────────────────────────────────────────
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, icon, children, action }: { title: string; icon: React.ReactNode; children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div>
       <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
         {icon}
         {title}
+        {action && <span className="ml-auto">{action}</span>}
       </h4>
       <div className="p-3 rounded-lg bg-surface border border-border">
         {children}

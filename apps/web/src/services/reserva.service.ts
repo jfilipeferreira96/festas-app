@@ -581,6 +581,38 @@ export const reservaService = {
     });
   },
 
+  async atualizarPagamento(id: string, data: {
+    pago?: boolean;
+    metodoPagamento?: string;
+    valorPago?: number;
+    metodoPagamento2?: string;
+    valorPago2?: number;
+    caucao?: string;
+    valorCaucao?: number;
+    referenciaPagamento?: string;
+    descontoPercentagem?: number;
+    descontoMotivo?: string;
+  }) {
+    const reserva = await this.getById(id);
+    if (!reserva) throw new Error("NOT_FOUND");
+
+    return prisma.reserva.update({
+      where: { id },
+      data: {
+        pago: data.pago,
+        metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
+        valorPago: data.valorPago,
+        metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
+        valorPago2: data.valorPago2,
+        caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+        valorCaucao: data.valorCaucao,
+        referenciaPagamento: data.referenciaPagamento,
+        descontoPercentagem: data.descontoPercentagem,
+        descontoMotivo: data.descontoMotivo,
+      },
+    });
+  },
+
   async delete(id: string) {
     const reserva = await this.getById(id);
     if (reserva.estado === "EM_CURSO") throw new Error("CANNOT_DELETE_IN_PROGRESS");

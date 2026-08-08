@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   Plus, Trash2, AlertTriangle, User, Cake, MapPin,
   FileText, Search, CheckCircle, Sandwich, Gift,
+  CreditCard, Shield, Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
@@ -14,6 +15,7 @@ import DatePicker from "@/components/form/date-picker";
 import { Select } from "@/components/ui/select";
 import MultiSelect from "@/components/form/MultiSelect";
 import Checkbox from "@/components/form/input/Checkbox";
+import Switch from "@/components/form/switch/Switch";
 import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useExtras } from "@/hooks/use-extras";
@@ -27,6 +29,23 @@ import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva, MetodoPagamento, DisponibilidadeResult, TipoBolo } from "@/lib/api/reservas";
+
+// ── Payment Options ──────────────────────────────────────────────
+const METODO_PAGAMENTO_OPTIONS = [
+  { value: "NONE", label: "Não definido" },
+  { value: "DINHEIRO", label: "Dinheiro" },
+  { value: "MULTIBANCO", label: "Multibanco" },
+  { value: "MBWAY", label: "MB WAY" },
+  { value: "TRANSFERENCIA", label: "Transferência" },
+  { value: "CARTAO", label: "Cartão" },
+  { value: "OUTRO", label: "Outro" },
+];
+
+const CAUCAO_OPTIONS = [
+  { value: "NAO_PAGA", label: "Não paga" },
+  { value: "PAGA", label: "Paga" },
+  { value: "PAGA_NO_DIA", label: "Paga no dia" },
+];
 
 // ── Types ──────────────────────────────────────────────────────
 interface AniversarianteInput { nome: string; dataNascimento: string; }
@@ -1079,6 +1098,132 @@ function Step1Geral({
               rows={2}
               className="w-full rounded-lg border px-4 py-2.5 text-sm border-gray-300 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 bg-transparent text-gray-900 dark:text-gray-300 dark:bg-gray-900 dark:border-gray-700"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Pagamento & Caução ── */}
+      <div className="space-y-3">
+        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <CreditCard size={14} className="text-text-muted" /> Pagamento & Caução
+        </label>
+
+        {/* Estado + Valor */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+          <span className="text-sm font-medium text-text-primary">
+            {watch("pago") ? "✓ Pago" : "Por pagar"}
+          </span>
+          <Switch
+            checked={watch("pago") ?? false}
+            onChange={(checked) => setValue("pago", checked, { shouldDirty: true })}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Valor Pago (€)</label>
+            <InputField
+              type="number"
+              step={0.01}
+              min={0}
+              {...register("valorPago", { valueAsNumber: true })}
+              placeholder="0,00"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Método de Pagamento</label>
+            <Select
+              options={METODO_PAGAMENTO_OPTIONS}
+              value={watch("metodoPagamento") ?? "NONE"}
+              onChange={(val) => setValue("metodoPagamento", val === "NONE" ? "" : val, { shouldDirty: true })}
+              placeholder="Seleccionar..."
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1">Referência de Pagamento</label>
+          <InputField {...register("referenciaPagamento")} placeholder="Ex: ref. MBWAY, transferência..." />
+        </div>
+
+        {/* Pagamento dividido */}
+        <Checkbox
+          checked={!!watch("metodoPagamento2")}
+          onChange={(checked) => {
+            if (!checked) {
+              setValue("metodoPagamento2", "", { shouldDirty: true });
+              setValue("valorPago2", 0, { shouldDirty: true });
+            }
+          }}
+          label="Dividir pagamento (2º método)"
+        />
+        {watch("metodoPagamento2") && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
+              <Select
+                options={METODO_PAGAMENTO_OPTIONS}
+                value={watch("metodoPagamento2") ?? "NONE"}
+                onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? "" : val, { shouldDirty: true })}
+                placeholder="2º método..."
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º (€)</label>
+              <InputField
+                type="number"
+                step={0.01}
+                min={0}
+                {...register("valorPago2", { valueAsNumber: true })}
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Caução */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+          <label className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
+            <Shield size={13} className="text-text-muted" /> Caução
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Select
+                options={CAUCAO_OPTIONS}
+                value={watch("caucao") ?? "NAO_PAGA"}
+                onChange={(val) => setValue("caucao", val, { shouldDirty: true })}
+              />
+            </div>
+            <div>
+              <InputField
+                type="number"
+                step={0.01}
+                min={0}
+                {...register("valorCaucao", { valueAsNumber: true })}
+                placeholder="Valor caução (€)"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Desconto */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+          <label className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
+            <Percent size={13} className="text-text-muted" /> Desconto
+          </label>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <InputField
+                type="number"
+                min={0}
+                max={100}
+                {...register("descontoPercentagem", { valueAsNumber: true })}
+                placeholder="%"
+              />
+            </div>
+            <div className="col-span-2">
+              <InputField {...register("descontoMotivo")} placeholder="Motivo do desconto..." />
+            </div>
           </div>
         </div>
       </div>

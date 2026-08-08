@@ -10,6 +10,7 @@ import {
   Timer,
   Package,
   Printer,
+  Wallet,
   ChevronDown,
   ChevronUp,
   CheckCircle,
@@ -41,6 +42,7 @@ import { useDashboardKPIs } from "@/hooks/use-dashboard";
 import { useCacifos } from "@/hooks/use-cacifos";
 import FestaForm from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
+import PagamentoModal from "./PagamentoModal";
 import type { Reserva } from "@/lib/api/reservas";
 import { getAniversarianteNome, getAniversarianteNomes } from "@/lib/api/reservas";
 import { imprimirListaConvidados } from "@/utils/print-lista";
@@ -56,6 +58,7 @@ export default function FestasContent() {
   const [editingReserva, setEditingReserva] = useState<Reserva | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [viewingReservaId, setViewingReservaId] = useState<string | null>(null);
+  const [pagamentoReserva, setPagamentoReserva] = useState<Reserva | null>(null);
 
   const handleFormClose = useCallback(() => {
     setShowForm(false);
@@ -121,6 +124,7 @@ export default function FestasContent() {
           setShowForm(true);
         }}
         onView={(reserva) => setViewingReservaId(reserva.id)}
+        onPagamento={(reserva) => setPagamentoReserva(reserva)}
       />
       </div>
 
@@ -158,6 +162,11 @@ export default function FestasContent() {
         reservaId={viewingReservaId}
         onClose={() => setViewingReservaId(null)}
       />
+
+      {/* Pagamento Modal */}
+      {pagamentoReserva && (
+        <PagamentoModal reserva={pagamentoReserva} onClose={() => setPagamentoReserva(null)} />
+      )}
     </div>
   );
 }
@@ -169,12 +178,14 @@ function EmCursoTab({
   onFinalizar,
   onEdit,
   onView,
+  onPagamento,
 }: {
   festas?: Reserva[];
   isLoading: boolean;
   onFinalizar: (reserva: Reserva) => void;
   onEdit: (reserva: Reserva) => void;
   onView: (reserva: Reserva) => void;
+  onPagamento: (reserva: Reserva) => void;
 }) {
   if (isLoading) {
     return (
@@ -213,6 +224,7 @@ function EmCursoTab({
           onFinalizar={() => onFinalizar(festa)}
           onEdit={() => onEdit(festa)}
           onView={() => onView(festa)}
+          onPagamento={() => onPagamento(festa)}
         />
       ))}
     </div>
@@ -225,11 +237,13 @@ function FestaCard({
   onFinalizar,
   onEdit,
   onView,
+  onPagamento,
 }: {
   festa: Reserva;
   onFinalizar: () => void;
   onEdit?: () => void;
   onView: () => void;
+  onPagamento: () => void;
 }) {
   const [elapsed, setElapsed] = useState("");
   const [remaining, setRemaining] = useState("");
@@ -365,6 +379,16 @@ function FestaCard({
             aria-label="Imprimir lista de crianças"
           >
             <Printer size={16} />
+          </button>
+          {/* Botão de pagamento rápido — visível directamente no card */}
+          <button
+            type="button"
+            onClick={onPagamento}
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors shrink-0 ${festa.pago ? "text-accent-green-500 hover:bg-accent-green-50" : "text-accent-orange-500 hover:bg-accent-orange-50"}`}
+            title="Gerir pagamento"
+            aria-label="Gerir pagamento"
+          >
+            <Wallet size={16} />
           </button>
           {/* 3-dots dropdown — acções secundárias */}
           <div className="relative shrink-0">
@@ -559,9 +583,14 @@ function FestaCard({
           </div>
         )}
 
-        {/* Pagamento */}
-        <div className="flex items-center gap-2">
-          <CreditCard size={14} className="text-text-muted" />
+        {/* Pagamento — clicável para abrir PagamentoModal */}
+        <button
+          type="button"
+          onClick={onPagamento}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity text-left"
+          title="Gerir pagamento"
+        >
+          <CreditCard size={14} className={`shrink-0 ${festa.pago ? "text-accent-green-500" : "text-accent-orange-500"}`} />
           <span className="text-xs text-text-secondary">
             {festa.pago ? (
               <span className="text-primary-500">Pago</span>
@@ -579,7 +608,7 @@ function FestaCard({
               </span>
             )}
           </span>
-        </div>
+        </button>
 
         {/* Caução */}
         {(festa.caucao === "PAGA" || festa.caucao === "PAGA_NO_DIA") && (

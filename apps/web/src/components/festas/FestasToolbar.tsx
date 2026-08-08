@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Printer, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 export type FestaTab =
   | "hoje"
@@ -33,16 +33,18 @@ const TAB_OPTIONS: TabOption[] = [
 interface FestasToolbarProps {
   tab: FestaTab;
   onTabChange: (tab: FestaTab) => void;
-  onPrint: () => void;
   /** Callback para criar nova festa (botão à direita). Se omitido, não mostra o botão. */
   onCreate?: () => void;
+  /** Mostrar tabs de navegação rápida (Hoje/Amanhã/Semana/etc). Apenas para ADMINISTRADOR. */
+  showTabs?: boolean;
 }
 
-/** Barra de tabs + acções (Nova Festa + Imprimir). DatePicker é renderizada separadamente. */
+/** Barra de tabs + botão Nova Festa. DatePicker é renderizada separadamente. */
 const FestasToolbar: React.FC<FestasToolbarProps> = React.memo(
-  ({ tab, onTabChange, onPrint, onCreate }) => {
+  ({ tab, onTabChange, onCreate, showTabs = true }) => {
     return (
       <div className="flex items-center justify-between gap-4 mt-4 mb-6 flex-wrap no-print">
+        {showTabs && (
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto filter-scrollbar max-w-full">
             {TAB_OPTIONS.map((opt) => {
@@ -62,17 +64,10 @@ const FestasToolbar: React.FC<FestasToolbarProps> = React.memo(
             })}
           </div>
         </div>
+        )}
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onPrint}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs bg-white"
-          >
-            <Printer size={16} />
-            <span className="hidden sm:inline">Imprimir</span>
-          </button>
-
-          {onCreate && (
+        {onCreate && (
+        <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={onCreate}
               className="inline-flex items-center justify-center font-medium gap-2 rounded-[10px] transition-all duration-200 flex items-center gap-2 px-5 py-2.5 text-sm bg-brand-500 text-white shadow-theme-xs hover:bg-brand-600"
@@ -80,8 +75,8 @@ const FestasToolbar: React.FC<FestasToolbarProps> = React.memo(
               <Plus size={16} />
               Nova Festa
             </button>
-          )}
         </div>
+        )}
       </div>
     );
   },

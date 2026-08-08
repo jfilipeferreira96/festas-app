@@ -1,7 +1,7 @@
  "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCheck, History, Clock, ClipboardList, Bell } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCheck, History, Clock, ClipboardList, Bell, Wallet } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -10,11 +10,13 @@ import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserv
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
+import PagamentoModal from "./PagamentoModal";
 import HistoricoModal from "./HistoricoModal";
 import PreencherCacifosModal from "@/components/cacifos/PreencherCacifosModal";
 import FestasToolbar, { type FestaTab } from "./FestasToolbar";
 import SlotsPorPreencher from "./SlotsPorPreencher";
 import DatePicker from "@/components/form/date-picker";
+import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import type { Reserva, EstadoReserva } from "@/lib/api/reservas";
 import { getAniversarianteNome } from "@/lib/api/reservas";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
@@ -49,6 +51,7 @@ function slotLabel(horaInicio: string): string {
 
 export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacifos" }) {
   const isCacifos = mode === "cacifos";
+  const { isGlobalAdmin } = useMinhasPermissoes();
   const [tab, setTab] = useState<FestaTab>("hoje");
   const [dataSelecionada, setDataSelecionada] = useState<string | null>(null);
   const [formInitialValues, setFormInitialValues] = useState<FestaFormInitialValues | undefined>(undefined);
@@ -61,6 +64,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const [finalizarModal, setFinalizarModal] = useState<Reserva | null>(null);
   const [iniciarFestaReserva, setIniciarFestaReserva] = useState<Reserva | null>(null);
   const [preencherCacifosReservaId, setPreencherCacifosReservaId] = useState<string | null>(null);
+  const [pagamentoReserva, setPagamentoReserva] = useState<Reserva | null>(null);
 
   // Formatar uma data YYYY-MM-DD por extenso (pt-PT)
   const formatarData = useCallback((iso: string) => {
@@ -288,11 +292,11 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         </div>
       )}
 
-      {/* Toolbar: tabs + Nova Festa + Imprimir */}
+      {/* Toolbar: tabs (admin only) + Nova Festa */}
       <FestasToolbar
         tab={tab}
         onTabChange={handleTabChange}
-        onPrint={() => window.print()}
+        showTabs={isGlobalAdmin}
         onCreate={!isCacifos ? handleCreate : undefined}
       />
 
@@ -507,6 +511,29 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             },
           },
           {
+            key: "pagamento",
+            label: "Pagamento",
+            render: (_v, r) => {
+              const valor = r.valorPago != null
+                ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(r.valorPago)
+                : null;
+              return (
+                <button
+                  onClick={() => setPagamentoReserva(r)}
+                  className="inline-flex flex-col items-start gap-0.5 hover:opacity-80 transition-opacity"
+                  title="Gerir pagamento"
+                >
+                  <span className={`text-xs font-semibold ${r.pago ? "text-accent-green-600" : "text-accent-orange-600"}`}>
+                    {r.pago ? "✓ Pago" : "Por pagar"}
+                  </span>
+                  {valor && (
+                    <span className="text-xs text-text-muted">{valor}</span>
+                  )}
+                </button>
+              );
+            },
+          },
+          {
             key: "estado",
             label: "Estado",
             sortable: true,
@@ -516,7 +543,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
               </StatusBadge>
             ),
           },
-        ] as Column<Reserva>[]).filter((c) => !(isCacifos && (c.key === "contacto" || c.key === "temaMenu")))}
+        ] as Column<Reserva>[]).filter((c) => !(isCacifos && (c.key === "contacto" || c.key === "temaMenu" || c.key === "pagamento")))}
         loading={isLoading}
         searchable
         searchPlaceholder="Pesquisar por nome, contacto, email..."
@@ -613,6 +640,17 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                   className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
                 >
                   <History size={15} />
+                </button>
+              </Tooltip>
+            )}
+            {/* Quick action: Pagamento (todos os estados excepto CONCLUIDA/CANCELADA) */}
+            {r.estado !== "CONCLUIDA" && r.estado !== "CANCELADA" && (
+              <Tooltip content="Gerir pagamento" position="top" theme="dark">
+                <button
+                  onClick={() => setPagamentoReserva(r)}
+                  className={`p-1.5 rounded-lg hover:bg-yellow-50 transition-colors ${r.pago ? "text-accent-green-500" : "text-accent-orange-500"}`}
+                >
+                  <Wallet size={15} />
                 </button>
               </Tooltip>
             )}
@@ -798,6 +836,11 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* Pagamento Modal */}
+      {pagamentoReserva && (
+        <PagamentoModal reserva={pagamentoReserva} onClose={() => setPagamentoReserva(null)} />
       )}
     </div>
   );

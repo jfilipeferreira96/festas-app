@@ -52,6 +52,18 @@ export function useUpdateReserva() {
   });
 }
 
+export function useUpdatePagamento() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof reservasApi.atualizarPagamento>[1] }) =>
+      reservasApi.atualizarPagamento(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useUpdateReservaStatus() {
   const queryClient = useQueryClient();
   return useMutation({

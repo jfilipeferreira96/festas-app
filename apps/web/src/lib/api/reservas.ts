@@ -157,6 +157,23 @@ export const reservasApi = {
       body: JSON.stringify({ estado }),
     }),
 
+  atualizarPagamento: (id: string, data: {
+    pago?: boolean;
+    metodoPagamento?: MetodoPagamento;
+    valorPago?: number;
+    metodoPagamento2?: MetodoPagamento;
+    valorPago2?: number;
+    caucao?: string;
+    valorCaucao?: number;
+    referenciaPagamento?: string;
+    descontoPercentagem?: number;
+    descontoMotivo?: string;
+  }) =>
+    api<Reserva>(`/api/reservas/${id}/pagamento`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
   delete: (id: string) =>
     api<{ message: string }>(`/api/reservas/${id}`, {
       method: "DELETE",

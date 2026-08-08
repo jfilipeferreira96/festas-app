@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Trash2, CheckCircle, XCircle, Users, Clock, Pencil, CreditCard } from "lucide-react";
+import { Plus, Eye, Trash2, CheckCircle, XCircle, Users, Clock, Pencil, CreditCard, Wallet } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -9,6 +9,8 @@ import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useEntradasLivres, useEliminarEntradaLivre, useConcluirEntradaLivre, useCancelarEntradaLivre, useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
 import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
+import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
+import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
@@ -43,6 +45,7 @@ function formatDate(iso: string): string {
 
 export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" | "cacifos" }) {
   const isCacifos = mode === "cacifos";
+  const { isGlobalAdmin } = useMinhasPermissoes();
   const [filtro, setFiltro] = useState("hoje");
   const [showForm, setShowForm] = useState(false);
   const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
@@ -50,6 +53,7 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
   const [concluirModal, setConcluirModal] = useState<EntradaLivre | null>(null);
   const [cancelarModal, setCancelarModal] = useState<{ isOpen: boolean; id: string }>({ isOpen: false, id: "" });
+  const [pagamentoEntrada, setPagamentoEntrada] = useState<EntradaLivre | null>(null);
 
   const isFormOpen = showForm || !!editingEntrada;
   const formTitle = editingEntrada ? "Editar Entrada Livre" : "Nova Entrada Livre";
@@ -143,6 +147,7 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
 
       {/* Filters + Create */}
       <div className="flex items-center justify-between gap-4 mt-4 mb-6 flex-wrap">
+        {isGlobalAdmin && (
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-1 rounded-xl bg-white border border-gray-200 p-1 shadow-theme-xs overflow-x-auto filter-scrollbar max-w-full">
             {FILTER_OPTIONS.map((opt) => (
@@ -160,8 +165,9 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
             ))}
           </div>
         </div>
+        )}
         {!isCacifos && (
-          <Button onClick={handleCreate} className="flex items-center gap-2">
+          <Button onClick={handleCreate} className="flex items-center gap-2 ml-auto">
             <Plus size={16} />
             Nova Entrada
           </Button>
@@ -246,14 +252,24 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
           },
           {
             key: "pago",
-            label: "Pago",
-            render: (_v, r) => (
-              r.pago ? (
-                <span className="text-accent-green-600 font-medium text-sm">Sim</span>
-              ) : (
-                <span className="text-accent-red-600 font-medium text-sm">Não</span>
-              )
-            ),
+            label: "Pagamento",
+            render: (_v, r) => {
+              const custo = r.custoTotalFinal ?? r.custoTotal ?? 0;
+              return (
+                <button
+                  onClick={() => setPagamentoEntrada(r)}
+                  className="inline-flex flex-col items-start gap-0.5 hover:opacity-80 transition-opacity"
+                  title="Gerir pagamento"
+                >
+                  <span className={`text-xs font-semibold ${r.pago ? "text-accent-green-600" : "text-accent-orange-600"}`}>
+                    {r.pago ? "✓ Pago" : "Por pagar"}
+                  </span>
+                  {custo > 0 && (
+                    <span className="text-xs text-text-muted">{formatCurrency(custo)}</span>
+                  )}
+                </button>
+              );
+            },
           },
         ] as Column<EntradaLivre>[]).filter((c) => !(isCacifos && (c.key === "custo" || c.key === "pago")))}
         loading={isLoading}
@@ -288,8 +304,17 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
           }
           return (
           <div className="flex items-center justify-end gap-1">
-            {/* Marcar como paga foi removido: só é possível marcar pago através do
-                modal de detalhe, onde o método de pagamento é obrigatório. */}
+            {/* Quick action: Gerir Pagamento (todos os estados excepto CANCELADA) */}
+            {r.estado !== "CANCELADA" && (
+              <Tooltip content="Gerir pagamento" position="top" theme="dark">
+                <button
+                  onClick={() => setPagamentoEntrada(r)}
+                  className={`p-1.5 rounded-lg hover:bg-yellow-50 transition-colors ${r.pago ? "text-accent-green-500" : "text-accent-orange-500"}`}
+                >
+                  <Wallet size={15} />
+                </button>
+              </Tooltip>
+            )}
             {/* Quick action: Pagar Excesso (CONCLUIDA com excesso em falta) */}
             {r.estado === "CONCLUIDA" && r.custoExcesso != null && r.custoExcesso > 0 && !r.pagoExcesso && (
               <Tooltip content="Marcar excesso pago" position="top" theme="dark">
@@ -423,6 +448,11 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
         variant="warning"
         isConfirming={cancelar.isPending}
       />
+
+      {/* Pagamento Modal */}
+      {pagamentoEntrada && (
+        <EntradaLivrePagamentoModal entrada={pagamentoEntrada} onClose={() => setPagamentoEntrada(null)} />
+      )}
     </div>
   );
 }
