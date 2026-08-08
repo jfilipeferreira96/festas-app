@@ -128,6 +128,7 @@ describe("Entrada Livre Service", () => {
         encarregadoTelefone: "912345678",
         encarregadoEmail: "maria@email.pt",
         duracaoMinutos: 90,
+        pago: true,
         criancas: [{ nome: "João", idade: 6 }, { nome: "Ana", idade: 5 }],
         observacoes: "Teste de criação",
       });
@@ -149,6 +150,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Pedro Sem Cacifo",
         encarregadoTelefone: "923456789",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Luís" }],
       });
 
@@ -172,6 +174,7 @@ describe("Entrada Livre Service", () => {
         encarregadoTelefone: "934567890",
         cacifoId: cacifo!.id,
         duracaoMinutos: 120,
+        pago: true,
         criancas: [{ nome: "Beatriz" }],
       });
 
@@ -191,6 +194,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Teste Global",
         encarregadoTelefone: "912345678",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança" }],
       });
 
@@ -210,6 +214,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Teste Com Lanche",
         encarregadoTelefone: "912345679",
         duracaoMinutos: 120,
+        pago: true,
         criancas: [{ nome: "Criança" }, { nome: "Criança 2" }],
         temLanche: true,
       });
@@ -227,6 +232,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Teste Pai Paga",
         encarregadoTelefone: "912345680",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança Pequena", idade: 2 }],
         numAdultos: 1,
       });
@@ -234,6 +240,46 @@ describe("Entrada Livre Service", () => {
       expect(entrada).toBeDefined();
       expect(entrada.numAdultos).toBe(1);
       expect(entrada.custoTotal).toBeGreaterThan(0);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should throw PAGAMENTO_OBRIGATORIO when pago is undefined", async () => {
+      await expect(
+        entradaLivreService.create({
+          encarregadoNome: "Sem Pagamento",
+          encarregadoTelefone: "912345678",
+          duracaoMinutos: 60,
+          criancas: [{ nome: "Criança" }],
+          // pago omitted — must throw
+        } as any)
+      ).rejects.toThrow("PAGAMENTO_OBRIGATORIO");
+    });
+
+    it("should throw PAGAMENTO_OBRIGATORIO when pago is null", async () => {
+      await expect(
+        entradaLivreService.create({
+          encarregadoNome: "Sem Pagamento Null",
+          encarregadoTelefone: "912345678",
+          duracaoMinutos: 60,
+          criancas: [{ nome: "Criança" }],
+          pago: null,
+        } as any)
+      ).rejects.toThrow("PAGAMENTO_OBRIGATORIO");
+    });
+
+    it("should create entrada with pago=false (não pago) — valid", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Não Pago Válido",
+        encarregadoTelefone: "912345678",
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+        pago: false,
+      });
+
+      expect(entrada).toBeDefined();
+      expect(entrada.pago).toBe(false);
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
@@ -382,6 +428,7 @@ describe("Entrada Livre Service", () => {
         encarregadoTelefone: "999999999",
         cacifoId: cacifo!.id,
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança" }],
       });
 
@@ -404,6 +451,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Para Cancelar",
         encarregadoTelefone: "999999999",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança" }],
       });
 
@@ -433,6 +481,7 @@ describe("Entrada Livre Service", () => {
         encarregadoTelefone: "999999999",
         cacifoId: cacifo!.id,
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança" }],
       });
 
@@ -453,6 +502,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Para Eliminar",
         encarregadoTelefone: "999999999",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança" }],
       });
 
@@ -474,6 +524,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Ativa Teste",
         encarregadoTelefone: "999999999",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança" }],
       });
 
@@ -563,6 +614,7 @@ describe("Entrada Livre Service", () => {
         encarregadoTelefone: "9555444333",
         encarregadoEmail: "novo-enc-teste@test.com",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança Nova" }],
       });
 
@@ -591,6 +643,7 @@ describe("Entrada Livre Service", () => {
         encarregadoTelefone: "911111111",
         encarregadoEmail: "teste1@email.pt",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança Reuso" }],
       });
 
@@ -612,6 +665,7 @@ describe("Entrada Livre Service", () => {
         encarregadoTelefone: "922222222",
         // No email → should match by telefone
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança Tel" }],
       });
 
@@ -632,6 +686,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Teste Meias Split",
         encarregadoTelefone: "915555555",
         duracaoMinutos: 60,
+        pago: true,
         criancas: [{ nome: "Criança 1" }, { nome: "Criança 2" }, { nome: "Criança 3" }],
         meiasQuantidade: 3,
         metodoPagamento: "DINHEIRO",
@@ -652,6 +707,7 @@ describe("Entrada Livre Service", () => {
         encarregadoNome: "Multi Crianças",
         encarregadoTelefone: "916666666",
         duracaoMinutos: 90,
+        pago: true,
         criancas: [
           { nome: "C1", idade: 4 },
           { nome: "C2", idade: 5 },

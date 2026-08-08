@@ -80,7 +80,7 @@ describe("RBAC — Matriz hardcoded", () => {
 
     it("apenas ADMINISTRADOR e RECECAO devem ter acesso a clientes", () => {
       expect(PERMISSOES.ADMINISTRADOR.clientes).toBe("administracao");
-      expect(PERMISSOES.RECECAO.clientes).toBe("escrita");
+      expect(PERMISSOES.RECECAO.clientes).toBe("leitura");
       expect(PERMISSOES.LANCHE.clientes).toBeUndefined();
       expect(PERMISSOES.CACIFOS.clientes).toBeUndefined();
       expect(PERMISSOES.MONITOR.clientes).toBeUndefined();
@@ -163,8 +163,10 @@ describe("RBAC — Matriz hardcoded", () => {
       expect(PERMISSOES.RECECAO.reservas).toBe("escrita");
     });
 
-    it("deve ter escrita no módulo clientes", () => {
-      expect(PERMISSOES.RECECAO.clientes).toBe("escrita");
+    it("deve ter apenas leitura no módulo clientes (não editar — privacidade/rotação de staff)", () => {
+      expect(PERMISSOES.RECECAO.clientes).toBe("leitura");
+      expect(hasAccess("RECECAO", "clientes", "escrita")).toBe(false);
+      expect(canRead("RECECAO", "clientes")).toBe(true);
     });
 
     it("deve ter leitura no módulo cacifos", () => {
