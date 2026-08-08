@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Cacifo, EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 import { formatDate } from "@/utils/date";
+import { imprimirListaConvidados } from "@/utils/print-lista";
 import PreencherCacifosModal from "./PreencherCacifosModal";
 
 const ESTADO_STYLES: Record<string, { base: string; hover: string; icon: string }> = {
@@ -113,16 +114,23 @@ export default function CacifosContent() {
   const handleExportCSV = useCallback(() => {
     if (!cacifos || cacifos.length === 0) return;
 
+    const esc = (val: string | number): string => {
+      const s = String(val ?? "");
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+
     const headers = ["Número", "Nome", "Estado", "Crianças", "Notas"];
     const rows = cacifos.map((cacifo) => [
-      cacifo.numero,
-      cacifo.nome ?? "",
-      ESTADO_LABELS[cacifo.estado] ?? cacifo.estado,
-      cacifo.criancas ?? "—",
-      cacifo.notas ?? "—",
+      esc(cacifo.numero),
+      esc(cacifo.nome ?? ""),
+      esc(ESTADO_LABELS[cacifo.estado] ?? cacifo.estado),
+      esc(cacifo.criancas ?? ""),
+      esc(cacifo.notas ?? ""),
     ]);
 
-    const csvContent = [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
+    // Usar ";" como separador (padrão Excel PT-PT) + BOM UTF-8 para acentos
+    const BOM = "\uFEFF";
+    const csvContent = BOM + [headers.map(esc).join(";"), ...rows.map((row) => row.join(";"))].join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -140,6 +148,14 @@ export default function CacifosContent() {
   ], [festasAtivas]);
 
   const formattedDate = formatDate(selectedDate);
+
+  const handleImprimir = useCallback(() => {
+    imprimirListaConvidados(
+      { data: selectedDate },
+      cacifos ?? [],
+      `Cacifos — ${formattedDate}`
+    );
+  }, [selectedDate, cacifos, formattedDate]);
 
   return (
     <div className="space-y-5">
@@ -254,7 +270,7 @@ export default function CacifosContent() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.print()}
+              onClick={handleImprimir}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
             >
               <Printer size={16} />
@@ -396,37 +412,6 @@ export default function CacifosContent() {
           </p>
         </div>
       )}
-      </div>
-
-      {/* Print-only: tabela de cacifos para impressão */}
-      <div className="print-only">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Nº</th>
-              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Nome</th>
-              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Estado</th>
-              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Crianças</th>
-              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Festa / Cliente</th>
-              <th className="border border-gray-400 px-2 py-1 text-left text-xs">Notas</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cacifos?.map((cacifo) => (
-              <tr key={cacifo.id}>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.numero}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.nome ?? "—"}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{ESTADO_LABELS[cacifo.estado] ?? cacifo.estado}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.criancas ?? "—"}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.reserva?.cliente?.nome ?? "—"}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{cacifo.notas ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {(!cacifos || cacifos.length === 0) && (
-          <p className="text-sm text-center py-4">Sem cacifos para mostrar.</p>
-        )}
       </div>
 
       {/* Cacifo Detail Modal */}

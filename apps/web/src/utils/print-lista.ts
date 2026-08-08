@@ -9,76 +9,152 @@ interface ReservaPrintInfo {
   data?: string | Date;
   horario?: string;
   local?: { nome?: string } | null;
+  notasCacifos?: string | null;
 }
 
 interface CacifoPrintInfo {
   numero: number;
   criancas?: string | null;
+  notas?: string | null;
+}
+
+interface CriancaPrintItem {
+  nome: string;
+  cacifo?: number;
+  notas?: string;
 }
 
 /**
- * Extrai todos os nomes de crianças a partir dos cacifos e aniversariantes.
- * Os cacifos guardam os nomes separados por vírgula ou nova-linha.
+ * Extrai todas as crianças a partir dos cacifos e aniversariantes.
+ * Cada criança inclui o nº do cacifo associado (se existir) e as
+ * respectivas notas/observações.
  */
-function extrairNomesCriancas(
+function extrairCriancas(
   reserva: ReservaPrintInfo,
   cacifos: CacifoPrintInfo[]
-): string[] {
-  const nomes: string[] = [];
+): CriancaPrintItem[] {
+  const itens: CriancaPrintItem[] = [];
+  const nomesVistos = new Set<string>();
 
-  // 1. Nomes dos cacifos (crianças presentes na festa)
+  // 1. Crianças dos cacifos (crianças presentes na festa)
   for (const cacifo of cacifos) {
     if (!cacifo.criancas || cacifo.criancas === "Por preencher") continue;
     const separados = cacifo.criancas
       .split(/[,;\n]/)
       .map((n) => n.trim())
       .filter(Boolean);
-    nomes.push(...separados);
-  }
-
-  // 2. Se não há cacifos preenchidos, usar os aniversariantes
-  if (nomes.length === 0 && reserva.aniversariantes) {
-    for (const a of reserva.aniversariantes) {
-      if (a.aniversariante.nome?.trim()) nomes.push(a.aniversariante.nome.trim());
+    for (const nome of separados) {
+      if (nomesVistos.has(nome)) continue;
+      nomesVistos.add(nome);
+    
+      const notaFinal =
+        cacifo.notas?.trim() ||
+        reserva.notasCacifos?.trim() ||
+        undefined;
+      itens.push({
+        nome,
+        cacifo: cacifo.numero,
+        notas: notaFinal,
+      });
     }
   }
 
-  // Deduplicar mantendo a ordem
-  return [...new Set(nomes)];
+  // 2. Se não há cacifos preenchidos, usar os aniversariantes
+  if (itens.length === 0 && reserva.aniversariantes) {
+    for (const a of reserva.aniversariantes) {
+      const nome = a.aniversariante.nome?.trim();
+      if (nome && !nomesVistos.has(nome)) {
+        nomesVistos.add(nome);
+        itens.push({ nome });
+      }
+    }
+  }
+
+  return itens;
+}
+
+/** Verifica se pelo menos uma criança tem cacifo associado. */
+function temCacifos(itens: CriancaPrintItem[]): boolean {
+  return itens.some((c) => c.cacifo != null);
+}
+
+const ENT_AMP = String.fromCharCode(38) + "amp;";
+const ENT_LT = String.fromCharCode(38) + "lt;";
+const ENT_GT = String.fromCharCode(38) + "gt;";
+const ENT_QUOT = String.fromCharCode(38) + "quot;";
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, ENT_AMP)
+    .replace(/</g, ENT_LT)
+    .replace(/>/g, ENT_GT)
+    .replace(/\x22/g, ENT_QUOT);
 }
 
 // ── Impressão Lista de Crianças ──────────────────────────────────
 /**
  * Abre uma nova janela com uma lista simples e limpa dos nomes das
  * crianças da festa, pronta a imprimir.
+ * Inclui colunas de cacifo associado e notas quando existirem.
  */
 export function imprimirListaConvidados(
   reserva: ReservaPrintInfo,
-  cacifos: CacifoPrintInfo[]
+  cacifos: CacifoPrintInfo[],
+  titulo?: string
 ): void {
-  const nomes = extrairNomesCriancas(reserva, cacifos);
+  const itens = extrairCriancas(reserva, cacifos);
   const anvNomes =
     reserva.aniversariantes
       ?.map((a) => a.aniversariante.nome)
       .join(", ") || "—";
   const data = formatDate(reserva.data ? String(reserva.data) : "");
-  const total = nomes.length;
+  const total = itens.length;
 
-  const linhasHtml = nomes
-    .map(
-      (nome, i) =>
-        `<tr>
-        <td style="border:1px solid #bbb;padding:8px 12px;font-weight:600;width:40px;text-align:center;color:#555;">${i + 1}</td>
-        <td style="border:1px solid #bbb;padding:8px 12px;font-size:15px;">${nome}</td>
-      </tr>`
-    )
+  const mostrarCacifo = temCacifos(itens);
+
+  const linhasHtml = itens
+    .map((item, i) => {
+      const colunas: string[] = [
+        `<td style="border:1px solid #bbb;padding:8px 12px;font-weight:600;width:40px;text-align:center;color:#555;">${i + 1}</td>`,
+        `<td style="border:1px solid #bbb;padding:8px 12px;font-size:15px;">${escapeHtml(item.nome)}</td>`,
+      ];
+      if (mostrarCacifo) {
+        colunas.push(
+          `<td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:70px;color:#666;">${item.cacifo != null ? "#" + item.cacifo : "—"}</td>`
+        );
+      }
+      // Coluna de Notas — sempre visível (espaço para escrita manual)
+      colunas.push(
+        `<td style="border:1px solid #bbb;padding:6px 10px;font-size:13px;color:#444;min-height:36px;">${item.notas ? escapeHtml(item.notas) : ""}</td>`
+      );
+      return `<tr>${colunas.join("\n        ")}</tr>`;
+    })
     .join("");
+
+  // Cabeçalho dinâmico
+  const cabecalhoCols: string[] = [
+    `<th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:center;width:40px;">Nº</th>`,
+    `<th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Crianças</th>`,
+  ];
+  if (mostrarCacifo) {
+    cabecalhoCols.push(
+      `<th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:center;width:70px;">Cacifo</th>`
+    );
+  }
+  // Coluna de Notas — sempre visível
+  cabecalhoCols.push(
+    `<th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Notas</th>`
+  );
+
+  const colspan = cabecalhoCols.length;
+
+  const tituloFinal = titulo ?? `Festa de ${anvNomes}`;
 
   const html = `<!DOCTYPE html>
 <html lang="pt">
 <head>
   <meta charset="utf-8">
-  <title>Lista de Crianças — ${anvNomes}</title>
+  <title>${escapeHtml(tituloFinal)}</title>
   <style>
     * { font-family: 'Inter', Arial, sans-serif; box-sizing: border-box; }
     body { padding: 30px; color: #1a1a1a; }
@@ -90,13 +166,18 @@ export function imprimirListaConvidados(
   </style>
 </head>
 <body>
-  <h1>🎉 Festa de ${anvNomes}</h1>
+  <h1>${escapeHtml(tituloFinal)}</h1>
   <div class="info">
-    Data: ${data} · Horário: ${reserva.horario ?? "—"} · Sala: ${reserva.local?.nome ?? "—"}
+    Data: ${escapeHtml(data)} · Horário: ${escapeHtml(reserva.horario ?? "—")} · Sala: ${escapeHtml(reserva.local?.nome ?? "—")}
   </div>
   <table>
+    <thead>
+      <tr>
+        ${cabecalhoCols.join("\n        ")}
+      </tr>
+    </thead>
     <tbody>
-      ${linhasHtml || '<tr><td colspan="2" style="border:1px solid #bbb;padding:20px;text-align:center;color:#999;">Sem crianças registadas</td></tr>'}
+      ${linhasHtml || `<tr><td colspan="${colspan}" style="border:1px solid #bbb;padding:20px;text-align:center;color:#999;">Sem crianças registadas</td></tr>`}
     </tbody>
   </table>
   <div class="footer">Total de crianças: ${total} · Gerado em ${new Date().toLocaleString("pt-PT")}</div>
