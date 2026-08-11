@@ -18,10 +18,11 @@ export default async function ProtectedLayout({
     redirect("/entrar");
   }
 
-  // Roles focados numa única página (CACIFOS, FESTAS_ACABAR) — sem menu lateral.
+  // Roles focados numa única página (CACIFOS, FESTAS_ACABAR, LANCHE) — sem menu lateral.
   const isSidebarHidden =
     (session.user as { funcao?: string }).funcao === "CACIFOS" ||
-    (session.user as { funcao?: string }).funcao === "FESTAS_ACABAR";
+    (session.user as { funcao?: string }).funcao === "FESTAS_ACABAR" ||
+    (session.user as { funcao?: string }).funcao === "LANCHE";
 
   return (
     <ProtectedProviders>

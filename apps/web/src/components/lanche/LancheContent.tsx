@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Sandwich, AlertTriangle, Save, Pencil, Printer, Clock, CookingPot, CheckCheck, Cake, Users } from "lucide-react";
+import { Sandwich, AlertTriangle, Save, Pencil, Printer, Clock, CookingPot, CheckCheck, Cake, Users, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
 import { PageHeader, Button } from "@/components/ui";
@@ -13,6 +13,9 @@ import { Select } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
+import { reservasApi } from "@/lib/api/reservas";
+import { imprimirListaConvidados } from "@/utils/print-lista";
+import { useToast } from "@/hooks/use-toast";
 import {
   useLanchesDoDia,
   useAlergias,
@@ -61,6 +64,8 @@ export default function LancheContent() {
   const [notasEdit, setNotasEdit] = useState("");
   const [lesoesEdit, setLesoesEdit] = useState("");
   const [horaLancheEdit, setHoraLancheEdit] = useState<string>("");
+  const [printingId, setPrintingId] = useState<string | null>(null);
+  const toast = useToast();
 
   // Stable handler for DatePicker — avoids flatpickr re-init on every render.
   const handleDataChange = useCallback((selectedDates: Date[]) => {
@@ -115,6 +120,24 @@ export default function LancheContent() {
     setLesoesEdit(festa.observacoesLesoes ?? "");
     setHoraLancheEdit(festa.horaLanche ?? "");
   }, []);
+
+  // Imprime a lista de crianças (nomes) de uma festa — busca o detalhe da reserva
+  // para obter aniversariantes + cacifos e reutiliza o utilitário das festas.
+  const handleImprimirFesta = useCallback(async (festa: LancheFesta) => {
+    setPrintingId(festa.reservaId);
+    try {
+      const reserva = await reservasApi.getById(festa.reservaId);
+      imprimirListaConvidados(
+        reserva,
+        reserva.cacifos ?? [],
+        `Festa de ${festa.nomeFesta}`
+      );
+    } catch {
+      toast.error("Não foi possível obter a lista da festa.");
+    } finally {
+      setPrintingId(null);
+    }
+  }, [toast]);
 
   const handleSaveNotas = useCallback(async () => {
     if (!editingFesta) return;
@@ -400,13 +423,6 @@ export default function LancheContent() {
               ))}
             </div>
           </div>
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
-          >
-            <Printer size={16} />
-            <span>Imprimir</span>
-          </button>
         </div>
       </div>
 
@@ -452,14 +468,29 @@ export default function LancheContent() {
             pagination
             pageSize={10}
             renderActions={(f) => (
-              <Tooltip content="Editar observações" position="top" theme="dark">
-                <button
-                  onClick={() => handleEditNotas(f)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors no-print"
-                >
-                  <Pencil size={15} />
-                </button>
-              </Tooltip>
+              <div className="flex items-center justify-end gap-1 no-print">
+                <Tooltip content="Imprimir lista de crianças" position="top" theme="dark">
+                  <button
+                    onClick={() => handleImprimirFesta(f)}
+                    disabled={printingId === f.reservaId}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors disabled:opacity-50"
+                  >
+                    {printingId === f.reservaId ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <Printer size={15} />
+                    )}
+                  </button>
+                </Tooltip>
+                <Tooltip content="Editar observações" position="top" theme="dark">
+                  <button
+                    onClick={() => handleEditNotas(f)}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-primary-500 transition-colors"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                </Tooltip>
+              </div>
             )}
           />
         ) : entradas.length > 0 ? (
