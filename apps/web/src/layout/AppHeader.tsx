@@ -13,9 +13,11 @@ interface AppHeaderProps {
     email?: string | null;
     image?: string | null;
   };
+  /** Oculta o botão de hamburger (quando não há sidebar, p.ex. role CACIFOS). */
+  hideSidebarToggle?: boolean;
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({ user }) => {
+const AppHeader: React.FC<AppHeaderProps> = ({ user, hideSidebarToggle = false }) => {
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();
   const { handleSignOut } = useSignOut();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -23,19 +25,21 @@ const AppHeader: React.FC<AppHeaderProps> = ({ user }) => {
   return (
     <header className="sticky top-0 z-30 flex w-full bg-surface border-b border-border">
       <div className="flex items-center justify-between w-full px-4 py-3">
-        {/* Left: hamburger menu */}
-        <div className="flex items-center gap-3">
-          <button
-            className="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-text-secondary hover:bg-brand-500/5 lg:hidden"
-            onClick={toggleMobileSidebar}
-            aria-label="Abrir menu"
-          >
-            {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
+        {/* Left: hamburger menu (apenas quando há sidebar) */}
+        {!hideSidebarToggle && (
+          <div className="flex items-center gap-3">
+            <button
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-border text-text-secondary hover:bg-brand-500/5 lg:hidden"
+              onClick={toggleMobileSidebar}
+              aria-label="Abrir menu"
+            >
+              {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        )}
 
         {/* Right: DB badge + user menu */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-auto">
           <DbBadge />
 
           {/* User menu */}

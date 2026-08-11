@@ -17,26 +17,31 @@ import {
 } from "@/hooks/use-cacifos";
 import { useActualizarEstadoCacifos } from "@/hooks/use-reservas";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/utils/date";
 import { imprimirListaConvidados } from "@/utils/print-lista";
-import type { Cacifo } from "@/lib/api/cacifos";
+import { cacifosApi, type Cacifo } from "@/lib/api/cacifos";
 
 // ── Props ──────────────────────────────────────────────────────────
 interface PreencherCacifosModalProps {
   reservaId: string | null;
   onClose: () => void;
+  /** Cacifo pré-seleccionado a adicionar automaticamente à reserva (vindo do grid de cacifos). */
+  preselectedCacifoId?: string | null;
 }
 
 // ── Main Component ─────────────────────────────────────────────────
 export default React.memo(function PreencherCacifosModal({
   reservaId,
   onClose,
+  preselectedCacifoId,
 }: PreencherCacifosModalProps) {
   const { data: reserva, isLoading } = useReserva(reservaId ?? "");
   const { data: cacifos } = useCacifos(reservaId ? { reservaId } : undefined);
   const { data: disponiveis } = useCacifosDisponiveis();
 
   const toast = useToast();
+  const queryClient = useQueryClient();
   const actualizarEstado = useActualizarEstadoCacifos();
   const adicionarCacifo = useAdicionarCacifoReserva();
   const realocar = useRealocarTodos();
@@ -45,6 +50,32 @@ export default React.memo(function PreencherCacifosModal({
 
   // ── Derived ──────────────────────────────────────────────────────
   const cacifosList = cacifos ?? [];
+
+  // ── Auto-adicionar cacifo pré-seleccionado + focus no input ──
+  const preselectedAddedRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!reservaId || !preselectedCacifoId) return;
+    if (preselectedAddedRef.current === preselectedCacifoId) return;
+
+    const alreadyAssigned = cacifosList.some(c => c.id === preselectedCacifoId);
+    if (!alreadyAssigned) {
+      preselectedAddedRef.current = preselectedCacifoId;
+      cacifosApi.marcarOcupado(preselectedCacifoId, reservaId)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+          setTimeout(() => {
+            document.querySelector<HTMLInputElement>(`[data-cacifo-input="${preselectedCacifoId}"]`)?.focus();
+          }, 400);
+        })
+        .catch(() => toast.error("Não foi possível adicionar o cacifo."));
+    } else {
+      preselectedAddedRef.current = preselectedCacifoId;
+      setTimeout(() => {
+        document.querySelector<HTMLInputElement>(`[data-cacifo-input="${preselectedCacifoId}"]`)?.focus();
+      }, 100);
+    }
+  }, [reservaId, preselectedCacifoId, cacifosList, queryClient, toast]);
+
   const preenchidos = cacifosList.filter(
     (c) => c.criancas && c.criancas !== "Por preencher"
   ).length;
@@ -404,6 +435,7 @@ function CacifoRow({
 
       {/* Input nome */}
       <input
+        data-cacifo-input={cacifo.id}
         type="text"
         value={isPlaceholder ? "" : nome}
         placeholder="Por preencher"

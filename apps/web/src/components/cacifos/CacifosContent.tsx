@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Package, Download, LockKeyhole, AlertTriangle, Unlock, Printer, ClipboardList } from "lucide-react";
+import { Package, Download, LockKeyhole, AlertTriangle, Unlock, Printer, ClipboardList, DoorOpen, Cake, Loader2 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
@@ -12,10 +12,14 @@ import {
   useLibertar,
   useCacifosEsquecidos,
   useLibertarTodos,
+  useCacifosDisponiveis,
 } from "@/hooks/use-cacifos";
 import { useReservas, useReservasAtivas } from "@/hooks/use-reservas";
+import { useEntradasLivres, useAtualizarEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useToast } from "@/hooks/use-toast";
-import type { Cacifo, EstadoCacifo } from "@/lib/api/cacifos";
+import { useQueryClient } from "@tanstack/react-query";
+import type { EntradaLivre } from "@/lib/api/entradaLivre";
+import { cacifosApi, type Cacifo, type EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 import { formatDate } from "@/utils/date";
 import { imprimirListaConvidados } from "@/utils/print-lista";
@@ -58,8 +62,11 @@ export default function CacifosContent() {
   const [filtroFesta, setFiltroFesta] = useState("");
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [selectedReservaId, setSelectedReservaId] = useState<string | null>(null);
+  const [preselectedCacifoId, setPreselectedCacifoId] = useState<string | null>(null);
+  const [pendingEntradaId, setPendingEntradaId] = useState<string | null>(null);
 
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch festas for the selected date (for summary bar)
   const { data: reservasData } = useReservas({ data: selectedDate, pageSize: 100 });
@@ -148,6 +155,48 @@ export default function CacifosContent() {
   ], [festasAtivas]);
 
   const formattedDate = formatDate(selectedDate);
+
+  // Entradas Livres do dia (para atribuir cacifos)
+  const { data: entradasData } = useEntradasLivres({ data: selectedDate });
+  const entradasLivresHoje = useMemo(
+    () => (entradasData ?? []).filter((e) => e.estado === "ATIVA"),
+    [entradasData],
+  );
+  const { data: cacifosDisponiveis } = useCacifosDisponiveis();
+  const atualizarEntrada = useAtualizarEntradaLivre();
+
+  const handleAtribuirCacifoEntrada = useCallback(async (entradaId: string, cacifoId: string) => {
+    setPendingEntradaId(entradaId);
+    try {
+      await atualizarEntrada.mutateAsync({ id: entradaId, data: { cacifoId: cacifoId === "NONE" ? null : cacifoId } });
+      // Garante que os cartões de cacifo também actualizam (associação reversa)
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      toast.success(cacifoId === "NONE" ? "Cacifo removido." : "Cacifo atribuído com sucesso.");
+    } catch (err) {
+      toast.handleApiError(err, "Erro ao atribuir cacifo.");
+    } finally {
+      setPendingEntradaId(null);
+    }
+  }, [atualizarEntrada, toast, queryClient]);
+
+  // Associar cacifo LIVRE a uma festa ou entrada livre a partir do modal
+  const handleAssociarCacifo = useCallback(async (cacifoId: string, tipo: "festa" | "entrada", targetId: string) => {
+    try {
+      if (tipo === "festa") {
+        await cacifosApi.marcarOcupado(cacifoId, targetId);
+      } else {
+        await atualizarEntrada.mutateAsync({ id: targetId, data: { cacifoId } });
+      }
+      // Invalidar TODAS as queries relevantes para dar refresh completo
+      queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+      queryClient.invalidateQueries({ queryKey: ["entradas-livres"] });
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+      toast.success("Cacifo associado com sucesso.");
+      setSelectedCacifo(null);
+    } catch (err) {
+      toast.handleApiError(err, "Erro ao associar cacifo.");
+    }
+  }, [atualizarEntrada, queryClient, toast]);
 
   const handleImprimir = useCallback(() => {
     imprimirListaConvidados(
@@ -287,6 +336,8 @@ export default function CacifosContent() {
         </div>
       </div>
 
+      {/* Resumo do dia: Festas + Entradas (lado a lado em ecrãs grandes) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Festas summary for selected date */}
       {festas.length > 0 && (
         <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
@@ -305,7 +356,7 @@ export default function CacifosContent() {
               return (
                 <div
                   key={festa.id}
-                  className={`flex items-center gap-2 px-3 py-2 text-xs rounded-lg border transition-all duration-200 ${
+                  className={`flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-lg border transition-all duration-200 ${
                     isFiltered
                       ? "bg-brand-500 text-white border-brand-500 shadow-sm"
                       : "bg-white text-text-secondary border-border hover:border-brand-300 hover:text-brand-500 hover:shadow-theme-xs"
@@ -316,26 +367,26 @@ export default function CacifosContent() {
                     className="flex items-center gap-2"
                   >
                     {festa.cor ? (
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-white/30" style={{ backgroundColor: festa.cor }} />
+                      <span className="w-3 h-3 rounded-full shrink-0 ring-1 ring-white/30" style={{ backgroundColor: festa.cor }} />
                     ) : (
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-gray-200" />
+                      <span className="w-3 h-3 rounded-full shrink-0 bg-gray-200" />
                     )}
                     <span className="font-medium">{anvNome}</span>
-                    <span className={`text-[10px] ${isFiltered ? "text-white/70" : "text-text-muted"}`}>
+                    <span className={`text-xs ${isFiltered ? "text-white/70" : "text-text-muted"}`}>
                       {festa.horario} · {festa.local?.nome ?? ""}
                     </span>
                   </button>
                   {/* Botão Preencher cacifos */}
                   <button
                     onClick={() => setSelectedReservaId(festa.id)}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
                       isFiltered
                         ? "bg-white/20 text-white hover:bg-white/30"
                         : "bg-brand-50 text-brand-600 hover:bg-brand-100"
                     }`}
                     title="Preencher cacifos"
                   >
-                    <ClipboardList size={12} />
+                    <ClipboardList size={14} />
                     Preencher
                   </button>
                 </div>
@@ -344,6 +395,71 @@ export default function CacifosContent() {
           </div>
         </div>
       )}
+
+      {/* Entradas Livres summary — atribuir cacifos */}
+      {entradasLivresHoje.length > 0 && (
+        <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
+              <DoorOpen size={14} className="text-brand-500" />
+              Entradas Livres — {formattedDate}
+            </p>
+            <span className="text-xs text-text-muted bg-gray-50 px-2.5 py-1 rounded-full font-medium">
+              {entradasLivresHoje.length} {entradasLivresHoje.length === 1 ? "entrada" : "entradas"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[...entradasLivresHoje]
+              .sort((a, b) => {
+                if (!a.cacifoId && b.cacifoId) return -1;
+                if (a.cacifoId && !b.cacifoId) return 1;
+                return 0;
+              })
+              .map((entrada) => {
+              const criancaNomes = (entrada.criancas as Array<{ nome: string }> | null)?.map(c => c.nome).join(", ") || "—";
+              const hasCacifo = !!entrada.cacifoId;
+              return (
+                <div
+                  key={entrada.id}
+                  className={`flex items-center gap-2 px-3 py-2 text-xs rounded-lg border transition-all duration-200 ${
+                    hasCacifo
+                      ? "bg-white text-text-secondary border-border"
+                      : "bg-accent-orange-50 text-accent-orange-700 border-accent-orange-200"
+                  }`}
+                >
+                  <DoorOpen size={12} className={`shrink-0 ${hasCacifo ? "text-text-muted" : "text-accent-orange-500"}`} />
+                  <span className="font-medium">{criancaNomes}</span>
+                  <span className={`text-[10px] ${hasCacifo ? "text-text-muted" : "text-accent-orange-400"}`}>
+                    · {entrada.encarregadoNome}
+                  </span>
+                  <div className="w-28 shrink-0">
+                    {pendingEntradaId === entrada.id ? (
+                      <div className="flex items-center justify-center h-9 rounded-lg border border-border bg-gray-50">
+                        <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
+                      </div>
+                    ) : (
+                      <Select
+                        options={[
+                          { value: "NONE", label: "Sem cacifo" },
+                          ...(cacifosDisponiveis ?? [])
+                            .filter(c => c.id !== entrada.cacifoId)
+                            .map(c => ({ value: c.id, label: `#${c.numero}` })),
+                          ...(entrada.cacifo ? [{ value: entrada.cacifo.id, label: `#${entrada.cacifo.numero}` }] : []),
+                        ]}
+                        value={entrada.cacifoId ?? "NONE"}
+                        onChange={(val) => handleAtribuirCacifoEntrada(entrada.id, val)}
+                        placeholder="Atribuir..."
+                        dropdownWidth="w-48"
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      </div>
 
       {/* Grid */}
       <div className="no-print">
@@ -392,7 +508,22 @@ export default function CacifosContent() {
                 )}
                 {cacifo.reserva && !porPreencher && (
                   <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
-                    {cacifo.reserva.cliente?.nome ?? ""}
+                    {cacifo.reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || cacifo.reserva.cliente?.nome || ""}
+                  </span>
+                )}
+                {!cacifo.reserva && cacifo.estado === "OCUPADO" && (
+                  <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
+                    Entrada Livre
+                  </span>
+                )}
+                {/* Indicador Festa vs Entrada Livre */}
+                {cacifo.estado === "OCUPADO" && (
+                  <span className={`absolute top-1 right-1 px-1 py-0.5 rounded text-[9px] font-bold leading-none ${
+                    cacifo.reserva
+                      ? "bg-accent-red-100 text-accent-red-600"
+                      : "bg-brand-100 text-brand-600"
+                  }`}>
+                    {cacifo.reserva ? "Festa" : "EL"}
                   </span>
                 )}
               </button>
@@ -455,7 +586,7 @@ export default function CacifosContent() {
             <div className="space-y-2 mb-5">
               {selectedCacifo.reserva && (
                 <>
-                  <DetailRow label="Festa" value={selectedCacifo.reserva.cliente?.nome ?? "—"} />
+                  <DetailRow label="Aniversariante" value={selectedCacifo.reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || selectedCacifo.reserva.cliente?.nome || "—"} />
                   <DetailRow label="Sala" value={selectedCacifo.reserva.local?.nome ?? "—"} />
                   {selectedCacifo.reserva.notasCacifos && (
                     <div className="px-3 py-2.5 rounded-lg bg-accent-orange-50 border border-accent-orange-200">
@@ -472,6 +603,64 @@ export default function CacifosContent() {
                 <DetailRow label="Notas" value={selectedCacifo.notas} />
               )}
             </div>
+
+            {/* Associar cacifo LIVRE a festa ou entrada livre */}
+            {selectedCacifo.estado === "LIVRE" && (
+              <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 space-y-3">
+                <p className="text-sm font-semibold text-text-primary">Associar cacifo #{selectedCacifo.numero} a:</p>
+                {/* Festas como pills clicáveis */}
+                {festas.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-text-muted mb-1.5 flex items-center gap-1"><Cake size={11} /> Festas</p>
+                    <div className="flex flex-wrap gap-2">
+                      {festas.map((f) => {
+                        const anvNome = f.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || f.cliente?.nome || "—";
+                        return (
+                          <button
+                            key={f.id}
+                            onClick={() => {
+                              setPreselectedCacifoId(selectedCacifo.id);
+                              setSelectedCacifo(null);
+                              setSelectedReservaId(f.id);
+                            }}
+                            className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg border bg-white text-text-secondary border-border hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 transition-all cursor-pointer"
+                          >
+                            {f.cor && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: f.cor }} />}
+                            <span className="font-medium">{anvNome}</span>
+                            <span className="text-[10px] text-text-muted">{f.horario}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {/* Entradas Livres como pills clicáveis */}
+                {entradasLivresHoje.filter(e => !e.cacifoId).length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-text-muted mb-1.5 flex items-center gap-1"><DoorOpen size={11} /> Entradas Livres</p>
+                    <div className="flex flex-wrap gap-2">
+                      {entradasLivresHoje.filter(e => !e.cacifoId).map((e) => {
+                        const criancaNomes = (e.criancas as Array<{ nome: string }> | null)?.map(c => c.nome).join(", ") || "—";
+                        return (
+                          <button
+                            key={e.id}
+                            onClick={() => handleAssociarCacifo(selectedCacifo.id, "entrada", e.id)}
+                            className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg border bg-white text-text-secondary border-border hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 transition-all cursor-pointer"
+                          >
+                            <DoorOpen size={12} className="text-brand-500 shrink-0" />
+                            <span className="font-medium">{criancaNomes}</span>
+                            <span className="text-[10px] text-text-muted">{e.encarregadoNome}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {festas.length === 0 && entradasLivresHoje.filter(e => !e.cacifoId).length === 0 && (
+                  <p className="text-xs text-text-muted">Nenhuma festa ou entrada livre disponível para associar.</p>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
               <Button
@@ -498,7 +687,11 @@ export default function CacifosContent() {
       {/* Preencher Cacifos Modal */}
       <PreencherCacifosModal
         reservaId={selectedReservaId}
-        onClose={() => setSelectedReservaId(null)}
+        preselectedCacifoId={preselectedCacifoId}
+        onClose={() => {
+          setSelectedReservaId(null);
+          setPreselectedCacifoId(null);
+        }}
       />
     </div>
   );

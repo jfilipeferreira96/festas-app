@@ -194,7 +194,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered, openSubmenu, toggleSubmenu } = useSidebar();
   const pathname = usePathname();
   const { handleSignOut } = useSignOut();
-  const { canRead, isGlobalAdmin, isLoading: permissoesLoading } = useMinhasPermissoes();
+  const { canRead, isGlobalAdmin, funcao, isLoading: permissoesLoading } = useMinhasPermissoes();
 
   const isActive = useCallback(
     (path: string) => {
@@ -245,6 +245,8 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
               .filter((item) => {
                 // Dashboard is admin-only (no modulo assigned)
                 if (item.name === "Dashboard") return isGlobalAdmin;
+                // CACIFOS só vê cacifos no menu (reservas: leitura é para a API, não para navegação)
+                if (funcao === "CACIFOS" && item.modulo === "reservas") return false;
                 return !item.modulo || permissoesLoading || canRead(item.modulo);
               })
               .map((item) => (

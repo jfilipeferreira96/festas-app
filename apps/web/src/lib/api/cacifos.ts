@@ -16,6 +16,7 @@ export interface Cacifo {
     cliente: { id: string; nome: string } | null;
     local: { id: string; nome: string } | null;
     notasCacifos?: string | null;
+    aniversariantes?: { aniversariante: { nome: string } }[];
   };
 }
 
