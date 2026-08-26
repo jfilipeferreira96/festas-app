@@ -42,7 +42,7 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamento
   const [metodo, setMetodo] = useState("NONE");
 
   const totalLiquido = (ajustes ?? []).reduce(
-    (sum, a) => sum + (a.tipo === "ACRESCIMO" ? a.valor : -a.valor),
+    (sum, a) => sum + (a.tipo === "ACRESCIMO" ? Number(a.valor) : -Number(a.valor)),
     0
   );
 
@@ -116,7 +116,7 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamento
                       a.tipo === "ACRESCIMO" ? "text-accent-green-600" : "text-accent-red-500"
                     }`}
                   >
-                    {a.tipo === "ACRESCIMO" ? "+" : "−"} {fmtEuro.format(a.valor)}
+                    {a.tipo === "ACRESCIMO" ? "+" : "−"} {fmtEuro.format(Number(a.valor))}
                   </span>
                   {a.criadoPor && (
                     <span className="text-[10px] text-text-muted">
