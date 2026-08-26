@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import Switch from "@/components/form/switch/Switch";
 import { useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useToast } from "@/hooks/use-toast";
+import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 
 const METODO_PAGAMENTO_OPTIONS = [
@@ -54,7 +55,7 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
   const isLoading = atualizarPagamento.isPending;
 
   return (
-    <Modal isOpen onClose={onClose} size="sm" title={`Pagamento — ${criancaNomes}`}>
+    <Modal isOpen onClose={onClose} size="md" title={`Pagamento — ${criancaNomes}`}>
       <div className="p-5 space-y-4">
         {/* Custo */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
@@ -84,6 +85,9 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
           />
           {pago && <p className="text-xs text-text-muted mt-1">* Obrigatório quando marcado como pago</p>}
         </div>
+
+        {/* Acertos de pagamento (acrécimos/descontos com nota) */}
+        <AjustesPagamentoSection entradaLivreId={entrada.id} />
 
         {/* Footer */}
         <div className="flex items-center gap-3 pt-2 lg:justify-end">

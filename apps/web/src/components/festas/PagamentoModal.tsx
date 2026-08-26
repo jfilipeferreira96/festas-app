@@ -10,6 +10,7 @@ import Switch from "@/components/form/switch/Switch";
 import Checkbox from "@/components/form/input/Checkbox";
 import { useUpdatePagamento } from "@/hooks/use-reservas";
 import { useToast } from "@/hooks/use-toast";
+import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import type { Reserva, MetodoPagamento } from "@/lib/api/reservas";
 
 const METODO_PAGAMENTO_OPTIONS = [
@@ -201,6 +202,9 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
               </div>
             </div>
           </div>
+
+          {/* Acertos de pagamento (acrécimos/descontos com nota) */}
+          <AjustesPagamentoSection reservaId={reserva.id} />
 
           {/* Resumo financeiro */}
           {total > 0 && (

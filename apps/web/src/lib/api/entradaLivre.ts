@@ -3,6 +3,7 @@ import { api } from "./utils";
 export interface Crianca {
   nome: string;
   idade?: number;
+  querLanche?: boolean;
 }
 
 export interface EntradaLivreExtraItem {

@@ -116,7 +116,7 @@ export const lancheService = {
     });
 
     const lanchesEntradas: LancheEntradaLivre[] = entradas.map((e) => {
-      const criancas = (e.criancas as { nome: string; idade?: number }[]) ?? [];
+      const criancas = (e.criancas as { nome: string; idade?: number; querLanche?: boolean }[]) ?? [];
       return {
         entradaLivreId: e.id,
         tipo: "ENTRADA_LIVRE",
@@ -124,6 +124,7 @@ export const lancheService = {
         inicioEm: e.inicioEm.toISOString(),
         horaLanche: e.horaLanche ?? undefined,
         localNome: "Parque Geral",
+        temLanche: e.temLanche,
         criancas,
         observacoesLesoes: e.observacoesLesoes ?? undefined,
         estadoLanche: (e.estadoLanche ?? "NAO_INICIADO") as EstadoLanche,

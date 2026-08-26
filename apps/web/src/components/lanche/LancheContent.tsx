@@ -307,13 +307,28 @@ export default function LancheContent() {
     },
     {
       key: "criancas",
-      label: "Nº Crianças",
+      label: "Crianças / Lanches",
       sortable: true,
-      render: (_v, e) => (
-        <span className="text-sm text-text-secondary block text-center">
-          {e.criancas?.length ?? 0}
-        </span>
-      ),
+      render: (_v, e) => {
+        const comLanche = e.temLanche ? (e.criancas ?? []).filter((c) => c.querLanche !== false) : [];
+        return (
+          <div className="text-center">
+            <span className="text-sm text-text-secondary block">
+              {e.criancas?.length ?? 0}
+            </span>
+            {e.temLanche ? (
+              <span
+                className="text-[10px] text-accent-orange-600 font-medium block whitespace-normal max-w-[180px] mx-auto"
+                title={comLanche.map((c) => c.nome).join(", ")}
+              >
+                {comLanche.length} {comLanche.length === 1 ? "lanche" : "lanches"}: {comLanche.map((c) => c.nome).join(", ")}
+              </span>
+            ) : (
+              <span className="text-[10px] text-text-muted block">sem lanche</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: "observacoesLesoes",

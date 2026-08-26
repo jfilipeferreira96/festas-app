@@ -33,6 +33,7 @@ model User {
   monitor       Monitor?
   auditLogs     AuditLog[]
   notasRapidas  NotaRapida[]
+  ajustesPagamento AjustePagamento[]
 
   @@map("user")
 }
@@ -465,6 +466,7 @@ model Reserva {
   monitores       ReservaMonitor[]
   etapas          ReservaEtapa[]
   aniversariantes ReservaAniversariante[]
+  ajustes         AjustePagamento[]
 
   @@index([data, localId])
   @@index([estado])
@@ -811,6 +813,7 @@ model EntradaLivre {
 
   // ── Extras (opcional) ───────────────
   extras          EntradaLivreExtra[]
+  ajustes         AjustePagamento[]
 
   @@index([estado])
   @@index([inicioEm])
@@ -828,6 +831,40 @@ model EntradaLivreExtra {
 
   @@unique([entradaLivreId, extraId])
   @@map("entrada_livre_extra")
+}
+
+// ============================================
+// AJUSTES DE PAGAMENTO (acertos acima/abaixo)
+// Registo histórico de acertos manuais de valor
+// em festas (Reserva) e entradas livres.
+// ============================================
+
+model AjustePagamento {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+
+  // "ACRESCIMO" | "DESCONTO"
+  tipo            String
+  valor           Decimal  @db.Decimal(10, 2)
+  motivo          String   @db.Text
+
+  // Método associado ao acerto (opcional — se vazio, usa o método principal da entidade)
+  metodoPagamento MetodoPagamento?
+
+  // ── Alvo do acerto (exatamente um dos dois) ──
+  reservaId       String?
+  reserva         Reserva?       @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+
+  entradaLivreId  String?
+  entradaLivre    EntradaLivre?  @relation(fields: [entradaLivreId], references: [id], onDelete: Cascade)
+
+  // ── Autor ──
+  criadoPorId     String?
+  criadoPor       User?          @relation(fields: [criadoPorId], references: [id])
+
+  @@index([reservaId])
+  @@index([entradaLivreId])
+  @@map("ajuste_pagamento")
 }
 
 // ============================================

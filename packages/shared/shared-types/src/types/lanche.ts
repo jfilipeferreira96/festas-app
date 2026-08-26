@@ -41,7 +41,8 @@ export interface LancheEntradaLivre {
   horaLanche?: string;
   localNome: string;
   cor?: string;
-  criancas: { nome: string; idade?: number }[];
+  temLanche: boolean;
+  criancas: { nome: string; idade?: number; querLanche?: boolean }[];
   observacoesLesoes?: string;
   estadoLanche: EstadoLanche;
 }

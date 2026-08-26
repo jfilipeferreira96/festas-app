@@ -14,6 +14,7 @@ import {
   Phone,
   Pencil,
   MoreVertical,
+  Wallet,
 } from "lucide-react";
 import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
@@ -29,6 +30,7 @@ import {
 } from "@/hooks/use-entrada-livre";
 import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
+import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 
 function formatTime(iso: string): string {
@@ -91,6 +93,7 @@ export default function EntradasAtivasContent() {
   const [showForm, setShowForm] = useState(false);
   const [editingEntrada, setEditingEntrada] = useState<EntradaLivre | null>(null);
   const [viewingEntradaId, setViewingEntradaId] = useState<string | null>(null);
+  const [pagamentoEntrada, setPagamentoEntrada] = useState<EntradaLivre | null>(null);
 
   const todayStr = useMemo(
     () => new Date().toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" }),
@@ -156,6 +159,7 @@ export default function EntradasAtivasContent() {
           onMarcarPago={handleMarcarPago}
           onView={setViewingEntradaId}
           onEdit={handleEdit}
+          onPagamento={setPagamentoEntrada}
           pagamentoPending={atualizarPagamento.isPending}
         />
       </div>
@@ -173,6 +177,10 @@ export default function EntradasAtivasContent() {
           fimPrevisto={confirmConcluir.fimPrevisto}
           duracaoMinutos={confirmConcluir.duracaoMinutos}
           custoBase={Number(confirmConcluir.custoTotal ?? 0)}
+          notas={{
+            cacifos: confirmConcluir.observacoes,
+            lesoes: confirmConcluir.observacoesLesoes,
+          }}
         />
       )}
 
@@ -203,6 +211,14 @@ export default function EntradasAtivasContent() {
         entradaId={viewingEntradaId}
         onClose={() => setViewingEntradaId(null)}
       />
+
+      {/* Pagamento Modal */}
+      {pagamentoEntrada && (
+        <EntradaLivrePagamentoModal
+          entrada={pagamentoEntrada}
+          onClose={() => setPagamentoEntrada(null)}
+        />
+      )}
     </div>
   );
 }
@@ -216,6 +232,7 @@ function EmCursoTab({
   onMarcarPago,
   onView,
   onEdit,
+  onPagamento,
   pagamentoPending,
 }: {
   entradas?: EntradaLivre[];
@@ -225,6 +242,7 @@ function EmCursoTab({
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
   onEdit: (entrada: EntradaLivre) => void;
+  onPagamento: (entrada: EntradaLivre) => void;
   pagamentoPending: boolean;
 }) {
   if (isLoading) {
@@ -260,6 +278,7 @@ function EmCursoTab({
           onMarcarPago={onMarcarPago}
           onView={onView}
           onEdit={onEdit}
+          onPagamento={onPagamento}
           pagamentoPending={pagamentoPending}
         />
       ))}
@@ -275,6 +294,7 @@ function EntradaAtivaCard({
   onMarcarPago,
   onView,
   onEdit,
+  onPagamento,
   pagamentoPending,
 }: {
   entrada: EntradaLivre;
@@ -283,6 +303,7 @@ function EntradaAtivaCard({
   onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
   onEdit: (entrada: EntradaLivre) => void;
+  onPagamento: (entrada: EntradaLivre) => void;
   pagamentoPending: boolean;
 }) {
   const timer = useTimer(entrada.inicioEm, entrada.duracaoMinutos);
@@ -320,6 +341,20 @@ function EntradaAtivaCard({
               <span>{entrada.encarregadoNome}</span>
             </div>
           </div>
+          {/* Botão de pagamento rápido — abre modal com acertos */}
+          <button
+            type="button"
+            onClick={() => onPagamento(entrada)}
+            className={`inline-flex items-center justify-center w-8 h-8 rounded-lg transition-colors shrink-0 ${
+              entrada.pago
+                ? "text-accent-green-500 hover:bg-accent-green-50"
+                : "text-accent-orange-500 hover:bg-accent-orange-50"
+            }`}
+            title="Gerir pagamento"
+            aria-label="Gerir pagamento"
+          >
+            <Wallet size={16} />
+          </button>
           {/* 3-dots dropdown — acções secundárias */}
           <div className="relative shrink-0">
             <button
@@ -399,6 +434,28 @@ function EntradaAtivaCard({
             </Dropdown>
           </div>
         </div>
+
+        {/* Avisos aos pais — observações e lesões/alergias */}
+        {(entrada.observacoes?.trim() || entrada.observacoesLesoes?.trim()) && (
+          <div className="space-y-1.5 mb-3">
+            {entrada.observacoes?.trim() && (
+              <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-accent-orange-50 border border-accent-orange-200">
+                <AlertTriangle size={13} className="text-accent-orange-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-text-secondary whitespace-pre-wrap break-words">
+                  {entrada.observacoes}
+                </p>
+              </div>
+            )}
+            {entrada.observacoesLesoes?.trim() && (
+              <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-accent-red-50 border border-accent-red-200">
+                <AlertTriangle size={13} className="text-accent-red-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-text-secondary whitespace-pre-wrap break-words">
+                  <span className="font-medium">Lesões/Alergias:</span> {entrada.observacoesLesoes}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Timer Display */}
         <div className="grid grid-cols-3 gap-3 mb-3">

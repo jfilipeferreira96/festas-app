@@ -117,9 +117,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const { data: extras } = useExtras();
 
   // ── Crianças (managed outside RHF because dynamic array) ──
-  const [criancas, setCriancas] = React.useState<Array<{ nome: string; idade: string }>>(
-    entrada?.criancas?.map((c) => ({ nome: c.nome, idade: c.idade?.toString() ?? "" })) ??
-      [{ nome: "", idade: "" }]
+  const [criancas, setCriancas] = React.useState<Array<{ nome: string; idade: string; querLanche: boolean }>>(
+    entrada?.criancas?.map((c) => ({ nome: c.nome, idade: c.idade?.toString() ?? "", querLanche: c.querLanche !== false })) ??
+      [{ nome: "", idade: "", querLanche: true }]
   );
 
   // ── Extras seleccionados (managed outside RHF) ──
@@ -196,12 +196,13 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   // Componentes de custo para o resumo detalhado
   const custoComponentes = useMemo(() => {
-    const numCriancasComNome = criancas.filter((c) => c.nome.trim()).length;
-    const totalPessoas = Math.max(numCriancasComNome + (numAdultosWatched ?? 0), 1);
+    const comNome = criancas.filter((c) => c.nome.trim());
+    const totalPessoas = Math.max(comNome.length + (numAdultosWatched ?? 0), 1);
     const custoTempo = custoTempoPorPessoa * totalPessoas;
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 3);
-    const custoLanche = temLancheWatched ? precoLanche * totalPessoas : 0;
-    return { totalPessoas, custoTempo, custoLanche, total: custoTempo + custoLanche };
+    const criancasComLanche = temLancheWatched ? comNome.filter((c) => c.querLanche).length : 0;
+    const custoLanche = precoLanche * criancasComLanche;
+    return { totalPessoas, criancasComLanche, custoTempo, custoLanche, total: custoTempo + custoLanche };
   }, [custoTempoPorPessoa, criancas, numAdultosWatched, temLancheWatched, configPreco]);
 
   // Mantém compatibilidade: custoCalculado = total
@@ -276,7 +277,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   // ── Handlers ──
   const addCrianca = useCallback(() => {
-    setCriancas((prev) => [...prev, { nome: "", idade: "" }]);
+    setCriancas((prev) => [...prev, { nome: "", idade: "", querLanche: true }]);
   }, []);
 
   const removeCrianca = useCallback((index: number) => {
@@ -286,6 +287,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const updateCrianca = useCallback((index: number, field: "nome" | "idade", value: string) => {
     setCriancas((prev) => prev.map((c, i) => (i === index ? { ...c, [field]: value } : c)));
     if (field === "nome" && value.trim()) setShowCriancasError(false);
+  }, []);
+
+  const toggleCriancaLanche = useCallback((index: number) => {
+    setCriancas((prev) => prev.map((c, i) => (i === index ? { ...c, querLanche: !c.querLanche } : c)));
   }, []);
 
   const toggleExtra = useCallback((extraId: string) => {
@@ -316,7 +321,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             if (m < 0 || (m === 0 && agora.getDate() < nasc.getDate())) anos--;
             idade = String(Math.max(0, anos));
           }
-          return { nome: filho.nome, idade };
+          return { nome: filho.nome, idade, querLanche: true };
         });
         setCriancas(novasCriancas);
         setShowCriancasError(false);
@@ -342,6 +347,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
           .map((c) => ({
             nome: c.nome.trim(),
             idade: c.idade ? parseInt(c.idade, 10) : undefined,
+            querLanche: c.querLanche,
           })),
         encarregadoNome: data.encarregadoNome,
         encarregadoTelefone: data.encarregadoTelefone,
@@ -451,6 +457,15 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
                       max={18}
                     />
                   </div>
+                  {temLancheWatched && (
+                    <div className="pb-2">
+                      <Checkbox
+                        checked={crianca.querLanche}
+                        onChange={() => toggleCriancaLanche(index)}
+                        label="Lanche"
+                      />
+                    </div>
+                  )}
                   {criancas.length > 1 && (
                     <button
                       type="button"
@@ -574,7 +589,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               <div>
                 <span className="text-sm font-medium text-text-primary">Inclui lanche?</span>
                 <p className="text-xs text-text-muted">
-                  +{formatEuro(Number(configPreco?.precoLancheEntrada ?? 3))} por pessoa
+                  +{formatEuro(Number(configPreco?.precoLancheEntrada ?? 3))} por criança (marcar por criança acima)
                 </p>
               </div>
               <Switch
@@ -802,7 +817,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               {custoComponentes.custoLanche > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-text-muted">
-                    Lanche (×{custoComponentes.totalPessoas}p)
+                    Lanche ({custoComponentes.criancasComLanche} {custoComponentes.criancasComLanche === 1 ? "criança" : "crianças"})
                   </span>
                   <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoLanche)}</span>
                 </div>

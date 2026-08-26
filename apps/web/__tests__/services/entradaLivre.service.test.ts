@@ -227,6 +227,119 @@ describe("Entrada Livre Service", () => {
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
 
+    it("should charge lanche only for children with querLanche=true", async () => {
+      // Referência sem lanche (mesma duração e nº de crianças)
+      const ref = await entradaLivreService.create({
+        encarregadoNome: "Ref Sem Lanche",
+        encarregadoTelefone: "912345611",
+        duracaoMinutos: 90,
+        pago: true,
+        criancas: [{ nome: "A" }, { nome: "B" }],
+        temLanche: false,
+      });
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Lanche Parcial",
+        encarregadoTelefone: "912345612",
+        duracaoMinutos: 90,
+        pago: true,
+        criancas: [
+          { nome: "A", querLanche: true },
+          { nome: "B", querLanche: false },
+        ],
+        temLanche: true,
+      });
+
+      const base = Number(ref.custoTotal);
+      const precoLanche = 3; // default (config sem precoLancheEntrada)
+      expect(Number(entrada.custoTotal)).toBeCloseTo(base + 1 * precoLanche, 2);
+
+      await testPrisma.entradaLivre.delete({ where: { id: ref.id } });
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should count all children as lanche when flag is absent (retrocompatibilidade)", async () => {
+      const ref = await entradaLivreService.create({
+        encarregadoNome: "Ref Sem Lanche 2",
+        encarregadoTelefone: "912345613",
+        duracaoMinutos: 90,
+        pago: true,
+        criancas: [{ nome: "A" }, { nome: "B" }],
+        temLanche: false,
+      });
+
+      // Sem querLanche — registo antigo: todas as crianças contam
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Lanche Retro",
+        encarregadoTelefone: "912345614",
+        duracaoMinutos: 90,
+        pago: true,
+        criancas: [{ nome: "A" }, { nome: "B" }],
+        temLanche: true,
+      });
+
+      const base = Number(ref.custoTotal);
+      const precoLanche = 3;
+      expect(Number(entrada.custoTotal)).toBeCloseTo(base + 2 * precoLanche, 2);
+
+      await testPrisma.entradaLivre.delete({ where: { id: ref.id } });
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should not charge lanche when temLanche=false even with querLanche flags", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Sem Lanche Flags",
+        encarregadoTelefone: "912345615",
+        duracaoMinutos: 90,
+        pago: true,
+        criancas: [
+          { nome: "A", querLanche: true },
+          { nome: "B", querLanche: true },
+        ],
+        temLanche: false,
+      });
+
+      const semLanche = await entradaLivreService.create({
+        encarregadoNome: "Sem Lanche Simples",
+        encarregadoTelefone: "912345616",
+        duracaoMinutos: 90,
+        pago: true,
+        criancas: [{ nome: "A" }, { nome: "B" }],
+        temLanche: false,
+      });
+
+      expect(Number(entrada.custoTotal)).toBeCloseTo(Number(semLanche.custoTotal), 2);
+
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+      await testPrisma.entradaLivre.delete({ where: { id: semLanche.id } });
+    });
+
+    it("should recalculate custoTotal on update when a child toggles querLanche", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Update Lanche",
+        encarregadoTelefone: "912345617",
+        duracaoMinutos: 90,
+        pago: true,
+        criancas: [
+          { nome: "A", querLanche: true },
+          { nome: "B", querLanche: true },
+        ],
+        temLanche: true,
+      });
+
+      const atualizada = await entradaLivreService.atualizar(entrada.id, {
+        criancas: [
+          { nome: "A", querLanche: true },
+          { nome: "B", querLanche: false },
+        ],
+      });
+
+      // Menos um lanche (3€) face à criação
+      expect(Number(atualizada.custoTotal)).toBeCloseTo(Number(entrada.custoTotal) - 3, 2);
+
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
     it("should create entrada with numAdultos (pai paga)", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Pai Paga",

@@ -7,6 +7,7 @@ import { cacifoService } from "@/services/cacifo.service";
 interface CriancaInput {
   nome: string;
   idade?: number;
+  querLanche?: boolean;
 }
 
 interface CriarEntradaLivreDTO {
@@ -88,6 +89,14 @@ async function registarCriancasComoAniversariantes(
   await prisma.aniversariante.createMany({
     data: novos.map((nome) => ({ nome, clienteId })),
   });
+}
+
+// ── Helper: contar crianças com lanche ──
+// O lanche é granular: cada criança tem a sua flag (querLanche).
+// Registos antigos sem flag contam como "quer lanche" (retrocompatibilidade).
+function contarCriancasComLanche(criancas: CriancaInput[], temLanche: boolean | undefined): number {
+  if (!temLanche) return 0;
+  return criancas.filter((c) => c.querLanche !== false).length;
 }
 
 export const entradaLivreService = {
@@ -221,7 +230,8 @@ export const entradaLivreService = {
     const custoTempoPorPessoa = await configuracaoPrecoService.calcularPrecoEntrada(duracaoMinutos, new Date());
     const custoTempo = custoTempoPorPessoa * totalPessoas;
     const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
-    const custoLanche = data.temLanche ? precoLanche * totalPessoas : 0;
+    const criancasComLanche = contarCriancasComLanche(criancas, data.temLanche);
+    const custoLanche = precoLanche * criancasComLanche;
     const custoCalculado = custoTempo + custoLanche;
 
     const custoTotal =
@@ -465,7 +475,8 @@ export const entradaLivreService = {
 
     // Decisão do custoTotal:
     // - Se o utilizador forneceu um valor manual, esse prevalece.
-    // - Senão, se a duração mudou, recalcula a partir da config.
+    // - Senão, recalcula a partir do tarifário se a duração ou a composição
+    //   de pessoas/lanche mudou.
     let novoCustoTotal: number | undefined;
     let novoFimPrevisto: Date | undefined;
     if (typeof custoTotalInput === "number" && custoTotalInput >= 0) {
@@ -474,10 +485,30 @@ export const entradaLivreService = {
     if (duracaoMinutos !== undefined && duracaoMinutos !== entrada.duracaoMinutos) {
       const inicioEm = new Date(entrada.inicioEm);
       novoFimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
-      if (novoCustoTotal === undefined) {
-        // Recalcula o custo com a taxa horária registada na entrada
-        const custoHora = Number(entrada.custoHora);
-        novoCustoTotal = (custoHora / 60) * duracaoMinutos;
+    }
+
+    const camposRelevantesFornecidos =
+      criancas !== undefined ||
+      data.temLanche !== undefined ||
+      data.numAdultos !== undefined ||
+      duracaoMinutos !== undefined;
+
+    if (novoCustoTotal === undefined && camposRelevantesFornecidos) {
+      const criancasEfetivas = criancas ?? (entrada.criancas as unknown as CriancaInput[]);
+      const numAdultosEfetivo = data.numAdultos ?? entrada.numAdultos;
+      const temLancheEfetivo = data.temLanche ?? entrada.temLanche;
+      const duracaoEfetiva = duracaoMinutos ?? entrada.duracaoMinutos;
+
+      const lancheAntes = contarCriancasComLanche(entrada.criancas as unknown as CriancaInput[], entrada.temLanche);
+      const lancheDepois = contarCriancasComLanche(criancasEfetivas, temLancheEfetivo);
+      const duracaoMudou = duracaoEfetiva !== entrada.duracaoMinutos;
+
+      if (duracaoMudou || lancheAntes !== lancheDepois || numAdultosEfetivo !== entrada.numAdultos) {
+        const custoTempoPorPessoa = await configuracaoPrecoService.calcularPrecoEntrada(duracaoEfetiva, new Date(entrada.inicioEm));
+        const configPreco = await configuracaoPrecoService.getConfig();
+        const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
+        const totalPessoas = criancasEfetivas.length + numAdultosEfetivo;
+        novoCustoTotal = custoTempoPorPessoa * totalPessoas + precoLanche * lancheDepois;
       }
     }
 
