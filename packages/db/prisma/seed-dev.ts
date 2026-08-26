@@ -536,7 +536,8 @@ async function seedReservas() {
     numCriancas: number,
     numPreenchidos: number,
     startCacifo: number,
-    allPreenchidos: boolean = false
+    allPreenchidos: boolean = false,
+    notasPorCacifo: (string | undefined)[] = []
   ) {
     const names = pickNames(numCriancas);
     const numToFill = allPreenchidos ? numCriancas : numPreenchidos;
@@ -549,6 +550,7 @@ async function seedReservas() {
           estado: "OCUPADO",
           reservaId,
           criancas: names[i] ?? `Criança ${i + 1}`,
+          notas: notasPorCacifo[i] ?? null,
         },
       });
     }
@@ -747,6 +749,8 @@ async function seedReservas() {
     update: {
       estado: "EM_CURSO", inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso, fimReal: null,
       horario: "14:00", duracaoMinutos: 135,
+      notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde — confirmar com os pais no pagamento e na saída.",
+      observacoesLesoes: "Marta tem gesso no braço direito — evitar escalada e trampolins.",
     },
     create: {
       id: "reserva-001",
@@ -758,10 +762,12 @@ async function seedReservas() {
       bolo: "BOLO_ARTISTICO", boloTema: "Bolo de chocolate com coroa dourada",
       observacoesGerais: "Marta faz 8 anos. Gosta de cor-de-rosa. Sem restrições alimentares.",
       observacoesBrindes: "Sacos com pulseiras e adesivos.",
+      observacoesLesoes: "Marta tem gesso no braço direito — evitar escalada e trampolins.",
       outrosExtras: "Palhaçada ao início (15 min)",
       metodoPagamento: "MBWAY", valorPago: 175.00, pago: true,
       caucao: "PAGA",
       notas: "Marta faz 8 anos. Decoração cor-de-rosa.",
+      notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde — confirmar com os pais no pagamento e na saída.",
       clienteId: "cliente-001", localId: "local-001",
     },
   });
@@ -772,8 +778,24 @@ async function seedReservas() {
   await prisma.reservaExtra.upsert({ where: { id: "rext-001-1" }, update: {}, create: { id: "rext-001-1", reservaId: "reserva-001", extraId: "extra-004", quantidade: 1 } });
   await prisma.reservaExtra.upsert({ where: { id: "rext-001-2" }, update: {}, create: { id: "rext-001-2", reservaId: "reserva-001", extraId: "extra-005", quantidade: 18 } });
   await prisma.reservaExtra.upsert({ where: { id: "rext-001-3" }, update: {}, create: { id: "rext-001-3", reservaId: "reserva-001", extraId: "extra-006", quantidade: 18 } });
-  // Cacifos: 15 preenchidos de 18, cacifos 1-15
-  await fillCacifos("reserva-001", 18, 15, 1, false);
+  // Cacifos: 15 preenchidos de 18, cacifos 1-15 (vários com notas para testar avisos)
+  await fillCacifos("reserva-001", 18, 15, 1, false, [
+    "Alergia a frutos secos — evitar bolo e bombons com amendoim",
+    undefined,
+    "Asma — bomba na mochila azul; avisar os pais na saída",
+    undefined,
+    undefined,
+    "Sem meias — comprou no parque (talão colado à porta do cacifo)",
+    undefined,
+    undefined,
+    "Alergia a lactose — bolo sem leite e sumo sem iogurte",
+    undefined,
+    "Sai apenas com a avó — não entregar a terceiros",
+    undefined,
+    undefined,
+    undefined,
+    "Meias tamanho 28 esquecidas no cacifo — devolver na saída",
+  ]);
   // Etapas: 2/6 concluídas
   await createEtapas("reserva-001", 2, 6, tEmCurso);
 
@@ -791,6 +813,7 @@ async function seedReservas() {
       observacoesGerais: "Beatriz quer decoração de unicórnios. Muito glitter!",
       observacoesLesoes: "Laura é alérgica a amendoim.",
       observacoesBrindes: "Mini-unicórnios de pelúcia para todos.",
+      notasCacifos: "Cacifos 16 e 23 com alertas — verificar meias em falta no pagamento.",
       metodoPagamento: "DINHEIRO", valorPago: 100.00, pago: false,
       caucao: "PAGA_NO_DIA",
       notas: "Beatriz quer decoração de unicórnios.",
@@ -801,6 +824,16 @@ async function seedReservas() {
   await prisma.menu.upsert({ where: { id: "menu-002" }, update: {}, create: { id: "menu-002", nome: "Menu Unicórnio", preco: 10.00, notas: "Pipocas, sumo, sandes, bolo arco-íris", reservaId: "reserva-002" } });
   await prisma.reservaExtra.upsert({ where: { id: "rext-002-1" }, update: {}, create: { id: "rext-002-1", reservaId: "reserva-002", extraId: "extra-002", quantidade: 1 } });
   await prisma.reservaExtra.upsert({ where: { id: "rext-002-2" }, update: {}, create: { id: "rext-002-2", reservaId: "reserva-002", extraId: "extra-004", quantidade: 1 } });
+  await fillCacifos("reserva-002", 22, 8, 16, false, [
+    "Alergia a amendoim (Laura) — separar do bolo com creme de chocolate",
+    undefined,
+    "Irmã mais velha vem buscar às 18:00 — contacto da mãe no balcão",
+    undefined,
+    "Sem meias — pagar 2,50€ no balcão",
+    undefined,
+    undefined,
+    "Mochila com bomba de asma — entregar directamente à mãe",
+  ]);
 
   // ── TOMORROW 1) RESERVA — slot 14:00, 135 min (Francisco, Futebol, Sala Arco-Íris)
   const tomorrowStr = toDateStr(daysFromNow(1));
@@ -1037,7 +1070,7 @@ async function seedReservas() {
 
   console.log("  ✓ 24 reservas (6 ontem + 3 hoje + 2 amanhã + 3 futuras + 5 esta semana + 5 semana passada)");
   console.log("  ✓ ~92% em slots horários (10:00/14:00/16:30/18:30), 2 com horário custom");
-  console.log("  ✓ Menus, extras, cacifos preenchidos, etapas, horaLanche e brindes-pais para todas\n");
+  console.log("  ✓ Menus, extras, cacifos preenchidos (com notas de saúde/saída nas festas de hoje), etapas, horaLanche e brindes-pais para todas\n");
 }
 
 // ─── Marketing ────────────────────────────────────────────────

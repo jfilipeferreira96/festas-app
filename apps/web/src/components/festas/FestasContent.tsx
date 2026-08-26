@@ -142,6 +142,13 @@ export default function FestasContent() {
           fimPrevisto={confirmFinalizar.fimPrevisto}
           duracaoMinutos={confirmFinalizar.duracaoMinutos}
           custoBase={Number(confirmFinalizar.valorPago ?? 0)}
+          notas={{
+            cacifos: confirmFinalizar.notasCacifos,
+            lesoes: confirmFinalizar.observacoesLesoes,
+            itens: (confirmFinalizar.cacifos ?? [])
+              .filter((c) => c.notas?.trim())
+              .map((c) => ({ numero: c.numero, notas: c.notas!.trim() })),
+          }}
         />
       )}
 
@@ -625,6 +632,33 @@ function FestaCard({
           <div className="mt-1 p-2 bg-gray-50 rounded-lg">
             <p className="text-[10px] text-text-muted uppercase tracking-wider mb-0.5">Notas</p>
             <p className="text-xs text-text-secondary">{festa.notas}</p>
+          </div>
+        )}
+
+        {(festa.notasCacifos || (festa.cacifos ?? []).some((c) => c.notas?.trim())) && (
+          <div className="mt-1 p-2 rounded-lg bg-accent-orange-50 border border-accent-orange-200">
+            <p className="text-[10px] font-semibold text-accent-orange-700 uppercase tracking-wider mb-0.5">
+              📝 Notas Cacifos
+            </p>
+            {festa.notasCacifos && (
+              <p className="text-xs text-text-secondary whitespace-pre-wrap">{festa.notasCacifos}</p>
+            )}
+            {(festa.cacifos ?? [])
+              .filter((c) => c.notas?.trim())
+              .map((c) => (
+                <p key={c.id} className="text-xs text-text-secondary">
+                  <span className="font-medium">Cacifo {c.numero}:</span> {c.notas}
+                </p>
+              ))}
+          </div>
+        )}
+
+        {festa.observacoesLesoes && (
+          <div className="mt-1 p-2 rounded-lg bg-accent-red-50 border border-accent-red-200">
+            <p className="text-[10px] font-semibold text-accent-red-700 uppercase tracking-wider mb-0.5">
+              🩹 Lesões / Alergias
+            </p>
+            <p className="text-xs text-text-secondary whitespace-pre-wrap">{festa.observacoesLesoes}</p>
           </div>
         )}
 

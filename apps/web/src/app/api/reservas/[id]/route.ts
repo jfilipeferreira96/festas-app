@@ -31,6 +31,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     const {
       data,
       horario,
+      horaLanche,
+      salaLancheId,
       duracaoMinutos,
       localId,
       clienteId,
@@ -50,7 +52,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       observacoesBrindes,
       outrosExtras,
       metodoPagamento,
+      metodoPagamento2,
       valorPago,
+      valorPago2,
+      meiasQuantidade,
       pago,
       referenciaPagamento,
       caucao,
@@ -66,7 +71,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       clienteContacto,
       clienteEmail,
       clienteCodigoPostal,
-      // Menu
+      menuId,
       menuNome,
       menuPreco,
       menuNotas,
@@ -75,6 +80,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     await reservaService.update(id, {
       data,
       horario,
+      horaLanche,
+      salaLancheId,
       duracaoMinutos,
       localId,
       clienteId,
@@ -94,7 +101,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
       observacoesBrindes,
       outrosExtras,
       metodoPagamento,
+      metodoPagamento2,
       valorPago,
+      valorPago2,
+      meiasQuantidade,
       pago,
       referenciaPagamento,
       caucao,
@@ -110,6 +120,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
       clienteContacto,
       clienteEmail,
       clienteCodigoPostal,
+      menuId: menuId === null ? null : (menuId || undefined),
     });
 
     // Create or update menu if provided

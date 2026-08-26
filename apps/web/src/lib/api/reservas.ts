@@ -42,6 +42,8 @@ export interface CreateReservaData {
   clienteNome: string;
   clienteContacto: string;
   clienteEmail?: string;
+  clienteCodigoPostal?: string;
+  adicionarCliente?: boolean;
   idadeAnos: number;
   data: string;
   horario: string;
@@ -50,12 +52,17 @@ export interface CreateReservaData {
   localId: string;
   salaLancheId?: string;
   numCriancas?: number;
+  previsaoCriancas?: number;
   extrasIds?: string[];
+  extrasTexto?: Record<string, string>;
   monitoresIds?: string[];
   etapasIds?: string[];
   notas?: string;
   menuItens?: MenuItemInput[];
+  menuId?: string | null;
+  aniversariantes?: { nome: string; dataNascimento?: string }[];
   // Festa fields
+  tema?: string;
   cor?: string;
   bolo?: TipoBolo;
   boloTema?: string;
@@ -66,10 +73,19 @@ export interface CreateReservaData {
   observacoesGerais?: string;
   observacoesLesoes?: string;
   observacoesBrindes?: string;
+  outrosExtras?: string;
   // Pagamento
   metodoPagamento?: MetodoPagamento;
+  metodoPagamento2?: MetodoPagamento;
   valorPago?: number;
+  valorPago2?: number;
+  meiasQuantidade?: number;
   pago?: boolean;
+  referenciaPagamento?: string;
+  caucao?: string;
+  valorCaucao?: number;
+  descontoPercentagem?: number;
+  descontoMotivo?: string;
 }
 
 export interface UpdateReservaData extends Partial<CreateReservaData> {}

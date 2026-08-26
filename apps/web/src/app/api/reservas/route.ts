@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
     const {
       data,
       horario,
+      horaLanche,
+      salaLancheId,
       duracaoMinutos,
       localId,
       clienteId,
@@ -104,7 +106,10 @@ export async function POST(request: NextRequest) {
       observacoesBrindes,
       outrosExtras,
       metodoPagamento,
+      metodoPagamento2,
       valorPago,
+      valorPago2,
+      meiasQuantidade,
       pago,
       referenciaPagamento,
       caucao,
@@ -126,7 +131,7 @@ export async function POST(request: NextRequest) {
       clienteEmail,
       clienteCodigoPostal,
       adicionarCliente,
-      // Menu
+      menuId,
       menuNome,
       menuPreco,
       menuNotas,
@@ -135,6 +140,8 @@ export async function POST(request: NextRequest) {
     const reserva = await reservaService.create({
       data,
       horario,
+      horaLanche,
+      salaLancheId,
       duracaoMinutos,
       localId,
       clienteId,
@@ -150,7 +157,10 @@ export async function POST(request: NextRequest) {
       observacoesBrindes,
       outrosExtras,
       metodoPagamento,
+      metodoPagamento2,
       valorPago,
+      valorPago2,
+      meiasQuantidade,
       pago,
       referenciaPagamento,
       caucao,
@@ -171,6 +181,7 @@ export async function POST(request: NextRequest) {
       clienteEmail,
       clienteCodigoPostal,
       adicionarCliente,
+      menuId: menuId || undefined,
     });
 
     // Create menu if provided

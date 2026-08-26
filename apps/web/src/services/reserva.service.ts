@@ -3,6 +3,7 @@ import type { TipoBolo } from "@saas/shared-types";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 import { cacifoService } from "@/services/cacifo.service";
+import { menuService } from "@/services/menu.service";
 
 interface AniversarianteInput {
   nome: string;
@@ -25,6 +26,7 @@ interface CreateReservaData {
   clienteId?: string;
   numCriancas?: number;
   notas?: string;
+  menuId?: string | null;
   // Festa fields
   tema?: string;
   previsaoCriancas?: number;
@@ -80,6 +82,7 @@ interface UpdateReservaData {
   clienteId?: string;
   numCriancas?: number;
   notas?: string;
+  menuId?: string | null;
   tema?: string;
   previsaoCriancas?: number;
   cor?: string;
@@ -127,12 +130,16 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
 };
 
 async function findOrCreateCliente(input: AniversarianteInput): Promise<string> {
+  if (!input.encarregadoEmail && !input.encarregadoTelefone) {
+    throw new Error("CLIENTE_REQUIRED");
+  }
+
   // Try to find existing client by email or telefone
   const existing = await prisma.cliente.findFirst({
     where: {
       OR: [
         ...(input.encarregadoEmail ? [{ email: input.encarregadoEmail }] : []),
-        { telefone: input.encarregadoTelefone },
+        ...(input.encarregadoTelefone ? [{ telefone: input.encarregadoTelefone }] : []),
       ],
     },
   });
@@ -143,12 +150,35 @@ async function findOrCreateCliente(input: AniversarianteInput): Promise<string> 
     data: {
       nome: input.encarregadoNome,
       email: input.encarregadoEmail,
-      telefone: input.encarregadoTelefone,
+      telefone: input.encarregadoTelefone ?? "",
       contribuinte: input.encarregadoContribuinte,
       codigoPostal: input.encarregadoCodigoPostal,
     },
   });
   return cliente.id;
+}
+
+/**
+ * Faz upsert (ou remove) o registo Menu da reserva a partir do Extra de
+ * categoria MENU seleccionado no formulário (menuId).
+ * - menuId string → resolve o Extra e cria/atualiza o Menu (nome + preço)
+ * - menuId null   → remove o menu existente (utilizador limpou a seleção)
+ */
+async function syncMenuFromExtra(reservaId: string, menuId: string | null | undefined) {
+  if (menuId === undefined) return;
+
+  if (menuId === null) {
+    await prisma.menu.deleteMany({ where: { reservaId } });
+    return;
+  }
+
+  const extra = await prisma.extra.findUnique({ where: { id: menuId } });
+  if (!extra || extra.categoria !== "MENU") throw new Error("MENU_NOT_FOUND");
+
+  await menuService.createOrUpdateForReserva(reservaId, {
+    nome: extra.nome,
+    preco: Number(extra.precoUnitario),
+  });
 }
 
 // ── Disponibilidade / conflitos de horário ──────────────────────
@@ -331,8 +361,16 @@ export const reservaService = {
       for (const anvInput of data.aniversariantes) {
         if (!anvInput.dataNascimento) throw new Error("DATA_NASCIMENTO_REQUIRED");
 
+        const anvComEncarregado: AniversarianteInput = {
+          ...anvInput,
+          encarregadoNome: data.clienteNome ?? anvInput.encarregadoNome ?? "",
+          encarregadoEmail: data.clienteEmail ?? anvInput.encarregadoEmail,
+          encarregadoTelefone: data.clienteContacto ?? anvInput.encarregadoTelefone,
+          encarregadoCodigoPostal: data.clienteCodigoPostal ?? anvInput.encarregadoCodigoPostal,
+        };
+
         // Find or create cliente
-        const cId = await findOrCreateCliente(anvInput);
+        const cId = await findOrCreateCliente(anvComEncarregado);
         if (!clienteId) clienteId = cId;
 
         // Create aniversariante
@@ -445,6 +483,8 @@ export const reservaService = {
       await cacifoService.preReservarCacifos(created.id, numCriancas);
     }
 
+    await syncMenuFromExtra(created.id, data.menuId);
+
     return created;
   },
 
@@ -457,7 +497,15 @@ export const reservaService = {
     if (data.aniversariantes && data.aniversariantes.length > 0) {
       for (const anvInput of data.aniversariantes) {
         if (!anvInput.dataNascimento) throw new Error("DATA_NASCIMENTO_REQUIRED");
-        const cId = await findOrCreateCliente(anvInput);
+
+        const anvComEncarregado: AniversarianteInput = {
+          ...anvInput,
+          encarregadoNome: data.clienteNome ?? anvInput.encarregadoNome ?? "",
+          encarregadoEmail: data.clienteEmail ?? anvInput.encarregadoEmail,
+          encarregadoTelefone: data.clienteContacto ?? anvInput.encarregadoTelefone,
+          encarregadoCodigoPostal: data.clienteCodigoPostal ?? anvInput.encarregadoCodigoPostal,
+        };
+        const cId = await findOrCreateCliente(anvComEncarregado);
         const anv = await prisma.aniversariante.create({
           data: {
             nome: anvInput.nome,
@@ -505,7 +553,7 @@ export const reservaService = {
       await cacifoService.ajustarPreReserva(id, data.numCriancas);
     }
 
-    return prisma.reserva.update({
+    await prisma.reserva.update({
       where: { id },
       data: {
         data: data.data ? new Date(data.data) : undefined,
@@ -565,6 +613,12 @@ export const reservaService = {
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
       },
     });
+
+    if (data.menuId !== undefined) {
+      await syncMenuFromExtra(id, data.menuId);
+    }
+
+    return this.getById(id);
   },
 
   async updateStatus(id: string, novoEstado: string) {

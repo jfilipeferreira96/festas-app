@@ -445,18 +445,30 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     }
   }, [watchedData, watchedMenuId, menuExtras]);
 
+  React.useEffect(() => {
+    if (!reserva?.menu || menuExtras.length === 0) return;
+    if (getValues("menuId")) return;
+    const match = menuExtras.find((m) => m.nome === reserva.menu?.nome);
+    if (match) setValue("menuId", match.id);
+  }, [reserva?.menu, menuExtras, setValue, getValues]);
+
+  const [showPagamento, setShowPagamento] = useState(() =>
+    Boolean(
+      reserva &&
+        (reserva.pago ||
+          reserva.metodoPagamento ||
+          (reserva.caucao && reserva.caucao !== "NAO_PAGA") ||
+          reserva.descontoPercentagem ||
+          (reserva.valorCaucao && Number(reserva.valorCaucao) > 0))
+    )
+  );
+
   // ── Pré-preencher valorCaucao com o default das configurações ──
   React.useEffect(() => {
     if (reserva?.valorCaucao && Number(reserva.valorCaucao) > 0) return;
     if (!configPreco?.caucaoDefault) return;
     setValue("valorCaucao", Number(configPreco.caucaoDefault));
   }, [configPreco, setValue, reserva?.valorCaucao]);
-
-  const totalEstimado = useMemo(() => {
-    let total = 0;
-    for (const extraId of selectedExtrasIds) { const extra = extraItems.find((e) => e.id === extraId); if (extra) total += Number(extra.precoUnitario); }
-    return total;
-  }, [selectedExtrasIds, extraItems]);
 
   const handleExtrasChange = useCallback((selected: string[]) => setSelectedExtrasIds(selected), []);
   const handleMonitoresChange = useCallback((selected: string[]) => setValue("monitoresIds", selected), [setValue]);
@@ -509,6 +521,11 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       setShowAniversarianteError(true);
       return; // Não submete — o utilizador precisa de preencher o nome
     }
+    setShowDataNascimentoError(false);
+    if (!aniversariantes.filter((a) => a.nome.trim()).every((a) => a.dataNascimento)) {
+      setShowDataNascimentoError(true);
+      return;
+    }
     setSubmitError("");
 
     const primeiroAniv = aniversariantes[0];
@@ -529,7 +546,8 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
       extrasTexto: Object.fromEntries(Object.entries(extrasTexto).filter(([, v]) => v.trim())),
       monitoresIds: data.monitoresIds, etapasIds: data.etapasIds,
-      cor: data.cor || undefined, menuId: data.menuId || undefined,
+      cor: data.cor || undefined,
+      menuId: reserva ? (data.menuId || null) : (data.menuId || undefined),
       // Bolo (TipoBolo)
       bolo: (data.bolo || undefined) as TipoBolo | undefined,
       boloTema: data.boloTema || undefined,
@@ -602,7 +620,8 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
             etapaOptions={etapaOptions} currentEtapasIds={currentEtapasIds} handleEtapasChange={handleEtapasChange}
             extraItems={extraItems} extraGroups={extraGroups} selectedExtrasIds={selectedExtrasIds}
             handleExtrasChange={handleExtrasChange} extrasTexto={extrasTexto} setExtrasTexto={setExtrasTexto}
-            totalEstimado={totalEstimado} watchedData={watchedData} corOptions={corOptions} menuOptions={menuOptions}
+            watchedData={watchedData} corOptions={corOptions} menuOptions={menuOptions}
+            showPagamento={showPagamento} setShowPagamento={setShowPagamento}
             showAniversarianteError={showAniversarianteError}
             showDataNascimentoError={showDataNascimentoError}
             disponibilidade={disponibilidade.data}
@@ -668,8 +687,9 @@ interface Step1Props {
   handleExtrasChange: (selected: string[]) => void;
   extrasTexto: Record<string, string>;
   setExtrasTexto: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  totalEstimado: number;
   watchedData: string;
+  showPagamento: boolean;
+  setShowPagamento: (v: boolean) => void;
   corOptions: { value: string; label: string; color?: string; disabled?: boolean }[];
   menuOptions: { value: string; label: string }[];
   menuWarning?: string;
@@ -695,7 +715,7 @@ function Step1Geral({
   salaOptions, monitorOptions, currentMonitoresIds, handleMonitoresChange,
   etapaOptions, currentEtapasIds, handleEtapasChange,
   extraItems, extraGroups, selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto,
-  totalEstimado, watchedData, corOptions, menuOptions, menuWarning,
+  watchedData, corOptions, menuOptions, menuWarning, showPagamento, setShowPagamento,
   showAniversarianteError, showDataNascimentoError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
   coresEmUso,
   slotOptions, horarioCustom, setHorarioCustom, onSelectSlot, currentHorario,
@@ -881,6 +901,20 @@ function Step1Geral({
         </div>
       )}
 
+      {/* ── Menu (antes do bolo — pedido do cliente) ── */}
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
+          <Select options={menuOptions} placeholder="Seleccionar menu" value={watch("menuId") ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
+          {menuWarning && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <AlertTriangle size={12} className="text-accent-orange shrink-0" />
+              <p className="text-[11px] text-accent-orange-700">{menuWarning}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ── Bolo de Aniversário ── */}
       <div className="space-y-2">
         <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
@@ -954,20 +988,6 @@ function Step1Geral({
           )}
         </div>
       )}
-
-      {/* ── Menu ── */}
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
-          <Select options={menuOptions} placeholder="Seleccionar menu" value={watch("menuId") ?? "NONE"} onChange={(val) => setValue("menuId", val === "NONE" ? undefined : val)} />
-          {menuWarning && (
-            <div className="flex items-center gap-1.5 mt-1">
-              <AlertTriangle size={12} className="text-accent-orange shrink-0" />
-              <p className="text-[11px] text-accent-orange-700">{menuWarning}</p>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Tema da Festa: oculto per pedido do cliente (12/07/2026) */}
       <div className="hidden" aria-hidden="true">
@@ -1050,13 +1070,6 @@ function Step1Geral({
           />
         </div>
       </div>
-      {totalEstimado > 0 && (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-primary-50 border border-primary-200">
-          <span className="text-sm font-medium text-text-secondary">Total Extras</span>
-          <span className="text-lg font-bold text-primary-500">{formatEuro(totalEstimado / 100)}</span>
-        </div>
-      )}
-
       {/* ── Notas & Observações (final da marcação) ── */}
       <div className="space-y-3">
         <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
@@ -1102,13 +1115,24 @@ function Step1Geral({
         </div>
       </div>
 
-      {/* ── Pagamento & Caução ── */}
+      {/* ── Pagamento & Caução (opcional — escondido por defeito) ──
+          O pagamento é normalmente gerido no dia da festa via PagamentoModal.
+          O toggle permite registar dados de pagamento na altura da reserva
+          (ex.: caução paga no acto da marcação). */}
       <div className="space-y-3">
-        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-          <CreditCard size={14} className="text-text-muted" /> Pagamento & Caução
-        </label>
+        <Checkbox
+          checked={showPagamento}
+          onChange={setShowPagamento}
+          label="Registar pagamento na reserva (opcional)"
+        />
 
-        {/* Estado + Valor */}
+        {showPagamento && (
+          <>
+            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+              <CreditCard size={14} className="text-text-muted" /> Pagamento & Caução
+            </label>
+
+            {/* Estado + Valor */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
           <span className="text-sm font-medium text-text-primary">
             {watch("pago") ? "✓ Pago" : "Por pagar"}
@@ -1226,6 +1250,8 @@ function Step1Geral({
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

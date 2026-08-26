@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { CreditCard, Wallet, Shield, Percent, Hash, CheckCircle2 } from "lucide-react";
+import { CreditCard, Wallet, Shield, Percent, Hash, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui";
 import { Select } from "@/components/ui/select";
@@ -92,6 +92,31 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     <Modal isOpen onClose={onClose} size="md" title={`Pagamento — ${anvNome}`}>
       <div className="p-5 flex flex-col max-h-[70vh]">
         <div className="flex-1 min-h-0 flex flex-col overflow-y-auto space-y-4">
+
+          {(reserva.notasCacifos || reserva.observacoesLesoes || (reserva.cacifos ?? []).some((c) => c.notas?.trim())) && (
+            <div className="p-3 rounded-lg bg-accent-orange-50 border border-accent-orange-200 space-y-1.5">
+              <p className="text-[10px] font-semibold text-accent-orange-700 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertTriangle size={12} /> Avisar os pais
+              </p>
+              {reserva.notasCacifos && (
+                <p className="text-xs text-text-secondary whitespace-pre-wrap">
+                  <span className="font-medium">Notas cacifos:</span> {reserva.notasCacifos}
+                </p>
+              )}
+              {(reserva.cacifos ?? [])
+                .filter((c) => c.notas?.trim())
+                .map((c) => (
+                  <p key={c.id} className="text-xs text-text-secondary">
+                    <span className="font-medium">Cacifo {c.numero}:</span> {c.notas}
+                  </p>
+                ))}
+              {reserva.observacoesLesoes && (
+                <p className="text-xs text-text-secondary whitespace-pre-wrap">
+                  <span className="font-medium">Lesões / Alergias:</span> {reserva.observacoesLesoes}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Estado do pagamento */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-surface border border-border">

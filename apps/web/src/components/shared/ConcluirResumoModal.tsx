@@ -70,6 +70,13 @@ interface ConcluirResumoModalProps {
 
   /** Base cost already paid (valorPago for festa, custoTotal for entrada) */
   custoBase: number;
+
+  /** Notas importantes a transmitir aos pais na saída (cacifos, alergias, etc.) */
+  notas?: {
+    cacifos?: string | null;
+    lesoes?: string | null;
+    itens?: { numero: number; notas: string }[];
+  };
 }
 
 // ──────────────────────────────────────────────
@@ -88,6 +95,7 @@ export default function ConcluirResumoModal({
   fimPrevisto,
   duracaoMinutos,
   custoBase,
+  notas,
 }: ConcluirResumoModalProps) {
   const { data: configPreco } = useConfigPreco();
   const precoExcessoFixo = configPreco
@@ -133,6 +141,9 @@ export default function ConcluirResumoModal({
 
   const custoExcessoFinal = hasExcesso && cobrarExcesso ? custoExcesso : 0;
   const custoTotal = custoBase + custoExcessoFinal;
+
+  const notasCacifoItens = notas?.itens ?? [];
+  const temNotas = Boolean(notas?.cacifos || notas?.lesoes || notasCacifoItens.length > 0);
 
   const handleConfirm = useCallback(() => {
     if (hasExcesso && cobrarExcesso) {
@@ -301,6 +312,34 @@ export default function ConcluirResumoModal({
             </div>
           </div>
         </div>
+
+        {temNotas && (
+          <div className="rounded-xl border border-accent-orange-200 bg-accent-orange-50 dark:border-accent-orange-800 dark:bg-accent-orange-900/20 p-4 mb-6">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-accent-orange-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <p className="text-sm font-medium text-accent-orange-800 dark:text-accent-orange-300">
+                  Avisar os pais na saída
+                </p>
+                {notas?.cacifos && (
+                  <p className="text-xs text-accent-orange-700 dark:text-accent-orange-400 whitespace-pre-wrap">
+                    <span className="font-semibold">Notas cacifos:</span> {notas.cacifos}
+                  </p>
+                )}
+                {notasCacifoItens.map((item) => (
+                  <p key={item.numero} className="text-xs text-accent-orange-700 dark:text-accent-orange-400">
+                    <span className="font-semibold">Cacifo {item.numero}:</span> {item.notas}
+                  </p>
+                ))}
+                {notas?.lesoes && (
+                  <p className="text-xs text-accent-orange-700 dark:text-accent-orange-400 whitespace-pre-wrap">
+                    <span className="font-semibold">Lesões / Alergias:</span> {notas.lesoes}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex gap-3">
