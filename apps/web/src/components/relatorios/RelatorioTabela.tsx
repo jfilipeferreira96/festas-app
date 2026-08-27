@@ -113,6 +113,28 @@ export default function RelatorioTabela({ relatorio }: { relatorio: RelatorioFin
       <SecaoTabela secao={relatorio.entradasLivres} />
       <SecaoTabela secao={relatorio.outros} />
 
+      {/* Ajustes de pagamento — auditoria (não soma ao Total Geral) */}
+      {relatorio.ajustes && relatorio.ajustes.linhas.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-baseline gap-2 mb-2 px-1">
+            <h3 className="text-sm font-semibold text-text-primary">{relatorio.ajustes.titulo}</h3>
+            <span className="text-[11px] text-text-muted">
+              Valores já incluídos nos totais acima — listagem para auditoria
+            </span>
+          </div>
+          <div className="overflow-x-auto rounded-[14px] border border-dashed border-border bg-surface/60 shadow-card">
+            <table className="w-full">
+              <CabecalhoTabela />
+              <tbody>
+                {relatorio.ajustes.linhas.map((linha, i) => (
+                  <LinhaDados key={`ajustes-${i}`} linha={linha} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Total Geral */}
       <div className="mt-6">
         <h3 className="text-sm font-semibold text-text-primary mb-2 px-1">Total Geral</h3>

@@ -825,6 +825,7 @@ export const reservaService = {
         local: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
+        extras: { include: { extra: true } },
         monitores: { include: { monitor: true } },
         cacifos: true,
         menu: true,
@@ -877,6 +878,23 @@ export const reservaService = {
       where: { reservaId },
       include: { etapa: true },
       orderBy: { etapa: { ordem: "asc" } },
+    });
+  },
+
+  /**
+   * Alterna o estado de conclusão de um extra da reserva
+   * (entregue/prestado no dia da festa — check na tabela de festas).
+   */
+  async toggleReservaExtra(reservaExtraId: string) {
+    const reservaExtra = await prisma.reservaExtra.findUnique({
+      where: { id: reservaExtraId },
+    });
+    if (!reservaExtra) throw new Error("EXTRA_NOT_FOUND");
+
+    return prisma.reservaExtra.update({
+      where: { id: reservaExtraId },
+      data: { concluido: !reservaExtra.concluido },
+      include: { extra: true },
     });
   },
 

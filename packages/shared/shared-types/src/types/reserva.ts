@@ -102,6 +102,8 @@ export interface ReservaExtra {
   extraId: string;
   quantidade: number;
   textoPersonalizado?: string;
+  /** Extra entregue/prestado no dia da festa (check na tabela de festas). */
+  concluido?: boolean;
 }
 
 export interface ReservaMonitor {

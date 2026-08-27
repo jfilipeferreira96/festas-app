@@ -203,8 +203,11 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
             </div>
           </div>
 
-          {/* Acertos de pagamento (acrécimos/descontos com nota) */}
-          <AjustesPagamentoSection reservaId={reserva.id} />
+          {/* Acertos de pagamento (acrécimos/descontos/redefinições com nota) */}
+          <AjustesPagamentoSection
+            reservaId={reserva.id}
+            numCriancas={reserva.numCriancasConfirmadas ?? reserva.numCriancas}
+          />
 
           {/* Resumo financeiro */}
           {total > 0 && (

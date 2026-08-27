@@ -58,6 +58,8 @@ function useTimer(inicioEm: string, duracaoMinutos: number) {
   const remainingMs = Math.max(0, plannedMs - elapsedMs);
 
   const isOvertime = excessMs > 0;
+  // Alerta suave: a acabar (≤15 min restantes, ainda não excedido)
+  const isEndingSoon = !isOvertime && remainingMs <= 15 * 60_000;
 
   const elapsedMin = Math.floor(elapsedMs / 60000);
   const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
@@ -75,6 +77,7 @@ function useTimer(inicioEm: string, duracaoMinutos: number) {
     remaining: isOvertime ? "Excedido" : `${String(remainingMin).padStart(2, "0")}:${String(remainingSec).padStart(2, "0")}`,
     excess: isOvertime ? `+${String(excessMin).padStart(2, "0")}:${String(excessSec).padStart(2, "0")}` : null,
     isOvertime,
+    isEndingSoon,
     progressPercent,
     excessMinutes: excessMin,
   };
@@ -311,7 +314,7 @@ function EntradaAtivaCard({
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div className={`rounded-xl border shadow-theme-xs bg-white overflow-hidden transition-all ${timer.isOvertime ? "border-accent-red-200 ring-1 ring-accent-red-100" : "border-border"}`}>
+    <div className={`rounded-xl border shadow-theme-xs bg-white overflow-hidden transition-all ${timer.isOvertime ? "border-accent-red-200 ring-1 ring-accent-red-100" : "border-border"} ${timer.isEndingSoon ? "animate-alerta-piscar" : ""}`}>
       {/* Progress bar */}
       <div className="h-1 bg-gray-100">
         <div

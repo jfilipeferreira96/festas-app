@@ -1,12 +1,12 @@
  "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCheck, History, Clock, ClipboardList, Bell, Wallet } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCheck, History, Clock, ClipboardList, Bell, Wallet, Cake } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
-import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva } from "@/hooks/use-reservas";
+import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva, useToggleReservaExtra } from "@/hooks/use-reservas";
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
@@ -23,7 +23,9 @@ import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { formatDate, formatDuration } from "@/utils/date";
-import { differenceInYears } from "date-fns";
+import { imprimirBolos } from "@/utils/print-bolos";
+import { useNow } from "@/hooks/use-now";
+import { differenceInYears, parseISO } from "date-fns";
 import { BOLO_LABELS_SHORT } from "@/lib/constants/bolo";
 
 const ESTADO_LABELS: Record<string, string> = {
@@ -137,6 +139,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   }, [tab, dataSelecionada, toLocalISO, tomorrowISO]);
 
   const { data: reservas, isLoading } = useReservas(filtros);
+  // Relógio partilhado — alerta de festas a acabar (≤15 min) na tabela
+  const now = useNow(30_000);
   // Slots do dia (para slots vazios) — só quando há dia único
   const { data: slotsDia } = useSlotsDia(diaUnico ?? "");
   // Definições estáticas de slots (para label do slot na coluna Data/Hora)
@@ -145,6 +149,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const updateStatus = useUpdateReservaStatus();
   const iniciarFesta = useIniciarReserva();
   const finalizarReserva = useFinalizarReserva();
+  const toggleReservaExtra = useToggleReservaExtra();
 
   const handleCreate = useCallback(() => {
     setEditingReserva(null);
@@ -288,6 +293,18 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                 Amanhã
               </span>
             )}
+
+            {/* Imprimir lista de bolos da casa (1kg/2kg/artístico) das festas visíveis */}
+            <button
+              type="button"
+              onClick={() => imprimirBolos(reservas?.items || [])}
+              disabled={!reservas || reservas.items.length === 0}
+              className="ml-auto flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-medium text-text-secondary hover:bg-brand-500/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Imprimir lista de bolos da casa (festas visíveis)"
+            >
+              <Cake size={16} />
+              <span>Bolos</span>
+            </button>
           </div>
         </div>
       )}
@@ -314,6 +331,13 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       <DataTable<Reserva>
         data={reservas?.items || []}
         itemLabel="festas"
+        rowClassName={(r) => {
+          // Festa a acabar: EM_CURSO com fimPrevisto nos próximos 15 min
+          if (r.estado !== "EM_CURSO" || !r.fimPrevisto) return "";
+          const restanteMs = parseISO(r.fimPrevisto).getTime() - now;
+          if (restanteMs > 0 && restanteMs <= 15 * 60_000) return "animate-alerta-piscar";
+          return "";
+        }}
         defaultSort={{ key: "data", direction: "asc" }}
         sortAccessor={(r) => `${r.data ?? ""}T${r.horario ?? ""}`}
         columns={([
@@ -511,6 +535,36 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             },
           },
           {
+            key: "extras",
+            label: "Extras",
+            render: (_v, r) => {
+              const extras = r.extras ?? [];
+              if (extras.length === 0) return <span className="text-sm text-text-muted">—</span>;
+              return (
+                <div className="flex flex-col gap-1 min-w-[120px]">
+                  {extras.map((re) => (
+                    <button
+                      key={re.id}
+                      type="button"
+                      onClick={() => toggleReservaExtra.mutate(re.id)}
+                      disabled={toggleReservaExtra.isPending}
+                      className="flex items-center gap-1.5 text-left group/extra disabled:opacity-50"
+                      title={re.concluido ? "Entregue — clicar para reabrir" : "Marcar como entregue"}
+                    >
+                      <CheckCircle2
+                        size={14}
+                        className={`shrink-0 ${re.concluido ? "text-accent-green-500" : "text-gray-300 group-hover/extra:text-accent-green-400 transition-colors"}`}
+                      />
+                      <span className={`text-xs ${re.concluido ? "text-text-muted line-through" : "text-text-secondary"}`}>
+                        {re.quantidade > 1 ? `${re.quantidade}× ` : ""}{re.extra?.nome ?? "Extra"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              );
+            },
+          },
+          {
             key: "pagamento",
             label: "Pagamento",
             render: (_v, r) => {
@@ -543,7 +597,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
               </StatusBadge>
             ),
           },
-        ] as Column<Reserva>[]).filter((c) => !(isCacifos && (c.key === "contacto" || c.key === "temaMenu" || c.key === "pagamento")))}
+        ] as Column<Reserva>[]).filter((c) => !(isCacifos && (c.key === "contacto" || c.key === "temaMenu" || c.key === "extras" || c.key === "pagamento")))}
         loading={isLoading}
         searchable
         searchPlaceholder="Pesquisar por nome, contacto, email..."

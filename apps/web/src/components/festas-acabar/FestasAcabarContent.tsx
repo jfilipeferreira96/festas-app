@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
-import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Package, Tv, Minimize2, Gift } from "lucide-react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
+import { Save, Clock, Pencil, CheckCircle2, AlertTriangle, History, Package, Tv, Minimize2, Gift, CreditCard, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
@@ -10,10 +10,11 @@ import TextArea from "@/components/form/input/TextArea";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
-import { useFestasAcabar, useAtualizarFestaAcabar, useFinalizarFesta } from "@/hooks/use-festas-acabar";
+import { useFestasAcabar, useEntradasAcabar, useAtualizarFestaAcabar, useFinalizarFesta } from "@/hooks/use-festas-acabar";
 import { useTVMode } from "@/hooks/use-tv-mode";
-import { useReserva } from "@/hooks/use-reservas";
-import type { FestaAcabar } from "@/lib/api/festasAcabar";
+import { useReserva, useToggleReservaExtra } from "@/hooks/use-reservas";
+import EntradasAcabarSection from "./EntradasAcabarSection";
+import type { FestaAcabar, EntradaAcabar } from "@/lib/api/festasAcabar";
 
 /** Formata minutos decorridos como HH:MM. */
 function formatDecorrido(min: number): string {
@@ -31,8 +32,10 @@ interface EditState {
 
 export default function FestasAcabarContent() {
   const { data: festasRaw, isLoading } = useFestasAcabar();
+  const { data: entradasRaw } = useEntradasAcabar();
   const atualizar = useAtualizarFestaAcabar();
   const finalizar = useFinalizarFesta();
+  const toggleReservaExtra = useToggleReservaExtra();
   const { isTVMode, toggleTVMode } = useTVMode();
   const [editing, setEditing] = useState<EditState | null>(null);
   const [confirmandoFinalizar, setConfirmandoFinalizar] = useState<FestaAcabar | null>(null);
@@ -46,6 +49,30 @@ export default function FestasAcabarContent() {
   }, []);
 
   const festas = (festasRaw as unknown as FestaAcabar[]) ?? [];
+  const entradas = (entradasRaw as unknown as EntradaAcabar[]) ?? [];
+
+  // ── Alertas do balcão: festas/entradas por pagar ou com tempo excedido ──
+  const alertas = useMemo(() => {
+    let festasPorPagar = 0;
+    let festasExcedidas = 0;
+    for (const f of festas) {
+      if (!f.pago) festasPorPagar++;
+      if (f.fimPrevisto && now > parseISO(f.fimPrevisto).getTime()) festasExcedidas++;
+    }
+    let entradasPorPagar = 0;
+    let entradasExcedidas = 0;
+    for (const e of entradas) {
+      if (!e.pago) entradasPorPagar++;
+      if (now > parseISO(e.fimPrevisto).getTime()) entradasExcedidas++;
+    }
+    return {
+      festasPorPagar,
+      festasExcedidas,
+      entradasPorPagar,
+      entradasExcedidas,
+      total: festasPorPagar + festasExcedidas + entradasPorPagar + entradasExcedidas,
+    };
+  }, [festas, entradas, now]);
 
   const handleConfirmarFinalizar = useCallback(async () => {
     if (!confirmandoFinalizar) return;
@@ -141,6 +168,51 @@ export default function FestasAcabarContent() {
       },
     },
     {
+      key: "pagamento",
+      label: "Pagamento",
+      render: (_v, f) =>
+        f.pago ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-accent-green-50 text-accent-green-600 border border-accent-green-200">
+            <CheckCircle2 size={12} /> Pago
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold bg-accent-red-50 text-accent-red-600 border border-accent-red-200">
+            <CreditCard size={12} /> Por pagar
+          </span>
+        ),
+    },
+    {
+      key: "extras",
+      label: "Extras",
+      render: (_v, f) => {
+        if (!f.extras || f.extras.length === 0) {
+          return <span className="text-xs text-text-muted/50">—</span>;
+        }
+        return (
+          <div className="flex flex-col gap-1 min-w-[120px]">
+            {f.extras.map((re) => (
+              <button
+                key={re.id}
+                type="button"
+                onClick={() => toggleReservaExtra.mutate(re.id)}
+                disabled={toggleReservaExtra.isPending}
+                className="flex items-center gap-1.5 text-left group/extra disabled:opacity-50"
+                title={re.concluido ? "Entregue — clicar para reabrir" : "Marcar como entregue"}
+              >
+                <CheckCircle2
+                  size={14}
+                  className={`shrink-0 ${re.concluido ? "text-accent-green-500" : "text-gray-300 group-hover/extra:text-accent-green-400 transition-colors"}`}
+                />
+                <span className={`text-xs ${re.concluido ? "text-text-muted line-through" : "text-text-secondary"}`}>
+                  {re.quantidade > 1 ? `${re.quantidade}× ` : ""}{re.nome}
+                </span>
+              </button>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       key: "observacoesBrindes",
       label: "Brindes",
       render: (_v, f) =>
@@ -179,6 +251,20 @@ export default function FestasAcabarContent() {
           <span className="text-xs text-text-muted/50">—</span>
         ),
     },
+    {
+      key: "notasCacifos",
+      label: "Obs. Cacifos",
+      render: (_v, f) => {
+        const notas = f.notasCacifos || f.observacoesCacifo;
+        if (!notas) return <span className="text-xs text-text-muted/50">—</span>;
+        return (
+          <div className="inline-flex items-start gap-1.5 max-w-[280px] rounded-lg bg-brand-50 border border-brand-200 px-2.5 py-1.5">
+            <Package size={13} className="text-brand-600 shrink-0 mt-0.5" />
+            <span className="text-xs text-brand-800 whitespace-normal">{notas}</span>
+          </div>
+        );
+      },
+    },
   ];
 
   return (
@@ -198,10 +284,44 @@ export default function FestasAcabarContent() {
         }
       />
 
+      {/* ── Alerta do balcão: por pagar / tempo excedido ── */}
+      {alertas.total > 0 && (
+        <div className="animate-alerta-piscar flex flex-wrap items-center gap-x-5 gap-y-1.5 rounded-xl border-2 border-accent-red-400 bg-accent-red-50 px-4 py-3">
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-accent-red-700">
+            <AlertTriangle size={16} /> Atenção balcão
+          </span>
+          {alertas.festasPorPagar > 0 && (
+            <span className="text-[13px] font-medium text-accent-red-700">
+              {alertas.festasPorPagar} festa(s) por pagar
+            </span>
+          )}
+          {alertas.festasExcedidas > 0 && (
+            <span className="text-[13px] font-medium text-accent-red-700">
+              {alertas.festasExcedidas} festa(s) com tempo excedido
+            </span>
+          )}
+          {alertas.entradasPorPagar > 0 && (
+            <span className="text-[13px] font-medium text-accent-red-700">
+              {alertas.entradasPorPagar} entrada(s) livre(s) por pagar
+            </span>
+          )}
+          {alertas.entradasExcedidas > 0 && (
+            <span className="text-[13px] font-medium text-accent-red-700">
+              {alertas.entradasExcedidas} entrada(s) com tempo excedido
+            </span>
+          )}
+        </div>
+      )}
+
       <DataTable<FestaAcabar>
         data={festas}
         columns={columns}
         itemLabel="festas em curso"
+        rowClassName={(f) =>
+          !f.pago || (f.fimPrevisto ? now > parseISO(f.fimPrevisto).getTime() : false)
+            ? "bg-accent-red-50/60 border-l-4 border-l-accent-red-400"
+            : ""
+        }
         loading={isLoading}
         defaultSort={{ key: "fimPrevisto", direction: "asc" }}
         searchable
@@ -245,6 +365,9 @@ export default function FestasAcabarContent() {
           description: "Não há festas a decorrer neste momento.",
         }}
       />
+
+      {/* ── Entradas livres ativas ── */}
+      <EntradasAcabarSection entradas={entradas} now={now} />
 
       {/* Modal de edição */}
       {editing && (

@@ -86,8 +86,11 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
           {pago && <p className="text-xs text-text-muted mt-1">* Obrigatório quando marcado como pago</p>}
         </div>
 
-        {/* Acertos de pagamento (acrécimos/descontos com nota) */}
-        <AjustesPagamentoSection entradaLivreId={entrada.id} />
+        {/* Acertos de pagamento (acrécimos/descontos/redefinições com nota) */}
+        <AjustesPagamentoSection
+          entradaLivreId={entrada.id}
+          numCriancas={Array.isArray(entrada.criancas) ? entrada.criancas.length : 0}
+        />
 
         {/* Footer */}
         <div className="flex items-center gap-3 pt-2 lg:justify-end">

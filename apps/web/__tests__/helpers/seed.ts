@@ -44,6 +44,13 @@ export const TEST_IDS = {
   RESERVA_PENDENTE: "test-reserva-002",
   RESERVA_EM_CURSO: "test-reserva-003",
 
+  // Reserva Extras
+  RESERVA_EXTRA_1: "test-reserva-extra-001",
+  RESERVA_EXTRA_2: "test-reserva-extra-002",
+
+  // Ajustes de Pagamento
+  AJUSTE_ACRESCIMO: "test-ajuste-001",
+
   // Segmentos
   SEGMENTO_1: "test-segmento-001",
 
@@ -293,6 +300,36 @@ export async function seedTestData(): Promise<void> {
     create: { id: `${TEST_IDS.RESERVA_EM_CURSO}-${TEST_IDS.ANIV_1}`, reservaId: TEST_IDS.RESERVA_EM_CURSO, aniversarianteId: TEST_IDS.ANIV_1 },
   });
 
+  // ── Reserva Extras (toggle de conclusão no dia da festa) ────
+  // EXTRA_1 na confirmada: ainda não entregue (concluido = false)
+  await testPrisma.reservaExtra.upsert({
+    where: { id: TEST_IDS.RESERVA_EXTRA_1 },
+    update: {},
+    create: { id: TEST_IDS.RESERVA_EXTRA_1, reservaId: TEST_IDS.RESERVA_CONFIRMADA, extraId: TEST_IDS.EXTRA_1, quantidade: 1, concluido: false },
+  });
+  // EXTRA_2 na em curso: já entregue (concluido = true)
+  await testPrisma.reservaExtra.upsert({
+    where: { id: TEST_IDS.RESERVA_EXTRA_2 },
+    update: {},
+    create: { id: TEST_IDS.RESERVA_EXTRA_2, reservaId: TEST_IDS.RESERVA_EM_CURSO, extraId: TEST_IDS.EXTRA_2, quantidade: 2, concluido: true },
+  });
+
+  // ── Ajuste de Pagamento (acréscimo exemplo — write-through) ──
+  // ACRESCIMO 10€ na confirmada (meias). O valorPago do seed já considera o acerto.
+  await testPrisma.ajustePagamento.upsert({
+    where: { id: TEST_IDS.AJUSTE_ACRESCIMO },
+    update: {},
+    create: {
+      id: TEST_IDS.AJUSTE_ACRESCIMO,
+      tipo: "ACRESCIMO",
+      valor: 10,
+      motivo: "Meias compradas no parque (5 × 2€)",
+      reservaId: TEST_IDS.RESERVA_CONFIRMADA,
+      metodoPagamento: "DINHEIRO",
+      criadoPorId: TEST_IDS.USER_ADMIN,
+    },
+  });
+
   // ── Segmento ────────────────────────────────────────────────
   await testPrisma.segmento.upsert({
     where: { id: TEST_IDS.SEGMENTO_1 },
@@ -465,6 +502,8 @@ export async function cleanTestData(): Promise<void> {
   await testPrisma.segmento.deleteMany().catch(() => {});
 
   await testPrisma.menu.deleteMany().catch(() => {});
+
+  await testPrisma.ajustePagamento.deleteMany().catch(() => {});
 
   await testPrisma.reservaEtapa.deleteMany().catch(() => {});
   await testPrisma.reservaMonitor.deleteMany().catch(() => {});

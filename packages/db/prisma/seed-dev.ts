@@ -581,13 +581,13 @@ async function seedReservas() {
   // ═══════════════════════════════════════════════════════════
   const ontemStr = toDateStr(daysAgo(1));
   const ontemConfigs = [
-    { id: "reserva-ontem-1", hora: "10:00", min: 0, dur: 135, n: 15, p: 18, tema: "Dinossauros", cor: "#00A68A", local: "local-001", cli: "cliente-001", aniv: "aniv-002", mons: ["monitor-001", "monitor-002"], bolo: "Bolo de chocolate com decoração de dinossauros", obs: "Tomás adora T-Rex. Decoração verde e castanho.", brindes: "Sacos com mini-dinossauros para todos.", menuNome: "Menu Dinossauro", menuPreco: 9.50 },
-    { id: "reserva-ontem-2", hora: "14:00", min: 0, dur: 135, n: 12, p: 14, tema: "Princesa", cor: "#E54796", local: "local-002", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-003"], bolo: "Bolo de morango com coroa de princesa", obs: "Matilde quer tudo cor-de-rosa.", brindes: "Coroas de princesa para as meninas.", menuNome: "Menu Princesa", menuPreco: 10.00 },
-    { id: "reserva-ontem-3", hora: "16:30", min: 30, dur: 135, n: 18, p: 20, tema: "Piratas", cor: "#8A8E91", local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001", "monitor-004"], bolo: "Bolo de baunilha com navio pirata", obs: "Duarte adora piratas! Decoração com mapas do tesouro.", brindes: "Tapas de olho de pirata e bússolas.", menuNome: "Menu Pirata", menuPreco: 8.00 },
-    { id: "reserva-ontem-4", hora: "18:30", min: 30, dur: 135, n: 10, p: 12, tema: "Fada", cor: "#993B98", local: "local-003", cli: "cliente-006", aniv: "aniv-007", mons: ["monitor-005", "monitor-006"], bolo: "Bolo de cenoura com decoração de fadas", obs: "Leonor quer tudo lilás e brilhante.", brindes: "Varinhas de condão para todos.", menuNome: "Menu Fada", menuPreco: 11.00 },
-    { id: "reserva-ontem-5", hora: "14:00", min: 0, dur: 135, n: 20, p: 22, tema: "Robôs", cor: "#0095C8", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-003"], bolo: "Bolo de chocolate com decoração robô", obs: "Rodrigo gosta de tecnologia e robôs.", brindes: "Mini-robôs de brincar.", menuNome: "Menu Robô", menuPreco: 9.00 },
+    { id: "reserva-ontem-1", hora: "10:00", min: 0, dur: 135, n: 15, p: 18, tema: "Dinossauros", cor: "#00A68A", local: "local-001", cli: "cliente-001", aniv: "aniv-002", mons: ["monitor-001", "monitor-002"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de chocolate com decoração de dinossauros", obs: "Tomás adora T-Rex. Decoração verde e castanho.", brindes: "Sacos com mini-dinossauros para todos.", menuNome: "Menu Dinossauro", menuPreco: 9.50 },
+    { id: "reserva-ontem-2", hora: "14:00", min: 0, dur: 135, n: 12, p: 14, tema: "Princesa", cor: "#E54796", local: "local-002", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-003"], boloTipo: "NOSSO_1KG" as const, bolo: "Bolo de morango com coroa de princesa", obs: "Matilde quer tudo cor-de-rosa.", brindes: "Coroas de princesa para as meninas.", menuNome: "Menu Princesa", menuPreco: 10.00 },
+    { id: "reserva-ontem-3", hora: "16:30", min: 30, dur: 135, n: 18, p: 20, tema: "Piratas", cor: "#8A8E91", local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001", "monitor-004"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de baunilha com navio pirata", obs: "Duarte adora piratas! Decoração com mapas do tesouro.", brindes: "Tapas de olho de pirata e bússolas.", menuNome: "Menu Pirata", menuPreco: 8.00 },
+    { id: "reserva-ontem-4", hora: "18:30", min: 30, dur: 135, n: 10, p: 12, tema: "Fada", cor: "#993B98", local: "local-003", cli: "cliente-006", aniv: "aniv-007", mons: ["monitor-005", "monitor-006"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de cenoura com decoração de fadas", obs: "Leonor quer tudo lilás e brilhante.", brindes: "Varinhas de condão para todos.", menuNome: "Menu Fada", menuPreco: 11.00 },
+    { id: "reserva-ontem-5", hora: "14:00", min: 0, dur: 135, n: 20, p: 22, tema: "Robôs", cor: "#0095C8", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-003"], boloTipo: "NOSSO_2KG" as const, bolo: "Bolo de chocolate com decoração robô", obs: "Rodrigo gosta de tecnologia e robôs.", brindes: "Mini-robôs de brincar.", menuNome: "Menu Robô", menuPreco: 9.00 },
     // ─── Horário CUSTOM (não corresponde a nenhum slot → festasSemSlot) ──
-    { id: "reserva-ontem-6", hora: "12:30", min: 30, dur: 90, n: 8, p: 10, tema: "Safari", cor: "#F59253", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-006"], bolo: "Bolo com animais da selva", obs: "Afonso quer tema safari com animais de pelúcia.", brindes: "Binóculos de brincar.", menuNome: "Menu Safari", menuPreco: 7.50 },
+    { id: "reserva-ontem-6", hora: "12:30", min: 30, dur: 90, n: 8, p: 10, tema: "Safari", cor: "#F59253", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-006"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo com animais da selva", obs: "Afonso quer tema safari com animais de pelúcia.", brindes: "Binóculos de brincar.", menuNome: "Menu Safari", menuPreco: 7.50 },
   ];
 
   for (const c of ontemConfigs) {
@@ -603,7 +603,7 @@ async function seedReservas() {
         horario: c.hora, duracaoMinutos: c.dur, numCriancas: c.n, previsaoCriancas: c.p,
         estado: "CONCLUIDA",
         inicioEm: start, fimPrevisto: fim, fimReal,
-        tema: c.tema, cor: c.cor, bolo: "BOLO_ARTISTICO", boloTema: c.bolo,
+        tema: c.tema, cor: c.cor, bolo: c.boloTipo, boloTema: c.bolo,
         observacoesGerais: c.obs,
         observacoesBrindes: c.brindes,
         metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
@@ -616,7 +616,7 @@ async function seedReservas() {
       await prisma.reservaMonitor.upsert({ where: { id: `rm-${c.id}-${i}` }, update: {}, create: { id: `rm-${c.id}-${i}`, reservaId: c.id, monitorId: mId } });
     }
     await prisma.menu.upsert({ where: { id: `menu-${c.id}` }, update: {}, create: { id: `menu-${c.id}`, nome: c.menuNome, preco: c.menuPreco, notas: "Sumo, croissants, nuggets, bolo", reservaId: c.id } });
-    await prisma.reservaExtra.upsert({ where: { id: `rext-${c.id}-0` }, update: {}, create: { id: `rext-${c.id}-0`, reservaId: c.id, extraId: "extra-005", quantidade: c.n } });
+    await prisma.reservaExtra.upsert({ where: { id: `rext-${c.id}-0` }, update: {}, create: { id: `rext-${c.id}-0`, reservaId: c.id, extraId: "extra-005", quantidade: c.n, concluido: true } });
     await createEtapas(c.id, 6, 6, start);
   }
 
@@ -658,7 +658,7 @@ async function seedReservas() {
       await prisma.reservaMonitor.upsert({ where: { id: `rm-${id}-${i}` }, update: {}, create: { id: `rm-${id}-${i}`, reservaId: id, monitorId: mId } });
     }
     await prisma.menu.upsert({ where: { id: `menu-${id}` }, update: {}, create: { id: `menu-${id}`, nome: c.menuNome, preco: c.menuPreco, notas: "Sumo, pipocas, bolo", reservaId: id } });
-    await prisma.reservaExtra.upsert({ where: { id: `rext-${id}-0` }, update: {}, create: { id: `rext-${id}-0`, reservaId: id, extraId: "extra-005", quantidade: c.n } });
+    await prisma.reservaExtra.upsert({ where: { id: `rext-${id}-0` }, update: {}, create: { id: `rext-${id}-0`, reservaId: id, extraId: "extra-005", quantidade: c.n, concluido: true } });
     await createEtapas(id, 6, 6, start);
   }
 
@@ -719,7 +719,7 @@ async function seedReservas() {
       estado: "CONCLUIDA",
       inicioEm: tConcStart, fimPrevisto: addMin(tConcStart, 135), fimReal: addMin(tConcStart, 130),
       tema: "Fada", cor: "#993B98",
-      bolo: "BOLO_ARTISTICO", boloTema: "Bolo de cenoura com decoração de fadas",
+      bolo: "NOSSO_1KG", boloTema: "Bolo de cenoura com decoração de fadas",
       observacoesGerais: "Leonor quer tudo lilás e brilhante.",
       observacoesBrindes: "Varinhas de condão para todos.",
       metodoPagamento: "CARTAO", valorPago: 145.00, pago: true,
@@ -737,7 +737,7 @@ async function seedReservas() {
   await prisma.reservaMonitor.upsert({ where: { id: "rm-today-3a" }, update: {}, create: { id: "rm-today-3a", reservaId: "reserva-today-3", monitorId: "monitor-005" } });
   await prisma.reservaMonitor.upsert({ where: { id: "rm-today-3b" }, update: {}, create: { id: "rm-today-3b", reservaId: "reserva-today-3", monitorId: "monitor-006" } });
   await prisma.menu.upsert({ where: { id: "menu-today-3" }, update: {}, create: { id: "menu-today-3", nome: "Menu Fada", preco: 11.00, notas: "Croissants, sumo, iogurte, bolo", reservaId: "reserva-today-3" } });
-  await prisma.reservaExtra.upsert({ where: { id: "rext-today-3" }, update: {}, create: { id: "rext-today-3", reservaId: "reserva-today-3", extraId: "extra-004", quantidade: 1 } });
+  await prisma.reservaExtra.upsert({ where: { id: "rext-today-3" }, update: {}, create: { id: "rext-today-3", reservaId: "reserva-today-3", extraId: "extra-004", quantidade: 1, concluido: true } });
   await createEtapas("reserva-today-3", 6, 6, tConcStart);
 
   // ── 2) EM_CURSO — slot 14:00, 135 min (Marta, Princesa, Sala Azul)
@@ -759,7 +759,7 @@ async function seedReservas() {
       estado: "EM_CURSO",
       inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso,
       tema: "Princesa", cor: "#E54796",
-      bolo: "BOLO_ARTISTICO", boloTema: "Bolo de chocolate com coroa dourada",
+      bolo: "NOSSO_2KG", boloTema: "Bolo de chocolate com coroa dourada",
       observacoesGerais: "Marta faz 8 anos. Gosta de cor-de-rosa. Sem restrições alimentares.",
       observacoesBrindes: "Sacos com pulseiras e adesivos.",
       observacoesLesoes: "Marta tem gesso no braço direito — evitar escalada e trampolins.",
@@ -775,9 +775,9 @@ async function seedReservas() {
   await prisma.reservaMonitor.upsert({ where: { id: "rm-001a" }, update: {}, create: { id: "rm-001a", reservaId: "reserva-001", monitorId: "monitor-001" } });
   await prisma.reservaMonitor.upsert({ where: { id: "rm-001b" }, update: {}, create: { id: "rm-001b", reservaId: "reserva-001", monitorId: "monitor-003" } });
   await prisma.menu.upsert({ where: { id: "menu-001" }, update: {}, create: { id: "menu-001", nome: "Menu Completo", preco: 8.50, notas: "Sumo, croissants, nuggets, bolo, pipocas", reservaId: "reserva-001" } });
-  await prisma.reservaExtra.upsert({ where: { id: "rext-001-1" }, update: {}, create: { id: "rext-001-1", reservaId: "reserva-001", extraId: "extra-004", quantidade: 1 } });
-  await prisma.reservaExtra.upsert({ where: { id: "rext-001-2" }, update: {}, create: { id: "rext-001-2", reservaId: "reserva-001", extraId: "extra-005", quantidade: 18 } });
-  await prisma.reservaExtra.upsert({ where: { id: "rext-001-3" }, update: {}, create: { id: "rext-001-3", reservaId: "reserva-001", extraId: "extra-006", quantidade: 18 } });
+  await prisma.reservaExtra.upsert({ where: { id: "rext-001-1" }, update: {}, create: { id: "rext-001-1", reservaId: "reserva-001", extraId: "extra-004", quantidade: 1, concluido: true } });
+  await prisma.reservaExtra.upsert({ where: { id: "rext-001-2" }, update: {}, create: { id: "rext-001-2", reservaId: "reserva-001", extraId: "extra-005", quantidade: 18, concluido: false } });
+  await prisma.reservaExtra.upsert({ where: { id: "rext-001-3" }, update: {}, create: { id: "rext-001-3", reservaId: "reserva-001", extraId: "extra-006", quantidade: 18, concluido: false } });
   // Cacifos: 15 preenchidos de 18, cacifos 1-15 (vários com notas para testar avisos)
   await fillCacifos("reserva-001", 18, 15, 1, false, [
     "Alergia a frutos secos — evitar bolo e bombons com amendoim",
@@ -947,7 +947,7 @@ async function seedReservas() {
       horario: "10:00", duracaoMinutos: 135, numCriancas: 10, previsaoCriancas: 12,
       estado: "CONFIRMADO",
       tema: "Sereia", cor: "#00A68A",
-      bolo: "BOLO_ARTISTICO", boloTema: "Bolo oceano com sereia",
+      bolo: "NOSSO_1KG", boloTema: "Bolo oceano com sereia",
       observacoesGerais: "Mariana adora o mar e sereias.",
       observacoesBrindes: "Conchas e estrelas-do-mar de brincar.",
       metodoPagamento: "CARTAO", valorPago: 120.00, pago: true,
@@ -1068,7 +1068,74 @@ async function seedReservas() {
     await prisma.entradaLivre.update({ where: { id: e.id }, data: { horaLanche } });
   }
 
+  // ─── Ajustes de pagamento (exemplos: acréscimo, desconto, redefinição) ───
+  // Nota: os ajustes são write-through — os valores finais já refletem os acertos.
+  const adminUser = await prisma.user.findFirst({ where: { funcao: "ADMINISTRADOR" } });
+
+  // 1) ACRESCIMO na festa EM_CURSO de hoje (meias compradas no parque)
+  await prisma.ajustePagamento.upsert({
+    where: { id: "ajuste-seed-acrescimo-001" },
+    update: {},
+    create: {
+      id: "ajuste-seed-acrescimo-001",
+      tipo: "ACRESCIMO", valor: 15.00,
+      motivo: "6 pares de meias compradas no parque (6 × 2,50€)",
+      reservaId: "reserva-001",
+      metodoPagamento: "DINHEIRO",
+      criadoPorId: adminUser?.id ?? null,
+    },
+  });
+  await prisma.reserva.update({ where: { id: "reserva-001" }, data: { valorPago: { increment: 15 } } });
+
+  // 2) DESCONTO na festa CONCLUIDA de hoje (cortesia cliente habitual)
+  await prisma.ajustePagamento.upsert({
+    where: { id: "ajuste-seed-desconto-001" },
+    update: {},
+    create: {
+      id: "ajuste-seed-desconto-001",
+      tipo: "DESCONTO", valor: 10.00,
+      motivo: "Cliente habitual — desconto de cortesia",
+      reservaId: "reserva-today-3",
+      criadoPorId: adminUser?.id ?? null,
+    },
+  });
+  await prisma.reserva.update({ where: { id: "reserva-today-3" }, data: { valorPago: { decrement: 10 } } });
+
+  // 3) REDEFINICAO POR_CRIANCA na festa CONFIRMADA de hoje (12€ × 22 crianças = 264€)
+  await prisma.ajustePagamento.upsert({
+    where: { id: "ajuste-seed-redefinicao-001" },
+    update: {},
+    create: {
+      id: "ajuste-seed-redefinicao-001",
+      tipo: "REDEFINICAO", valor: 264.00,
+      modo: "POR_CRIANCA", precoPorCabeca: 12.00,
+      motivo: "Preço combinado de 12€ por criança (22 crianças)",
+      reservaId: "reserva-002",
+      criadoPorId: adminUser?.id ?? null,
+    },
+  });
+  await prisma.reserva.update({ where: { id: "reserva-002" }, data: { valorPago: 264.00 } });
+
+  // 4) ACRESCIMO numa entrada livre com lanche (2 × 4,50€)
+  await prisma.ajustePagamento.upsert({
+    where: { id: "ajuste-seed-acrescimo-002" },
+    update: {},
+    create: {
+      id: "ajuste-seed-acrescimo-002",
+      tipo: "ACRESCIMO", valor: 9.00,
+      motivo: "Lanche para 2 crianças (2 × 4,50€)",
+      entradaLivreId: "entrada-livre-ativa-lanche-001",
+      metodoPagamento: "MBWAY",
+      criadoPorId: adminUser?.id ?? null,
+    },
+  });
+  await prisma.entradaLivre.update({
+    where: { id: "entrada-livre-ativa-lanche-001" },
+    data: { custoTotalFinal: 29.00 },
+  });
+
   console.log("  ✓ 24 reservas (6 ontem + 3 hoje + 2 amanhã + 3 futuras + 5 esta semana + 5 semana passada)");
+  console.log("  ✓ 4 ajustes de pagamento (acréscimo, desconto, redefinição por criança, lanche em entrada livre)");
   console.log("  ✓ ~92% em slots horários (10:00/14:00/16:30/18:30), 2 com horário custom");
   console.log("  ✓ Menus, extras, cacifos preenchidos (com notas de saúde/saída nas festas de hoje), etapas, horaLanche e brindes-pais para todas\n");
 }

@@ -84,6 +84,7 @@ export const festasAcabarService = {
         local: true,
         aniversariantes: { include: { aniversariante: true } },
         cacifos: true,
+        extras: { include: { extra: true } },
       },
       orderBy: { fimPrevisto: "asc" },
     });
@@ -101,6 +102,13 @@ export const festasAcabarService = {
           ? differenceInYears(new Date(r.data ?? new Date()), new Date(primeiroAniv.aniversariante.dataNascimento))
           : null;
 
+      // Notas dos cacifos atribuídos (concatenadas, primeiro campo preenchido)
+      const observacoesCacifo =
+        r.cacifos
+          .map((c) => c.notas)
+          .filter(Boolean)
+          .join("; ") || undefined;
+
       return {
         id: r.id,
         nomeFesta: nomesAniv || "—",
@@ -110,9 +118,52 @@ export const festasAcabarService = {
         inicioEm: r.inicioEm?.toISOString() ?? null,
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
         localNome: r.local?.nome ?? "—",
+        pago: r.pago,
+        valorPago: r.valorPago != null ? Number(r.valorPago) : null,
+        extras: r.extras.map((re) => ({
+          id: re.id,
+          nome: re.extra?.nome ?? "Extra",
+          quantidade: re.quantidade,
+          concluido: re.concluido,
+        })),
+        notasCacifos: r.notasCacifos ?? undefined,
+        observacoesCacifo,
         observacoesBrindes: r.observacoesBrindes ?? "",
         observacoesBrindesPais: r.observacoesBrindesPais ?? "",
         observacoesLesoes: r.observacoesLesoes ?? "",
+      };
+    });
+  },
+
+  /**
+   * Entradas livres ATIVAS — para o balcão (FESTAS_ACABAR) acompanhar
+   * pagamento, tempo e confirmação do lanche. Sem acções de gestão
+   * (concluir/pagar ficam na página de admin /entradas-livres).
+   */
+  async getEntradasAtivas() {
+    const entradas = await prisma.entradaLivre.findMany({
+      where: { estado: "ATIVA" },
+      orderBy: { fimPrevisto: "asc" },
+    });
+
+    return entradas.map((e) => {
+      const criancas = Array.isArray(e.criancas)
+        ? (e.criancas as Array<{ nome?: string }>)
+        : [];
+      return {
+        id: e.id,
+        criancasNomes: criancas.map((c) => c.nome).filter(Boolean).join(", ") || "—",
+        numCriancas: criancas.length,
+        encarregadoNome: e.encarregadoNome,
+        inicioEm: e.inicioEm.toISOString(),
+        fimPrevisto: e.fimPrevisto.toISOString(),
+        duracaoMinutos: e.duracaoMinutos,
+        pago: e.pago,
+        temLanche: e.temLanche,
+        estadoLanche: e.estadoLanche,
+        horaLanche: e.horaLanche ?? undefined,
+        observacoes: e.observacoes ?? undefined,
+        observacoesLesoes: e.observacoesLesoes ?? undefined,
       };
     });
   },

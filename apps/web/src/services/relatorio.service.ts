@@ -133,6 +133,14 @@ interface EntradaRelatorio {
   extras: Array<{ quantidade: number; extra: { precoUnitario: unknown } }>;
 }
 
+interface AjusteRelatorio {
+  tipo: string;
+  valor: unknown;
+  metodoPagamento: string | null;
+  reserva: { metodoPagamento: string | null } | null;
+  entradaLivre: { metodoPagamento: string | null } | null;
+}
+
 // ── Service ────────────────────────────────────────────────────
 
 export const relatorioService = {
@@ -149,7 +157,7 @@ export const relatorioService = {
     const dataFimEnd = new Date(dataFim);
     dataFimEnd.setDate(dataFimEnd.getDate() + 1);
 
-    const [reservas, entradas] = await Promise.all([
+    const [reservas, entradas, ajustes] = await Promise.all([
       prisma.reserva.findMany({
         where: {
           data: { gte: dataInicio, lt: dataFimEnd },
@@ -173,6 +181,15 @@ export const relatorioService = {
           extras: { include: { extra: true } },
         },
       }),
+      prisma.ajustePagamento.findMany({
+        where: {
+          createdAt: { gte: dataInicio, lt: dataFimEnd },
+        },
+        include: {
+          reserva: { select: { metodoPagamento: true } },
+          entradaLivre: { select: { metodoPagamento: true } },
+        },
+      }),
     ]);
 
     const festas = this.calcularFestas(reservas as unknown as ReservaRelatorio[]);
@@ -183,7 +200,10 @@ export const relatorioService = {
       reservas as unknown as ReservaRelatorio[],
       entradas as unknown as EntradaRelatorio[],
     );
+    const ajustesSecao = this.calcularAjustes(ajustes as unknown as AjusteRelatorio[]);
 
+    // Nota: ajustes NÃO somam ao total geral — são write-through (já incluídos
+    // em valorPago/custoTotalFinal das festas/entradas). Secção de auditoria.
     const totalGeral = somarLinhas(
       [festas.total, entradasLivresSecao.total, outros.total],
       "TOTAL",
@@ -195,6 +215,7 @@ export const relatorioService = {
       festas,
       entradasLivres: entradasLivresSecao,
       outros,
+      ajustes: ajustesSecao,
       totalGeral,
     };
   },
@@ -346,6 +367,49 @@ export const relatorioService = {
       titulo: "Outros",
       linhas,
       total: somarLinhas(linhas, "Total"),
+    };
+  },
+
+  /**
+   * Secção 4: Ajustes de Pagamento (informativa)
+   * Acréscimos cobrados, descontos concedidos e redefinições de preço.
+   *
+   * IMPORTANTE: os ajustes são write-through — o valor final da festa/entrada
+   * já reflecte o acerto. Por isso esta secção é apenas auditoria e NÃO soma
+   * ao totalGeral (evitar dupla contagem).
+   */
+  calcularAjustes(ajustes: AjusteRelatorio[]): SecaoRelatorio {
+    const lAcrescimos = criarLinhaVazia("Acréscimos cobrados");
+    const lDescontos = criarLinhaVazia("Descontos concedidos");
+    const lRedefinicoes = criarLinhaVazia("Redefinições de preço");
+
+    for (const a of ajustes) {
+      // Método do acerto; se vazio, usa o método principal da entidade alvo
+      const metodo = a.metodoPagamento ?? a.reserva?.metodoPagamento ?? a.entradaLivre?.metodoPagamento;
+      const valor = Math.abs(toNum(a.valor));
+
+      switch (a.tipo) {
+        case "ACRESCIMO":
+          lAcrescimos.quantidade += 1;
+          somarPorMetodo(lAcrescimos, metodo, valor);
+          break;
+        case "DESCONTO":
+          lDescontos.quantidade += 1;
+          somarPorMetodo(lDescontos, metodo, valor);
+          break;
+        case "REDEFINICAO":
+          lRedefinicoes.quantidade += 1;
+          somarPorMetodo(lRedefinicoes, metodo, valor);
+          break;
+      }
+    }
+
+    const linhas = filtrarLinhasVazias([lAcrescimos, lDescontos, lRedefinicoes]);
+
+    return {
+      titulo: "Ajustes de Pagamento (auditoria)",
+      linhas,
+      total: somarLinhas(linhas, "Total Ajustes"),
     };
   },
 };

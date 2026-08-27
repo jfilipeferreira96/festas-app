@@ -172,6 +172,18 @@ export function useMarcarEtapasConcluidas() {
   });
 }
 
+/** Alterna a conclusão de um extra da reserva (entregue/prestado no dia). */
+export function useToggleReservaExtra() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reservaExtraId: string) => reservasApi.toggleReservaExtra(reservaExtraId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["reservas"] });
+      queryClient.invalidateQueries({ queryKey: ["festas-acabar"] });
+    },
+  });
+}
+
 /** Actualiza o estado dos cacifos ao nível da festa (Chamar/Concluído). */
 export function useActualizarEstadoCacifos() {
   const queryClient = useQueryClient();

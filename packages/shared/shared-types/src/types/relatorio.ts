@@ -26,5 +26,6 @@ export interface RelatorioFinanceiro {
   festas: SecaoRelatorio;
   entradasLivres: SecaoRelatorio;
   outros: SecaoRelatorio;
+  ajustes: SecaoRelatorio;
   totalGeral: LinhaRelatorio;
 }

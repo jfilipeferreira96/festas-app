@@ -42,6 +42,8 @@ interface DataTableProps<T> {
   itemLabel?: string;
   /** Optional footer row rendered inside the table card (e.g. totals). */
   footer?: React.ReactNode;
+  /** Custom class(es) applied to each row (e.g. alert highlighting). */
+  rowClassName?: (item: T) => string;
   /** Default sort configuration applied on mount */
   defaultSort?: {
     key: string;
@@ -83,6 +85,7 @@ function DataTable<T extends { id: string }>({
   defaultSort,
   sortAccessor,
   footer,
+  rowClassName,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(initialPageSize);
@@ -268,7 +271,7 @@ function DataTable<T extends { id: string }>({
           </TableHeader>
           <TableBody>
             {currentData.map((row, index) => (
-              <TableRow key={row.id} className="border-b border-border hover:bg-gray-50/50 last:border-0">
+              <TableRow key={row.id} className={`border-b border-border hover:bg-gray-50/50 last:border-0 ${rowClassName?.(row) ?? ""}`}>
                 <TableCell className="px-4 py-3 text-sm text-text-secondary text-center w-12 font-tabular-nums">
                   {pagination ? (currentPage - 1) * rowsPerPage + index + 1 : index + 1}
                 </TableCell>

@@ -257,6 +257,8 @@ function FestaCard({
   const [progress, setProgress] = useState(0);
   const [isOverdue, setIsOverdue] = useState(false);
   const [isWaitingStart, setIsWaitingStart] = useState(false);
+  const [isEndingSoon, setIsEndingSoon] = useState(false);
+  const [isLancheAtrasado, setIsLancheAtrasado] = useState(false);
   const [showCacifos, setShowCacifos] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
@@ -310,6 +312,18 @@ function FestaCard({
         `${elapsedH.toString().padStart(2, "0")}:${elapsedM.toString().padStart(2, "0")}:${elapsedS.toString().padStart(2, "0")}`
       );
 
+      // Alerta suave: festa a acabar (≤15 min restantes, ainda não ultrapassou)
+      setIsEndingSoon(remainingMs > 0 && remainingMs <= 15 * 60_000);
+
+      // Alerta suave: lanche atrasado (hora passou e ainda NAO_INICIADO)
+      if (festa.horaLanche && festa.estadoLanche === "NAO_INICIADO") {
+        const [lh, lm] = festa.horaLanche.split(":").map(Number);
+        const lancheMs = new Date(now).setHours(lh, lm, 0, 0);
+        setIsLancheAtrasado(now.getTime() >= lancheMs);
+      } else {
+        setIsLancheAtrasado(false);
+      }
+
       if (remainingMs <= 0) {
         setIsOverdue(true);
         const overMs = Math.abs(remainingMs);
@@ -348,7 +362,7 @@ function FestaCard({
     <div
      className={`bg-surface rounded-[14px] shadow-card border overflow-hidden ${
        isOverdue ? "border-accent-red-400" : isWaitingStart ? "border-primary-300" : "border-border"
-     }`}
+     } ${isEndingSoon ? "animate-alerta-piscar" : ""}`}
    >
      {/* Color bar — cor da festa para identificação das pulseiras */}
      {festa.cor && (
@@ -376,6 +390,16 @@ function FestaCard({
            <StatusBadge status={isOverdue ? "INSUFICIENTE" : isWaitingStart ? ("RESERVA" as StatusType) : ("EM_CURSO" as StatusType)}>
              {isOverdue ? "Ultrapassou" : isWaitingStart ? "Aguarda início" : "Em curso"}
            </StatusBadge>
+           {isEndingSoon && (
+             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent-orange-100 text-accent-orange-700 animate-alerta-piscar shrink-0">
+               ⚠ A acabar
+             </span>
+           )}
+           {isLancheAtrasado && (
+             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent-orange-100 text-accent-orange-700 animate-alerta-piscar shrink-0">
+               🍽 Lanche atrasado
+             </span>
+           )}
          </div>
           {/* Botão de impressão rápido — visível directamente no card */}
           <button

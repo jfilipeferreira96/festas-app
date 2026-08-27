@@ -218,6 +218,19 @@
     "updated": "Entrada livre atualizada com sucesso",
     "deleted": "Entrada livre eliminada com sucesso"
   },
+  "ajuste": {
+    "notFound": "Ajuste não encontrado",
+    "tipoInvalido": "Tipo de ajuste inválido",
+    "valorInvalido": "Valor inválido",
+    "motivoObrigatorio": "O motivo é obrigatório",
+    "alvoInvalido": "Ajuste deve referir-se a uma festa ou a uma entrada livre",
+    "modoInvalido": "Modo de redefinição inválido",
+    "criancasInvalido": "Não há crianças associadas para calcular o preço por criança",
+    "redefinicaoNaoRemovivel": "Redefinições de preço não podem ser removidas — crie uma nova redefinição para corrigir"
+  },
+  "fechoCaixa": {
+    "dataInvalida": "Data inválida"
+  },
   "relatorio": {
     "invalidDateRange": "Intervalo de datas inválido",
     "dataInicioRequired": "Data de início é obrigatória",

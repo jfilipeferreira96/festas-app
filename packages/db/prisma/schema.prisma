@@ -479,6 +479,7 @@ model ReservaExtra {
   extraId           String
   quantidade        Int     @default(1)
   textoPersonalizado String? // Texto livre quando extra.requerTexto = true
+  concluido         Boolean @default(false) // Entregue/prestado no dia da festa (check na tabela de festas)
   reserva           Reserva @relation(fields: [reservaId], references: [id], onDelete: Cascade)
   extra             Extra   @relation(fields: [extraId], references: [id], onDelete: Cascade)
 
@@ -843,10 +844,15 @@ model AjustePagamento {
   id              String   @id @default(cuid())
   createdAt       DateTime @default(now())
 
-  // "ACRESCIMO" | "DESCONTO"
+  // "ACRESCIMO" | "DESCONTO" | "REDEFINICAO"
   tipo            String
   valor           Decimal  @db.Decimal(10, 2)
   motivo          String   @db.Text
+
+  // Para REDEFINICAO: "TOTAL" | "POR_CRIANCA"
+  modo            String?
+  // Quando modo = POR_CRIANCA: preço unitário aplicado (valor guarda o total resultante)
+  precoPorCabeca  Decimal? @db.Decimal(10, 2)
 
   // Método associado ao acerto (opcional — se vazio, usa o método principal da entidade)
   metodoPagamento MetodoPagamento?

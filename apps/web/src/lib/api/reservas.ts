@@ -8,6 +8,8 @@ export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo };
 // API response type (base + relations from API)
 export interface Reserva extends ReservaBase {
   local: Local;
+  // Estado do lanche (NAO_INICIADO | A_DECORRER | TERMINADO) — devolvido pela API
+  estadoLanche?: string;
   salaLanche?: { id: string; nome: string } | null;
   cliente: { id: string; nome: string; email?: string; telefone: string; codigoPostal?: string };
   aniversariantes: { id: string; aniversarianteId: string; aniversariante: { id: string; nome: string; dataNascimento?: string | null } }[];
@@ -239,5 +241,11 @@ export const reservasApi = {
     api<Reserva>(`/api/reservas/${id}/estado-cacifos`, {
       method: "PATCH",
       body: JSON.stringify(body),
+    }),
+
+  /** Alterna o estado de conclusão de um extra da reserva (entregue/prestado). */
+  toggleReservaExtra: (reservaExtraId: string) =>
+    api<{ id: string; concluido: boolean }>(`/api/reserva-extras/${reservaExtraId}`, {
+      method: "PATCH",
     }),
 };

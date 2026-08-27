@@ -1,11 +1,16 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Plus, Minus, Trash2, ArrowUpDown } from "lucide-react";
+import { Plus, Minus, Trash2, ArrowUpDown, PenLine, CornerUpRight } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
-import { useAjustesPagamento, useCriarAjustePagamento, useEliminarAjustePagamento } from "@/hooks/use-ajustes-pagamento";
+import {
+  useAjustesPagamento,
+  useCriarAjustePagamento,
+  useRedefinirPreco,
+  useEliminarAjustePagamento,
+} from "@/hooks/use-ajustes-pagamento";
 import { useToast } from "@/hooks/use-toast";
 
 const fmtEuro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
@@ -13,6 +18,11 @@ const fmtEuro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "E
 const TIPO_OPTIONS = [
   { value: "ACRESCIMO", label: "Acréscimo (+)" },
   { value: "DESCONTO", label: "Desconto (−)" },
+];
+
+const MODO_OPTIONS = [
+  { value: "TOTAL", label: "Total (€)" },
+  { value: "POR_CRIANCA", label: "Por criança (€)" },
 ];
 
 const METODO_OPTIONS = [
@@ -28,12 +38,15 @@ const METODO_OPTIONS = [
 interface AjustesPagamentoSectionProps {
   reservaId?: string;
   entradaLivreId?: string;
+  /** Nº de crianças (confirmadas ?? previstas) — usado no preview do preço por criança */
+  numCriancas?: number | null;
 }
 
-function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamentoSectionProps) {
+function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: AjustesPagamentoSectionProps) {
   const toast = useToast();
   const { data: ajustes, isLoading } = useAjustesPagamento({ reservaId, entradaLivreId });
   const criarAjuste = useCriarAjustePagamento();
+  const redefinirPreco = useRedefinirPreco();
   const eliminarAjuste = useEliminarAjustePagamento();
 
   const [tipo, setTipo] = useState("ACRESCIMO");
@@ -41,8 +54,17 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamento
   const [motivo, setMotivo] = useState("");
   const [metodo, setMetodo] = useState("NONE");
 
+  // ── Redefinir preço ──
+  const [showRedefinir, setShowRedefinir] = useState(false);
+  const [redefModo, setRedefModo] = useState("TOTAL");
+  const [redefValor, setRedefValor] = useState("");
+  const [redefPorCabeca, setRedefPorCabeca] = useState("");
+  const [redefMotivo, setRedefMotivo] = useState("");
+
+  // REDEFINICAO não conta no líquido (define total absoluto, não é ±)
   const totalLiquido = (ajustes ?? []).reduce(
-    (sum, a) => sum + (a.tipo === "ACRESCIMO" ? Number(a.valor) : -Number(a.valor)),
+    (sum, a) =>
+      a.tipo === "REDEFINICAO" ? sum : a.tipo === "ACRESCIMO" ? sum + Number(a.valor) : sum - Number(a.valor),
     0
   );
 
@@ -74,6 +96,39 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamento
     }
   }, [criarAjuste, tipo, valor, motivo, metodo, reservaId, entradaLivreId, toast]);
 
+  const handleRedefinir = useCallback(async () => {
+    if (!redefMotivo.trim()) {
+      toast.error("A nota da redefinição é obrigatória.");
+      return;
+    }
+    const modo = redefModo as "TOTAL" | "POR_CRIANCA";
+    if (modo === "TOTAL") {
+      const total = parseFloat(redefValor);
+      if (!total || total <= 0) {
+        toast.error("Indique o novo total (maior que zero).");
+        return;
+      }
+      await redefinirPreco.mutateAsync(
+        { modo: "TOTAL", valor: total, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
+        { onSuccess: () => toast.success("Preço redefinido.") }
+      );
+    } else {
+      const porCabeca = parseFloat(redefPorCabeca);
+      if (!porCabeca || porCabeca <= 0) {
+        toast.error("Indique o preço por criança (maior que zero).");
+        return;
+      }
+      await redefinirPreco.mutateAsync(
+        { modo: "POR_CRIANCA", precoPorCabeca: porCabeca, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
+        { onSuccess: () => toast.success("Preço redefinido.") }
+      );
+    }
+    setRedefValor("");
+    setRedefPorCabeca("");
+    setRedefMotivo("");
+    setShowRedefinir(false);
+  }, [redefinirPreco, redefModo, redefValor, redefPorCabeca, redefMotivo, reservaId, entradaLivreId, toast]);
+
   const handleRemove = useCallback(
     async (id: string) => {
       try {
@@ -86,11 +141,81 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamento
     [eliminarAjuste, toast]
   );
 
+  // Preview do total em modo POR_CRIANCA
+  const previewTotal =
+    redefModo === "POR_CRIANCA" && numCriancas && numCriancas > 0 && parseFloat(redefPorCabeca) > 0
+      ? fmtEuro.format(parseFloat(redefPorCabeca) * numCriancas)
+      : null;
+
   return (
     <div className="border-t border-border pt-3 space-y-3">
-      <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-        <ArrowUpDown size={14} className="text-text-muted" /> Acertos de Pagamento
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <ArrowUpDown size={14} className="text-text-muted" /> Acertos de Pagamento
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowRedefinir((v) => !v)}
+          className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors ${
+            showRedefinir
+              ? "bg-brand-100 text-brand-700"
+              : "text-text-muted hover:bg-gray-100 hover:text-text-primary"
+          }`}
+        >
+          <PenLine size={12} /> Redefinir preço
+        </button>
+      </div>
+
+      {/* Form redefinir preço */}
+      {showRedefinir && (
+        <div className="space-y-2 p-3 rounded-lg border border-brand-200 bg-brand-50/50">
+          <p className="text-[11px] text-text-secondary">
+            Define um novo preço final. Fica registado no histórico e substitui o total atual.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[11px] font-medium text-text-secondary mb-1">Modo</label>
+              <Select options={MODO_OPTIONS} value={redefModo} onChange={setRedefModo} />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-text-secondary mb-1">
+                {redefModo === "TOTAL" ? "Novo total (€)" : "€ por criança"}
+              </label>
+              <InputField
+                type="number"
+                step={0.01}
+                min={0.01}
+                value={redefModo === "TOTAL" ? redefValor : redefPorCabeca}
+                onChange={(e) =>
+                  redefModo === "TOTAL" ? setRedefValor(e.target.value) : setRedefPorCabeca(e.target.value)
+                }
+                placeholder="0,00"
+              />
+            </div>
+          </div>
+          {previewTotal && (
+            <p className="text-[11px] text-brand-700 font-medium">
+              = {previewTotal} ({numCriancas} crianças)
+            </p>
+          )}
+          <div>
+            <label className="block text-[11px] font-medium text-text-secondary mb-1">Nota *</label>
+            <InputField
+              value={redefMotivo}
+              onChange={(e) => setRedefMotivo(e.target.value)}
+              placeholder="Ex: preço combinado com o cliente, 45 € por criança..."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setShowRedefinir(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleRedefinir} disabled={redefinirPreco.isPending}>
+              {redefinirPreco.isPending ? "A guardar..." : "Redefinir"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Lista de acertos */}
       {isLoading ? (
@@ -106,18 +231,31 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamento
             >
               {a.tipo === "ACRESCIMO" ? (
                 <Plus size={14} className="text-accent-green-600 mt-0.5 shrink-0" />
+              ) : a.tipo === "REDEFINICAO" ? (
+                <CornerUpRight size={14} className="text-brand-600 mt-0.5 shrink-0" />
               ) : (
                 <Minus size={14} className="text-accent-red-500 mt-0.5 shrink-0" />
               )}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-sm font-semibold ${
-                      a.tipo === "ACRESCIMO" ? "text-accent-green-600" : "text-accent-red-500"
-                    }`}
-                  >
-                    {a.tipo === "ACRESCIMO" ? "+" : "−"} {fmtEuro.format(Number(a.valor))}
-                  </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {a.tipo === "REDEFINICAO" ? (
+                    <span className="text-sm font-semibold text-brand-700">
+                      Redefinição → {fmtEuro.format(Number(a.valor))}
+                    </span>
+                  ) : (
+                    <span
+                      className={`text-sm font-semibold ${
+                        a.tipo === "ACRESCIMO" ? "text-accent-green-600" : "text-accent-red-500"
+                      }`}
+                    >
+                      {a.tipo === "ACRESCIMO" ? "+" : "−"} {fmtEuro.format(Number(a.valor))}
+                    </span>
+                  )}
+                  {a.tipo === "REDEFINICAO" && a.precoPorCabeca != null && (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-brand-100 text-brand-700">
+                      {fmtEuro.format(Number(a.precoPorCabeca))}/criança
+                    </span>
+                  )}
                   {a.criadoPor && (
                     <span className="text-[10px] text-text-muted">
                       {a.criadoPor.name} ·{" "}
@@ -132,16 +270,18 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId }: AjustesPagamento
                 </div>
                 <p className="text-xs text-text-secondary whitespace-pre-wrap break-words">{a.motivo}</p>
               </div>
-              <button
-                type="button"
-                onClick={() => handleRemove(a.id)}
-                disabled={eliminarAjuste.isPending}
-                className="p-1 text-text-muted hover:text-accent-red-500 transition-colors shrink-0"
-                title="Remover acerto (reverte o total)"
-                aria-label="Remover acerto"
-              >
-                <Trash2 size={13} />
-              </button>
+              {a.tipo !== "REDEFINICAO" && (
+                <button
+                  type="button"
+                  onClick={() => handleRemove(a.id)}
+                  disabled={eliminarAjuste.isPending}
+                  className="p-1 text-text-muted hover:text-accent-red-500 transition-colors shrink-0"
+                  title="Remover acerto (reverte o total)"
+                  aria-label="Remover acerto"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
             </div>
           ))}
           <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800/50">

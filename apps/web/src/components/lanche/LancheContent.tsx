@@ -16,6 +16,8 @@ import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { reservasApi } from "@/lib/api/reservas";
 import { imprimirListaConvidados } from "@/utils/print-lista";
 import { useToast } from "@/hooks/use-toast";
+import { useMinhasPermissoes } from "@/hooks/use-permissoes";
+import { useNow } from "@/hooks/use-now";
 import {
   useLanchesDoDia,
   useAlergias,
@@ -66,6 +68,23 @@ export default function LancheContent() {
   const [horaLancheEdit, setHoraLancheEdit] = useState<string>("");
   const [printingId, setPrintingId] = useState<string | null>(null);
   const toast = useToast();
+
+  // ── Função do utilizador: LANCHE vê só observações de lanche ──
+  const { funcao } = useMinhasPermissoes();
+  const isFuncaoLanche = funcao === "LANCHE";
+
+  // ── Relógio partilhado (alertas de lanche atrasado) ──
+  const now = useNow(30_000);
+
+  /** Lanche atrasado: hora passou e ainda está NAO_INICIADO. */
+  const lancheAtrasado = useCallback(
+    (hora: string | null | undefined, estado: string | undefined) => {
+      if (estado !== "NAO_INICIADO" || !hora) return false;
+      const agora = format(now, "HH:mm");
+      return hora <= agora;
+    },
+    [now]
+  );
 
   // Stable handler for DatePicker — avoids flatpickr re-init on every render.
   const handleDataChange = useCallback((selectedDates: Date[]) => {
@@ -222,11 +241,11 @@ export default function LancheContent() {
       ),
     },
     {
-      key: "extrasNomes",
-      label: "Extras",
+      key: "extrasLancheNomes",
+      label: "Extras (Lanche)",
       render: (_v, f) => (
         <span className="text-xs text-text-secondary">
-          {f.extrasNomes?.length ? f.extrasNomes.join(", ") : "—"}
+          {f.extrasLancheNomes?.length ? f.extrasLancheNomes.join(", ") : "—"}
         </span>
       ),
     },
@@ -246,24 +265,20 @@ export default function LancheContent() {
         </span>
       ),
     },
-    {
-      key: "notasCacifos",
-      label: "Obs. Cacifos",
-      render: (_v, f) => (
-        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.notasCacifos || f.observacoesCacifo || "—"}
-        </span>
-      ),
-    },
-    {
-      key: "observacoesLesoes",
-      label: "Obs. Lesões",
-      render: (_v, f) => (
-        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.observacoesLesoes || "—"}
-        </span>
-      ),
-    },
+    // Obs. Cacifos — escondida para a função LANCHE (só vê obs. de lanche)
+    ...(!isFuncaoLanche
+      ? [
+          {
+            key: "notasCacifos",
+            label: "Obs. Cacifos",
+            render: (_v: string | null, f: LancheFestaRow) => (
+              <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
+                {f.notasCacifos || f.observacoesCacifo || "—"}
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       key: "estadoLanche",
       label: "Estado",
@@ -276,7 +291,7 @@ export default function LancheContent() {
         />
       ),
     },
-  ], [handleEstadoChange]);
+  ], [handleEstadoChange, isFuncaoLanche]);
 
   // ── Columns: Entradas Livres ───────────────────────────────────────
   const entradasColumns: Column<LancheEntradaRow>[] = useMemo(() => [
@@ -329,15 +344,6 @@ export default function LancheContent() {
           </div>
         );
       },
-    },
-    {
-      key: "observacoesLesoes",
-      label: "Obs. Lesões",
-      render: (_v, e) => (
-        <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {e.observacoesLesoes || "—"}
-        </span>
-      ),
     },
     {
       key: "estadoLanche",
@@ -476,6 +482,9 @@ export default function LancheContent() {
             columns={festasColumns}
             itemLabel="festas"
             loading={isLoading}
+            rowClassName={(f) =>
+              lancheAtrasado(f.horaLanche ?? f.horario, f.estadoLanche) ? "animate-alerta-piscar" : ""
+            }
             defaultSort={{ key: "horaLanche", direction: "asc" }}
             searchable
             searchPlaceholder="Pesquisar por aniversariante..."
@@ -533,6 +542,14 @@ export default function LancheContent() {
             columns={entradasColumns}
             itemLabel="entradas livres"
             defaultSort={{ key: "horaLanche", direction: "asc" }}
+            rowClassName={(e) =>
+              lancheAtrasado(
+                e.horaLanche ?? (e.inicioEm ? format(parseISO(e.inicioEm), "HH:mm") : null),
+                e.estadoLanche
+              )
+                ? "animate-alerta-piscar"
+                : ""
+            }
             searchable
             searchPlaceholder="Pesquisar por encarregado..."
             searchFn={(e, q) => (e.encarregadoNome ?? "").toLowerCase().includes(q)}

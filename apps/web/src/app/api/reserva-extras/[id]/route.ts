@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ajustePagamentoService } from "@/services/ajustePagamento.service";
+import { reservaService } from "@/services/reserva.service";
 import { requireAuth } from "@/lib/auth-server";
 import { createRouteErrorHandler } from "@/lib/route-error";
 
 const handleError = createRouteErrorHandler({
   errorMap: {
-    NOT_FOUND: "ajuste.notFound",
-    REDEFINICAO_NAO_REMOVIVEL: "ajuste.redefinicaoNaoRemovivel",
+    EXTRA_NOT_FOUND: "extra.notFound",
   },
   statusMap: {
-    NOT_FOUND: 404,
-    REDEFINICAO_NAO_REMOVIVEL: 400,
+    EXTRA_NOT_FOUND: 404,
   },
-  serviceName: "AjustePagamento",
+  serviceName: "ReservaExtra",
 });
 
-// DELETE /api/ajustes-pagamento/[id] — remove o ajuste e reverte o total
-export async function DELETE(
+// PATCH /api/reserva-extras/[id] — alterna o estado de conclusão do extra
+// (entregue/prestado no dia da festa — check na tabela de festas)
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,7 +24,7 @@ export async function DELETE(
     if (!auth.ok) return auth.response;
 
     const { id } = await params;
-    const result = await ajustePagamentoService.remove(id);
+    const result = await reservaService.toggleReservaExtra(id);
     return NextResponse.json(result);
   } catch (error) {
     return handleError(error);
