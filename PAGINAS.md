@@ -209,6 +209,7 @@ Gestão visual dos cacifos físicos do espaço.
 - Estado do cacifo: `LIVRE`, `OCUPADO`, `RESERVADO`
 - **Pré-reserva materializada no dia** — criar/editar uma festa NÃO reserva cacifos (o pool é físico e diário). Os N cacifos (`numCriancasConfirmadas || numCriancas || previsaoCriancas`) ficam `RESERVADO` com "Por preencher" apenas: (A) quando a festa inicia (`iniciar()` → top-up), ou (B) quando o modal "Preencher" é aberto para uma festa de hoje. Se faltarem cacifos livres, o utilizador é avisado (`indisponiveis`)
 - O filtro "Filtrar por festa" e o resumo "Festas do dia" partilham a mesma fonte: festas activas (`RESERVA`/`CONFIRMADO`/`EM_CURSO`) da data seleccionada no DatePicker
+- **Vista de planeamento (datas futuras)** — quando a data seleccionada é futura, a grelha mostra cacifos fantasma "Planeado" (tracejado brand + nome da festa): os primeiros cacifos fisicamente `LIVRE` são atribuídos virtualmente a cada festa do dia por ordem de horário, sem reset entre festas (pool esgotado = excesso de capacidade visível). Derivado apenas no cliente — nada é escrito na BD; clicar num cacifo planeado abre o modal "Preencher" da festa. O filtro por festa em datas futuras é aplicado no cliente (físico OU planeado)
 
 ---
 

@@ -76,14 +76,49 @@ export default function CacifosContent() {
     [reservasData]
   );
 
+  // ── Vista de planeamento (datas futuras) ──
+  const isFutura = selectedDate > new Date().toISOString().split("T")[0];
+  
   const { data: cacifos, isLoading } = useCacifos(
-    filtro || filtroFesta
+    filtro || (filtroFesta && !isFutura)
       ? {
           ...(filtro ? { estado: filtro as EstadoCacifo } : {}),
-          ...(filtroFesta ? { reservaId: filtroFesta } : {})
+          ...(filtroFesta && !isFutura ? { reservaId: filtroFesta } : {})
         }
       : undefined
   );
+
+  const preview = useMemo(() => {
+    const map = new Map<string, { id: string; nome: string; horario: string }>();
+    if (!isFutura || !cacifos) return map;
+    const livres = cacifos
+      .filter((c) => c.estado === "LIVRE")
+      .sort((a, b) => a.numero - b.numero)
+      .map((c) => c.id);
+    const porHorario = [...festas].sort((a, b) => a.horario.localeCompare(b.horario));
+    for (const festa of porHorario) {
+      const alvo =
+        festa.numCriancasConfirmadas || festa.numCriancas || festa.previsaoCriancas || 0;
+      const nome =
+        festa.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") ||
+        festa.cliente?.nome ||
+        "Festa";
+      for (let i = 0; i < alvo; i++) {
+        const cacifoId = livres.shift();
+        if (!cacifoId) break; // pool esgotado — capacidade do dia excedida
+        map.set(cacifoId, { id: festa.id, nome, horario: festa.horario });
+      }
+    }
+    return map;
+  }, [isFutura, cacifos, festas]);
+
+  // Cacifos a renderizar na grelha (filtro por festa de datas futuras é cliente).
+  const cacifosVisiveis = useMemo(() => {
+    if (!filtroFesta || !isFutura || !cacifos) return cacifos ?? [];
+    return cacifos.filter(
+      (c) => c.reserva?.id === filtroFesta || preview.get(c.id)?.id === filtroFesta
+    );
+  }, [filtroFesta, isFutura, cacifos, preview]);
   const { data: contadores } = useCacifoContadores();
   const libertar = useLibertar();
   const { data: esquecidos } = useCacifosEsquecidos();
@@ -462,6 +497,17 @@ export default function CacifosContent() {
       )}
       </div>
 
+      {/* Banner — vista de planeamento (datas futuras) */}
+      {isFutura && (
+        <div className="no-print mb-4 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-xs leading-relaxed text-brand-700">
+          <strong className="font-semibold">Vista de planeamento:</strong> os cacifos
+          marcados como <span className="font-semibold">“Planeado”</span> são uma
+          previsão para as festas deste dia. A reserva física é materializada
+          automaticamente no próprio dia — clicar num cacifo planeado abre a festa
+          correspondente.
+        </div>
+      )}
+
       {/* Grid */}
       <div className="no-print">
       {isLoading ? (
@@ -475,7 +521,7 @@ export default function CacifosContent() {
         </div>
       ) : cacifos && cacifos.length > 0 ? (
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
-          {cacifos.map((cacifo) => {
+          {cacifosVisiveis.map((cacifo) => {
             const style = ESTADO_STYLES[cacifo.estado] ?? {
               base: "bg-gray-50 border-gray-200 text-gray-500",
               hover: "hover:bg-gray-100 hover:shadow-md hover:scale-[1.04]",
@@ -484,19 +530,40 @@ export default function CacifosContent() {
             const porPreencher =
               cacifo.estado === "RESERVADO" &&
               (!cacifo.criancas || !cacifo.criancas.trim() || cacifo.criancas === "Por preencher");
+            // Preview "Planeado" — só existe em datas futuras sobre cacifos LIVRE.
+            const previewFesta =
+              isFutura && cacifo.estado === "LIVRE" ? preview.get(cacifo.id) : undefined;
             return (
               <button
                 key={cacifo.id}
-                onClick={() => setSelectedCacifo(cacifo)}
+                onClick={() =>
+                  previewFesta ? setSelectedReservaId(previewFesta.id) : setSelectedCacifo(cacifo)
+                }
                 className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 border-2 relative cursor-pointer active:scale-95 ${
-                  porPreencher
+                  previewFesta
+                    ? "border-dashed border-brand-300 bg-brand-50 text-brand-600 hover:bg-brand-100 hover:shadow-md hover:scale-[1.04]"
+                    : porPreencher
                     ? "border-dashed border-accent-orange bg-brand-50 text-brand-700"
                     : style.base
-                } ${style.hover}`}
-                title={cacifo.criancas || `Cacifo ${cacifo.numero}`}
+                } ${previewFesta ? "" : style.hover}`}
+                title={
+                  previewFesta
+                    ? `Planeado para ${previewFesta.nome} · ${previewFesta.horario}`
+                    : cacifo.criancas || `Cacifo ${cacifo.numero}`
+                }
               >
-                <Package size={14} className={style.icon} />
+                <Package size={14} className={previewFesta ? "text-brand-400" : style.icon} />
                 <span className="text-xs font-bold mt-0.5">{cacifo.numero}</span>
+                {previewFesta && (
+                  <>
+                    <span className="text-[9px] leading-tight text-center mt-0.5 text-brand-500 font-semibold">
+                      Planeado
+                    </span>
+                    <span className="text-[9px] leading-tight text-center max-w-[95%] truncate text-brand-600/80">
+                      {previewFesta.nome}
+                    </span>
+                  </>
+                )}
                 {porPreencher && (
                   <span className="text-[9px] leading-tight text-center mt-0.5 max-w-[95%] truncate text-accent-orange font-medium">
                     Por preencher
