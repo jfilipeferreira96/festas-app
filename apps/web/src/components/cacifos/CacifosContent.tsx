@@ -14,7 +14,7 @@ import {
   useLibertarTodos,
   useCacifosDisponiveis,
 } from "@/hooks/use-cacifos";
-import { useReservas, useReservasAtivas } from "@/hooks/use-reservas";
+import { useReservas } from "@/hooks/use-reservas";
 import { useEntradasLivres, useAtualizarEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -68,12 +68,13 @@ export default function CacifosContent() {
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch festas for the selected date (for summary bar)
   const { data: reservasData } = useReservas({ data: selectedDate, pageSize: 100 });
-  const festas = useMemo(() => reservasData?.items ?? [], [reservasData]);
-
-  // Fetch all active festas (for festa filter dropdown)
-  const { data: festasAtivas } = useReservasAtivas();
+  const festas = useMemo(
+    () => (reservasData?.items ?? []).filter(
+      (r) => r.estado === "RESERVA" || r.estado === "CONFIRMADO" || r.estado === "EM_CURSO"
+    ),
+    [reservasData]
+  );
 
   const { data: cacifos, isLoading } = useCacifos(
     filtro || filtroFesta
@@ -145,14 +146,14 @@ export default function CacifosContent() {
     link.click();
   }, [cacifos, selectedDate]);
 
-  // Build festa filter options from active festas
+  
   const festaFilterOptions = useMemo(() => [
     { value: "", label: "Todos os cacifos" },
-    ...(festasAtivas ?? []).map((r) => ({
+    ...festas.map((r) => ({
       value: r.id,
       label: r.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || r.cliente?.nome || "Festa",
     })),
-  ], [festasAtivas]);
+  ], [festas]);
 
   const formattedDate = formatDate(selectedDate);
 
