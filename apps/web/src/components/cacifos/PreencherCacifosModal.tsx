@@ -76,6 +76,34 @@ export default React.memo(function PreencherCacifosModal({
     }
   }, [reservaId, preselectedCacifoId, cacifosList, queryClient, toast]);
 
+  // ── Trigger B: materializar pré-reserva quando a festa é HOJE ──
+  // Os cacifos são um pool físico diário — só se reservam no dia da festa.
+  const materializadoRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!reservaId || !reserva) return;
+    if (materializadoRef.current === reservaId) return;
+
+    const alvo = reserva.numCriancasConfirmadas || reserva.numCriancas || reserva.previsaoCriancas || 0;
+    const atribuidos = (cacifos ?? []).length;
+    if (alvo <= 0 || atribuidos >= alvo) return;
+
+    // Só materializa no dia da festa — datas futuras reservam-se no dia.
+    const hoje = new Date().toISOString().split("T")[0];
+    if (!reserva.data.startsWith(hoje)) return;
+
+    materializadoRef.current = reservaId;
+    cacifosApi.preReservar(reservaId, alvo - atribuidos)
+      .then((res) => {
+        queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+        if (res.indisponiveis > 0) {
+          toast.warning(
+            `Pré-reservados ${res.reservados.length} de ${alvo - atribuidos} cacifos — pool livre insuficiente.`
+          );
+        }
+      })
+      .catch(() => toast.error("Não foi possível pré-reservar cacifos."));
+  }, [reservaId, reserva, cacifos, queryClient, toast]);
+
   const preenchidos = cacifosList.filter(
     (c) => c.criancas && c.criancas !== "Por preencher"
   ).length;
@@ -149,6 +177,14 @@ export default React.memo(function PreencherCacifosModal({
             {/* Header */}
             <ModalHeader reserva={reserva} />
 
+            {/* Nota: cacifos reservam-se no dia da festa */}
+            {isFutura(reserva) && (
+              <div className="p-3 rounded-lg bg-brand-50 border border-brand-200 text-xs text-brand-700">
+                Os cacifos desta festa são pré-reservados automaticamente no dia {formatDate(reserva.data)}.
+                Até lá, o pool de cacifos mantém-se livre para as festas do dia.
+              </div>
+            )}
+
             {/* Progresso */}
             <ProgressoBar preenchidos={preenchidos} total={total} />
 
@@ -220,6 +256,12 @@ export default React.memo(function PreencherCacifosModal({
 });
 
 // ── Header ─────────────────────────────────────────────────────────
+/** True se a festa é para uma data futura (cacifos ainda não se reservam). */
+function isFutura(reserva: NonNullable<ReturnType<typeof useReserva>["data"]>): boolean {
+  const hoje = new Date().toISOString().split("T")[0];
+  return reserva.data.slice(0, 10) > hoje;
+}
+
 function ModalHeader({ reserva }: { reserva: ReturnType<typeof useReserva>["data"] }) {
   if (!reserva) return null;
   const anvNomes = reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "—";

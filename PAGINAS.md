@@ -207,6 +207,8 @@ Gestão visual dos cacifos físicos do espaço.
 - Um cacifo só pode estar associado a um participante de cada vez
 - Ao concluir uma festa, todos os cacifos associados ficam automaticamente disponíveis
 - Estado do cacifo: `LIVRE`, `OCUPADO`, `RESERVADO`
+- **Pré-reserva materializada no dia** — criar/editar uma festa NÃO reserva cacifos (o pool é físico e diário). Os N cacifos (`numCriancasConfirmadas || numCriancas || previsaoCriancas`) ficam `RESERVADO` com "Por preencher" apenas: (A) quando a festa inicia (`iniciar()` → top-up), ou (B) quando o modal "Preencher" é aberto para uma festa de hoje. Se faltarem cacifos livres, o utilizador é avisado (`indisponiveis`)
+- O filtro "Filtrar por festa" e o resumo "Festas do dia" partilham a mesma fonte: festas activas (`RESERVA`/`CONFIRMADO`/`EM_CURSO`) da data seleccionada no DatePicker
 
 ---
 

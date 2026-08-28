@@ -299,8 +299,8 @@ Default configurations for: extras, menus, locais, menu-templates.
 |------|---------------|
 | `rbac.test.ts` | RBAC hardcoded: FUNCOES, PERMISSOES matrix, hasAccess, role isolation |
 | `local.service.test.ts` | CRUD for locais |
-| `reserva.service.test.ts` | Create, list, updateStatus, delete, DAY_BLOCKED, meias/split |
-| `cacifo.service.test.ts` | MarcarOcupado, marcarPago, libertar, histórico, getDisponiveisParaFesta |
+| `reserva.service.test.ts` | Create, list, updateStatus, delete, DAY_BLOCKED, meias/split, materialização de cacifos no dia (iniciar top-up) |
+| `cacifo.service.test.ts` | MarcarOcupado, marcarPago, libertar, histórico, getDisponiveisParaFesta, preReservarCacifos |
 | `extra.service.test.ts` | CRUD for extras |
 | `cliente.service.test.ts` | CRUD for clientes, search |
 | `monitor.service.test.ts` | CRUD for monitores, listActive |

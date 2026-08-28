@@ -84,4 +84,11 @@ export const cacifosApi = {
       method: "POST",
       body: JSON.stringify({ reservaId }),
     }),
+
+  /** Pré-reserva N cacifos para uma festa (materialização no dia). */
+  preReservar: (reservaId: string, quantidade: number) =>
+    api<{ reservados: Cacifo[]; indisponiveis: number }>("/api/cacifos/pre-reservar", {
+      method: "POST",
+      body: JSON.stringify({ reservaId, quantidade }),
+    }),
 };

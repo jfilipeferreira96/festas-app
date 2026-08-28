@@ -318,45 +318,6 @@ describe("Cacifo Service", () => {
     });
   });
 
-  // ── ajustarPreReserva ─────────────────────────────────────────
-  describe("ajustarPreReserva()", () => {
-    it("deve aumentar quantidade (de 2 para 4)", async () => {
-      // Pré-reservar 2
-      await cacifoService.preReservarCacifos(TEST_IDS.RESERVA_EM_CURSO, 2);
-
-      // Ajustar para 4
-      const result = await cacifoService.ajustarPreReserva(TEST_IDS.RESERVA_EM_CURSO, 4);
-
-      expect(result.reservados.length).toBe(2);
-      expect(result.libertados.length).toBe(0);
-
-      // Verificar total
-      const actuais = await cacifoService.list({ reservaId: TEST_IDS.RESERVA_EM_CURSO });
-      expect(actuais.length).toBe(4);
-
-      // Cleanup
-      await cacifoService.libertarCacifosDaReserva(TEST_IDS.RESERVA_EM_CURSO);
-    });
-
-    it("deve diminuir quantidade (de 4 para 2)", async () => {
-      // Pré-reservar 4
-      await cacifoService.preReservarCacifos(TEST_IDS.RESERVA_EM_CURSO, 4);
-
-      // Ajustar para 2
-      const result = await cacifoService.ajustarPreReserva(TEST_IDS.RESERVA_EM_CURSO, 2);
-
-      expect(result.reservados.length).toBe(0);
-      expect(result.libertados.length).toBe(2);
-
-      // Verificar total
-      const actuais = await cacifoService.list({ reservaId: TEST_IDS.RESERVA_EM_CURSO });
-      expect(actuais.length).toBe(2);
-
-      // Cleanup
-      await cacifoService.libertarCacifosDaReserva(TEST_IDS.RESERVA_EM_CURSO);
-    });
-  });
-
   // ── adicionarCacifoAReserva ───────────────────────────────────
   describe("adicionarCacifoAReserva()", () => {
     it("deve encontrar o próximo cacifo livre quando cacifoId não é fornecido", async () => {

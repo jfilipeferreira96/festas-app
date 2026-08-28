@@ -477,12 +477,6 @@ export const reservaService = {
       },
     });
 
-    // Pré-reservar cacifos automaticamente
-    const numCriancas = data.numCriancas || data.previsaoCriancas || 0;
-    if (numCriancas > 0) {
-      await cacifoService.preReservarCacifos(created.id, numCriancas);
-    }
-
     await syncMenuFromExtra(created.id, data.menuId);
 
     return created;
@@ -546,11 +540,6 @@ export const reservaService = {
     // Sync aniversariantes if new ones provided
     if (aniversarianteIds.length > 0) {
       await prisma.reservaAniversariante.deleteMany({ where: { reservaId: id } });
-    }
-
-    // Ajustar pré-reserva de cacifos se numCriancas mudou
-    if (data.numCriancas !== undefined && data.numCriancas !== reserva.numCriancas) {
-      await cacifoService.ajustarPreReserva(id, data.numCriancas);
     }
 
     await prisma.reserva.update({
@@ -702,7 +691,7 @@ export const reservaService = {
       }));
     }
 
-    return prisma.reserva.update({
+    const atualizada = await prisma.reserva.update({
       where: { id },
       data: {
         estado: "EM_CURSO",
@@ -719,6 +708,14 @@ export const reservaService = {
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
       },
     });
+
+    const alvoCacifos =
+      atualizada.numCriancasConfirmadas || atualizada.numCriancas || atualizada.previsaoCriancas || 0;
+    if (alvoCacifos > 0 && atualizada.cacifos.length < alvoCacifos) {
+      await cacifoService.preReservarCacifos(id, alvoCacifos - atualizada.cacifos.length);
+    }
+
+    return this.getById(id);
   },
 
   async finalizar(id: string, options?: { custoExcessoManual?: number }) {

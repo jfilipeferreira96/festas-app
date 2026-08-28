@@ -269,36 +269,6 @@ export const cacifoService = {
   },
 
   /**
-   * Ajusta o número de cacifos pré-reservados para uma reserva.
-   * Se novaQuantidade > actual: reserva cacifos adicionais.
-   * Se novaQuantidade < actual: liberta os excedentes (preservando histórico).
-   */
-  async ajustarPreReserva(reservaId: string, novaQuantidade: number) {
-    const actuais = await prisma.cacifo.findMany({
-      where: { reservaId, estado: "RESERVADO" },
-      orderBy: { numero: "asc" },
-    });
-
-    if (novaQuantidade > actuais.length) {
-      // Reservar adicionais
-      const faltam = novaQuantidade - actuais.length;
-      const result = await this.preReservarCacifos(reservaId, faltam);
-      return { reservados: result.reservados, libertados: [], indisponiveis: result.indisponiveis };
-    }
-
-    if (novaQuantidade < actuais.length) {
-      // Libertar excedentes (os últimos)
-      const excedentes = actuais.slice(novaQuantidade);
-      for (const cacifo of excedentes) {
-        await this.libertar(cacifo.id);
-      }
-      return { reservados: [], libertados: excedentes, indisponiveis: 0 };
-    }
-
-    return { reservados: [], libertados: [], indisponiveis: 0 };
-  },
-
-  /**
    * Adiciona um cacifo específico (ou o próximo livre) a uma reserva.
    * Usado no modal de cacifos quando se junta uma criança no dia.
    */
