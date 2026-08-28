@@ -1117,22 +1117,7 @@ async function seedReservas() {
   await prisma.reserva.update({ where: { id: "reserva-002" }, data: { valorPago: 264.00 } });
 
   // 4) ACRESCIMO numa entrada livre com lanche (2 × 4,50€)
-  await prisma.ajustePagamento.upsert({
-    where: { id: "ajuste-seed-acrescimo-002" },
-    update: {},
-    create: {
-      id: "ajuste-seed-acrescimo-002",
-      tipo: "ACRESCIMO", valor: 9.00,
-      motivo: "Lanche para 2 crianças (2 × 4,50€)",
-      entradaLivreId: "entrada-livre-ativa-lanche-001",
-      metodoPagamento: "MBWAY",
-      criadoPorId: adminUser?.id ?? null,
-    },
-  });
-  await prisma.entradaLivre.update({
-    where: { id: "entrada-livre-ativa-lanche-001" },
-    data: { custoTotalFinal: 29.00 },
-  });
+  // → criado em seedEntradasLivres() (a entrada só existe depois dessa fase)
 
   console.log("  ✓ 24 reservas (6 ontem + 3 hoje + 2 amanhã + 3 futuras + 5 esta semana + 5 semana passada)");
   console.log("  ✓ 4 ajustes de pagamento (acréscimo, desconto, redefinição por criança, lanche em entrada livre)");
@@ -1353,6 +1338,25 @@ async function seedEntradasLivres() {
       metodoPagamento: "MBWAY",
       criancas: [{ nome: "Tomás", idade: 5 }, { nome: "Madalena", idade: 3 }],
     },
+  });
+
+  // 4) ACRESCIMO nesta entrada livre com lanche (2 × 4,50€) — write-through
+  const adminUserAjuste = await prisma.user.findFirst({ where: { funcao: "ADMINISTRADOR" } });
+  await prisma.ajustePagamento.upsert({
+    where: { id: "ajuste-seed-acrescimo-002" },
+    update: {},
+    create: {
+      id: "ajuste-seed-acrescimo-002",
+      tipo: "ACRESCIMO", valor: 9.00,
+      motivo: "Lanche para 2 crianças (2 × 4,50€)",
+      entradaLivreId: "entrada-livre-ativa-lanche-001",
+      metodoPagamento: "MBWAY",
+      criadoPorId: adminUserAjuste?.id ?? null,
+    },
+  });
+  await prisma.entradaLivre.update({
+    where: { id: "entrada-livre-ativa-lanche-001" },
+    data: { custoTotalFinal: 29.00 },
   });
 
   // ─── CONCLUIDAS esta semana (-1 a -5 dias) — 7 entradas ──────────

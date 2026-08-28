@@ -1,8 +1,7 @@
 import type React from "react";
 import Link from "next/link";
-import type { LinkProps } from "next/link";
 
-type LinkHref = LinkProps["href"];
+type LinkHref = React.ComponentProps<typeof Link>["href"];
 
 interface DropdownItemProps {
   tag?: "a" | "button";

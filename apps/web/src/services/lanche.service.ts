@@ -145,6 +145,7 @@ export const lancheService = {
         salaLanche: true,
         aniversariantes: { include: { aniversariante: true } },
         menu: true,
+        extras: { include: { extra: true } },
       },
     });
     if (!reserva) throw new Error("NOT_FOUND");
@@ -160,6 +161,15 @@ export const lancheService = {
     const idadeAniversariante = primeiroAniv
       ? calcularIdade(primeiroAniv.dataNascimento, reserva.data)
       : undefined;
+
+    // Extrair nomes dos extras (todos) e apenas os de lanche (subcategoria contém "lanche")
+    const extrasNomes = reserva.extras
+      .map((re) => re.extra?.nome)
+      .filter(Boolean) as string[];
+    const extrasLancheNomes = reserva.extras
+      .filter((re) => re.extra?.categoria === "EXTRA" && re.extra?.subcategoria?.toLowerCase().includes("lanche"))
+      .map((re) => re.extra?.nome)
+      .filter(Boolean) as string[];
 
     return {
       reservaId: reserva.id,
@@ -180,6 +190,8 @@ export const lancheService = {
       notasCacifos: reserva.notasCacifos ?? undefined,
       itensLanche: reserva.menu?.itensLanche ?? undefined,
       observacoesLesoes: reserva.observacoesLesoes ?? undefined,
+      extrasNomes,
+      extrasLancheNomes,
       estadoLanche: (reserva.estadoLanche ?? "NAO_INICIADO") as EstadoLanche,
     };
   },
