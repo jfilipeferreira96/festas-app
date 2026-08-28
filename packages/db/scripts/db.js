@@ -259,9 +259,16 @@ switch (command) {
     break;
   }
 
+  case "seed:changes": {
+    // Seed de verificação rápida das alterações (vídeos 4/5/6/9) — complementa o seed-dev.
+    const seedPath = join(DB_ROOT, "prisma", "seed-changes.ts");
+    run(`npx tsx "${seedPath}"`);
+    break;
+  }
+
   default:
     console.error(`❌ Unknown command: ${command}`);
-    console.error("   Available: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev, seed:prod");
+    console.error("   Available: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev, seed:prod, seed:changes");
     console.error("   Target:    --target=prod|test (ou env DB_TARGET) — escolhe a BD (default: prod)");
     process.exit(1);
 }

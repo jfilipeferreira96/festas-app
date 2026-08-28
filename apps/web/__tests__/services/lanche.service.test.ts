@@ -47,6 +47,53 @@ describe("Lanche Service", () => {
         expect(typeof f.nomeFesta).toBe("string");
       }
     });
+
+    it("extrasLancheNomes só inclui extras com subcategoria de lanche (Lanche e Extras ao lanche)", async () => {
+      // Extra com subcategoria "Extras ao lanche" (valor usado no seed dev/prod)
+      const extraAoLanche = await testPrisma.extra.create({
+        data: {
+          id: "test-extra-ao-lanche-temp",
+          nome: "Sumo Extra Teste",
+          precoUnitario: 2.5,
+          categoria: "EXTRA",
+          subcategoria: "Extras ao lanche",
+        },
+      });
+      // Ligar os dois extras de lanche à reserva confirmada
+      await testPrisma.reservaExtra.create({
+        data: {
+          id: "test-reserva-extra-lanche-temp",
+          reservaId: TEST_IDS.RESERVA_CONFIRMADA,
+          extraId: TEST_IDS.EXTRA_LANCHE_1,
+          quantidade: 1,
+        },
+      });
+      await testPrisma.reservaExtra.create({
+        data: {
+          id: "test-reserva-extra-ao-lanche-temp",
+          reservaId: TEST_IDS.RESERVA_CONFIRMADA,
+          extraId: extraAoLanche.id,
+          quantidade: 1,
+        },
+      });
+
+      try {
+        const lanche = await lancheService.getLancheByReservaId(TEST_IDS.RESERVA_CONFIRMADA);
+
+        // EXTRA_1 (Turbo Slide, sem subcategoria) está na reserva mas NÃO é de lanche
+        expect(lanche.extrasNomes).toContain("Turbo Slide Teste");
+        expect(lanche.extrasLancheNomes).not.toContain("Turbo Slide Teste");
+
+        // Extras de lanche aparecem nas duas variantes de subcategoria
+        expect(lanche.extrasLancheNomes).toContain("Bolo de Aniversário"); // subcategoria "Lanche"
+        expect(lanche.extrasLancheNomes).toContain("Sumo Extra Teste"); // subcategoria "Extras ao lanche"
+      } finally {
+        await testPrisma.reservaExtra.deleteMany({
+          where: { id: { in: ["test-reserva-extra-lanche-temp", "test-reserva-extra-ao-lanche-temp"] } },
+        });
+        await testPrisma.extra.delete({ where: { id: extraAoLanche.id } });
+      }
+    });
   });
 
   describe("getLancheByReservaId()", () => {

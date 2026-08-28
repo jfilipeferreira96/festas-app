@@ -234,4 +234,68 @@ describe("Relatório Service", () => {
       }
     });
   });
+
+  // ── calcularAjustes (secção de auditoria) ─────────────────────
+  describe("calcularAjustes()", () => {
+    type AjusteInput = Parameters<typeof relatorioService.calcularAjustes>[0][number];
+    const mkAjuste = (a: Partial<AjusteInput>): AjusteInput => a as AjusteInput;
+
+    it("soma ACRESCIMO/DESCONTO/REDEFINICAO em linhas separadas por método", () => {
+      const secao = relatorioService.calcularAjustes([
+        mkAjuste({ tipo: "ACRESCIMO", valor: 10, metodoPagamento: "DINHEIRO" }),
+        mkAjuste({ tipo: "ACRESCIMO", valor: 5, metodoPagamento: "MBWAY" }),
+        mkAjuste({ tipo: "DESCONTO", valor: -3, metodoPagamento: "DINHEIRO" }),
+        mkAjuste({ tipo: "REDEFINICAO", valor: 180, metodoPagamento: "MULTIBANCO" }),
+      ]);
+
+      expect(secao.titulo).toBe("Ajustes de Pagamento (auditoria)");
+
+      const acrescimos = secao.linhas.find((l) => l.descricao === "Acréscimos cobrados");
+      expect(acrescimos?.quantidade).toBe(2);
+      expect(acrescimos?.valorNumerario).toBe(10); // |valor| — sinal ignorado na auditoria
+      expect(acrescimos?.valorMbway).toBe(5);
+
+      const descontos = secao.linhas.find((l) => l.descricao === "Descontos concedidos");
+      expect(descontos?.quantidade).toBe(1);
+      expect(descontos?.valorNumerario).toBe(3); // Math.abs(-3)
+
+      const redefinicoes = secao.linhas.find((l) => l.descricao === "Redefinições de preço");
+      expect(redefinicoes?.quantidade).toBe(1);
+      expect(redefinicoes?.valorMultibanco).toBe(180);
+    });
+
+    it("usa o método da reserva quando o ajuste não tem metodoPagamento", () => {
+      const secao = relatorioService.calcularAjustes([
+        mkAjuste({ tipo: "ACRESCIMO", valor: 7, reserva: { metodoPagamento: "TRANSFERENCIA" } }),
+      ]);
+
+      const acrescimos = secao.linhas.find((l) => l.descricao === "Acréscimos cobrados");
+      expect(acrescimos?.valorTransferencia).toBe(7);
+    });
+
+    it("sem ajustes → secção vazia (linhas filtradas)", () => {
+      const secao = relatorioService.calcularAjustes([]);
+      expect(secao.linhas.length).toBe(0);
+      expect(secao.total.quantidade).toBe(0);
+    });
+  });
+
+  describe("getRelatorioFinanceiro() — secção ajustes", () => {
+    it("inclui ajuste seeded (ACRESCIMO 10€ DINHEIRO) na auditoria sem somar ao totalGeral", async () => {
+      const { ontem, amanha } = getIntervaloTeste();
+      const relatorio = await relatorioService.getRelatorioFinanceiro(ontem, amanha);
+
+      expect(relatorio.ajustes).toBeDefined();
+      const acrescimos = relatorio.ajustes.linhas.find((l) => l.descricao === "Acréscimos cobrados");
+      expect(acrescimos?.quantidade).toBeGreaterThanOrEqual(1);
+      expect(acrescimos?.valorNumerario).toBeGreaterThanOrEqual(10);
+
+      // Auditoria: ajustes NÃO somam ao total geral (write-through em valorPago)
+      const somaSemAjustes =
+        relatorio.festas.total.valorNumerario +
+        relatorio.entradasLivres.total.valorNumerario +
+        relatorio.outros.total.valorNumerario;
+      expect(relatorio.totalGeral.valorNumerario).toBeCloseTo(somaSemAjustes, 2);
+    });
+  });
 });

@@ -334,7 +334,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         rowClassName={(r) => {
           // Festa a acabar: EM_CURSO com fimPrevisto nos próximos 15 min
           if (r.estado !== "EM_CURSO" || !r.fimPrevisto) return "";
-          const restanteMs = parseISO(r.fimPrevisto).getTime() - now;
+          const restanteMs = parseISO(r.fimPrevisto).getTime() - now.getTime();
           if (restanteMs > 0 && restanteMs <= 15 * 60_000) return "animate-alerta-piscar";
           return "";
         }}

@@ -25,6 +25,7 @@
     "db:reset": "npm run db:reset --workspace=@festas/db",
     "db:seed:dev": "npm run db:seed:dev --workspace=@festas/db",
     "db:seed:prod": "npm run db:seed:prod --workspace=@festas/db",
+    "db:seed:changes": "npm run db:seed:changes --workspace=@festas/db",
     "deploy": "node scripts/build-deploy.mjs --build",
     "deploy:bundle": "node scripts/build-deploy.mjs"
   },

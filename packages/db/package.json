@@ -23,6 +23,7 @@
     "db:seed": "node scripts/db.js seed",
     "db:seed:dev": "node scripts/db.js seed:dev",
     "db:seed:prod": "node scripts/db.js seed:prod",
+    "db:seed:changes": "node scripts/db.js seed:changes",
     "db:refresh": "node scripts/db.js clean",
     "db:sync": "node scripts/db.js migrate && node scripts/db.js generate",
     "db:inspect": "node scripts/db.js generate && node scripts/db.js studio"

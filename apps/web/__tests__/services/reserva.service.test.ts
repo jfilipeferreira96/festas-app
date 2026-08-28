@@ -1016,4 +1016,40 @@ describe("Reserva Service", () => {
       });
     });
   });
+
+  describe("toggleReservaExtra()", () => {
+    it("deve alternar concluido de false para true e devolver o extra incluído", async () => {
+      // RESERVA_EXTRA_1 nasce com concluido: false no seed
+      const toggled = await reservaService.toggleReservaExtra(TEST_IDS.RESERVA_EXTRA_1);
+
+      expect(toggled.concluido).toBe(true);
+      expect(toggled.extra).toBeDefined();
+      expect(toggled.extra.id).toBe(TEST_IDS.EXTRA_1);
+
+      const naDb = await testPrisma.reservaExtra.findUnique({
+        where: { id: TEST_IDS.RESERVA_EXTRA_1 },
+      });
+      expect(naDb?.concluido).toBe(true);
+    });
+
+    it("deve alternar concluido de true para false (segundo clique)", async () => {
+      // Estado anterior do teste: concluido: true
+      const toggled = await reservaService.toggleReservaExtra(TEST_IDS.RESERVA_EXTRA_1);
+
+      expect(toggled.concluido).toBe(false);
+
+      // Restaurar estado do seed para outros testes
+      const restaurado = await testPrisma.reservaExtra.update({
+        where: { id: TEST_IDS.RESERVA_EXTRA_1 },
+        data: { concluido: false },
+      });
+      expect(restaurado.concluido).toBe(false);
+    });
+
+    it("deve lançar EXTRA_NOT_FOUND para id inexistente", async () => {
+      await expect(reservaService.toggleReservaExtra("inexistente-xxx")).rejects.toThrow(
+        "EXTRA_NOT_FOUND"
+      );
+    });
+  });
 });

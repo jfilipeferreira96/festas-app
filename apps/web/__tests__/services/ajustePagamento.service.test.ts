@@ -242,6 +242,152 @@ describe("ajustePagamentoService", () => {
     );
   });
 
+  // ── redefinirPreco: REDEFINICAO ────────────────────────────────
+  it("deve redefinir o preço total absoluto (modo TOTAL)", async () => {
+    const ajuste = await ajustePagamentoService.redefinirPreco(
+      {
+        modo: "TOTAL",
+        valor: 180,
+        motivo: "Acerto combinado com o cliente",
+        reservaId: TEST_IDS.RESERVA_PENDENTE,
+      },
+      { id: TEST_IDS.USER_ADMIN, name: "Admin Teste" }
+    );
+
+    expect(ajuste.tipo).toBe("REDEFINICAO");
+    expect(ajuste.modo).toBe("TOTAL");
+    expect(Number(ajuste.valor)).toBe(180);
+    expect(ajuste.precoPorCabeca).toBeNull();
+
+    const reserva = await testPrisma.reserva.findUniqueOrThrow({
+      where: { id: TEST_IDS.RESERVA_PENDENTE },
+    });
+    expect(Number(reserva.valorPago)).toBe(180);
+  });
+
+  it("deve redefinir por criança usando confirmadas ?? previstas (modo POR_CRIANCA)", async () => {
+    // 4 crianças confirmadas × 45 € = 180 €
+    await testPrisma.reserva.update({
+      where: { id: TEST_IDS.RESERVA_PENDENTE },
+      data: { numCriancasConfirmadas: 4 },
+    });
+
+    const ajuste = await ajustePagamentoService.redefinirPreco({
+      modo: "POR_CRIANCA",
+      precoPorCabeca: 45,
+      motivo: "Preço especial por miúdo",
+      reservaId: TEST_IDS.RESERVA_PENDENTE,
+    });
+
+    expect(ajuste.tipo).toBe("REDEFINICAO");
+    expect(ajuste.modo).toBe("POR_CRIANCA");
+    expect(Number(ajuste.precoPorCabeca)).toBe(45);
+    expect(Number(ajuste.valor)).toBe(180); // 45 × 4
+
+    const reserva = await testPrisma.reserva.findUniqueOrThrow({
+      where: { id: TEST_IDS.RESERVA_PENDENTE },
+    });
+    expect(Number(reserva.valorPago)).toBe(180);
+  });
+
+  it("deve redefinir entrada livre por criança (nº de crianças do array)", async () => {
+    // ENTRADA_LIVRE_1 tem 2 crianças (João, Maria) → 2 × 6 = 12
+    const ajuste = await ajustePagamentoService.redefinirPreco({
+      modo: "POR_CRIANCA",
+      precoPorCabeca: 6,
+      motivo: "Entrada ajustada",
+      entradaLivreId: TEST_IDS.ENTRADA_LIVRE_1,
+    });
+
+    expect(Number(ajuste.valor)).toBe(12);
+
+    const entrada = await testPrisma.entradaLivre.findUniqueOrThrow({
+      where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
+    });
+    // Sem custoTotalFinal → redefine custoTotal
+    expect(Number(entrada.custoTotal)).toBe(12);
+  });
+
+  it("deve recusar modo inválido, motivo vazio e valor inválido", async () => {
+    await expect(
+      ajustePagamentoService.redefinirPreco({
+        modo: "X" as "TOTAL",
+        valor: 10,
+        motivo: "x",
+        reservaId: TEST_IDS.RESERVA_PENDENTE,
+      })
+    ).rejects.toThrow("MODO_INVALIDO");
+
+    await expect(
+      ajustePagamentoService.redefinirPreco({
+        modo: "TOTAL",
+        valor: 10,
+        motivo: "  ",
+        reservaId: TEST_IDS.RESERVA_PENDENTE,
+      })
+    ).rejects.toThrow("MOTIVO_OBRIGATORIO");
+
+    await expect(
+      ajustePagamentoService.redefinirPreco({
+        modo: "TOTAL",
+        valor: 0,
+        motivo: "x",
+        reservaId: TEST_IDS.RESERVA_PENDENTE,
+      })
+    ).rejects.toThrow("VALOR_INVALIDO");
+
+    await expect(
+      ajustePagamentoService.redefinirPreco({
+        modo: "POR_CRIANCA",
+        precoPorCabeca: -1,
+        motivo: "x",
+        reservaId: TEST_IDS.RESERVA_PENDENTE,
+      })
+    ).rejects.toThrow("VALOR_INVALIDO");
+  });
+
+  it("deve recusar POR_CRIANCA em festa sem crianças", async () => {
+    await testPrisma.reserva.update({
+      where: { id: TEST_IDS.RESERVA_PENDENTE },
+      data: { numCriancasConfirmadas: null, numCriancas: 0 },
+    });
+
+    await expect(
+      ajustePagamentoService.redefinirPreco({
+        modo: "POR_CRIANCA",
+        precoPorCabeca: 10,
+        motivo: "x",
+        reservaId: TEST_IDS.RESERVA_PENDENTE,
+      })
+    ).rejects.toThrow("CRIANCAS_INVALIDO");
+  });
+
+  it("REDEFINICAO não é removível (auditoria)", async () => {
+    const ajuste = await ajustePagamentoService.redefinirPreco({
+      modo: "TOTAL",
+      valor: 100,
+      motivo: "Para tentar remover",
+      reservaId: TEST_IDS.RESERVA_PENDENTE,
+    });
+
+    await expect(ajustePagamentoService.remove(ajuste.id)).rejects.toThrow(
+      "REDEFINICAO_NAO_REMOVIVEL"
+    );
+  });
+
+  it("list devolve modo e precoPorCabeca das redefinições", async () => {
+    const ajustes = await ajustePagamentoService.list({
+      reservaId: TEST_IDS.RESERVA_PENDENTE,
+    });
+
+    const redef = ajustes.find(
+      (a: { tipo: string; modo: string | null; precoPorCabeca: number | null }) =>
+        a.tipo === "REDEFINICAO" && a.modo === "POR_CRIANCA"
+    );
+    expect(redef).toBeDefined();
+    expect(redef!.precoPorCabeca).toBe(45);
+  });
+
   // ── list ──────────────────────────────────────────────────────
   it("deve listar apenas ajustes da reserva filtrada", async () => {
     const ajustes = await ajustePagamentoService.list({

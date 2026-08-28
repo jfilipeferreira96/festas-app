@@ -52,6 +52,66 @@ describe("Festas Acabar Service", () => {
       // RESERVA_PENDENTE está em estado RESERVA — não deve aparecer
       expect(ids).not.toContain(TEST_IDS.RESERVA_PENDENTE);
     });
+
+    it("deve devolver pagamento (pago/valorPago) para o alerta do balcão", async () => {
+      const festas = await festasAcabarService.getFestas();
+      const festa = festas.find((f: { id: string }) => f.id === TEST_IDS.RESERVA_EM_CURSO);
+      expect(festa).toBeDefined();
+      expect(typeof festa!.pago).toBe("boolean");
+      expect("valorPago" in festa!).toBe(true);
+    });
+
+    it("deve devolver extras com estado concluido (check por extra)", async () => {
+      const festas = await festasAcabarService.getFestas();
+      const festa = festas.find((f: { id: string }) => f.id === TEST_IDS.RESERVA_EM_CURSO);
+      expect(festa).toBeDefined();
+
+      const extras = (festa!.extras ?? []) as Array<{ nome: string; quantidade: number; concluido: boolean }>;
+      // O seed cria pelo menos um extra com concluido: true na festa em curso
+      expect(extras.some((re) => re.concluido === true)).toBe(true);
+      for (const re of extras) {
+        expect(typeof re.nome).toBe("string");
+        expect(typeof re.quantidade).toBe("number");
+        expect(typeof re.concluido).toBe("boolean");
+      }
+    });
+
+    it("deve devolver observações de cacifos (notasCacifos/observacoesCacifo)", async () => {
+      const festas = await festasAcabarService.getFestas();
+      const festa = festas.find((f: { id: string }) => f.id === TEST_IDS.RESERVA_EM_CURSO);
+      expect(festa).toBeDefined();
+      expect("notasCacifos" in festa!).toBe(true);
+      expect("observacoesCacifo" in festa!).toBe(true);
+    });
+  });
+
+  describe("getEntradasAtivas()", () => {
+    it("deve devolver apenas entradas ATIVA", async () => {
+      const entradas = await festasAcabarService.getEntradasAtivas();
+      const ids = entradas.map((e: { id: string }) => e.id);
+
+      expect(ids).toContain(TEST_IDS.ENTRADA_LIVRE_1);
+      expect(ids).not.toContain(TEST_IDS.ENTRADA_LIVRE_2); // CONCLUIDA
+      expect(ids).not.toContain(TEST_IDS.ENTRADA_LIVRE_3); // CANCELADA
+    });
+
+    it("deve devolver campos do balcão (pago, temLanche, estadoLanche, fimPrevisto)", async () => {
+      const entradas = await festasAcabarService.getEntradasAtivas();
+      const entrada = entradas.find((e: { id: string }) => e.id === TEST_IDS.ENTRADA_LIVRE_1);
+
+      expect(entrada).toBeDefined();
+      expect(entrada!.pago).toBe(true); // seed: pago MBWAY
+      expect(entrada!.temLanche).toBe(false);
+      expect(typeof entrada!.fimPrevisto).toBe("string");
+      expect(typeof entrada!.encarregadoNome).toBe("string");
+    });
+
+    it("deve ordenar por fimPrevisto ascendente", async () => {
+      const entradas = await festasAcabarService.getEntradasAtivas();
+      for (let i = 1; i < entradas.length; i++) {
+        expect(entradas[i - 1].fimPrevisto <= entradas[i].fimPrevisto).toBe(true);
+      }
+    });
   });
 
   describe("atualizarObservacoes()", () => {
