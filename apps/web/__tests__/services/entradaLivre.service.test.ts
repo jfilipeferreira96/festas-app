@@ -56,9 +56,12 @@ describe("Entrada Livre Service", () => {
     });
 
     it("should filter by data (tomorrow — expect empty)", async () => {
+      // Data em horário LOCAL (não UTC) — evita flake quando a suite corre
+      // logo após a meia-noite local: o seed usa dias locais, mas o
+      // toISOString() serializa o dia UTC e saltava para o dia errado.
       const amanha = new Date();
       amanha.setDate(amanha.getDate() + 1);
-      const amanhaStr = amanha.toISOString().split("T")[0];
+      const amanhaStr = `${amanha.getFullYear()}-${String(amanha.getMonth() + 1).padStart(2, "0")}-${String(amanha.getDate()).padStart(2, "0")}`;
       const entradas = await entradaLivreService.list({ data: amanhaStr });
       // Should be empty since we don't seed entries for tomorrow
       expect(entradas.length).toBe(0);

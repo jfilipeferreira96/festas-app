@@ -354,17 +354,20 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         encarregadoEmail: data.encarregadoEmail || undefined,
         duracaoMinutos: data.duracaoMinutos,
         custoTotal: data.custoTotal,
-        metodoPagamento: data.metodoPagamento && data.metodoPagamento !== "NONE" ? data.metodoPagamento : undefined,
+        // Em edição, null (em vez de undefined) quando vazio para LIMPAR o valor
+        // no registo (undefined = "sem alterações" no Prisma).
+        metodoPagamento: data.metodoPagamento && data.metodoPagamento !== "NONE" ? data.metodoPagamento : isEdit ? null : undefined,
         pago: data.pago,
-        cacifoId: data.cacifoId || undefined,
+        // null remove o cacifo associado (o serviço liberta o cacifo antigo).
+        cacifoId: data.cacifoId || null,
         extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
         observacoes: data.observacoes || undefined,
         observacoesLesoes: data.observacoesLesoes || undefined,
         temLanche: data.temLanche,
-        horaLanche: data.horaLanche || undefined,
+        horaLanche: data.horaLanche || (isEdit ? null : undefined),
         numAdultos: data.numAdultos,
-        metodoPagamento2: data.metodoPagamento2 && data.metodoPagamento2 !== "NONE" ? data.metodoPagamento2 : undefined,
-        valorPago2: data.valorPago2 || undefined,
+        metodoPagamento2: data.metodoPagamento2 && data.metodoPagamento2 !== "NONE" ? data.metodoPagamento2 : isEdit ? null : undefined,
+        valorPago2: data.valorPago2 || (isEdit ? null : undefined),
         meiasQuantidade: data.meiasQuantidade || undefined,
       };
 

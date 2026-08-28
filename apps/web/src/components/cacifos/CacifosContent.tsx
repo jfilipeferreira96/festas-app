@@ -175,10 +175,12 @@ export default function CacifosContent() {
     const BOM = "\uFEFF";
     const csvContent = BOM + [headers.map(esc).join(";"), ...rows.map((row) => row.join(";"))].join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
+    link.href = url;
     link.download = `cacifos-${selectedDate}.csv`;
     link.click();
+    URL.revokeObjectURL(url);
   }, [cacifos, selectedDate]);
 
   

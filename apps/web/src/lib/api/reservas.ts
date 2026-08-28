@@ -76,11 +76,11 @@ export interface CreateReservaData {
   observacoesLesoes?: string;
   observacoesBrindes?: string;
   outrosExtras?: string;
-  // Pagamento
-  metodoPagamento?: MetodoPagamento;
-  metodoPagamento2?: MetodoPagamento;
+  // Pagamento (null = limpar o valor no registo; undefined = sem alterações)
+  metodoPagamento?: MetodoPagamento | null;
+  metodoPagamento2?: MetodoPagamento | null;
   valorPago?: number;
-  valorPago2?: number;
+  valorPago2?: number | null;
   meiasQuantidade?: number;
   pago?: boolean;
   referenciaPagamento?: string;
@@ -177,10 +177,10 @@ export const reservasApi = {
 
   atualizarPagamento: (id: string, data: {
     pago?: boolean;
-    metodoPagamento?: MetodoPagamento;
+    metodoPagamento?: MetodoPagamento | null;
     valorPago?: number;
-    metodoPagamento2?: MetodoPagamento;
-    valorPago2?: number;
+    metodoPagamento2?: MetodoPagamento | null;
+    valorPago2?: number | null;
     caucao?: string;
     valorCaucao?: number;
     referenciaPagamento?: string;

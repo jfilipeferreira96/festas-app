@@ -547,7 +547,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       extrasTexto: Object.fromEntries(Object.entries(extrasTexto).filter(([, v]) => v.trim())),
       monitoresIds: data.monitoresIds, etapasIds: data.etapasIds,
       cor: data.cor || undefined,
-      menuId: reserva ? (data.menuId || null) : (data.menuId || undefined),
+      // Guard: se a reserva tem menu mas os extras (menus) ainda não carregaram,
+      // não enviar menuId — evita apagar o menu por acidente (race condition).
+      menuId: reserva ? (reserva.menu && menuExtras.length === 0 ? undefined : data.menuId || null) : (data.menuId || undefined),
       // Bolo (TipoBolo)
       bolo: (data.bolo || undefined) as TipoBolo | undefined,
       boloTema: data.boloTema || undefined,
@@ -556,11 +558,12 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       // Notas por equipa
       notasCacifos: data.notasCacifos || undefined,
       notasLanche: data.notasLanche || undefined,
-      // Pagamento
-      metodoPagamento: (data.metodoPagamento || undefined) as MetodoPagamento | undefined,
+      // Pagamento — em edição, null (em vez de undefined) quando vazio para LIMPAR
+      // o valor no registo (undefined = "sem alterações" no Prisma).
+      metodoPagamento: (reserva ? data.metodoPagamento || null : data.metodoPagamento || undefined) as MetodoPagamento | null | undefined,
       valorPago: data.valorPago || undefined, pago: data.pago, notas: obsGerais,
-      metodoPagamento2: (data.metodoPagamento2 || undefined) as MetodoPagamento | undefined,
-      valorPago2: data.valorPago2 || undefined,
+      metodoPagamento2: (reserva ? data.metodoPagamento2 || null : data.metodoPagamento2 || undefined) as MetodoPagamento | null | undefined,
+      valorPago2: reserva ? (data.valorPago2 || null) : (data.valorPago2 || undefined),
       meiasQuantidade: data.meiasQuantidade || undefined,
       observacoesGerais: data.observacoesGerais || undefined,
       observacoesLesoes: data.observacoesLesoes || undefined,
@@ -586,7 +589,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
           : "Erro ao guardar a festa. Tente novamente."
       );
     }
-  }, [reserva, aniversariantes, encarregadosAdicionais, selectedExtrasIds, extrasTexto, updateReserva, createReserva, onClose]);
+  }, [reserva, aniversariantes, encarregadosAdicionais, selectedExtrasIds, extrasTexto, menuExtras, updateReserva, createReserva, onClose]);
 
   /** Handler chamado quando a validação Zod falha — mostra erros e faz scroll. */
   const onInvalid = useCallback(() => {
@@ -884,6 +887,14 @@ function Step1Geral({
           <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1"><MapPin size={12} /> Sala *</label>
           <Select options={salaOptions} placeholder="Seleccionar" value={watch("localId") || ""} onChange={(val) => setValue("localId", val)} error={!!errors.localId} />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Cor da Festa</label>
+          <Select
+            options={corOptions}
+            value={currentCor || "NONE"}
+            onChange={(val) => setValue("cor", val === "NONE" ? "" : val, { shouldDirty: true })}
+          />
         </div>
       </div>
 

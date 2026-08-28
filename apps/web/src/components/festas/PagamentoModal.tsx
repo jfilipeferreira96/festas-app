@@ -60,8 +60,10 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
 
   const handleSave = useCallback(async () => {
     const parseNum = (s: string) => s === "" ? undefined : Number(s);
-    const parseMetodo = (s: string): MetodoPagamento | undefined =>
-      s === "NONE" || s === "" ? undefined : s as MetodoPagamento;
+    // "Não definido" deve LIMPAR o método guardado — null (não undefined),
+    // porque undefined = "sem alterações" no Prisma e deixaria o método antigo.
+    const parseMetodo = (s: string): MetodoPagamento | null =>
+      s === "NONE" || s === "" ? null : s as MetodoPagamento;
 
     try {
       await updatePagamento.mutateAsync({
@@ -71,8 +73,8 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           metodoPagamento: parseMetodo(metodoPagamento),
           valorPago: parseNum(valorPago),
           referenciaPagamento: referenciaPagamento || undefined,
-          metodoPagamento2: showSplit ? parseMetodo(metodoPagamento2) : undefined,
-          valorPago2: showSplit ? parseNum(valorPago2) : undefined,
+          metodoPagamento2: showSplit ? parseMetodo(metodoPagamento2) : null,
+          valorPago2: showSplit ? parseNum(valorPago2) ?? null : null,
           caucao: caucao || undefined,
           valorCaucao: parseNum(valorCaucao),
           descontoPercentagem: parseNum(descontoPercentagem),

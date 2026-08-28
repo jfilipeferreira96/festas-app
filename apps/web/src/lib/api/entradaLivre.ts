@@ -64,9 +64,9 @@ export interface CriarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos: number;
   custoTotal?: number;
-  metodoPagamento?: string;
+  metodoPagamento?: string | null;
   pago?: boolean;
-  cacifoId?: string;
+  cacifoId?: string | null;
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
@@ -74,9 +74,11 @@ export interface CriarEntradaLivreDTO {
   temLanche?: boolean;
   // Adultos (encarregados que acompanham e pagam)
   numAdultos?: number;
+  // Lanche
+  horaLanche?: string | null;
   // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string;
-  valorPago2?: number;
+  metodoPagamento2?: string | null;
+  valorPago2?: number | null;
   // Meias
   meiasQuantidade?: number;
 }
@@ -88,9 +90,10 @@ export interface AtualizarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos?: number;
   custoTotal?: number;
-  metodoPagamento?: string;
+  metodoPagamento?: string | null;
   pago?: boolean;
   cacifoId?: string | null;
+  horaLanche?: string | null;
   extrasIds?: string[];
   observacoes?: string;
   observacoesLesoes?: string;
@@ -99,8 +102,8 @@ export interface AtualizarEntradaLivreDTO {
   // Adultos
   numAdultos?: number;
   // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string;
-  valorPago2?: number;
+  metodoPagamento2?: string | null;
+  valorPago2?: number | null;
   // Meias
   meiasQuantidade?: number;
 }
