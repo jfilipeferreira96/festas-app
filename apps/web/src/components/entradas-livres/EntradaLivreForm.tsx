@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   Plus, Trash2, CreditCard, User, Users,
   Clock, Package, MessageSquare, Search,
+  CheckCircle2, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
@@ -15,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import Switch from "@/components/form/switch/Switch";
 import Checkbox from "@/components/form/input/Checkbox";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
+import EntradaLivrePagamentoModal from "@/components/entradas-livres/EntradaLivrePagamentoModal";
 import type { Cliente } from "@/lib/api/clientes";
 import {
   useCriarEntradaLivre,
@@ -135,6 +137,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const [showSplitPayment, setShowSplitPayment] = React.useState(
     !!entrada?.metodoPagamento2 || !!entrada?.valorPago2
   );
+  // Modal dedicada de pagamento (com acertos/auditoria) — usada em modo edição
+  const [showPagamentoModal, setShowPagamentoModal] = React.useState(false);
 
   const defaultValues = useMemo<Partial<EntradaLivreFormData>>(
     () => ({
@@ -354,10 +358,11 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         encarregadoEmail: data.encarregadoEmail || undefined,
         duracaoMinutos: data.duracaoMinutos,
         custoTotal: data.custoTotal,
-        // Em edição, null (em vez de undefined) quando vazio para LIMPAR o valor
-        // no registo (undefined = "sem alterações" no Prisma).
-        metodoPagamento: data.metodoPagamento && data.metodoPagamento !== "NONE" ? data.metodoPagamento : isEdit ? null : undefined,
-        pago: data.pago,
+        // Em edição, o pagamento é gerido na modal dedicada ("Gerir pagamento",
+        // com acertos/auditoria): os campos são omitidos (undefined) para não
+        // sobrescrever alterações feitas aí.
+        metodoPagamento: isEdit ? undefined : (data.metodoPagamento && data.metodoPagamento !== "NONE" ? data.metodoPagamento : undefined),
+        pago: isEdit ? undefined : data.pago,
         // null remove o cacifo associado (o serviço liberta o cacifo antigo).
         cacifoId: data.cacifoId || null,
         extrasIds: selectedExtrasIds.length > 0 ? selectedExtrasIds : undefined,
@@ -366,8 +371,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         temLanche: data.temLanche,
         horaLanche: data.horaLanche || (isEdit ? null : undefined),
         numAdultos: data.numAdultos,
-        metodoPagamento2: data.metodoPagamento2 && data.metodoPagamento2 !== "NONE" ? data.metodoPagamento2 : isEdit ? null : undefined,
-        valorPago2: data.valorPago2 || (isEdit ? null : undefined),
+        metodoPagamento2: isEdit ? undefined : (data.metodoPagamento2 && data.metodoPagamento2 !== "NONE" ? data.metodoPagamento2 : undefined),
+        valorPago2: isEdit ? undefined : data.valorPago2 || undefined,
         meiasQuantidade: data.meiasQuantidade || undefined,
       };
 
@@ -716,34 +721,62 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               <CreditCard size={14} className="text-brand-500" /> Pagamento
             </div>
 
-            {/* Estado + Método */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Estado do pagamento *
-                </label>
-                <Select
-                  options={ESTADO_PAGAMENTO_OPTIONS}
-                  placeholder="Seleccionar..."
-                  value={pago === undefined ? "" : pago ? "true" : "false"}
-                  onChange={(val) => setValue("pago", val === "true", { shouldValidate: true, shouldDirty: true })}
-                />
-                {errors.pago && (
-                  <p className="text-xs text-error-500 mt-1">{errors.pago.message}</p>
-                )}
+            {/* Estado + Método — na criação, campos; na edição, resumo + "Gerir pagamento" */}
+            {isEdit && entrada ? (
+              <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-surface border border-border">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {entrada.pago ? (
+                    <CheckCircle2 size={18} className="text-accent-green-500 shrink-0" />
+                  ) : (
+                    <Wallet size={18} className="text-accent-orange-500 shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text-primary">
+                      {entrada.pago ? "Pago" : "Por pagar"}
+                    </p>
+                    <p className="text-xs text-text-muted truncate">
+                      {METODO_PAGAMENTO_OPTIONS.find((o) => o.value === entrada.metodoPagamento)?.label ?? "Método não definido"}
+                      {entrada.metodoPagamento2
+                        ? ` + ${METODO_PAGAMENTO_OPTIONS.find((o) => o.value === entrada.metodoPagamento2)?.label ?? ""}`
+                        : ""}
+                      {" · "}
+                      {formatEuro(Number(entrada.custoTotalFinal ?? entrada.custoTotal ?? 0))}
+                    </p>
+                  </div>
+                </div>
+                <Button type="button" variant="outline" onClick={() => setShowPagamentoModal(true)} className="shrink-0">
+                  <Wallet size={14} /> Gerir pagamento
+                </Button>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Método de pagamento
-                </label>
-                <Select
-                  options={METODO_PAGAMENTO_OPTIONS}
-                  placeholder="Seleccionar método"
-                  value={watch("metodoPagamento") ?? "NONE"}
-                  onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)}
-                />
+            ) : (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">
+                    Estado do pagamento *
+                  </label>
+                  <Select
+                    options={ESTADO_PAGAMENTO_OPTIONS}
+                    placeholder="Seleccionar..."
+                    value={pago === undefined ? "" : pago ? "true" : "false"}
+                    onChange={(val) => setValue("pago", val === "true", { shouldValidate: true, shouldDirty: true })}
+                  />
+                  {errors.pago && (
+                    <p className="text-xs text-error-500 mt-1">{errors.pago.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">
+                    Método de pagamento
+                  </label>
+                  <Select
+                    options={METODO_PAGAMENTO_OPTIONS}
+                    placeholder="Seleccionar método"
+                    value={watch("metodoPagamento") ?? "NONE"}
+                    onChange={(val) => setValue("metodoPagamento", val === "NONE" ? undefined : val)}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Meias com stepper */}
             <div className="border-t border-border pt-3 space-y-2">
@@ -777,37 +810,39 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               </div>
             </div>
 
-            {/* Pagamento dividido (collapsible) */}
-            <div className="border-t border-border pt-3 space-y-2">
-              <Checkbox
-                checked={showSplitPayment}
-                onChange={(checked) => {
-                  setShowSplitPayment(checked);
-                  if (!checked) {
-                    setValue("metodoPagamento2", undefined, { shouldDirty: true });
-                    setValue("valorPago2", 0, { shouldDirty: true });
-                  }
-                }}
-                label="Dividir pagamento (2º método)"
-              />
-              {showSplitPayment && (
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
-                    <Select
-                      options={METODO_PAGAMENTO_OPTIONS}
-                      placeholder="2º método"
-                      value={watch("metodoPagamento2") ?? "NONE"}
-                      onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)}
-                    />
+            {/* Pagamento dividido (apenas na criação — na edição usar "Gerir pagamento") */}
+            {!isEdit && (
+              <div className="border-t border-border pt-3 space-y-2">
+                <Checkbox
+                  checked={showSplitPayment}
+                  onChange={(checked) => {
+                    setShowSplitPayment(checked);
+                    if (!checked) {
+                      setValue("metodoPagamento2", undefined, { shouldDirty: true });
+                      setValue("valorPago2", 0, { shouldDirty: true });
+                    }
+                  }}
+                  label="Dividir pagamento (2º método)"
+                />
+                {showSplitPayment && (
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
+                      <Select
+                        options={METODO_PAGAMENTO_OPTIONS}
+                        placeholder="2º método"
+                        value={watch("metodoPagamento2") ?? "NONE"}
+                        onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? undefined : val)}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label>
+                      <InputField type="number" step={0.01} min={0} value={watch("valorPago2") ?? 0} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º Método (€)</label>
-                    <InputField type="number" step={0.01} min={0} value={watch("valorPago2") ?? 0} onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value))} placeholder="0,00" />
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Resumo detalhado de valores */}
             <div className="border-t border-border pt-3 space-y-1.5">
@@ -875,6 +910,11 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         onClose={() => setShowClienteSearch(false)}
         onSelect={handleClienteSelected}
       />
+
+      {/* ── Modal: Gerir pagamento (edição) ── */}
+      {showPagamentoModal && entrada && (
+        <EntradaLivrePagamentoModal entrada={entrada} onClose={() => setShowPagamentoModal(false)} />
+      )}
     </div>
   );
 }
