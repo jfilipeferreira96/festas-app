@@ -31,16 +31,7 @@ import PagamentoModal from "@/components/festas/PagamentoModal";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva, MetodoPagamento, DisponibilidadeResult, TipoBolo } from "@/lib/api/reservas";
 
-// ── Payment Options ──────────────────────────────────────────────
-const METODO_PAGAMENTO_OPTIONS = [
-  { value: "NONE", label: "Não definido" },
-  { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "MULTIBANCO", label: "Multibanco" },
-  { value: "MBWAY", label: "MB WAY" },
-  { value: "TRANSFERENCIA", label: "Transferência" },
-  { value: "CARTAO", label: "Cartão" },
-  { value: "OUTRO", label: "Outro" },
-];
+import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
 
 const CAUCAO_OPTIONS = [
   { value: "NAO_PAGA", label: "Não paga" },

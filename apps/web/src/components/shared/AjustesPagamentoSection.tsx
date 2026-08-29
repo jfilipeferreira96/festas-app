@@ -25,14 +25,12 @@ const MODO_OPTIONS = [
   { value: "POR_CRIANCA", label: "Por criança (€)" },
 ];
 
+import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
+
+/** "Mesmo método" (NONE) + métodos canónicos da fonte única. */
 const METODO_OPTIONS = [
   { value: "NONE", label: "Mesmo método" },
-  { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "MULTIBANCO", label: "Multibanco" },
-  { value: "MBWAY", label: "MB WAY" },
-  { value: "TRANSFERENCIA", label: "Transferência" },
-  { value: "CARTAO", label: "Cartão" },
-  { value: "OUTRO", label: "Outro" },
+  ...METODO_PAGAMENTO_OPTIONS.filter((o) => o.value !== "NONE"),
 ];
 
 interface AjustesPagamentoSectionProps {

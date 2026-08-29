@@ -13,9 +13,12 @@ import {
   AlertTriangle,
   Timer,
   Sandwich,
+  Wallet,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
-import { StatusBadge } from "@/components/ui";
+import { StatusBadge, Button } from "@/components/ui";
+import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
+import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import { useEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useConfigPreco } from "@/hooks/use-precos";
 import type { StatusType } from "@/components/ui/status-badge/StatusBadge";
@@ -73,6 +76,7 @@ interface EntradaLivreDetailModalProps {
 export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices = false }: EntradaLivreDetailModalProps) {
   const { data: entrada, isLoading } = useEntradaLivre(entradaId ?? "");
   const { data: configPreco } = useConfigPreco();
+  const [showPagamento, setShowPagamento] = useState(false);
 
   const now = useCurrentTime();
 
@@ -108,6 +112,7 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
   if (!entradaId) return null;
 
   return (
+    <>
     <Modal isOpen={!!entradaId} onClose={onClose} size="lg" title="Detalhes da Entrada Livre">
       <div className="p-6">
         {isLoading || !entrada ? (
@@ -225,7 +230,14 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
                     value={entrada.pago ? "Pago" : "Por pagar"}
                   />
                   {entrada.metodoPagamento && (
-                    <DetailRow label="Método" value={entrada.metodoPagamento} />
+                    <DetailRow
+                      label={entrada.metodoPagamento2 ? "Métodos" : "Método"}
+                      value={
+                        entrada.metodoPagamento2
+                          ? `${metodoPagamentoLabel(entrada.metodoPagamento)} + ${metodoPagamentoLabel(entrada.metodoPagamento2)}`
+                          : metodoPagamentoLabel(entrada.metodoPagamento)
+                      }
+                    />
                   )}
                   {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
                     <DetailRow
@@ -243,10 +255,25 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
                 <DetailRow icon={<AlertTriangle size={12} />} label="Alergias/Lesões" value={entrada.observacoesLesoes} accent />
               )}
             </div>
+
+            {!hidePrices && (
+              <div className="mt-4 flex justify-end">
+                <Button onClick={() => setShowPagamento(true)} className="gap-2">
+                  <Wallet size={15} />
+                  Gerir pagamento
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
     </Modal>
+
+    {/* Pagamento — mesma modal unificada das restantes páginas */}
+    {showPagamento && entrada && (
+      <EntradaLivrePagamentoModal entrada={entrada} onClose={() => setShowPagamento(false)} />
+    )}
+    </>
   );
 }
 

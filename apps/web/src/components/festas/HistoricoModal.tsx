@@ -28,6 +28,7 @@ import { getAniversarianteNome, getAniversarianteNomes } from "@/lib/api/reserva
 import type { CacifoHistoricoEntry } from "@saas/shared-types";
 import { format, parseISO } from "date-fns";
 import { pt } from "date-fns/locale";
+import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 
 interface HistoricoModalProps {
   reserva: Reserva | null;
@@ -198,7 +199,7 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
               )}
               {reserva.metodoPagamento && (
                 <span className="text-text-muted ml-1">
-                  · {reserva.metodoPagamento === "DINHEIRO" ? "Dinheiro" : reserva.metodoPagamento === "MULTIBANCO" ? "Multibanco" : reserva.metodoPagamento === "MBWAY" ? "MB WAY" : reserva.metodoPagamento === "TRANSFERENCIA" ? "Transferência" : reserva.metodoPagamento === "CARTAO" ? "Cartão" : reserva.metodoPagamento}
+                  · {metodoPagamentoLabel(reserva.metodoPagamento)}
                 </span>
               )}
             </span>

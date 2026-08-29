@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import Switch from "@/components/form/switch/Switch";
 import Checkbox from "@/components/form/input/Checkbox";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
+import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
 import EntradaLivrePagamentoModal from "@/components/entradas-livres/EntradaLivrePagamentoModal";
 import type { Cliente } from "@/lib/api/clientes";
 import {
@@ -63,16 +64,6 @@ const DURACAO_OPTIONS = [
   { value: "60", label: "1 hora" },
   { value: "120", label: "2 horas" },
   { value: "180", label: "3 horas" },
-];
-
-const METODO_PAGAMENTO_OPTIONS = [
-  { value: "NONE", label: "Não definido" },
-  { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "MULTIBANCO", label: "Multibanco" },
-  { value: "MBWAY", label: "MB WAY" },
-  { value: "TRANSFERENCIA", label: "Transferência" },
-  { value: "CARTAO", label: "Cartão" },
-  { value: "OUTRO", label: "Outro" },
 ];
 
 // Estado de pagamento — Select de 3 estados para obrigar selecção explícita

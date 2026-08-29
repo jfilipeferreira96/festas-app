@@ -9,6 +9,7 @@ import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva, useToggleReservaExtra } from "@/hooks/use-reservas";
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./FestaForm";
+import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import FestaDetailModal from "./FestaDetailModal";
 import PagamentoModal from "./PagamentoModal";
 import HistoricoModal from "./HistoricoModal";
@@ -582,6 +583,12 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                   </span>
                   {valor && (
                     <span className="text-xs text-text-muted">{valor}</span>
+                  )}
+                  {r.metodoPagamento && (
+                    <span className="text-xs text-text-muted">
+                      {metodoPagamentoLabel(r.metodoPagamento)}
+                      {r.metodoPagamento2 ? ` + ${metodoPagamentoLabel(r.metodoPagamento2)}` : ""}
+                    </span>
                   )}
                 </button>
               );
