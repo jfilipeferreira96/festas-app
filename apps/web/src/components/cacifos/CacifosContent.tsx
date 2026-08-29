@@ -56,11 +56,19 @@ const FILTER_OPTIONS = [
   { value: "RESERVADO", label: "Reservados" },
 ];
 
+/** Converte Date para ISO (YYYY-MM-DD) em horário LOCAL — evita o desvio
+ *  de dia do toISOString() (UTC), crítico em fusos como Europe/Lisbon. */
+function toLocalISO(date: Date): string {
+  const mes = String(date.getMonth() + 1).padStart(2, "0");
+  const dia = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${mes}-${dia}`;
+}
+
 export default function CacifosContent() {
   const [filtro, setFiltro] = useState("");
   const [selectedCacifo, setSelectedCacifo] = useState<Cacifo | null>(null);
   const [filtroFesta, setFiltroFesta] = useState("");
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(() => toLocalISO(new Date()));
   const [selectedReservaId, setSelectedReservaId] = useState<string | null>(null);
   const [preselectedCacifoId, setPreselectedCacifoId] = useState<string | null>(null);
   const [pendingEntradaId, setPendingEntradaId] = useState<string | null>(null);
@@ -76,14 +84,14 @@ export default function CacifosContent() {
     [reservasData]
   );
 
-  // ── Vista de planeamento (datas futuras) ──
-  const isFutura = selectedDate > new Date().toISOString().split("T")[0];
-  
+  const todayISO = toLocalISO(new Date());
+  const isFutura = selectedDate > todayISO;
+
   const { data: cacifos, isLoading } = useCacifos(
-    filtro || (filtroFesta && !isFutura)
+    !isFutura && (filtro || filtroFesta)
       ? {
           ...(filtro ? { estado: filtro as EstadoCacifo } : {}),
-          ...(filtroFesta && !isFutura ? { reservaId: filtroFesta } : {})
+          ...(filtroFesta ? { reservaId: filtroFesta } : {})
         }
       : undefined
   );
@@ -91,8 +99,9 @@ export default function CacifosContent() {
   const preview = useMemo(() => {
     const map = new Map<string, { id: string; nome: string; horario: string }>();
     if (!isFutura || !cacifos) return map;
-    const livres = cacifos
-      .filter((c) => c.estado === "LIVRE")
+    // Pool = todos os cacifos (no dia futuro todos estarão livres; o estado
+    // atual é lógica de hoje e não deve limitar o planeamento).
+    const livres = [...cacifos]
       .sort((a, b) => a.numero - b.numero)
       .map((c) => c.id);
     const porHorario = [...festas].sort((a, b) => a.horario.localeCompare(b.horario));
@@ -114,10 +123,9 @@ export default function CacifosContent() {
 
   // Cacifos a renderizar na grelha (filtro por festa de datas futuras é cliente).
   const cacifosVisiveis = useMemo(() => {
-    if (!filtroFesta || !isFutura || !cacifos) return cacifos ?? [];
-    return cacifos.filter(
-      (c) => c.reserva?.id === filtroFesta || preview.get(c.id)?.id === filtroFesta
-    );
+    if (!isFutura || !cacifos) return cacifos ?? [];
+    if (!filtroFesta) return cacifos;
+    return cacifos.filter((c) => preview.get(c.id)?.id === filtroFesta);
   }, [filtroFesta, isFutura, cacifos, preview]);
   const { data: contadores } = useCacifoContadores();
   const libertar = useLibertar();
@@ -318,16 +326,19 @@ export default function CacifosContent() {
             {/* Date Picker */}
             <DatePicker
               id="cacifos-date-picker"
-              defaultDate={new Date(selectedDate)}
+              defaultDate={selectedDate}
+              minDate={todayISO}
               onChange={([date]: Date[]) => {
-                const iso = date.toISOString().split("T")[0];
+                const iso = toLocalISO(date);
+                if (iso < todayISO) return; // segurança: datas passadas não são permitidas
                 setSelectedDate(iso);
                 setFiltroFesta("");
               }}
               className="w-44"
             />
 
-            {/* Estado filter */}
+            {/* Estado filter — sem sentido na vista de planeamento (estado = lógica de hoje) */}
+            {!isFutura && (
             <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-1">
               {FILTER_OPTIONS.map((opt) => (
                 <button
@@ -343,6 +354,7 @@ export default function CacifosContent() {
                 </button>
               ))}
             </div>
+            )}
 
             {/* Festa filter */}
             <div className="w-55">
@@ -414,19 +426,21 @@ export default function CacifosContent() {
                       {festa.horario} · {festa.local?.nome ?? ""}
                     </span>
                   </button>
-                  {/* Botão Preencher cacifos */}
-                  <button
-                    onClick={() => setSelectedReservaId(festa.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
-                      isFiltered
-                        ? "bg-white/20 text-white hover:bg-white/30"
-                        : "bg-brand-50 text-brand-600 hover:bg-brand-100"
-                    }`}
-                    title="Preencher cacifos"
-                  >
-                    <ClipboardList size={14} />
-                    Preencher
-                  </button>
+                  {/* Botão Preencher cacifos — indisponível na vista de planeamento */}
+                  {!isFutura && (
+                    <button
+                      onClick={() => setSelectedReservaId(festa.id)}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                        isFiltered
+                          ? "bg-white/20 text-white hover:bg-white/30"
+                          : "bg-brand-50 text-brand-600 hover:bg-brand-100"
+                      }`}
+                      title="Preencher cacifos"
+                    >
+                      <ClipboardList size={14} />
+                      Preencher
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -475,6 +489,11 @@ export default function CacifosContent() {
                       <div className="flex items-center justify-center h-9 rounded-lg border border-border bg-gray-50">
                         <Loader2 className="w-4 h-4 animate-spin text-brand-500" />
                       </div>
+                    ) : isFutura ? (
+                      /* Vista de planeamento: leitura apenas (atribuição só no próprio dia) */
+                      <div className="flex items-center justify-center h-9 rounded-lg border border-border bg-gray-50 text-[10px] text-text-muted">
+                        {entrada.cacifo ? `#${entrada.cacifo.numero}` : "—"}
+                      </div>
                     ) : (
                       <Select
                         options={[
@@ -499,17 +518,6 @@ export default function CacifosContent() {
       )}
       </div>
 
-      {/* Banner — vista de planeamento (datas futuras) */}
-      {isFutura && (
-        <div className="no-print mb-4 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-xs leading-relaxed text-brand-700">
-          <strong className="font-semibold">Vista de planeamento:</strong> os cacifos
-          marcados como <span className="font-semibold">“Planeado”</span> são uma
-          previsão para as festas deste dia. A reserva física é materializada
-          automaticamente no próprio dia — clicar num cacifo planeado abre a festa
-          correspondente.
-        </div>
-      )}
-
       {/* Grid */}
       <div className="no-print">
       {isLoading ? (
@@ -524,30 +532,37 @@ export default function CacifosContent() {
       ) : cacifos && cacifos.length > 0 ? (
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
           {cacifosVisiveis.map((cacifo) => {
-            const style = ESTADO_STYLES[cacifo.estado] ?? {
+            // Vista de planeamento: ignora o estado atual (lógica de hoje) —
+            // no dia futuro todos os cacifos estarão livres; mostra apenas o planeado.
+            const estado = isFutura ? "LIVRE" : cacifo.estado;
+            const style = ESTADO_STYLES[estado] ?? {
               base: "bg-gray-50 border-gray-200 text-gray-500",
               hover: "hover:bg-gray-100 hover:shadow-md hover:scale-[1.04]",
               icon: "text-gray-400",
             };
             const porPreencher =
-              cacifo.estado === "RESERVADO" &&
+              !isFutura &&
+              estado === "RESERVADO" &&
               (!cacifo.criancas || !cacifo.criancas.trim() || cacifo.criancas === "Por preencher");
-            // Preview "Planeado" — só existe em datas futuras sobre cacifos LIVRE.
-            const previewFesta =
-              isFutura && cacifo.estado === "LIVRE" ? preview.get(cacifo.id) : undefined;
+            // Preview "Planeado" — só existe em datas futuras.
+            const previewFesta = isFutura ? preview.get(cacifo.id) : undefined;
             return (
               <button
                 key={cacifo.id}
-                onClick={() =>
-                  previewFesta ? setSelectedReservaId(previewFesta.id) : setSelectedCacifo(cacifo)
-                }
-                className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 border-2 relative cursor-pointer active:scale-95 ${
+                onClick={() => {
+                  // Vista de planeamento é leitura apenas — sem modais nem associações.
+                  if (isFutura) return;
+                  setSelectedCacifo(cacifo);
+                }}
+                className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all duration-200 border-2 relative ${
+                  isFutura ? "cursor-default" : "cursor-pointer active:scale-95"
+                } ${
                   previewFesta
-                    ? "border-dashed border-brand-300 bg-brand-50 text-brand-600 hover:bg-brand-100 hover:shadow-md hover:scale-[1.04]"
+                    ? "border-dashed border-brand-300 bg-brand-50 text-brand-600"
                     : porPreencher
                     ? "border-dashed border-accent-orange bg-brand-50 text-brand-700"
                     : style.base
-                } ${previewFesta ? "" : style.hover}`}
+                } ${isFutura ? "" : style.hover}`}
                 title={
                   previewFesta
                     ? `Planeado para ${previewFesta.nome} · ${previewFesta.horario}`
@@ -571,23 +586,23 @@ export default function CacifosContent() {
                     Por preencher
                   </span>
                 )}
-                {cacifo.estado === "OCUPADO" && cacifo.criancas && (
+                {!isFutura && estado === "OCUPADO" && cacifo.criancas && (
                   <span className="text-[11px] leading-tight text-center mt-0.5 max-w-[95%] truncate font-medium">
                     {cacifo.criancas}
                   </span>
                 )}
-                {cacifo.reserva && !porPreencher && (
+                {!isFutura && cacifo.reserva && !porPreencher && (
                   <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
                     {cacifo.reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || cacifo.reserva.cliente?.nome || ""}
                   </span>
                 )}
-                {!cacifo.reserva && cacifo.estado === "OCUPADO" && (
+                {!isFutura && !cacifo.reserva && estado === "OCUPADO" && (
                   <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
                     Entrada Livre
                   </span>
                 )}
                 {/* Indicador Festa vs Entrada Livre */}
-                {cacifo.estado === "OCUPADO" && (
+                {!isFutura && estado === "OCUPADO" && (
                   <span className={`absolute top-1 right-1 px-1 py-0.5 rounded text-[9px] font-bold leading-none ${
                     cacifo.reserva
                       ? "bg-accent-red-100 text-accent-red-600"
