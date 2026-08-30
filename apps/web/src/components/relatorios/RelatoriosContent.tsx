@@ -1,14 +1,80 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { PageHeader } from "@/components/ui";
-import { Search, FileText } from "lucide-react";
+import { Search, FileText, BarChart2, Wallet } from "lucide-react";
 import DatePicker from "@/components/form/date-picker";
 import { toLocalISODate } from "@/utils/date";
 import { useRelatorioFinanceiro } from "@/hooks/use-relatorios";
+import FechoCaixaContent from "@/components/fecho-caixa/FechoCaixaContent";
 import RelatorioTabela from "./RelatorioTabela";
 
+type Tab = "fecho" | "geral";
+
+const TABS: Array<{ id: Tab; label: string; icon: typeof BarChart2 }> = [
+  { id: "fecho", label: "Fecho do dia", icon: Wallet },
+  { id: "geral", label: "Geral", icon: BarChart2 },
+];
+
 export default function RelatoriosContent() {
+  const [tab, setTab] = useState<Tab>("fecho");
+
+  // Sincroniza com ?tab=geral no URL (links diretos e refresh)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("tab") === "geral") setTab("geral");
+  }, []);
+
+  const handleTabChange = useCallback((nova: Tab) => {
+    setTab(nova);
+    // Mantém o URL partilhável sem navegar (history API)
+    const url = new URL(window.location.href);
+    if (nova === "geral") {
+      url.searchParams.set("tab", "geral");
+    } else {
+      url.searchParams.delete("tab");
+    }
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  return (
+    <div>
+      <PageHeader
+        title="Relatórios"
+        subtitle="Relatório financeiro por período e fecho de caixa do dia"
+      />
+
+      {/* Tabs */}
+      <div className="mt-4 mb-6 inline-flex rounded-lg border border-border bg-surface p-1 shadow-theme-sm">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => handleTabChange(id)}
+            aria-pressed={tab === id}
+            className={`flex items-center gap-1.5 px-4 h-9 rounded-md text-sm font-medium transition-colors ${
+              tab === id
+                ? "bg-brand-500 text-white shadow-theme-sm"
+                : "text-text-secondary hover:text-text-primary hover:bg-gray-50"
+            }`}
+          >
+            <Icon size={15} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "fecho" ? (
+        <FechoCaixaContent embedded />
+      ) : (
+        <RelatorioPeriodoTab />
+      )}
+    </div>
+  );
+}
+
+/** Tab do relatório por período (conteúdo original da página). */
+function RelatorioPeriodoTab() {
   const hojeISO = toLocalISODate(new Date());
 
   const [dataInicio, setDataInicio] = useState<string>(hojeISO);
@@ -37,13 +103,8 @@ export default function RelatoriosContent() {
 
   return (
     <div>
-      <PageHeader
-        title="Relatórios"
-        subtitle="Relatório financeiro e operacional — fecho de caixa"
-      />
-
       {/* Filtros */}
-      <div className="mt-4 mb-6 bg-surface rounded-[14px] p-5 shadow-card border border-border">
+      <div className="mb-6 bg-surface rounded-[14px] p-5 shadow-card border border-border">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4">
           <div className="flex-1">
             <DatePicker

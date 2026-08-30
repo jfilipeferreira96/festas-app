@@ -387,7 +387,6 @@ async function seedCacifos() {
         reservaId: null,
         criancas: null,
         notas: null,
-        participante: { disconnect: true },
       },
       create: { numero: i, estado: "LIVRE", configuracaoId: "config-cacifo-001" },
     });

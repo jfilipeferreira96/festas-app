@@ -32,7 +32,6 @@ import {
   Sandwich,
   CalendarX,
   Clock,
-  Wallet,
 } from "lucide-react";
 
 type NavItem = {
@@ -123,12 +122,6 @@ const mainNavItems: NavItem[] = [
     name: "Relatórios",
     icon: <BarChart2 className="w-5 h-5" />,
     path: "/relatorios",
-    modulo: "relatorios",
-  },
-  {
-    name: "Fecho de Caixa",
-    icon: <Wallet className="w-5 h-5" />,
-    path: "/fecho-caixa",
     modulo: "relatorios",
   },
 ];

@@ -25,7 +25,12 @@ function hojeISO(): string {
   return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 }
 
-export default function FechoCaixaContent() {
+interface FechoCaixaContentProps {
+  /** Quando renderizado dentro de outra página (tab), omite o PageHeader e margens globais. */
+  embedded?: boolean;
+}
+
+export default function FechoCaixaContent({ embedded = false }: FechoCaixaContentProps) {
   const [data, setData] = useState(hojeISO());
   const { data: fecho, isLoading } = useFechoCaixa(data);
 
@@ -53,10 +58,12 @@ export default function FechoCaixaContent() {
 
   return (
     <div>
-      <PageHeader title="Fecho de Caixa" subtitle={`Quanto se recebeu — ${dataFmt}`} />
+      {!embedded && (
+        <PageHeader title="Fecho de Caixa" subtitle={`Quanto se recebeu — ${dataFmt}`} />
+      )}
 
       {/* Controlos */}
-      <div className="mt-4 flex flex-wrap items-end gap-3">
+      <div className={`${embedded ? "" : "mt-4"} flex flex-wrap items-end gap-3`}>
         <div className="w-56">
           <DatePicker id="fecho-caixa-data" label="Dia" defaultDate={data} onChange={handleDateChange} />
         </div>
@@ -66,14 +73,14 @@ export default function FechoCaixaContent() {
       </div>
 
       {isLoading || !fecho ? (
-        <div className="mt-6 bg-surface rounded-[14px] p-8 shadow-card border border-border animate-pulse">
+        <div className={`${embedded ? "mt-4" : "mt-6"} bg-surface rounded-[14px] p-8 shadow-card border border-border animate-pulse`}>
           <div className="h-4 bg-gray-100 rounded w-1/3 mb-3" />
           <div className="h-3 bg-gray-100 rounded w-1/2" />
         </div>
       ) : (
         <>
           {/* Destaques: numerário / eletrónico / total */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className={`${embedded ? "mt-4" : "mt-6"} grid grid-cols-1 sm:grid-cols-3 gap-3`}>
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-surface border border-border shadow-card">
               <div className="w-10 h-10 rounded-full bg-accent-green-100 flex items-center justify-center">
                 <Banknote className="w-5 h-5 text-accent-green-600" />
@@ -110,7 +117,7 @@ export default function FechoCaixaContent() {
           </div>
 
           {/* Por método */}
-          <div className="mt-4 bg-surface rounded-[14px] p-5 shadow-card border border-border">
+          <div className={`${embedded ? "mt-3" : "mt-4"} bg-surface rounded-[14px] p-5 shadow-card border border-border`}>
             <h2 className="text-sm font-semibold text-text-primary mb-3">Por método de pagamento</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {METODO_CARDS.map(({ metodo, label }) => (
@@ -135,7 +142,7 @@ export default function FechoCaixaContent() {
           </div>
 
           {/* Ajustes do dia — auditoria */}
-          <div className="mt-4 bg-surface rounded-[14px] p-5 shadow-card border border-border">
+          <div className={`${embedded ? "mt-3" : "mt-4"} bg-surface rounded-[14px] p-5 shadow-card border border-border`}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
                 <ArrowUpDown size={14} className="text-text-muted" /> Ajustes do dia

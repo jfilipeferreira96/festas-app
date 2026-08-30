@@ -255,17 +255,29 @@ Gestão de clientes e seus dados de contacto.
 
 ## Relatórios `/relatorios`
 
-Indicadores e análises de desempenho do espaço.
+Relatório financeiro por período e fecho de caixa do dia, numa única página com tabs. Abre por defeito na tab "Fecho do dia".
 
-**Componente:** `RelatoriosContent.tsx`
+**Componente:** `RelatoriosContent.tsx` (tabs) + `FechoCaixaContent.tsx` (tab "Fecho do dia", com prop `embedded`)
 
-**Filtros globais:** período (Mensal / Trimestral / Anual), sala específica, monitor específico.
+**Tab 1 — Fecho do dia (default):**
+- Cards de destaque: Numerário / Eletrónico / Total do dia
+- Totais por método de pagamento (6 métodos)
+- Detalhe: Festas / Entradas Livres / Outros
+- Lista de ajustes do dia com motivo, autor e hora (auditoria)
+- Botão Imprimir (utilitário `print-fecho-caixa.ts`)
 
-**KPIs de topo:**
-- Total de festas realizadas no período
-- Receita total em euros
-- Taxa de ocupação dos cacifos
-- Extras mais contratados
+**Tab 2 — Geral** (`?tab=geral` no URL):
+- Filtro por intervalo de datas (Data Início / Data Fim + Pesquisar)
+- Tabelas por secção: Festas de Aniversário (agrupadas por menu), Entradas Livres (por duração 1H/2H/3H + lanches), Outros (cauções, excesso de tempo, meias, brindes)
+- Colunas por método de pagamento: Numerário, Multibanco, Transferência, MB WAY, Cartão, Outro
+- Secção de Ajustes de Pagamento (auditoria — não soma ao Total Geral)
+- Total Geral do período
+
+**Regras de negócio:**
+- A rota `/fecho-caixa` foi removida — o fecho de caixa vive na tab "Fecho do dia"
+- O fecho de caixa reutiliza a agregação do relatório financeiro (`fechoCaixaService` → `relatorioService.getRelatorioFinanceiro(data, data)`) — mesma fonte de verdade
+- Ambas as vistas são exclusivas de ADMINISTRADOR (modulo `relatorios`)
+- Ajustes são write-through: já estão refletidos em `valorPago`/`custoTotalFinal`, listam-se apenas para auditoria (nunca somam ao total)
 
 ---
 
