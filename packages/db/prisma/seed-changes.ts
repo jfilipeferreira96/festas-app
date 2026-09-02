@@ -18,10 +18,12 @@
 
 import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
+import { createPrismaClient } from "../src/mariadb-adapter";
 
 config({ path: "../../apps/web/.env" });
 
-const prisma = new PrismaClient();
+// Driver adapter (mariadb) — ver packages/db/src/mariadb-adapter.ts
+const prisma = createPrismaClient(process.env.DATABASE_URL!);
 
 // ─── Helpers ──────────────────────────────────────────────────
 function today(): Date {

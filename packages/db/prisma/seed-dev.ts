@@ -28,10 +28,12 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
 import { getSeedUsers } from "./seed-roles";
+import { createPrismaClient } from "../src/mariadb-adapter";
 
 config({ path: "../../apps/web/.env" });
 
-const prisma = new PrismaClient();
+// Driver adapter (mariadb) — ver packages/db/src/mariadb-adapter.ts
+const prisma = createPrismaClient(process.env.DATABASE_URL!);
 
 const seedAuth = betterAuth({
   database: prismaAdapter(prisma, { provider: "mysql" }),

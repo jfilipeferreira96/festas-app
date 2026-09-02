@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   // Monorepo root so standalone output traces workspace packages (@festas/*, @saas/*)
   outputFileTracingRoot: path.join(__dirname, "..", ".."),
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

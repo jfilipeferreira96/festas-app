@@ -1,9 +1,8 @@
 generator client {
-  provider      = "prisma-client-js"
-  // Gerar engines para dev (Windows = native) E para o servidor cPanel (Linux/AlmaLinux).
-  // Inclui RHEL e DEBIAN (o servidor cPanel usa debian-openssl-1.0.x).
-  // Para confirmar o alvo exato no servidor: `npx prisma -v` (mostra o "Binary Types").
-  binaryTargets = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.1.x", "debian-openssl-1.0.x", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+ 
+  previewFeatures = ["driverAdapters"]
+  binaryTargets   = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.1.x", "debian-openssl-1.0.x", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {

@@ -48,9 +48,31 @@ if (!process.env.DATABASE_URL) {
 
 const command = process.argv[2];
 
+// --- Driver adapter (mariadb) — mesma lógica de packages/db/src/mariadb-adapter.ts ---
+// A engine Rust do Prisma criava ~64 threads (1 por CPU do host) contadas no
+// limite nproc=100 do CloudLinux. Com o adapter, queries em JS puro.
+// CJS inline porque este script corre no cPanel sem TS/tsx.
+function mariadbConfigFromUrl(raw) {
+  const u = new URL(raw);
+  const q = Number(u.searchParams.get("connection_limit"));
+  return {
+    host: u.hostname,
+    port: u.port ? Number(u.port) : 3306,
+    user: decodeURIComponent(u.username),
+    password: decodeURIComponent(u.password),
+    database: u.pathname.replace(/^\/+/, ""),
+    connectionLimit: Number.isFinite(q) && q > 0 ? q : 5,
+    connectTimeout: 10000,
+  };
+}
+
 function getPrisma() {
   const { PrismaClient } = require("@prisma/client");
-  return new PrismaClient();
+  const { PrismaMariaDb } = require("@prisma/adapter-mariadb");
+  return new PrismaClient({
+    adapter: new PrismaMariaDb(mariadbConfigFromUrl(process.env.DATABASE_URL)),
+    log: ["warn", "error"],
+  });
 }
 
 // Mostra a BD com a password redigida (confirmação visual).
