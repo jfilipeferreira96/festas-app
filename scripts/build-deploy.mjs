@@ -498,8 +498,16 @@ ok("uploads/ criado (gravável).");
 // 2e. .env de PRODUÇÃO (sobrescreve o .env local que veio traçado)
 const envDest = join(DEPLOY, "apps", "web", ".env");
 if (existsSync(ENV_PROD)) {
-  writeFileSync(envDest, readFileSync(ENV_PROD, "utf8"));
-  ok(".env de produção copiado para deploy/apps/web/.env");
+  let envProd = readFileSync(ENV_PROD, "utf8");
+  envProd = envProd.replace(
+    /^DATABASE_URL=([^\r\n]+?)(\r?)$/m,
+    (_m, url, cr) =>
+      /connection_limit=/.test(url)
+        ? `DATABASE_URL=${url}${cr}`
+        : `DATABASE_URL=${url}${url.includes("?") ? "&" : "?"}connection_limit=5&pool_timeout=10${cr}`
+  );
+  writeFileSync(envDest, envProd);
+  ok(".env de produção copiado para deploy/apps/web/.env (connection_limit=5 garantido se ausente)");
 } else {
   err("apps/web/.env.production não existe. Cria-o com as credenciais de produção.");
 }
@@ -543,6 +551,13 @@ if (fs.existsSync(envPath)) {
 }
 
 // --- ambiente do Passenger -------------------------------------------------
+// 1) Este bundle é SEMPRE de produção (build standalone). Forçar NODE_ENV evita
+//    comportamentos pesados de dev caso o "Application mode" do cPanel esteja
+//    mal configurado (dev = mais processos/threads/RAM).
+process.env.NODE_ENV = "production";
+// 2) Limitar o thread pool do libuv (I/O fs/DNS). Fixa o valor por robustez —
+//    relevante para o limite de processos/threads do CloudLinux.
+process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || "4";
 process.env.HOSTNAME = process.env.HOSTNAME || "0.0.0.0";
 process.env.PORT = process.env.PORT || 3000;
 
