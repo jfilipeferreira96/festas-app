@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "./mariadb-adapter";
 
 // ─── DB Target Resolution ────────────────────────────────────
 /**
@@ -101,7 +102,7 @@ function resolveDatabaseUrl(): { url: string; info: DbInfo } {
 }
 
 // Resolver antes de criar o PrismaClient
-const { info: dbInfo } = resolveDatabaseUrl();
+const { url: databaseUrl, info: dbInfo } = resolveDatabaseUrl();
 
 // ─── Startup Log ─────────────────────────────────────────────
 function printDbBanner(info: DbInfo) {
@@ -151,6 +152,9 @@ function printDbBanner(info: DbInfo) {
 printDbBanner(dbInfo);
 
 // ─── Prisma Client ───────────────────────────────────────────
+// Driver adapter (mariadb): JS puro, sem engine Rust → sem pool de threads
+// tokio dimensionado pelos CPUs do host (motivo do limite nproc no cPanel).
+// Ver src/mariadb-adapter.ts.
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
   __dbInfo: DbInfo | undefined;
@@ -158,7 +162,7 @@ const globalForPrisma = globalThis as unknown as {
 
 const prisma: PrismaClient =
   globalForPrisma.prisma ??
-  new PrismaClient({
+  createPrismaClient(databaseUrl, {
     log: process.env.NODE_ENV === "production" ? ["warn", "error"] : ["warn", "error"],
   });
 

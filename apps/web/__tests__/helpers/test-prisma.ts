@@ -1,7 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createPrismaClient } from "@festas/db/mariadb-adapter";
 
 // Load .env from the apps/web directory. fileURLToPath is used because
 // import.meta.dirname is undefined under tsx/vitest CJS transpilation.
@@ -12,6 +12,10 @@ config({ path: resolve(__dirname, "../../.env") });
  * Prisma client configured for the TEST database.
  *
  * MySQL uses a separate DATABASE for test isolation (PostgreSQL used a "schema").
+ *
+ * Uses the shared driver-adapter factory (@festas/db/mariadb-adapter) —
+ * required because the schema has `previewFeatures = ["driverAdapters"]`
+ * (the PrismaClient constructor no longer accepts a bare `datasources` URL).
  *
  * Resolution priority:
  *   1. DATABASE_URL_TEST — explicit test connection string
@@ -31,12 +35,6 @@ function getTestDatabaseUrl(): string {
   return baseUrl.replace(/(\/)([^/?]+)(\?.*)?$/, "$1$2_test$3");
 }
 
-const testPrisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: getTestDatabaseUrl(),
-    },
-  },
-});
+const testPrisma = createPrismaClient(getTestDatabaseUrl());
 
 export default testPrisma;

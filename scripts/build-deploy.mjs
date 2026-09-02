@@ -717,7 +717,9 @@ mkdirSync(join(DEPLOY, "scripts"), { recursive: true });
     format: "cjs",
     target: "node20",
     outfile: SEED_OUT,
-    external: ["@prisma/client", "better-auth", "better-auth/adapters/prisma", "dotenv"],
+    // mariadb + adapter EXTERNOS: o driver tem requires dinâmicos que partem se
+    // bundlados; resolvem-se em runtime a partir de node_modules_deps.
+    external: ["@prisma/client", "@prisma/adapter-mariadb", "mariadb", "better-auth", "better-auth/adapters/prisma", "dotenv"],
     banner: { js: "// seed minimo de producao (cPanel) - auto-gerado" },
     logLevel: "warning",
   });
@@ -729,33 +731,36 @@ ok("scripts/db.js (launcher de BD) copiado.");
 cpSync(join(__dirname, "diagnose.js"), join(DEPLOY, "scripts", "diagnose.js"));
 ok("scripts/diagnose.js (diagnóstico de deployment) copiado.");
 
-// 3. VALIDAR E COPIAR ENGINE PRISMA -----------------------------------------
-// CRÍTICO: O Next.js standalone NÃO copia node_modules/.prisma/client (pasta
-// "hidden" que começa com "."). Sem as engines, o Prisma crasha em runtime:
-//   "Prisma Client could not locate the Query Engine for runtime X".
-// Copiamos manualmente do node_modules raiz do monorepo para o bundle.
+// 3. VALIDAR DRIVER ADAPTER (mariadb) + COPIAR CLIENT PRISMA ------------------
+// Com `previewFeatures = ["driverAdapters"]` o Prisma NÃO usa engines Rust em
+// runtime — as queries correm via @prisma/adapter-mariadb (JS puro, zero
+// threads tokio, que era a causa do limite nproc=100 do CloudLinux).
+// O crítico agora é o adapter + driver existirem no node_modules_deps.
 const prismaClientSrc = join(ROOT, "node_modules", ".prisma", "client");
 const prismaClientDir = join(DEPLOY, "node_modules_deps", ".prisma", "client");
 
-if (!existsSync(prismaClientDir)) {
-  log("A copiar engines Prisma (.prisma/client) para o bundle...");
-  if (!existsSync(prismaClientSrc)) {
-    err(`node_modules/.prisma/client não existe em ${prismaClientSrc}.`, "Corre: npm run db:generate (gera as engines para Windows + Linux)");
-  }
+if (!existsSync(prismaClientDir) && existsSync(prismaClientSrc)) {
+  log("A copiar cliente Prisma gerado (.prisma/client) para o bundle...");
   mkdirSync(prismaClientDir, { recursive: true });
   cpSync(prismaClientSrc, prismaClientDir, { recursive: true });
-  ok("Engines Prisma copiadas para node_modules_deps/.prisma/client/.");
+  ok("Cliente Prisma copiado para node_modules_deps/.prisma/client/.");
 }
 
-let linuxEngine = false;
-if (existsSync(prismaClientDir)) {
-  const engines = readdirSync(prismaClientDir).filter((f) => /libquery_engine-(debian|rhel|linux)/.test(f));
-  linuxEngine = engines.length > 0;
-  if (linuxEngine) ok(`Engine Prisma Linux presente: ${engines.join(", ")}`);
+const adapterDeps = ["mariadb", "@prisma/adapter-mariadb"];
+let adapterOk = true;
+for (const dep of adapterDeps) {
+  const depDir = join(DEPLOY, "node_modules_deps", ...dep.split("/"));
+  if (existsSync(depDir)) {
+    ok(`Driver adapter presente: ${dep}`);
+  } else {
+    adapterOk = false;
+    console.warn(`⚠️  AVISO: ${dep} não encontrado em node_modules_deps.`);
+  }
 }
-if (!linuxEngine) {
+if (!adapterOk) {
   console.warn(
-    "⚠️  AVISO: não encontrei a engine Prisma para Linux no bundle.\n" + "   Corre:  node scripts/build-deploy.mjs --build\n" + "   (garante que packages/db/prisma/schema.prisma tem binaryTargets com alvo Linux)",
+    "   O Prisma com driverAdapters precisa destes pacotes em runtime." +
+      "   Regenera: node scripts/build-deploy.mjs --build"
   );
 }
 
