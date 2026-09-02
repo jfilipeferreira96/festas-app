@@ -400,13 +400,14 @@ export const entradaLivreService = {
   },
 
   // ── Atualizar pagamento ─────────────────────────
-  async atualizarPagamento(id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: MetodoPagamento }) {
+  async atualizarPagamento(id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: MetodoPagamento | null; metodoPagamento2?: MetodoPagamento | null; valorPago2?: number | null }) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
 
     // Não é possível marcar como paga sem indicar o método de pagamento.
     // O método pode vir no próprio payload OU já estar guardado na entrada.
-    const metodoFinal = data.metodoPagamento ?? entrada.metodoPagamento;
+    // `null` limpa explicitamente o método (Prisma: null = limpar, undefined = manter).
+    const metodoFinal = data.metodoPagamento === null ? null : (data.metodoPagamento ?? entrada.metodoPagamento);
     if (data.pago === true && !metodoFinal) {
       throw new Error("METODO_PAGAMENTO_REQUIRED");
     }

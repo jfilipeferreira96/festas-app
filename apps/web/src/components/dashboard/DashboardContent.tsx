@@ -381,14 +381,9 @@ const ProximasFestasSection = React.memo(function ProximasFestasSection() {
   );
 });
 
-const METODO_LABELS: Record<string, string> = {
-  DINHEIRO: "Dinheiro",
-  MULTIBANCO: "Multibanco",
-  MBWAY: "MBWay",
-  TRANSFERENCIA: "Transferência",
-  CARTAO: "Cartão",
-  OUTRO: "Outro",
-};
+import { METODO_PAGAMENTO_LABELS } from "@/lib/metodo-pagamento";
+
+const METODO_LABELS: Record<string, string> = METODO_PAGAMENTO_LABELS;
 
 const ReceitasDoDiaSection = React.memo(function ReceitasDoDiaSection() {
   const { data: kpis, isLoading } = useDashboardKPIs();

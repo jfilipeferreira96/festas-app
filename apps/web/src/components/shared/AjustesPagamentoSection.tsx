@@ -25,14 +25,12 @@ const MODO_OPTIONS = [
   { value: "POR_CRIANCA", label: "Por criança (€)" },
 ];
 
+import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
+
+/** "Mesmo método" (NONE) + métodos canónicos da fonte única. */
 const METODO_OPTIONS = [
   { value: "NONE", label: "Mesmo método" },
-  { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "MULTIBANCO", label: "Multibanco" },
-  { value: "MBWAY", label: "MB WAY" },
-  { value: "TRANSFERENCIA", label: "Transferência" },
-  { value: "CARTAO", label: "Cartão" },
-  { value: "OUTRO", label: "Outro" },
+  ...METODO_PAGAMENTO_OPTIONS.filter((o) => o.value !== "NONE"),
 ];
 
 interface AjustesPagamentoSectionProps {
@@ -53,6 +51,8 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
   const [valor, setValor] = useState("");
   const [motivo, setMotivo] = useState("");
   const [metodo, setMetodo] = useState("NONE");
+  // Form "novo acerto" colapsado por defeito (revelação progressiva)
+  const [showNovo, setShowNovo] = useState(false);
 
   // ── Redefinir preço ──
   const [showRedefinir, setShowRedefinir] = useState(false);
@@ -90,6 +90,7 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
       setValor("");
       setMotivo("");
       setMetodo("NONE");
+      setShowNovo(false);
       toast.success("Acerto registado.");
     } catch (err) {
       toast.handleApiError(err, "Erro ao registar acerto.");
@@ -148,22 +149,35 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
       : null;
 
   return (
-    <div className="border-t border-border pt-3 space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
           <ArrowUpDown size={14} className="text-text-muted" /> Acertos de Pagamento
         </label>
-        <button
-          type="button"
-          onClick={() => setShowRedefinir((v) => !v)}
-          className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors ${
-            showRedefinir
-              ? "bg-brand-100 text-brand-700"
-              : "text-text-muted hover:bg-gray-100 hover:text-text-primary"
-          }`}
-        >
-          <PenLine size={12} /> Redefinir preço
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShowNovo((v) => !v)}
+            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors ${
+              showNovo
+                ? "bg-brand-100 text-brand-700"
+                : "text-text-muted hover:bg-gray-100 hover:text-text-primary"
+            }`}
+          >
+            <Plus size={12} /> Novo acerto
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowRedefinir((v) => !v)}
+            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md transition-colors ${
+              showRedefinir
+                ? "bg-brand-100 text-brand-700"
+                : "text-text-muted hover:bg-gray-100 hover:text-text-primary"
+            }`}
+          >
+            <PenLine size={12} /> Redefinir preço
+          </button>
+        </div>
       </div>
 
       {/* Form redefinir preço */}
@@ -297,7 +311,8 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
         </div>
       )}
 
-      {/* Form novo acerto */}
+      {/* Form novo acerto (colapsado por defeito) */}
+      {showNovo && (
       <div className="space-y-2 p-3 rounded-lg border border-dashed border-border">
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -340,6 +355,7 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 }

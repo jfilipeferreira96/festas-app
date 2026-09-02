@@ -404,12 +404,32 @@ describe("ajustePagamentoService", () => {
   });
 
   it("deve listar ajustes de uma entrada livre", async () => {
+    // Criar um ajuste com autor conhecido (os anteriores deste ficheiro
+    // não passam user e ficam com criadoPorId null)
+    const ajusteComAutor = await ajustePagamentoService.create(
+      {
+        tipo: "ACRESCIMO",
+        valor: 1,
+        motivo: "Listagem de entrada livre",
+        entradaLivreId: TEST_IDS.ENTRADA_LIVRE_1,
+      },
+      { id: TEST_IDS.USER_ADMIN, name: "Admin Teste" }
+    );
+
     const ajustes = await ajustePagamentoService.list({
       entradaLivreId: TEST_IDS.ENTRADA_LIVRE_1,
     });
 
-    expect(ajustes.length).toBe(1);
-    expect(ajustes[0].entradaLivreId).toBe(TEST_IDS.ENTRADA_LIVRE_1);
-    expect(ajustes[0].criadoPor).toBeDefined();
+    // ACRESCIMO (line above) + REDEFINICAO POR_CRIANCA criados antes neste ficheiro
+    expect(ajustes.length).toBeGreaterThanOrEqual(2);
+    for (const a of ajustes) {
+      expect(a.entradaLivreId).toBe(TEST_IDS.ENTRADA_LIVRE_1);
+      expect(a.reservaId).toBeNull();
+      expect(typeof a.valor).toBe("number");
+    }
+    const comAutor = ajustes.find((a) => a.id === ajusteComAutor.id);
+    expect(comAutor).toBeDefined();
+    expect(comAutor!.criadoPor).toBeDefined();
+    expect(comAutor!.criadoPor!.id).toBe(TEST_IDS.USER_ADMIN);
   });
 });

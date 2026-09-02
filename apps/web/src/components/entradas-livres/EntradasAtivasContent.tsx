@@ -26,7 +26,6 @@ import {
   useEntradasLivresAtivas,
   useConcluirEntradaLivre,
   useCancelarEntradaLivre,
-  useAtualizarPagamentoEntradaLivre,
 } from "@/hooks/use-entrada-livre";
 import EntradaLivreForm from "./EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
@@ -89,7 +88,6 @@ export default function EntradasAtivasContent() {
 
   const concluir = useConcluirEntradaLivre();
   const cancelar = useCancelarEntradaLivre();
-  const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
 
   const [confirmConcluir, setConfirmConcluir] = useState<EntradaLivre | null>(null);
   const [confirmCancelar, setConfirmCancelar] = useState<string | null>(null);
@@ -118,13 +116,6 @@ export default function EntradasAtivasContent() {
       setConfirmCancelar(null);
     },
     [cancelar]
-  );
-
-  const handleMarcarPago = useCallback(
-    async (id: string) => {
-      await atualizarPagamento.mutateAsync({ id, data: { pago: true } });
-    },
-    [atualizarPagamento]
   );
 
   const handleFormClose = useCallback(() => {
@@ -159,11 +150,9 @@ export default function EntradasAtivasContent() {
           isLoading={isLoading}
           onConcluir={setConfirmConcluir}
           onCancelar={setConfirmCancelar}
-          onMarcarPago={handleMarcarPago}
           onView={setViewingEntradaId}
           onEdit={handleEdit}
           onPagamento={setPagamentoEntrada}
-          pagamentoPending={atualizarPagamento.isPending}
         />
       </div>
 
@@ -232,21 +221,17 @@ function EmCursoTab({
   isLoading,
   onConcluir,
   onCancelar,
-  onMarcarPago,
   onView,
   onEdit,
   onPagamento,
-  pagamentoPending,
 }: {
   entradas?: EntradaLivre[];
   isLoading: boolean;
   onConcluir: (entrada: EntradaLivre) => void;
   onCancelar: (id: string) => void;
-  onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
   onEdit: (entrada: EntradaLivre) => void;
   onPagamento: (entrada: EntradaLivre) => void;
-  pagamentoPending: boolean;
 }) {
   if (isLoading) {
     return (
@@ -278,11 +263,9 @@ function EmCursoTab({
           entrada={entrada}
           onConcluir={onConcluir}
           onCancelar={onCancelar}
-          onMarcarPago={onMarcarPago}
           onView={onView}
           onEdit={onEdit}
           onPagamento={onPagamento}
-          pagamentoPending={pagamentoPending}
         />
       ))}
     </div>
@@ -294,20 +277,16 @@ function EntradaAtivaCard({
   entrada,
   onConcluir,
   onCancelar,
-  onMarcarPago,
   onView,
   onEdit,
   onPagamento,
-  pagamentoPending,
 }: {
   entrada: EntradaLivre;
   onConcluir: (entrada: EntradaLivre) => void;
   onCancelar: (id: string) => void;
-  onMarcarPago: (id: string) => void;
   onView: (id: string) => void;
   onEdit: (entrada: EntradaLivre) => void;
   onPagamento: (entrada: EntradaLivre) => void;
-  pagamentoPending: boolean;
 }) {
   const timer = useTimer(entrada.inicioEm, entrada.duracaoMinutos);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -385,25 +364,15 @@ function EntradaAtivaCard({
                     Editar
                   </DropdownItem>
                 </li>
-                {!entrada.pago && (
-                  <li>
-                    <DropdownItem
-                      onItemClick={() => {
-                        if (pagamentoPending) return;
-                        onMarcarPago(entrada.id);
-                        setIsDropdownOpen(false);
-                      }}
-                      className={`flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors w-full text-left ${
-                        pagamentoPending
-                          ? "text-gray-400 cursor-not-allowed"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      <CreditCard size={14} className="text-text-muted" />
-                      Marcar como paga
-                    </DropdownItem>
-                  </li>
-                )}
+                <li>
+                  <DropdownItem
+                    onItemClick={() => { onPagamento(entrada); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <Wallet size={14} className="text-text-muted" />
+                    Gerir pagamento
+                  </DropdownItem>
+                </li>
                 <li>
                   <DropdownItem
                     onItemClick={() => { onView(entrada.id); setIsDropdownOpen(false); }}

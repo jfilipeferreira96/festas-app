@@ -14,6 +14,8 @@ type PropsType = {
   mode?: "single" | "multiple" | "range" | "time";
   onChange?: Hook | Hook[];
   defaultDate?: DateOption;
+  /** Data mínima selecionável (flatpickr minDate) — ex.: bloquear datas passadas. */
+  minDate?: DateOption;
   label?: string;
   placeholder?: string;
   className?: string;
@@ -25,22 +27,25 @@ export default function DatePicker({
   onChange,
   label,
   defaultDate,
+  minDate,
   placeholder,
   className,
 }: PropsType) {
   useEffect(() => {
-    // Convert ISO date strings (YYYY-MM-DD) to Date objects since dateFormat is d-m-Y
-    let parsedDefaultDate = defaultDate;
-    if (typeof defaultDate === "string" && defaultDate) {
-      const parts = defaultDate.split("-");
-      if (parts.length === 3 && parts[0].length === 4) {
-        parsedDefaultDate = new Date(
-          parseInt(parts[0]),
-          parseInt(parts[1]) - 1,
-          parseInt(parts[2])
-        );
+
+    const parseISO = (value: DateOption | undefined): DateOption | undefined => {
+      if (typeof value === "string" && value) {
+        const parts = value.split("-");
+        if (parts.length === 3 && parts[0].length === 4) {
+          return new Date(
+            parseInt(parts[0]),
+            parseInt(parts[1]) - 1,
+            parseInt(parts[2])
+          );
+        }
       }
-    }
+      return value;
+    };
 
     const flatPickr = flatpickr(`#${id}`, {
       mode: mode || "single",
@@ -48,7 +53,8 @@ export default function DatePicker({
       monthSelectorType: "static",
       dateFormat: "d-m-Y",
       allowInput: true,
-      defaultDate: parsedDefaultDate,
+      defaultDate: parseISO(defaultDate),
+      minDate: parseISO(minDate),
       onChange,
       locale: Portuguese,
     });
@@ -58,7 +64,7 @@ export default function DatePicker({
         flatPickr.destroy();
       }
     };
-  }, [mode, onChange, id, defaultDate]);
+  }, [mode, onChange, id, defaultDate, minDate]);
 
   return (
     <div className={className}>

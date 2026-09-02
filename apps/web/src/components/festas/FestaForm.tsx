@@ -7,7 +7,7 @@ import { z } from "zod";
 import {
   Plus, Trash2, AlertTriangle, User, Cake, MapPin,
   FileText, Search, CheckCircle, Sandwich, Gift,
-  CreditCard, Shield, Percent,
+  CreditCard, Shield, Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import InputField from "@/components/form/input/InputField";
@@ -27,19 +27,11 @@ import { useSalasLanche } from "@/hooks/use-salas-lanche";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
+import PagamentoModal from "@/components/festas/PagamentoModal";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva, MetodoPagamento, DisponibilidadeResult, TipoBolo } from "@/lib/api/reservas";
 
-// ── Payment Options ──────────────────────────────────────────────
-const METODO_PAGAMENTO_OPTIONS = [
-  { value: "NONE", label: "Não definido" },
-  { value: "DINHEIRO", label: "Dinheiro" },
-  { value: "MULTIBANCO", label: "Multibanco" },
-  { value: "MBWAY", label: "MB WAY" },
-  { value: "TRANSFERENCIA", label: "Transferência" },
-  { value: "CARTAO", label: "Cartão" },
-  { value: "OUTRO", label: "Outro" },
-];
+import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
 
 const CAUCAO_OPTIONS = [
   { value: "NAO_PAGA", label: "Não paga" },
@@ -462,6 +454,8 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
           (reserva.valorCaucao && Number(reserva.valorCaucao) > 0))
     )
   );
+  // Modal dedicada de pagamento (com acertos/auditoria) — usada em modo edição
+  const [showPagamentoModal, setShowPagamentoModal] = useState(false);
 
   // ── Pré-preencher valorCaucao com o default das configurações ──
   React.useEffect(() => {
@@ -547,7 +541,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       extrasTexto: Object.fromEntries(Object.entries(extrasTexto).filter(([, v]) => v.trim())),
       monitoresIds: data.monitoresIds, etapasIds: data.etapasIds,
       cor: data.cor || undefined,
-      menuId: reserva ? (data.menuId || null) : (data.menuId || undefined),
+      // Guard: se a reserva tem menu mas os extras (menus) ainda não carregaram,
+      // não enviar menuId — evita apagar o menu por acidente (race condition).
+      menuId: reserva ? (reserva.menu && menuExtras.length === 0 ? undefined : data.menuId || null) : (data.menuId || undefined),
       // Bolo (TipoBolo)
       bolo: (data.bolo || undefined) as TipoBolo | undefined,
       boloTema: data.boloTema || undefined,
@@ -556,21 +552,26 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       // Notas por equipa
       notasCacifos: data.notasCacifos || undefined,
       notasLanche: data.notasLanche || undefined,
-      // Pagamento
-      metodoPagamento: (data.metodoPagamento || undefined) as MetodoPagamento | undefined,
-      valorPago: data.valorPago || undefined, pago: data.pago, notas: obsGerais,
-      metodoPagamento2: (data.metodoPagamento2 || undefined) as MetodoPagamento | undefined,
-      valorPago2: data.valorPago2 || undefined,
+      // Pagamento — em edição, o pagamento é gerido exclusivamente na modal
+      // "Gerir pagamento" (com auditoria de acertos): os campos são omitidos
+      // (undefined) para não sobrescrever alterações feitas aí.
+      metodoPagamento: (reserva ? undefined : data.metodoPagamento || undefined) as MetodoPagamento | undefined,
+      valorPago: reserva ? undefined : data.valorPago || undefined,
+      pago: reserva ? undefined : data.pago,
+      notas: obsGerais,
+      metodoPagamento2: (reserva ? undefined : data.metodoPagamento2 || undefined) as MetodoPagamento | undefined,
+      valorPago2: reserva ? undefined : data.valorPago2 || undefined,
       meiasQuantidade: data.meiasQuantidade || undefined,
       observacoesGerais: data.observacoesGerais || undefined,
       observacoesLesoes: data.observacoesLesoes || undefined,
       observacoesBrindes: data.observacoesBrindes || undefined,
       outrosExtras: data.outrosExtras || undefined,
-      caucao: data.caucao || undefined, referenciaPagamento: data.referenciaPagamento || undefined,
+      caucao: reserva ? undefined : data.caucao || undefined,
+      referenciaPagamento: reserva ? undefined : data.referenciaPagamento || undefined,
       boloQuantidade: data.boloQuantidade || undefined,
-      valorCaucao: data.valorCaucao || undefined,
-      descontoPercentagem: data.descontoPercentagem || undefined,
-      descontoMotivo: data.descontoMotivo || undefined,
+      valorCaucao: reserva ? undefined : data.valorCaucao || undefined,
+      descontoPercentagem: reserva ? undefined : data.descontoPercentagem || undefined,
+      descontoMotivo: reserva ? undefined : data.descontoMotivo || undefined,
       aniversariantes: aniversariantes.filter((a) => a.nome.trim()).map((a) => ({ nome: a.nome, dataNascimento: a.dataNascimento || undefined })),
     };
     try {
@@ -586,7 +587,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
           : "Erro ao guardar a festa. Tente novamente."
       );
     }
-  }, [reserva, aniversariantes, encarregadosAdicionais, selectedExtrasIds, extrasTexto, updateReserva, createReserva, onClose]);
+  }, [reserva, aniversariantes, encarregadosAdicionais, selectedExtrasIds, extrasTexto, menuExtras, updateReserva, createReserva, onClose]);
 
   /** Handler chamado quando a validação Zod falha — mostra erros e faz scroll. */
   const onInvalid = useCallback(() => {
@@ -622,6 +623,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
             handleExtrasChange={handleExtrasChange} extrasTexto={extrasTexto} setExtrasTexto={setExtrasTexto}
             watchedData={watchedData} corOptions={corOptions} menuOptions={menuOptions}
             showPagamento={showPagamento} setShowPagamento={setShowPagamento}
+            reserva={reserva} onOpenPagamento={() => setShowPagamentoModal(true)}
             showAniversarianteError={showAniversarianteError}
             showDataNascimentoError={showDataNascimentoError}
             disponibilidade={disponibilidade.data}
@@ -653,6 +655,11 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
         onClose={() => setShowClienteSearch(false)}
         onSelect={handleClienteSelected}
       />
+
+      {/* ── Modal: Gerir pagamento (edição) ── */}
+      {showPagamentoModal && reserva && (
+        <PagamentoModal reserva={reserva} onClose={() => setShowPagamentoModal(false)} />
+      )}
     </div>
   );
 }
@@ -690,6 +697,8 @@ interface Step1Props {
   watchedData: string;
   showPagamento: boolean;
   setShowPagamento: (v: boolean) => void;
+  reserva?: Reserva | null;
+  onOpenPagamento: () => void;
   corOptions: { value: string; label: string; color?: string; disabled?: boolean }[];
   menuOptions: { value: string; label: string }[];
   menuWarning?: string;
@@ -716,6 +725,7 @@ function Step1Geral({
   etapaOptions, currentEtapasIds, handleEtapasChange,
   extraItems, extraGroups, selectedExtrasIds, handleExtrasChange, extrasTexto, setExtrasTexto,
   watchedData, corOptions, menuOptions, menuWarning, showPagamento, setShowPagamento,
+  reserva, onOpenPagamento,
   showAniversarianteError, showDataNascimentoError, disponibilidade, disponibilidadeLoading, onVerificarDisponibilidade, onOpenSearchCliente,
   coresEmUso,
   slotOptions, horarioCustom, setHorarioCustom, onSelectSlot, currentHorario,
@@ -884,6 +894,14 @@ function Step1Geral({
           <label className="block text-xs font-medium text-text-secondary mb-1 flex items-center gap-1"><MapPin size={12} /> Sala *</label>
           <Select options={salaOptions} placeholder="Seleccionar" value={watch("localId") || ""} onChange={(val) => setValue("localId", val)} error={!!errors.localId} />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs font-medium text-text-secondary mb-1">Cor da Festa</label>
+          <Select
+            options={corOptions}
+            value={currentCor || "NONE"}
+            onChange={(val) => setValue("cor", val === "NONE" ? "" : val, { shouldDirty: true })}
+          />
         </div>
       </div>
 
@@ -1115,143 +1133,140 @@ function Step1Geral({
         </div>
       </div>
 
-      {/* ── Pagamento & Caução (opcional — escondido por defeito) ──
-          O pagamento é normalmente gerido no dia da festa via PagamentoModal.
-          O toggle permite registar dados de pagamento na altura da reserva
-          (ex.: caução paga no acto da marcação). */}
-      <div className="space-y-3">
-        <Checkbox
-          checked={showPagamento}
-          onChange={setShowPagamento}
-          label="Registar pagamento na reserva (opcional)"
-        />
-
-        {showPagamento && (
-          <>
-            <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-              <CreditCard size={14} className="text-text-muted" /> Pagamento & Caução
-            </label>
-
-            {/* Estado + Valor */}
-        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-          <span className="text-sm font-medium text-text-primary">
-            {watch("pago") ? "✓ Pago" : "Por pagar"}
-          </span>
-          <Switch
-            checked={watch("pago") ?? false}
-            onChange={(checked) => setValue("pago", checked, { shouldDirty: true })}
+      {/* ── Pagamento ──
+          Em edição, o pagamento é gerido exclusivamente na modal dedicada
+          ("Gerir pagamento"), que inclui acertos com auditoria.
+          Na criação, apenas o essencial: estado, valor, método e caução. */}
+      {reserva ? (
+        <PagamentoResumoEdit reserva={reserva} onGerir={onOpenPagamento} />
+      ) : (
+        <div className="space-y-3">
+          <Checkbox
+            checked={showPagamento}
+            onChange={setShowPagamento}
+            label="Registar pagamento na reserva (opcional)"
           />
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Valor Pago (€)</label>
-            <InputField
-              type="number"
-              step={0.01}
-              min={0}
-              {...register("valorPago", { valueAsNumber: true })}
-              placeholder="0,00"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Método de Pagamento</label>
-            <Select
-              options={METODO_PAGAMENTO_OPTIONS}
-              value={watch("metodoPagamento") ?? "NONE"}
-              onChange={(val) => setValue("metodoPagamento", val === "NONE" ? "" : val, { shouldDirty: true })}
-              placeholder="Seleccionar..."
-            />
-          </div>
-        </div>
+          {showPagamento && (
+            <>
+              <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                <CreditCard size={14} className="text-text-muted" /> Pagamento & Caução
+              </label>
 
+              {/* Estado */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+                <span className="text-sm font-medium text-text-primary">
+                  {watch("pago") ? "✓ Pago" : "Por pagar"}
+                </span>
+                <Switch
+                  checked={watch("pago") ?? false}
+                  onChange={(checked) => setValue("pago", checked, { shouldDirty: true })}
+                />
+              </div>
+
+              {/* Valor + Método */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Valor Pago (€)</label>
+                  <InputField
+                    type="number"
+                    step={0.01}
+                    min={0}
+                    {...register("valorPago", { valueAsNumber: true })}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Método de Pagamento</label>
+                  <Select
+                    options={METODO_PAGAMENTO_OPTIONS}
+                    value={watch("metodoPagamento") ?? "NONE"}
+                    onChange={(val) => setValue("metodoPagamento", val === "NONE" ? "" : val, { shouldDirty: true })}
+                    placeholder="Seleccionar..."
+                  />
+                </div>
+              </div>
+
+              {/* Caução */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <label className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
+                  <Shield size={13} className="text-text-muted" /> Caução
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Select
+                      options={CAUCAO_OPTIONS}
+                      value={watch("caucao") ?? "NAO_PAGA"}
+                      onChange={(val) => setValue("caucao", val, { shouldDirty: true })}
+                    />
+                  </div>
+                  <div>
+                    <InputField
+                      type="number"
+                      step={0.01}
+                      min={0}
+                      {...register("valorCaucao", { valueAsNumber: true })}
+                      placeholder="Valor caução (€)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[11px] text-text-muted">
+                Referência, pagamento dividido e descontos ficam disponíveis em "Gerir pagamento" após criar a reserva.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+// Resumo de pagamento (modo edição) — leitura apenas + atalho "Gerir pagamento"
+// ════════════════════════════════════════════════════════════════
+function PagamentoResumoEdit({ reserva, onGerir }: { reserva: Reserva; onGerir: () => void }) {
+  const metodo1 = METODO_PAGAMENTO_OPTIONS.find((o) => o.value === reserva.metodoPagamento)?.label;
+  const metodo2 = METODO_PAGAMENTO_OPTIONS.find((o) => o.value === reserva.metodoPagamento2)?.label;
+  const caucaoLabel = CAUCAO_OPTIONS.find((o) => o.value === reserva.caucao)?.label ?? "Não paga";
+
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <CreditCard size={14} className="text-brand-500" /> Pagamento
+        </label>
+        <Button type="button" variant="outline" onClick={onGerir} className="shrink-0">
+          <Wallet size={14} /> Gerir pagamento
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1">Referência de Pagamento</label>
-          <InputField {...register("referenciaPagamento")} placeholder="Ex: ref. MBWAY, transferência..." />
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Estado</p>
+          <p className={`text-sm font-semibold ${reserva.pago ? "text-accent-green-600" : "text-accent-orange-600"}`}>
+            {reserva.pago ? "✓ Pago" : "Por pagar"}
+          </p>
         </div>
-
-        {/* Pagamento dividido */}
-        <Checkbox
-          checked={!!watch("metodoPagamento2")}
-          onChange={(checked) => {
-            if (!checked) {
-              setValue("metodoPagamento2", "", { shouldDirty: true });
-              setValue("valorPago2", 0, { shouldDirty: true });
-            }
-          }}
-          label="Dividir pagamento (2º método)"
-        />
-        {watch("metodoPagamento2") && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">2º Método</label>
-              <Select
-                options={METODO_PAGAMENTO_OPTIONS}
-                value={watch("metodoPagamento2") ?? "NONE"}
-                onChange={(val) => setValue("metodoPagamento2", val === "NONE" ? "" : val, { shouldDirty: true })}
-                placeholder="2º método..."
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Valor 2º (€)</label>
-              <InputField
-                type="number"
-                step={0.01}
-                min={0}
-                {...register("valorPago2", { valueAsNumber: true })}
-                placeholder="0,00"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Caução */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-          <label className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
-            <Shield size={13} className="text-text-muted" /> Caução
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Select
-                options={CAUCAO_OPTIONS}
-                value={watch("caucao") ?? "NAO_PAGA"}
-                onChange={(val) => setValue("caucao", val, { shouldDirty: true })}
-              />
-            </div>
-            <div>
-              <InputField
-                type="number"
-                step={0.01}
-                min={0}
-                {...register("valorCaucao", { valueAsNumber: true })}
-                placeholder="Valor caução (€)"
-              />
-            </div>
-          </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Valor pago</p>
+          <p className="text-sm font-medium text-text-primary">
+            {reserva.valorPago ? formatEuro(Number(reserva.valorPago)) : "—"}
+          </p>
         </div>
-
-        {/* Desconto */}
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-          <label className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
-            <Percent size={13} className="text-text-muted" /> Desconto
-          </label>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <InputField
-                type="number"
-                min={0}
-                max={100}
-                {...register("descontoPercentagem", { valueAsNumber: true })}
-                placeholder="%"
-              />
-            </div>
-            <div className="col-span-2">
-              <InputField {...register("descontoMotivo")} placeholder="Motivo do desconto..." />
-            </div>
-          </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Método</p>
+          <p className="text-sm font-medium text-text-primary truncate">
+            {metodo1 ?? "—"}{metodo2 ? ` + ${metodo2}` : ""}
+          </p>
         </div>
-          </>
-        )}
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Caução</p>
+          <p className="text-sm font-medium text-text-primary truncate">
+            {caucaoLabel}
+            {reserva.valorCaucao && Number(reserva.valorCaucao) > 0 ? ` (${formatEuro(Number(reserva.valorCaucao))})` : ""}
+          </p>
+        </div>
       </div>
     </div>
   );

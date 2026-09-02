@@ -1,5 +1,7 @@
 "use client";
 
+import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
+
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
   PartyPopper,
@@ -452,6 +454,15 @@ function FestaCard({
                 )}
                 <li>
                   <DropdownItem
+                    onItemClick={() => { onPagamento(); setIsDropdownOpen(false); }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
+                  >
+                    <Wallet size={14} className="text-text-muted" />
+                    Gerir pagamento
+                  </DropdownItem>
+                </li>
+                <li>
+                  <DropdownItem
                     onItemClick={() => { onView(); setIsDropdownOpen(false); }}
                     className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors w-full text-left"
                   >
@@ -635,7 +646,7 @@ function FestaCard({
             )}
             {festa.metodoPagamento && (
               <span className="text-text-muted ml-1">
-                · {festa.metodoPagamento === "DINHEIRO" ? "Dinheiro" : festa.metodoPagamento === "MULTIBANCO" ? "Multibanco" : festa.metodoPagamento === "MBWAY" ? "MB WAY" : festa.metodoPagamento === "TRANSFERENCIA" ? "Transferência" : festa.metodoPagamento === "CARTAO" ? "Cartão" : festa.metodoPagamento}
+                · {metodoPagamentoLabel(festa.metodoPagamento)}
               </span>
             )}
           </span>

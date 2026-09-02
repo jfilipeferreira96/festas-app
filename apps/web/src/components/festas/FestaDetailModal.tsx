@@ -20,6 +20,7 @@ import { differenceInYears } from "date-fns";
 import { BOLO_LABELS } from "@/lib/constants/bolo";
 import { imprimirListaConvidados } from "@/utils/print-lista";
 import PagamentoModal from "./PagamentoModal";
+import { METODO_PAGAMENTO_LABELS } from "@/lib/metodo-pagamento";
 
 // ── Constants ──────────────────────────────────────────────────────
 const ESTADO_LABELS: Record<string, string> = {
@@ -28,15 +29,6 @@ const ESTADO_LABELS: Record<string, string> = {
   EM_CURSO: "Em curso",
   CONCLUIDA: "Concluída",
   CANCELADA: "Cancelada",
-};
-
-const METODO_PAGAMENTO_LABELS: Record<string, string> = {
-  DINHEIRO: "Dinheiro",
-  MULTIBANCO: "Multibanco",
-  MBWAY: "MB WAY",
-  TRANSFERENCIA: "Transferência Bancária",
-  CARTAO: "Cartão",
-  OUTRO: "Outro",
 };
 
 const CAUCAO_LABELS: Record<string, string> = {
