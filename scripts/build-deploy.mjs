@@ -499,12 +499,8 @@ ok("uploads/ criado (gravável).");
 const envDest = join(DEPLOY, "apps", "web", ".env");
 if (existsSync(ENV_PROD)) {
   let envProd = readFileSync(ENV_PROD, "utf8");
-  envProd = envProd.replace(
-    /^DATABASE_URL=([^\r\n]+?)(\r?)$/m,
-    (_m, url, cr) =>
-      /connection_limit=/.test(url)
-        ? `DATABASE_URL=${url}${cr}`
-        : `DATABASE_URL=${url}${url.includes("?") ? "&" : "?"}connection_limit=5&pool_timeout=10${cr}`
+  envProd = envProd.replace(/^DATABASE_URL=([^\r\n]+?)(\r?)$/m, (_m, url, cr) =>
+    /connection_limit=/.test(url) ? `DATABASE_URL=${url}${cr}` : `DATABASE_URL=${url}${url.includes("?") ? "&" : "?"}connection_limit=5&pool_timeout=10${cr}`,
   );
   writeFileSync(envDest, envProd);
   ok(".env de produção copiado para deploy/apps/web/.env (connection_limit=5 garantido se ausente)");
@@ -746,7 +742,65 @@ if (!existsSync(prismaClientDir) && existsSync(prismaClientSrc)) {
   ok("Cliente Prisma copiado para node_modules_deps/.prisma/client/.");
 }
 
+// O file tracing do Next.js NÃO inclui o adapter/driver: eles são required em
+// runtime a partir do dist do @festas/db (copiado à parte), fora do grafo de
+// trace da app. Sem esta cópia, o bundle arranca no PC de dev (resolve pela
+// node_modules do workspace, que está ACIMA de deploy/) mas falha no cPanel
+// com "Cannot find module". Copiamos o pacote + as suas deps de produção
+// (resolvidas com o npm local, respeitando nested node_modules).
 const adapterDeps = ["mariadb", "@prisma/adapter-mariadb"];
+{
+  const copyProdClosure = (roots) => {
+    const done = new Set();
+    const queue = [...roots];
+    while (queue.length > 0) {
+      const name = queue.shift();
+      if (done.has(name)) continue;
+      done.add(name);
+      if (name.startsWith("@types/")) continue; // tipos: desnecessários em runtime
+
+      // Resolver a pasta do pacote no node_modules de DEV:
+      //   1. nested dentro de um dos pacotes raiz (o npm deduplica, por ex.,
+      //      mariadb para @prisma/adapter-mariadb/node_modules)
+      //   2. fallback: raiz do node_modules
+      let srcPkgDir = null;
+      for (const root of adapterDeps) {
+        if (root === name) continue;
+        const nested = join(ROOT, "node_modules", ...root.split("/"), "node_modules", ...name.split("/"));
+        if (existsSync(nested)) {
+          srcPkgDir = nested;
+          break;
+        }
+      }
+      if (!srcPkgDir) srcPkgDir = join(ROOT, "node_modules", ...name.split("/"));
+      const destDir = join(DEPLOY, "node_modules_deps", ...name.split("/"));
+
+      if (!existsSync(srcPkgDir)) {
+        console.warn(`⚠️  AVISO: ${name} não encontrado no node_modules local.`);
+        continue;
+      }
+
+      if (!existsSync(destDir)) {
+        mkdirSync(dirname(destDir), { recursive: true });
+        cpSync(srcPkgDir, destDir, { recursive: true });
+        log(`Copiado para o bundle: ${name}`);
+      }
+
+      // Enfileirar deps de produção (package.json da pasta RESOLVIDA — pode
+      // ser a nested, cujo grafo de deps é o que interessa em runtime).
+      let pkgJson;
+      try {
+        pkgJson = JSON.parse(readFileSync(join(srcPkgDir, "package.json"), "utf8"));
+      } catch {
+        continue;
+      }
+      for (const dep of Object.keys(pkgJson.dependencies ?? {})) queue.push(dep);
+    }
+  };
+
+  copyProdClosure(adapterDeps);
+}
+
 let adapterOk = true;
 for (const dep of adapterDeps) {
   const depDir = join(DEPLOY, "node_modules_deps", ...dep.split("/"));
@@ -754,14 +808,11 @@ for (const dep of adapterDeps) {
     ok(`Driver adapter presente: ${dep}`);
   } else {
     adapterOk = false;
-    console.warn(`⚠️  AVISO: ${dep} não encontrado em node_modules_deps.`);
+    err(`FALHA CRÍTICA: ${dep} não encontrado em node_modules_deps.`);
   }
 }
 if (!adapterOk) {
-  console.warn(
-    "   O Prisma com driverAdapters precisa destes pacotes em runtime." +
-      "   Regenera: node scripts/build-deploy.mjs --build"
-  );
+  err("O Prisma com driverAdapters precisa destes pacotes em runtime — bundle inválido.");
 }
 
 // 4. TAMANHO DO BUNDLE -------------------------------------------------------
