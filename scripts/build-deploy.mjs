@@ -248,7 +248,7 @@ async function testDeploy() {
       console.error(`   Body (primeiros 1000 chars):\n${body.slice(0, 1000)}`);
       console.error("\n   Isto indica que a app crashou ao renderizar. Possíveis causas:");
       console.error("   - Prisma não consegue ligar à BD (verificar DATABASE_URL)");
-      console.error("   - Engines Prisma em falta (verificar node_modules_deps/.prisma/client/)");
+      console.error("   - Query compiler WASM em falta (verificar node_modules_deps/.prisma/client/query_compiler_bg.wasm)");
       console.error("   - Erro em @festas/auth ou @festas/db (verificar dist/ compilado)");
       return false;
     }
@@ -728,18 +728,43 @@ cpSync(join(__dirname, "diagnose.js"), join(DEPLOY, "scripts", "diagnose.js"));
 ok("scripts/diagnose.js (diagnóstico de deployment) copiado.");
 
 // 3. VALIDAR DRIVER ADAPTER (mariadb) + COPIAR CLIENT PRISMA ------------------
-// Com `previewFeatures = ["driverAdapters"]` o Prisma NÃO usa engines Rust em
-// runtime — as queries correm via @prisma/adapter-mariadb (JS puro, zero
-// threads tokio, que era a causa do limite nproc=100 do CloudLinux).
-// O crítico agora é o adapter + driver existirem no node_modules_deps.
+// Com `engineType = "client"` no schema.prisma o Prisma compila as queries em
+// JS/WASM (query_compiler_bg.wasm) e NÃO carrega a engine Rust. Isto é o que
+// elimina as ~64 threads tokio-runtime-w (limite nproc=100 do CloudLinux).
+// NOTA: `previewFeatures = ["driverAdapters"]` SOZINHO NÃO chega — a engine
+// Rust continua a carregar (medido: +7 threads por CPU lógica após a 1ª query).
+// O crítico agora é o adapter + driver + WASM do compilador no node_modules_deps
+// e NENHUMA engine .node nativa no bundle.
 const prismaClientSrc = join(ROOT, "node_modules", ".prisma", "client");
 const prismaClientDir = join(DEPLOY, "node_modules_deps", ".prisma", "client");
 
-if (!existsSync(prismaClientDir) && existsSync(prismaClientSrc)) {
-  log("A copiar cliente Prisma gerado (.prisma/client) para o bundle...");
-  mkdirSync(prismaClientDir, { recursive: true });
+if (existsSync(prismaClientSrc)) {
+  log("A sincronizar cliente Prisma gerado (.prisma/client) para o bundle...");
+  // Re-sincronizar SEMPRE: um bundle antigo pode ter engines Rust stale que
+  // fariam o Passenger voltar a carregar a libquery_engine (threads tokio).
+  rmSync(prismaClientDir, { recursive: true, force: true });
+  mkdirSync(dirname(prismaClientDir), { recursive: true });
   cpSync(prismaClientSrc, prismaClientDir, { recursive: true });
   ok("Cliente Prisma copiado para node_modules_deps/.prisma/client/.");
+} else {
+  err("FALHA CRÍTICA: node_modules/.prisma/client não existe — corre `npm run db:generate` primeiro.");
+}
+
+// Validação 1: o WASM do query compiler TEM de existir (engineType "client").
+const compilerWasm = join(prismaClientDir, "query_compiler_bg.wasm");
+if (existsSync(compilerWasm)) {
+  ok("Query compiler WASM presente: .prisma/client/query_compiler_bg.wasm");
+} else {
+  err('FALHA CRÍTICA: query_compiler_bg.wasm em falta — o schema.prisma tem engineType = "client"?');
+}
+
+// Validação 2: NENHUMA engine Rust (.node) pode existir no bundle — cada
+// libquery_engine*.node arranca um pool tokio com 1 thread por CPU visível.
+const rustEngines = readdirSync(prismaClientDir).filter((f) => f.endsWith(".node") || f.includes("libquery_engine") || (f.includes("query_engine") && f.endsWith(".node")));
+if (rustEngines.length > 0) {
+  err(`FALHA CRÍTICA: engines Rust no bundle (${rustEngines.join(", ")}) — regenera o cliente com engineType = "client".`);
+} else {
+  ok("Zero engines Rust no bundle (sem threads tokio-runtime-w).");
 }
 
 // O file tracing do Next.js NÃO inclui o adapter/driver: eles são required em

@@ -1,8 +1,11 @@
 generator client {
-  provider        = "prisma-client-js"
- 
-  previewFeatures = ["driverAdapters"]
-  binaryTargets   = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.1.x", "debian-openssl-1.0.x", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+  provider   = "prisma-client-js"
+  engineType = "client"
+
+  // engineType "client" → queries compiladas em JS/WASM (query_compiler),
+  //                       engine Rust (libquery_engine + threads tokio) NÃO é carregada
+  // adapter mariadb     → ligações BD geridas pelo driver mariadb (JS)
+  //                       (elimina as ~64 threads tokio-runtime-w no cPanel)
 }
 
 datasource db {
