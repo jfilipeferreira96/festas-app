@@ -581,6 +581,31 @@ require("./apps/web/server.js");
 writeFileSync(join(DEPLOY, "app.js"), APP_JS);
 ok("app.js (entry Passenger) criado.");
 
+// 2f3. Copiar scripts de ambiente e seed para o deploy --------------------
+log("A copiar scripts de ambiente e seed para o deploy...");
+
+// Copiar switch-env.js
+const switchEnvSource = join(__dirname, "switch-env.js");
+const switchEnvDest = join(DEPLOY, "switch-env.js");
+if (existsSync(switchEnvSource)) {
+  cpSync(switchEnvSource, switchEnvDest);
+  ok("switch-env.js copiado para deploy/");
+} else {
+  console.warn("⚠️  switch-env.js não encontrado. Pulando...");
+}
+
+// Copiar seed-simple.js
+const seedSimpleSource = join(ROOT, "packages", "db", "prisma", "seed-simple.js");
+const seedSimpleDest = join(DEPLOY, "node_modules_deps", "@festas", "db", "prisma", "seed-simple.js");
+if (existsSync(seedSimpleSource)) {
+  // Criar diretório se não existir
+  mkdirSync(dirname(seedSimpleDest), { recursive: true });
+  cpSync(seedSimpleSource, seedSimpleDest);
+  ok("seed-simple.js copiado para deploy/node_modules_deps/@festas/db/prisma/");
+} else {
+  console.warn("⚠️  seed-simple.js não encontrado. Pulando...");
+}
+
 // 2f2. app2.js — TESTE de configuração (servir HTML estático) ---------------
 // Ficheiro de teste que serve uma página HTML simples (sem node_modules).
 // O utilizador pode mudar o "Application startup file" para app2.js no cPanel

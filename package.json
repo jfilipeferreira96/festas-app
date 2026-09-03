@@ -27,7 +27,11 @@
     "db:seed:prod": "npm run db:seed:prod --workspace=@festas/db",
     "db:seed:changes": "npm run db:seed:changes --workspace=@festas/db",
     "deploy": "node scripts/build-deploy.mjs --build",
-    "deploy:bundle": "node scripts/build-deploy.mjs"
+    "deploy:bundle": "node scripts/build-deploy.mjs",
+    "switch:test": "node scripts/switch-env.js teste",
+    "switch:prod": "node scripts/switch-env.js producao",
+    "switch:status": "node scripts/switch-env.js status",
+    "switch": "node scripts/switch-env.js"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.21",
