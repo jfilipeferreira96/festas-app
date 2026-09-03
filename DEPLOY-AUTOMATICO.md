@@ -1,6 +1,13 @@
 # 🚀 Deploy Automático de Produção — festas (baselandia)
 
 > Fluxo completo em **3 passos**: correr local → upload → 1 comando no servidor.
+>
+> **Nota (2026-09-03):** tentámos automatizar ainda mais (upload por SSH / API
+> cPanel / FTP a partir do PC) e o hosting bloqueia tudo: SSH porto 22 fechado,
+> API do cPanel (2083) atrás de desafio anti-browser (openresty), FTP recusa
+> autenticação de contas dedicadas. O fluxo manual de 3 passos abaixo é o que
+> funciona — se um dia abrirem o SSH ao alojamento, o `deploy-festas.sh`
+> continua exatamente igual e o upload passa a ser um `scp`.
 > Substitui o processo manual (6+ passos) que causava o problema dos processos
 > órfãos (o **Restart do cPanel não mata o processo antigo** — ele fica com
 > PPID=1 e 11 threads para sempre, acumulando até bater nos 100/100 do
