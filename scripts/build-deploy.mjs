@@ -168,12 +168,12 @@ async function testDeploy() {
 
   try {
     // --- 1. escolher DATABASE_URL para o teste -------------------------------
-    // SEMPRE usar a BD remota (185.32.188.12) para o teste. O MySQL local
+    // SEMPRE usar a BD remota (185.32.188.42) para o teste. O MySQL local
     // (Docker) frequentemente não está disponível, e pode haver outro MySQL
     // na porta 3306 com credenciais diferentes. A BD remota é a única garantida.
-    const testDbUrl = "mysql://baselandia_user:RiG4UV.Ax1S4J.MN@185.32.188.12:3306/baselandia_prod";
+    const testDbUrl = "mysql://baselandia_user:RiG4UV.Ax1S4J.MN@185.32.188.42:3306/baselandia_prod";
 
-    log("MySQL REMOTO (185.32.188.12) será usado para o teste.");
+    log("MySQL REMOTO (185.32.188.42) será usado para o teste.");
 
     // --- 2. escrever .env de teste (backup do original) ----------------------
     if (existsSync(envFile)) {

@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ENV_PROD = resolve(__dirname, "..", "apps", "web", ".env.production");
 config({ path: ENV_PROD });
 
-const PUBLIC_HOST = process.env.REMOTE_DB_HOST || "185.32.188.12";
+const PUBLIC_HOST = process.env.REMOTE_DB_HOST || "185.32.188.42";
 const base = process.env.DATABASE_URL;
 
 if (!base) {
