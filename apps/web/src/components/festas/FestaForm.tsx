@@ -591,11 +591,11 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
 
   /** Handler chamado quando a validação Zod falha — mostra erros e faz scroll. */
   const onInvalid = useCallback(() => {
-    setShowAniversarianteError(true);
+    setShowAniversarianteError(!aniversariantes.some((a) => a.nome.trim()));
     // Scroll para o primeiro campo com erro
     const firstError = document.querySelector("[data-error='true'], .border-accent-red-400");
     if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
+  }, [aniversariantes]);
 
   const corOptions = useMemo(() => [
     { value: "NONE", label: "Sem cor" },
