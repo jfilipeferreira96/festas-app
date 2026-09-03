@@ -387,10 +387,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   );
 
   const onInvalid = useCallback(() => {
-    setShowCriancasError(true);
+    setShowCriancasError(!criancas.some((c) => c.nome.trim()));
     const firstError = document.querySelector("[data-error='true'], .border-accent-red-400");
     if (firstError) firstError.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
+  }, [criancas]);
 
   const isLoading = isSubmitting || criar.isPending || atualizar.isPending;
 
