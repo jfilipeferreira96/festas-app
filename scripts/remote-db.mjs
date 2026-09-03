@@ -59,8 +59,8 @@ const tgt = target === "test" ? "test" : "prod";
 process.env.DATABASE_URL = remoteUrl("baselandia_prod");
 process.env.DATABASE_URL_TEST = remoteUrl("baselandia_test");
 
-const shown = tgt === "test" ? process.env.DATABASE_URL_TEST : process.env.DATABASE_URL;
-console.log(`🌐 BD remoto (${tgt}): ${shown}\n`);
+const shown = String(tgt === "test" ? process.env.DATABASE_URL_TEST : process.env.DATABASE_URL) ?? "";
+console.log(`🌐 BD remoto (${tgt}): ${shown.replace(/:[^:@/]+@/, ":****@")}\n`);
 
 const dbJs = resolve(__dirname, "..", "packages", "db", "scripts", "db.js");
 const result = spawnSync(process.execPath, [dbJs, cmd, `--target=${tgt}`], {

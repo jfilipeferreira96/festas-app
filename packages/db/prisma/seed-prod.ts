@@ -28,6 +28,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
 import { getSeedUsers } from "./seed-roles";
 import { createPrismaClient } from "../src/mariadb-adapter";
+import { wipeDatabase } from "../src/wipe-database";
 
 // Load env from apps/web/.env when run directly.
 // (db.js also passes --env-file; dotenv ignores a missing file silently.)
@@ -55,27 +56,11 @@ const seedAuth = betterAuth({
   },
 });
 
-// ─── Wipe (idempotent) ────────────────────────────────────────
-async function wipeDatabase() {
-  console.log("🧹 Wiping existing data...");
-  // Truncate every table so the seed is fully idempotent (re-runnable).
-  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 0;");
-  const tables: { [key: string]: string }[] =
-    await prisma.$queryRawUnsafe(`SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE();`);
-  for (const row of tables) {
-    const table = row.TABLE_NAME ?? row["TABLE_NAME"];
-    if (!table) continue;
-    await prisma.$executeRawUnsafe(`TRUNCATE TABLE \`${table}\`;`);
-  }
-  await prisma.$executeRawUnsafe("SET FOREIGN_KEY_CHECKS = 1;");
-  console.log("  ✓ All tables truncated\n");
-}
-
 // ─── Main ─────────────────────────────────────────────────────
 async function main() {
   console.log("🌱 Production seed (minimum)...\n");
 
-  await wipeDatabase();
+  await wipeDatabase(prisma);
   await seedUsers();
   await seedLocais();
   await seedExtras();
