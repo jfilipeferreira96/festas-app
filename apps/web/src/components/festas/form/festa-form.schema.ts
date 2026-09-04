@@ -51,6 +51,7 @@ export const festaFormSchema = z.object({
   numCriancasConfirmadas: z.number().min(0).optional(),
   extrasIds: z.array(z.string()),
   extrasTexto: z.record(z.string(), z.string()),
+  extrasQuantidades: z.record(z.string(), z.number()),
   tema: z.string(),
   monitoresIds: z.array(z.string()).optional(),
   etapasIds: z.array(z.string()).optional(),
@@ -134,6 +135,9 @@ export function buildFestaDefaults(
     numCriancasConfirmadas: reserva?.numCriancasConfirmadas ?? undefined,
     extrasIds: reserva?.extras?.map((e) => e.extra.id) ?? [],
     extrasTexto: {},
+    extrasQuantidades: Object.fromEntries(
+      (reserva?.extras ?? []).map((e) => [e.extra.id, e.quantidade ?? 1])
+    ),
     tema: reserva?.tema ?? "",
     monitoresIds: reserva?.monitores?.map((m) => m.monitor.id) ?? [],
     etapasIds: reserva?.etapas?.map((e) => e.etapa.id) ?? [],
@@ -195,6 +199,10 @@ export function buildFestaPayload(
     numCriancasConfirmadas: data.numCriancasConfirmadas || undefined,
     extrasIds: data.extrasIds.length > 0 ? data.extrasIds : undefined,
     extrasTexto: Object.fromEntries(Object.entries(data.extrasTexto).filter(([, v]) => v.trim())),
+    extrasQuantidades:
+      data.extrasIds.length > 0
+        ? Object.fromEntries(data.extrasIds.map((id) => [id, data.extrasQuantidades[id] ?? 1]))
+        : undefined,
     monitoresIds: data.monitoresIds,
     etapasIds: data.etapasIds,
     cor: data.cor || undefined,

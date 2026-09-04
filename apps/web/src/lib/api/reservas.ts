@@ -57,6 +57,7 @@ export interface CreateReservaData {
   previsaoCriancas?: number;
   extrasIds?: string[];
   extrasTexto?: Record<string, string>;
+  extrasQuantidades?: Record<string, number>;
   monitoresIds?: string[];
   etapasIds?: string[];
   notas?: string;

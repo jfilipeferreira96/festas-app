@@ -100,7 +100,7 @@ export async function seedTestData(): Promise<void> {
   await testPrisma.extra.upsert({
     where: { id: TEST_IDS.EXTRA_2 },
     update: {},
-    create: { id: TEST_IDS.EXTRA_2, nome: "Pinturas Faciais Teste", precoUnitario: 30.0, icone: "palette", categoria: "EXTRA" },
+    create: { id: TEST_IDS.EXTRA_2, nome: "Pinturas Faciais Teste", precoUnitario: 30.0, icone: "palette", categoria: "EXTRA", baseCobranca: "POR_PESSOA" },
   });
 
   // ── Extras (LANCHE category - usando EXTRA como categoria) ───

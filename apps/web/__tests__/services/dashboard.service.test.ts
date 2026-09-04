@@ -133,8 +133,9 @@ describe("Dashboard Service", () => {
       }
     });
 
-    it("deve somar meias (reservas pagas hoje)", async () => {
+    it("NÃO soma meias à parte (fonte única: valorPago já as inclui)", async () => {
       const hoje = new Date();
+      const antes = (await dashboardService.getReceitasHoje()).DINHEIRO ?? 0;
       const reserva = await testPrisma.reserva.create({
         data: {
           data: hoje,
@@ -146,7 +147,7 @@ describe("Dashboard Service", () => {
           metodoPagamento: "DINHEIRO",
           valorPago: 100,
           meiasQuantidade: 10,
-          meiasPrecoUnit: 2, // 20€ de meias
+          meiasPrecoUnit: 2, // 20€ de meias - NÃO se soma à parte
           clienteId: TEST_IDS.CLIENTE_1,
           localId: TEST_IDS.LOCAL_1,
         },
@@ -154,10 +155,48 @@ describe("Dashboard Service", () => {
 
       try {
         const receitas = await dashboardService.getReceitasHoje();
-        // 100 (valorPago) + 20 (meias) = 120€ em DINHEIRO
-        expect(receitas.DINHEIRO ?? 0).toBeGreaterThanOrEqual(120);
+        // Fonte única: só valorPago (100€). As meias não duplicam a receita.
+        expect((receitas.DINHEIRO ?? 0) - antes).toBe(100);
       } finally {
         await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+      }
+    });
+
+    it("reparte o split das entradas sem dupla contagem (método 2 = valorPago2, método 1 = resto)", async () => {
+      const hoje = new Date();
+      const antesDinheiro = (await dashboardService.getReceitasHoje()).DINHEIRO ?? 0;
+      const antesMbway = (await dashboardService.getReceitasHoje()).MBWAY ?? 0;
+      const inicio = new Date(hoje);
+      inicio.setHours(15, 30, 0, 0);
+      const fim = new Date(inicio);
+      fim.setMinutes(fim.getMinutes() + 60);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          encarregadoNome: "Teste Split",
+          encarregadoTelefone: "900000001",
+          duracaoMinutos: 60,
+          custoHora: 10,
+          custoTotal: 20,
+          custoTotalFinal: 20,
+          inicioEm: inicio,
+          fimPrevisto: fim,
+          estado: "CONCLUIDA",
+          pago: true,
+          metodoPagamento: "DINHEIRO",
+          metodoPagamento2: "MBWAY",
+          valorPago2: 8,
+          criancas: [{ nome: "Y" }],
+        },
+      });
+
+      try {
+        const receitas = await dashboardService.getReceitasHoje();
+        // Total 20€: 8€ no método 2 (MBWAY) e apenas 12€ no método 1 (sem somar o total inteiro)
+        expect((receitas.MBWAY ?? 0) - antesMbway).toBe(8);
+        expect((receitas.DINHEIRO ?? 0) - antesDinheiro).toBe(12);
+      } finally {
+        await testPrisma.entradaLivre.delete({ where: { id: entrada.id } }).catch(() => {});
       }
     });
 

@@ -183,7 +183,7 @@ async function seedExtras() {
     { id: "extra-003", nome: "Máquina de Gelo", precoUnitario: 25.0, descricao: "Máquina de gelo seco", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
     { id: "extra-004", nome: "Pinturas Faciais", precoUnitario: 30.0, descricao: "Pinturas faciais artísticas", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
     { id: "extra-005", nome: "Algodão Doce", precoUnitario: 3.0, descricao: "Algodão doce por unidade", categoria: "EXTRA" as const, subcategoria: "Comida", requerTexto: false },
-    { id: "extra-006", nome: "Lembranças", precoUnitario: 35.0, descricao: "Saco de lembranças por criança", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true },
+    { id: "extra-006", nome: "Lembranças", precoUnitario: 35.0, descricao: "Saco de lembranças por criança", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true, baseCobranca: "POR_PESSOA" as const },
     { id: "extra-007", nome: "Brinde Personalizado", precoUnitario: 0.0, descricao: "Brinde com texto personalizado", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true },
     { id: "extra-menu-001", nome: "Menu Principal", precoUnitario: 20.0, descricao: "Menu completo com sumo, croissants, nuggets, pipocas e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
     { id: "extra-menu-002", nome: "Menu Carne", precoUnitario: 15.0, descricao: "Menu com nuggets, pizza, sumo e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
@@ -204,11 +204,11 @@ async function seedExtras() {
     { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
     // ─── Extras à diversão BasyLandy ────────────────────────────
-    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
-    { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
+    { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
     { id: "extra-diversao-convites", nome: "Convites Personalizados", precoUnitario: 15.0, descricao: "Pacote de 30 convites personalizados. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: true },
-    { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
-    { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
+    { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
     // ─── Bolos BasyLandy ────────────────────────────────────────
     { id: "extra-bolo-1kg", nome: "Bolo 1KG", precoUnitario: 17.5, descricao: "Bolo de aniversário de 1kg.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
     { id: "extra-bolo-2kg", nome: "Bolo 2KG (hóstia incluída)", precoUnitario: 30.0, descricao: "Bolo de aniversário de 2kg com hóstia incluída.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
@@ -217,6 +217,12 @@ async function seedExtras() {
   for (const extra of extras) {
     await prisma.extra.upsert({ where: { id: extra.id }, update: {}, create: extra });
   }
+
+  // Cobrança por pessoa (idempotente - upsert acima tem update: {})
+  await prisma.extra.updateMany({
+    where: { id: { in: ["extra-006", "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
+    data: { baseCobranca: "POR_PESSOA" },
+  });
 
   // Novos extras/menus BasyLandy → associados a todos os locais
   const basyLandyIds = [

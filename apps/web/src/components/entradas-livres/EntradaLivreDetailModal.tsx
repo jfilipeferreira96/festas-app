@@ -21,6 +21,7 @@ import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import { useEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useConfigPreco } from "@/hooks/use-precos";
+import { calcularCustoExtras } from "@/lib/extras-custo";
 import type { StatusType } from "@/components/ui/status-badge/StatusBadge";
 import type { ConfiguracaoPreco } from "@/lib/api/precos";
 
@@ -89,14 +90,18 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
     const precoPorPessoa = getTierPricePerPerson(entrada.duracaoMinutos, configPreco);
     const custoTempo = +(precoPorPessoa * totalPessoas).toFixed(2);
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 4.5);
-    const custoLanche = entrada.temLanche ? +(precoLanche * totalPessoas).toFixed(2) : 0;
+    const criancasComLanche = entrada.temLanche
+      ? (entrada.criancas ?? []).filter((c: { querLanche?: boolean }) => c.querLanche !== false).length
+      : 0;
+    const custoLanche = +(precoLanche * criancasComLanche).toFixed(2);
     const custoMeias = entrada.meiasQuantidade
       ? +((entrada.meiasPrecoUnit ?? Number(configPreco?.precoMeias ?? 2.5)) * entrada.meiasQuantidade).toFixed(2)
       : 0;
-    const custoExtras = entrada.extras?.reduce(
-      (sum, e) => sum + Number(e.extra?.precoUnitario ?? 0) * (e.quantidade ?? 1),
-      0,
-    ) ?? 0;
+    const custoExtras = calcularCustoExtras(
+      (entrada.extras ?? []).map((e) => ({ extraId: e.extraId, quantidade: e.quantidade ?? 1 })),
+      (entrada.extras ?? []).map((e) => e.extra),
+      totalPessoas
+    );
     return {
       totalPessoas,
       precoPorPessoa,

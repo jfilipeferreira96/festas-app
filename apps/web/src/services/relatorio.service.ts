@@ -254,31 +254,33 @@ export const relatorioService = {
 
   /**
    * Secção 2: Entradas Livres
-   * Agrupa por duração (1H, 2H, 3H) + lanches (extras).
-   * Usa custoTotalFinal (já inclui excesso) e soma pagamento dividido.
+   * Agrupa por duração (1H, 2H, 3H).
+   * Fonte única: custoTotalFinal (inclui excesso, extras e meias);
+   * o pagamento dividido é repartido (método 2 = valorPago2, método 1 = resto).
+   * Extras e lanches são listados como linhas informativas (já incluídos no custo).
    */
   calcularEntradasLivres(entradas: EntradaRelatorio[]): SecaoRelatorio {
     const l1H = criarLinhaVazia("Entrada 1H");
     const l2H = criarLinhaVazia("Entrada 2H");
     const l3H = criarLinhaVazia("Entrada 3H");
-    const lLanches = criarLinhaVazia("Lanches");
+    const lLanches = criarLinhaVazia("Lanches e Extras");
 
     for (const e of entradas) {
       const duracao = e.duracaoMinutos;
       const numCriancas = Array.isArray(e.criancas) ? e.criancas.length : 0;
       // custoTotalFinal inclui o excesso; fallback para custoTotal
       const valor = toNum(e.custoTotalFinal ?? e.custoTotal);
+      const valorMetodo2 = Math.min(toNum(e.valorPago2), valor);
 
       // Classificar por duração
       const linha: LinhaRelatorio = duracao <= 60 ? l1H : duracao <= 120 ? l2H : l3H;
 
       linha.quantidade += 1;
       linha.totalCriancas += numCriancas;
-      // Pagamento principal (custoTotalFinal) + pagamento dividido (método 2)
-      somarPorMetodo(linha, e.metodoPagamento, valor);
-      somarPorMetodo(linha, e.metodoPagamento2, toNum(e.valorPago2));
+      somarPorMetodo(linha, e.metodoPagamento2, valorMetodo2);
+      somarPorMetodo(linha, e.metodoPagamento, valor - valorMetodo2);
 
-      // Lanches (extras das entradas livres)
+      // Lanches/extras (informativo - já incluídos no custoTotalFinal)
       for (const ex of e.extras) {
         const extraValor = toNum(ex.extra.precoUnitario) * ex.quantidade;
         lLanches.quantidade += ex.quantidade;
@@ -286,18 +288,21 @@ export const relatorioService = {
       }
     }
 
-    const linhas = filtrarLinhasVazias([l1H, l2H, l3H, lLanches]);
+    const linhas = filtrarLinhasVazias([l1H, l2H, l3H]);
 
     return {
       titulo: "Entradas Livres",
       linhas,
       total: somarLinhas(linhas, "Total Entradas Livres"),
+      linhasInformativas: filtrarLinhasVazias([lLanches]),
     };
   },
 
   /**
    * Secção 3: Outros
-   * Cauções, Excesso de Tempo (festas), Meias e Brindes - apenas dados reais.
+   * Cauções e Excesso de Tempo (festas) somam ao total.
+   * Meias e Brindes são informativas - já incluídas na fonte única
+   * (valorPago das festas / custoTotalFinal das entradas).
    */
   calcularOutros(reservas: ReservaRelatorio[], entradas: EntradaRelatorio[]): SecaoRelatorio {
     const lCaucoes40 = criarLinhaVazia("Cauções 40€");
@@ -326,7 +331,7 @@ export const relatorioService = {
         somarPorMetodo(lExcesso, r.metodoPagamento, custoExcesso);
       }
 
-      // ── Meias (festa) ──
+      // ── Meias (festa) - informativa ──
       const qtdMeias = r.meiasQuantidade ?? 0;
       if (qtdMeias > 0) {
         const valorMeias = qtdMeias * toNum(r.meiasPrecoUnit);
@@ -334,7 +339,7 @@ export const relatorioService = {
         somarPorMetodo(lMeias, r.metodoPagamento, valorMeias);
       }
 
-      // ── Brindes (extras com subcategoria "Brindes") ──
+      // ── Brindes (extras com subcategoria "Brindes") - informativa ──
       for (const ex of r.extras) {
         if (ex.extra.subcategoria === "Brindes") {
           const valor = toNum(ex.extra.precoUnitario) * ex.quantidade;
@@ -345,7 +350,7 @@ export const relatorioService = {
       }
     }
 
-    // ── Meias (entradas livres) ──
+    // ── Meias (entradas livres) - informativa ──
     for (const e of entradas) {
       const qtdMeias = e.meiasQuantidade ?? 0;
       if (qtdMeias > 0) {
@@ -359,14 +364,13 @@ export const relatorioService = {
       lCaucoes40,
       lCaucoesOutros,
       lExcesso,
-      lMeias,
-      lBrindes,
     ]);
 
     return {
       titulo: "Outros",
       linhas,
       total: somarLinhas(linhas, "Total"),
+      linhasInformativas: filtrarLinhasVazias([lMeias, lBrindes]),
     };
   },
 

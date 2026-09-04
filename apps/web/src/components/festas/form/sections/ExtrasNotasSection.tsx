@@ -5,7 +5,9 @@ import { FileText } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
+import ExtrasQuantidadeStepper from "@/components/shared/extras/ExtrasQuantidadeStepper";
 import { formatEuro } from "@/lib/format";
+import { calcularCustoExtras } from "@/lib/extras-custo";
 import type { Extra } from "@/lib/api/extras";
 import type { FestaFormData } from "../festa-form.schema";
 
@@ -31,7 +33,22 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
   const { watch, setValue } = useFormContext<FestaFormData>();
   const extrasIds = watch("extrasIds");
   const extrasTexto = watch("extrasTexto");
+  const extrasQuantidades = watch("extrasQuantidades");
+  const numCriancasConfirmadas = watch("numCriancasConfirmadas");
+  const previsaoCriancas = watch("previsaoCriancas");
   const { grouped, ungrouped } = useMemo(() => groupBySubcategoria(extraItems), [extraItems]);
+
+  const numPessoas = Math.max(numCriancasConfirmadas ?? previsaoCriancas ?? 1, 1);
+
+  const totalExtras = useMemo(
+    () =>
+      calcularCustoExtras(
+        extrasIds.map((id) => ({ extraId: id, quantidade: extrasQuantidades[id] ?? 1 })),
+        extraItems,
+        numPessoas
+      ),
+    [extrasIds, extrasQuantidades, extraItems, numPessoas]
+  );
 
   const toggleExtra = (id: string) => {
     setValue(
@@ -43,6 +60,10 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
 
   const setTextoExtra = (id: string, texto: string) => {
     setValue("extrasTexto", { ...extrasTexto, [id]: texto }, { shouldDirty: true });
+  };
+
+  const setQuantidade = (id: string, qtd: number) => {
+    setValue("extrasQuantidades", { ...extrasQuantidades, [id]: qtd }, { shouldDirty: true });
   };
 
   const renderChip = (item: Extra) => {
@@ -57,13 +78,24 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
           }`}
         >
           <span className="text-sm text-text-primary">{item.nome}</span>
-          <span className="text-xs font-medium text-text-secondary">+{formatEuro(Number(item.precoUnitario))}</span>
+          <span className="text-xs font-medium text-text-secondary">
+            +{formatEuro(Number(item.precoUnitario))}
+            {item.baseCobranca === "POR_PESSOA" ? "/pessoa" : ""}
+          </span>
         </button>
         {isSelected && item.requerTexto && (
           <InputField
             value={extrasTexto[item.id] ?? ""}
             onChange={(e) => setTextoExtra(item.id, e.target.value)}
             placeholder={`Descrever ${item.nome.toLowerCase()}...`}
+          />
+        )}
+        {isSelected && (
+          <ExtrasQuantidadeStepper
+            extra={item}
+            quantidade={extrasQuantidades[item.id] ?? 1}
+            numPessoas={numPessoas}
+            onChange={(qtd) => setQuantidade(item.id, qtd)}
           />
         )}
       </div>
@@ -88,6 +120,12 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
               )}
               <div className="flex flex-wrap gap-3">{ungrouped.map(renderChip)}</div>
             </div>
+          )}
+          {extrasIds.length > 0 && totalExtras > 0 && (
+            <p className="text-xs text-text-secondary">
+              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> — soma ao custo final
+              {numCriancasConfirmadas ? ` (${numPessoas} crianças confirmadas)` : ""}
+            </p>
           )}
         </div>
       )}

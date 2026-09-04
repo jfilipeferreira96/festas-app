@@ -39,6 +39,12 @@ async function main() {
   const now = new Date();
   const hoje = today();
 
+  // ─── BaseCobranca: marcar extras por pessoa em BDs já semeadas ───
+  await prisma.extra.updateMany({
+    where: { id: { in: ["extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
+    data: { baseCobranca: "POR_PESSOA" },
+  });
+
   // ─── Dependências mínimas (upsert - funciona com ou sem seed-dev) ───
   await prisma.cliente.upsert({
     where: { id: "cliente-v9-001" },

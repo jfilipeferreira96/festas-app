@@ -39,6 +39,7 @@ const extraSchema = z.object({
   categoria: z.string().optional(),
   subcategoria: z.string().optional(),
   requerTexto: z.boolean().optional(),
+  baseCobranca: z.string().optional(),
 });
 
 type ExtraFormData = z.infer<typeof extraSchema>;
@@ -93,6 +94,9 @@ const columns: Column<Extra>[] = [
         {e.subcategoria && (
           <span className="text-xs text-text-muted">{e.subcategoria}</span>
         )}
+        {e.baseCobranca === "POR_PESSOA" && (
+          <span className="text-[11px] px-1.5 py-0.5 rounded bg-sky-50 text-sky-700">por pessoa</span>
+        )}
       </div>
     ),
   },
@@ -144,14 +148,16 @@ export default function ExtrasContent() {
       categoria: "EXTRA",
       subcategoria: "",
       requerTexto: false,
+      baseCobranca: "POR_UNIDADE",
     },
   });
 
   const currentCategoria = watch("categoria");
+  const currentBaseCobranca = watch("baseCobranca");
 
   const handleCreate = useCallback(() => {
     setEditingExtra(null);
-    reset({ nome: "", descricao: "", precoUnitario: 0, icone: "", categoria: "EXTRA", subcategoria: "", requerTexto: false });
+    reset({ nome: "", descricao: "", precoUnitario: 0, icone: "", categoria: "EXTRA", subcategoria: "", requerTexto: false, baseCobranca: "POR_UNIDADE" });
     setShowForm(true);
   }, [reset]);
 
@@ -166,6 +172,7 @@ export default function ExtrasContent() {
         categoria: extra.categoria || "EXTRA",
         subcategoria: extra.subcategoria || "",
         requerTexto: extra.requerTexto || false,
+        baseCobranca: extra.baseCobranca || "POR_UNIDADE",
       });
       setShowForm(true);
     },
@@ -182,6 +189,7 @@ export default function ExtrasContent() {
         categoria: (data.categoria || "EXTRA") as "EXTRA" | "MENU",
         subcategoria: data.subcategoria || undefined,
         requerTexto: data.requerTexto || false,
+        baseCobranca: (data.baseCobranca || "POR_UNIDADE") as "POR_UNIDADE" | "POR_PESSOA",
       };
       if (editingExtra) {
         await updateExtra.mutateAsync({
@@ -303,6 +311,21 @@ export default function ExtrasContent() {
                       <option key={s} value={s} />
                     ))}
                   </datalist>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1.5">Cobrança</label>
+                  <Select
+                    options={[
+                      { value: "POR_UNIDADE", label: "Por unidade" },
+                      { value: "POR_PESSOA", label: "Por pessoa" },
+                    ]}
+                    value={currentBaseCobranca || "POR_UNIDADE"}
+                    onChange={(val) => setValue("baseCobranca", val, { shouldDirty: true })}
+                    placeholder="Selecionar cobrança"
+                  />
+                  <p className="text-xs text-text-muted mt-1">
+                    "Por pessoa" multiplica o preço pelo nº de crianças/adultos da festa ou entrada.
+                  </p>
                 </div>
                 <div className="flex items-end pb-2">
                   <label className="flex items-center gap-2 cursor-pointer">

@@ -161,6 +161,11 @@ enum TipoExcecaoCalendario {
   BLOQUEADO
 }
 
+enum BaseCobranca {
+  POR_UNIDADE // Quantidade manual (stepper, default 1)
+  POR_PESSOA  // Pré-preenche a quantidade com o nº de pessoas (editável)
+}
+
 enum TipoBolo {
   PAIS_TRAZEM       // "Pais trazem o bolo"
   NOSSO_1KG         // "Nosso bolo 1kg"
@@ -239,6 +244,7 @@ model Extra {
   categoria     CategoriaItem @default(EXTRA)
   subcategoria  String?       // Ex: "Diversão", "Premium" - para agrupar extras no formulário
   requerTexto   Boolean       @default(false) // Se true, mostra input de texto ao selecionar
+  baseCobranca  BaseCobranca  @default(POR_UNIDADE) // POR_PESSOA = quantidade pré-preenchida com nº de pessoas
   // Flag para menus: true = apenas fim-de-semana/feriados, false = apenas dias de semana, null = todos os dias
   fimDeSemana   Boolean?
   activo        Boolean       @default(true)

@@ -72,6 +72,8 @@ function SecaoTabela({ secao }: { secao: SecaoRelatorio }) {
   // Não renderizar secções sem dados reais
   if (secao.linhas.length === 0) return null;
 
+  const informativas = secao.linhasInformativas ?? [];
+
   return (
     <div className="mb-6">
       <h3 className="text-sm font-semibold text-text-primary mb-2 px-1">{secao.titulo}</h3>
@@ -86,6 +88,23 @@ function SecaoTabela({ secao }: { secao: SecaoRelatorio }) {
           </tbody>
         </table>
       </div>
+      {informativas.length > 0 && (
+        <div className="mt-2">
+          <div className="flex items-baseline gap-2 mb-2 px-1">
+            <span className="text-[11px] font-medium text-text-muted">Já incluído nos totais acima</span>
+          </div>
+          <div className="overflow-x-auto rounded-[14px] border border-dashed border-border bg-surface/60 shadow-card">
+            <table className="w-full">
+              <CabecalhoTabela />
+              <tbody>
+                {informativas.map((linha, i) => (
+                  <LinhaDados key={`${secao.titulo}-info-${i}`} linha={linha} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

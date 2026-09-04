@@ -30,6 +30,8 @@ export const entradaLivreFormSchema = z.object({
   metodoPagamento2: z.enum(METODOS_PAGAMENTO).optional(),
   valorPago2: z.number().min(0).optional(),
   meiasQuantidade: z.number().min(0),
+  extrasIds: z.array(z.string()),
+  extrasQuantidades: z.record(z.string(), z.number()),
 });
 
 export type EntradaLivreFormData = z.infer<typeof entradaLivreFormSchema>;
@@ -72,12 +74,16 @@ export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefin
     metodoPagamento2: undefined,
     valorPago2: entrada?.valorPago2 ?? 0,
     meiasQuantidade: entrada?.meiasQuantidade ?? 0,
+    extrasIds: entrada?.extras?.map((e) => e.extraId) ?? [],
+    extrasQuantidades: Object.fromEntries(
+      (entrada?.extras ?? []).map((e) => [e.extraId, e.quantidade ?? 1])
+    ),
   };
 }
 
 export function buildEntradaPayload(
   data: EntradaLivreFormData,
-  opts: { isEdit: boolean; extrasAtuais: string[] }
+  opts: { isEdit: boolean }
 ): CriarEntradaLivreDTO {
   return {
     criancas: data.criancas.map((c) => ({
@@ -93,7 +99,10 @@ export function buildEntradaPayload(
     metodoPagamento: opts.isEdit ? undefined : data.metodoPagamento,
     pago: opts.isEdit ? undefined : data.pago,
     cacifoId: data.cacifoId || null,
-    extrasIds: opts.isEdit && opts.extrasAtuais.length > 0 ? opts.extrasAtuais : undefined,
+    extrasIds: data.extrasIds,
+    extrasQuantidades: Object.fromEntries(
+      data.extrasIds.map((id) => [id, data.extrasQuantidades[id] ?? 1])
+    ),
     observacoes: data.observacoes || undefined,
     observacoesLesoes: data.observacoesLesoes || undefined,
     temLanche: data.temLanche,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { CreditCard, Shield, CheckCircle2, ArrowUpDown } from "lucide-react";
 import InputField from "@/components/form/input/InputField";
 import { useUpdatePagamento } from "@/hooks/use-reservas";
@@ -13,6 +13,7 @@ import {
   PagamentoSplitSection,
 } from "@/components/shared/pagamento/PagamentoFields";
 import PagamentoCaucaoDescontoTab from "./PagamentoCaucaoDescontoTab";
+import PagamentoSugeridoBox, { calcularSugeridoFesta } from "./PagamentoSugeridoBox";
 import type { Reserva, MetodoPagamento } from "@/lib/api/reservas";
 import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
 
@@ -40,6 +41,13 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     reserva.descontoPercentagem ? String(reserva.descontoPercentagem) : ""
   );
   const [descontoMotivo, setDescontoMotivo] = useState(reserva.descontoMotivo ?? "");
+
+  const sugeridoInicial = calcularSugeridoFesta(reserva, Number(descontoPercentagem) || 0);
+  useEffect(() => {
+    if (!reserva.valorPago && sugeridoInicial && sugeridoInicial.sugerido > 0) {
+      setValorPago(sugeridoInicial.sugerido.toFixed(2));
+    }
+  }, [reserva.valorPago, sugeridoInicial]);
 
   const total = Number(valorPago) || 0;
   const caucaoValor = caucao === "PAGA" || caucao === "PAGA_NO_DIA" ? Number(valorCaucao) || 0 : 0;
@@ -131,13 +139,23 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     </>
   ) : undefined;
 
+  const sugeridoResumo = calcularSugeridoFesta(reserva, Number(descontoPercentagem) || 0);
+  const partesSugeridas: string[] = [];
+  if (sugeridoResumo && sugeridoResumo.custoExtras > 0) partesSugeridas.push(`+${fmtEuro.format(sugeridoResumo.custoExtras)} extras`);
+  if (sugeridoResumo && sugeridoResumo.custoMeias > 0) partesSugeridas.push(`+${fmtEuro.format(sugeridoResumo.custoMeias)} meias`);
+
   const resumo =
     total > 0 ? (
       <>
         Total <span className="font-semibold text-text-secondary">{fmtEuro.format(total)}</span>
         {caucaoValor > 0 && <> · −{fmtEuro.format(caucaoValor)} caução</>}
         {segundo > 0 && <> · −{fmtEuro.format(segundo)} 2º pag.</>}
+        {partesSugeridas.length > 0 && (
+          <span className="text-text-muted"> · {partesSugeridas.join(" · ")} (sugerido)</span>
+        )}
       </>
+    ) : partesSugeridas.length > 0 ? (
+      <span className="text-text-muted">{partesSugeridas.join(" · ")} (sugerido)</span>
     ) : undefined;
 
   const tabs: PagamentoTabConfig[] = [
@@ -177,6 +195,11 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
             setMetodo2={setMetodoPagamento2}
             valor2={valorPago2}
             setValor2={setValorPago2}
+          />
+          <PagamentoSugeridoBox
+            reserva={reserva}
+            descontoPercentagem={Number(descontoPercentagem) || 0}
+            onUsarSugerido={(v) => setValorPago(v.toFixed(2))}
           />
         </div>
       ),

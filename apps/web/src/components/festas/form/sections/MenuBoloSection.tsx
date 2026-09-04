@@ -53,9 +53,15 @@ export default function MenuBoloSection({ menuOptions, menuWarning }: MenuBoloSe
               options={TIPO_BOLO_OPTIONS}
               placeholder="Seleccionar..."
               value={bolo ?? ""}
-              onChange={(val) =>
-                setValue("bolo", val === "" ? undefined : (val as FestaFormTipoBolo), { shouldDirty: true })
-              }
+              onChange={(val) => {
+                const tipo = val === "" ? undefined : (val as FestaFormTipoBolo);
+                setValue("bolo", tipo, { shouldDirty: true });
+                if (!tipo || BOLO_BLOQUEIA_TEMA.includes(tipo)) {
+                  setValue("boloQuantidade", undefined, { shouldDirty: true });
+                } else {
+                  setValue("boloQuantidade", 1, { shouldDirty: true });
+                }
+              }}
             />
           </div>
           <div className="flex-1">
@@ -70,9 +76,9 @@ export default function MenuBoloSection({ menuOptions, menuWarning }: MenuBoloSe
             <FieldLabel>Quantidade</FieldLabel>
             <InputField
               type="number"
-              min={0}
+              min={1}
               {...register("boloQuantidade", { valueAsNumber: true })}
-              placeholder="0"
+              placeholder="1"
               disabled={bloqueiaTema}
             />
           </div>

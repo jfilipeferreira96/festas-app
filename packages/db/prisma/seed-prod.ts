@@ -189,6 +189,12 @@ async function seedExtras() {
     });
   }
 
+  // Cobrança por pessoa (idempotente)
+  await prisma.extra.updateMany({
+    where: { id: { in: ["extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
+    data: { baseCobranca: "POR_PESSOA" },
+  });
+
   // Associar todos os extras/menus BasyLandy a todos os locais
   const basyLandyIds = [
     "extra-menu-basy-semana", "extra-menu-basy-fimsemana", "extra-menu-almoco-jantar",

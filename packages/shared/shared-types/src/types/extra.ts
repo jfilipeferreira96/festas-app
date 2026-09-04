@@ -4,6 +4,8 @@
 
 import type { CategoriaItem } from "./menu";
 
+export type BaseCobranca = "POR_UNIDADE" | "POR_PESSOA";
+
 export interface Extra {
   id: string;
   nome: string;
@@ -13,6 +15,7 @@ export interface Extra {
   categoria: CategoriaItem;
   subcategoria?: string;
   requerTexto: boolean;
+  baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
   activo: boolean;
   createdAt: string;

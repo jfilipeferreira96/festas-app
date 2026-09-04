@@ -21,6 +21,7 @@ interface CriarEntradaLivreDTO {
   pago?: boolean;
   cacifoId?: string;
   extrasIds?: string[];
+  extrasQuantidades?: Record<string, number>;
   observacoes?: string;
   observacoesLesoes?: string;
   // Lanche
@@ -99,6 +100,29 @@ function contarCriancasComLanche(criancas: CriancaInput[], temLanche: boolean | 
   return criancas.filter((c) => c.querLanche !== false).length;
 }
 
+function quantidadeDeExtra(quantidades: Record<string, number> | undefined, extraId: string) {
+  const q = quantidades?.[extraId];
+  return Math.max(1, Math.round(q ?? 1));
+}
+
+async function calcularCustoExtras(
+  itens: { extraId: string; quantidade: number }[],
+  numPessoas: number
+): Promise<number> {
+  if (itens.length === 0) return 0;
+  const extrasData = await prisma.extra.findMany({
+    where: { id: { in: itens.map((i) => i.extraId) } },
+    select: { id: true, precoUnitario: true, baseCobranca: true },
+  });
+  const porId = new Map(extrasData.map((ex) => [ex.id, ex]));
+  return itens.reduce((acc, item) => {
+    const ex = porId.get(item.extraId);
+    if (!ex) return acc;
+    const qtd = ex.baseCobranca === "POR_PESSOA" ? numPessoas : item.quantidade;
+    return acc + Number(ex.precoUnitario) * qtd;
+  }, 0);
+}
+
 export const entradaLivreService = {
   // ── Listar entradas livres ──────────────────────
   async list(filtros?: {
@@ -151,7 +175,7 @@ export const entradaLivreService = {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
+          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
       },
       orderBy: { inicioEm: "desc" },
@@ -191,7 +215,7 @@ export const entradaLivreService = {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
+          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
       },
     });
@@ -232,7 +256,17 @@ export const entradaLivreService = {
     const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
     const criancasComLanche = contarCriancasComLanche(criancas, data.temLanche);
     const custoLanche = precoLanche * criancasComLanche;
-    const custoCalculado = custoTempo + custoLanche;
+
+    const extrasItens = (extrasIds ?? []).map((extraId) => ({
+      extraId,
+      quantidade: quantidadeDeExtra(data.extrasQuantidades, extraId),
+    }));
+    const custoExtras = await calcularCustoExtras(extrasItens, totalPessoas);
+
+    const custoMeias =
+      (data.meiasQuantidade ?? 0) * (data.meiasPrecoUnit ?? Number(configPreco.precoMeias));
+
+    const custoCalculado = custoTempo + custoLanche + custoExtras + custoMeias;
 
     const custoTotal =
       typeof custoTotalInput === "number" && custoTotalInput >= 0
@@ -266,7 +300,7 @@ export const entradaLivreService = {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
+          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
       },
     });
@@ -276,11 +310,12 @@ export const entradaLivreService = {
     await registarCriancasComoAniversariantes(clienteId, criancas);
 
     // Associar extras
-    if (extrasIds && extrasIds.length > 0) {
+    if (extrasItens.length > 0) {
       await prisma.entradaLivreExtra.createMany({
-        data: extrasIds.map((extraId) => ({
+        data: extrasItens.map((item) => ({
           entradaLivreId: entrada.id,
-          extraId,
+          extraId: item.extraId,
+          quantidade: item.quantidade,
         })),
       });
     }
@@ -340,7 +375,7 @@ export const entradaLivreService = {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
+          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
       },
     });
@@ -376,7 +411,7 @@ export const entradaLivreService = {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
+          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
       },
     });
@@ -419,7 +454,7 @@ export const entradaLivreService = {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
+          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
       },
     });
@@ -448,6 +483,7 @@ export const entradaLivreService = {
       pago?: boolean;
       cacifoId?: string | null;
       extrasIds?: string[];
+      extrasQuantidades?: Record<string, number>;
       observacoes?: string;
       observacoesLesoes?: string;
       // Lanche
@@ -462,7 +498,12 @@ export const entradaLivreService = {
       meiasPrecoUnit?: number;
     }
   ) {
-    const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
+    const entrada = await prisma.entradaLivre.findUnique({
+      where: { id },
+      include: {
+        extras: { include: { extra: { select: { id: true, precoUnitario: true, baseCobranca: true } } } },
+      },
+    });
     if (!entrada) throw new Error("NOT_FOUND");
 
     const {
@@ -470,14 +511,15 @@ export const entradaLivreService = {
       duracaoMinutos,
       cacifoId,
       extrasIds,
+      extrasQuantidades,
       custoTotal: custoTotalInput,
       ...rest
     } = data;
 
     // Decisão do custoTotal:
     // - Se o utilizador forneceu um valor manual, esse prevalece.
-    // - Senão, recalcula a partir do tarifário se a duração ou a composição
-    //   de pessoas/lanche mudou.
+    // - Senão, recalcula a partir do tarifário se a duração, a composição
+    //   de pessoas/lanche, os extras ou as meias mudaram.
     let novoCustoTotal: number | undefined;
     let novoFimPrevisto: Date | undefined;
     if (typeof custoTotalInput === "number" && custoTotalInput >= 0) {
@@ -488,11 +530,27 @@ export const entradaLivreService = {
       novoFimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
     }
 
+    const extrasNovos =
+      extrasIds !== undefined
+        ? extrasIds.map((extraId) => ({
+            extraId,
+            quantidade: quantidadeDeExtra(extrasQuantidades, extraId),
+          }))
+        : entrada.extras.map((e) => ({ extraId: e.extraId, quantidade: e.quantidade }));
+    const mapExtrasAtuais = new Map(entrada.extras.map((e) => [e.extraId, e.quantidade]));
+    const extrasMudaram =
+      extrasNovos.length !== entrada.extras.length ||
+      extrasNovos.some((e) => mapExtrasAtuais.get(e.extraId) !== e.quantidade);
+    const meiasMudaram =
+      data.meiasQuantidade !== undefined && data.meiasQuantidade !== entrada.meiasQuantidade;
+
     const camposRelevantesFornecidos =
       criancas !== undefined ||
       data.temLanche !== undefined ||
       data.numAdultos !== undefined ||
-      duracaoMinutos !== undefined;
+      duracaoMinutos !== undefined ||
+      extrasMudaram ||
+      meiasMudaram;
 
     if (novoCustoTotal === undefined && camposRelevantesFornecidos) {
       const criancasEfetivas = criancas ?? (entrada.criancas as unknown as CriancaInput[]);
@@ -504,12 +562,17 @@ export const entradaLivreService = {
       const lancheDepois = contarCriancasComLanche(criancasEfetivas, temLancheEfetivo);
       const duracaoMudou = duracaoEfetiva !== entrada.duracaoMinutos;
 
-      if (duracaoMudou || lancheAntes !== lancheDepois || numAdultosEfetivo !== entrada.numAdultos) {
+      if (duracaoMudou || lancheAntes !== lancheDepois || numAdultosEfetivo !== entrada.numAdultos || extrasMudaram || meiasMudaram) {
         const custoTempoPorPessoa = await configuracaoPrecoService.calcularPrecoEntrada(duracaoEfetiva, new Date(entrada.inicioEm));
         const configPreco = await configuracaoPrecoService.getConfig();
         const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
         const totalPessoas = criancasEfetivas.length + numAdultosEfetivo;
-        novoCustoTotal = custoTempoPorPessoa * totalPessoas + precoLanche * lancheDepois;
+        const custoExtras = await calcularCustoExtras(extrasNovos, totalPessoas);
+        const custoMeias =
+          Number(data.meiasQuantidade ?? entrada.meiasQuantidade ?? 0) *
+          Number(data.meiasPrecoUnit ?? entrada.meiasPrecoUnit ?? configPreco.precoMeias);
+        novoCustoTotal =
+          custoTempoPorPessoa * totalPessoas + precoLanche * lancheDepois + custoExtras + custoMeias;
       }
     }
 
@@ -544,11 +607,12 @@ export const entradaLivreService = {
     // Atualizar extras se fornecidos
     if (extrasIds !== undefined) {
       await prisma.entradaLivreExtra.deleteMany({ where: { entradaLivreId: id } });
-      if (extrasIds.length > 0) {
+      if (extrasNovos.length > 0) {
         await prisma.entradaLivreExtra.createMany({
-          data: extrasIds.map((extraId) => ({
+          data: extrasNovos.map((item) => ({
             entradaLivreId: id,
-            extraId,
+            extraId: item.extraId,
+            quantidade: item.quantidade,
           })),
         });
       }
@@ -568,7 +632,7 @@ export const entradaLivreService = {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
         cliente: { select: { id: true, nome: true, email: true, telefone: true } },
         extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true } } },
+          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
       },
     });

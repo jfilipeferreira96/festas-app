@@ -7,10 +7,12 @@ import { Button } from "@/components/ui";
 import { useToast } from "@/hooks/use-toast";
 import { useCriarEntradaLivre, useAtualizarEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useCacifos } from "@/hooks/use-cacifos";
+import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import EntradaLivrePagamentoModal from "@/components/entradas-livres/EntradaLivrePagamentoModal";
 import { scrollToFirstFormError } from "@/components/form/form-utils";
+import { calcularCustoExtras } from "@/lib/extras-custo";
 import type { Cliente } from "@/lib/api/clientes";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import {
@@ -21,6 +23,7 @@ import {
 } from "./entrada-livre-form.schema";
 import PessoasEntradaSection from "./sections/PessoasEntradaSection";
 import DuracaoLancheSection from "./sections/DuracaoLancheSection";
+import ExtrasEntradaSection from "./sections/ExtrasEntradaSection";
 import ObservacoesSection from "./sections/ObservacoesSection";
 import PagamentoEntradaSection from "./sections/PagamentoEntradaSection";
 
@@ -59,6 +62,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const temLanche = watch("temLanche") ?? false;
   const numAdultos = watch("numAdultos") ?? 0;
   const criancasWatched = watch("criancas");
+  const extrasIdsWatched = watch("extrasIds");
+  const extrasQuantidadesWatched = watch("extrasQuantidades");
+  const meiasQuantidadeWatched = watch("meiasQuantidade");
+  const { data: extrasData } = useExtras();
 
   const custoTempoPorPessoa = useMemo(() => {
     if (!configPreco) return 0;
@@ -76,8 +83,33 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 3);
     const criancasComLanche = temLanche ? comNome.filter((c) => c.querLanche).length : 0;
     const custoLanche = precoLanche * criancasComLanche;
-    return { totalPessoas, criancasComLanche, custoTempo, custoLanche, total: custoTempo + custoLanche };
-  }, [custoTempoPorPessoa, criancasWatched, numAdultos, temLanche, configPreco]);
+    const custoExtras = calcularCustoExtras(
+      extrasIdsWatched.map((id) => ({ extraId: id, quantidade: extrasQuantidadesWatched[id] ?? 1 })),
+      Array.isArray(extrasData) ? extrasData : [],
+      totalPessoas
+    );
+    const precoMeias = Number(configPreco?.precoMeias ?? 1.5);
+    const custoMeias = (meiasQuantidadeWatched ?? 0) * precoMeias;
+    return {
+      totalPessoas,
+      criancasComLanche,
+      custoTempo,
+      custoLanche,
+      custoExtras,
+      custoMeias,
+      total: custoTempo + custoLanche + custoExtras + custoMeias,
+    };
+  }, [
+    custoTempoPorPessoa,
+    criancasWatched,
+    numAdultos,
+    temLanche,
+    configPreco,
+    extrasIdsWatched,
+    extrasQuantidadesWatched,
+    extrasData,
+    meiasQuantidadeWatched,
+  ]);
 
   const custoCalculado = custoComponentes.total;
   const custoFinal = watch("custoTotal") ?? custoCalculado;
@@ -127,10 +159,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const onSubmit = useCallback(
     async (data: EntradaLivreFormData) => {
-      const payload = buildEntradaPayload(data, {
-        isEdit,
-        extrasAtuais: entrada?.extras?.map((e) => e.extraId) ?? [],
-      });
+      const payload = buildEntradaPayload(data, { isEdit });
       try {
         if (isEdit && entrada) {
           await atualizar.mutateAsync({ id: entrada.id, data: payload });
@@ -166,6 +195,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               cacifoOptions={cacifoOptions}
               onCustoEditado={() => setCustoEdited(true)}
             />
+            <ExtrasEntradaSection numPessoas={custoComponentes.totalPessoas} />
             <ObservacoesSection />
             <PagamentoEntradaSection
               entrada={entrada}
