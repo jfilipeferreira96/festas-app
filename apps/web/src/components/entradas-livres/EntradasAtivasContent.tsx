@@ -27,7 +27,7 @@ import {
   useConcluirEntradaLivre,
   useCancelarEntradaLivre,
 } from "@/hooks/use-entrada-livre";
-import EntradaLivreForm from "./EntradaLivreForm";
+import EntradaLivreForm from "./form/EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
 import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";

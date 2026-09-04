@@ -42,7 +42,7 @@ import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservasAtivas, useFinalizarReserva, useToggleEtapa, useRemoverEtapa, useMarcarEtapasConcluidas } from "@/hooks/use-reservas";
 import { useDashboardKPIs } from "@/hooks/use-dashboard";
 import { useCacifos } from "@/hooks/use-cacifos";
-import FestaForm from "./FestaForm";
+import FestaForm from "./form/FestaForm";
 import FestaDetailModal from "./FestaDetailModal";
 import PagamentoModal from "./PagamentoModal";
 import type { Reserva } from "@/lib/api/reservas";

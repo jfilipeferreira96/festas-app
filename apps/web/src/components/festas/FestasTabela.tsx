@@ -8,7 +8,7 @@ import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva, useToggleReservaExtra } from "@/hooks/use-reservas";
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
-import FestaForm, { type FestaFormInitialValues } from "./FestaForm";
+import FestaForm, { type FestaFormInitialValues } from "./form/FestaForm";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import FestaDetailModal from "./FestaDetailModal";
 import PagamentoModal from "./PagamentoModal";
