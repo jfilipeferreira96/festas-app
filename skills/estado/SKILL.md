@@ -1,4 +1,4 @@
-# SKILL — Estados e Badges
+# SKILL - Estados e Badges
 
 Padrão para representar estados de reservas, cacifos, monitores e campanhas.
 Nunca criar cores ou labels de estado fora deste ficheiro.
@@ -37,7 +37,7 @@ type EstadoCacifo = 'LIVRE' | 'OCUPADO' | 'RESERVADO'
 | `OCUPADO` | Ocupado | `red` |
 | `RESERVADO` | Reservado | `blue` |
 
-> **Nota:** `EstadoCacifo` tem 3 valores. Não existe `PAGO` — o estado de pagamento da caução é gerido pelo enum `EstadoCaucao` na reserva.
+> **Nota:** `EstadoCacifo` tem 3 valores. Não existe `PAGO` - o estado de pagamento da caução é gerido pelo enum `EstadoCaucao` na reserva.
 
 ## Estado de Caução
 
@@ -78,7 +78,7 @@ type EstadoCampanha = 'RASCUNHO' | 'AGENDADA' | 'ENVIADA' | 'CANCELADA'
 
 ## Componente Badge
 
-Usar sempre o componente `<Badge>` — nunca estilos inline para estados.
+Usar sempre o componente `<Badge>` - nunca estilos inline para estados.
 
 ```tsx
 import { Badge } from '@/components/ui/badge/Badge'
@@ -127,7 +127,7 @@ const CONFIG = {
 ```
 
 **Regras do stepper:**
-- O estado só avança — nunca recua automaticamente
+- O estado só avança - nunca recua automaticamente
 - Fluxo: `RESERVA` → `CONFIRMADO` → `EM_CURSO` → `CONCLUIDA`
 - `CANCELADA` pode ser definido a partir de qualquer estado (excepto `CONCLUIDA`)
 - Excepção: Administrador pode corrigir estado com confirmação explícita

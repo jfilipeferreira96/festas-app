@@ -135,7 +135,7 @@ function FestasAcabarTVContentInner() {
 
   return (
     <div className="min-h-screen flex flex-col p-8 gap-6 relative">
-      {/* Cabeçalho minimal — apenas título grande */}
+      {/* Cabeçalho minimal - apenas título grande */}
       <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <Cake className="h-12 w-12 text-primary-500" />
@@ -147,7 +147,7 @@ function FestasAcabarTVContentInner() {
           <p className="text-2xl text-text-muted">
             {format(new Date(), "EEEE, d 'de' MMMM", { locale: pt })}
           </p>
-          {/* Botão Modo Ecrã — alterna fullscreen TV */}
+          {/* Botão Modo Ecrã - alterna fullscreen TV */}
           <button
             onClick={toggleTVMode}
             className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-lg font-medium text-text-secondary hover:bg-brand-500/5 transition-colors"
@@ -161,7 +161,7 @@ function FestasAcabarTVContentInner() {
 
       {/* Duas colunas: festas (esquerda) + entradas livres (direita) */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 min-h-0">
-        {/* Coluna esquerda — Festas de aniversariante */}
+        {/* Coluna esquerda - Festas de aniversariante */}
         <div className="flex flex-col gap-4 min-h-0">
           <h2 className="text-3xl font-bold text-text-secondary shrink-0">
             Festas
@@ -183,7 +183,7 @@ function FestasAcabarTVContentInner() {
           </div>
         </div>
 
-        {/* Coluna direita — Entradas livres */}
+        {/* Coluna direita - Entradas livres */}
         <div className="flex flex-col gap-4 min-h-0">
           <h2 className="text-3xl font-bold text-text-secondary shrink-0">
             Entradas Livres

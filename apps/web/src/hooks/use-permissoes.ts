@@ -16,7 +16,7 @@ import { useUser } from "@/contexts/AuthContext";
 
 /**
  * Hook for the current user's permissions (client-side, hardcoded matrix).
- * No API call — reads `funcao` from the auth context and resolves access
+ * No API call - reads `funcao` from the auth context and resolves access
  * synchronously via `lib/permissoes`.
  *
  * Provides canRead / canWrite / isAdmin (module-level) / isGlobalAdmin helpers.

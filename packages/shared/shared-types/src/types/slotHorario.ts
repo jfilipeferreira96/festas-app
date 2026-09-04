@@ -1,5 +1,5 @@
 // ===================================
-// Slot de Horário — horários predefinidos para festas
+// Slot de Horário - horários predefinidos para festas
 // ===================================
 
 export interface SlotHorario {
@@ -10,7 +10,7 @@ export interface SlotHorario {
   ordem: number;
   // ── Defaults aplicados ao criar uma festa neste slot ──
   corDefault?: string | null; // Cor sugerida (ex: "#0095C8")
-  horaLancheDefault?: string | null; // HH:MM — hora sugerida do lanche
+  horaLancheDefault?: string | null; // HH:MM - hora sugerida do lanche
   salaLancheId?: string | null; // FK opcional para Local (isSalaLanche)
   salaLancheNome?: string | null; // Nome da sala de lanche (denormalizado para UI)
   createdAt: string;

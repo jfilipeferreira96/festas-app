@@ -1,5 +1,5 @@
 // ===================================
-// Menu — Types for menu management (simplified)
+// Menu - Types for menu management (simplified)
 // ===================================
 
 export type CategoriaItem = "MENU" | "EXTRA";

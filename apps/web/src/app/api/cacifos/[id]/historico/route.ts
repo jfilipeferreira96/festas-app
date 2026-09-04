@@ -11,7 +11,7 @@ const handleError = createRouteErrorHandler({
 
 type Params = { params: Promise<{ id: string }> };
 
-// GET /api/cacifos/:id/historico — histórico de ocupações do cacifo
+// GET /api/cacifos/:id/historico - histórico de ocupações do cacifo
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);

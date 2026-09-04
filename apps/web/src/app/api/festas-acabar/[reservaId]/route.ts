@@ -11,7 +11,7 @@ const handleError = createRouteErrorHandler({
 
 type Params = { params: Promise<{ reservaId: string }> };
 
-// PATCH /api/festas-acabar/:reservaId — atualizar observações
+// PATCH /api/festas-acabar/:reservaId - atualizar observações
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);

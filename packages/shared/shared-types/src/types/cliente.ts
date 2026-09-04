@@ -1,5 +1,5 @@
 // ===================================
-// Cliente — Types for client management
+// Cliente - Types for client management
 // ===================================
 
 export interface Cliente {

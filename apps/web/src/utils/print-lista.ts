@@ -106,7 +106,7 @@ export function imprimirListaConvidados(
   const anvNomes =
     reserva.aniversariantes
       ?.map((a) => a.aniversariante.nome)
-      .join(", ") || "—";
+      .join(", ") || "-";
   const data = formatDate(reserva.data ? String(reserva.data) : "");
   const total = itens.length;
 
@@ -120,10 +120,10 @@ export function imprimirListaConvidados(
       ];
       if (mostrarCacifo) {
         colunas.push(
-          `<td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:70px;color:#666;">${item.cacifo != null ? "#" + item.cacifo : "—"}</td>`
+          `<td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:70px;color:#666;">${item.cacifo != null ? "#" + item.cacifo : "-"}</td>`
         );
       }
-      // Coluna de Notas — sempre visível (espaço para escrita manual)
+      // Coluna de Notas - sempre visível (espaço para escrita manual)
       colunas.push(
         `<td style="border:1px solid #bbb;padding:6px 10px;font-size:13px;color:#444;min-height:36px;">${item.notas ? escapeHtml(item.notas) : ""}</td>`
       );
@@ -141,7 +141,7 @@ export function imprimirListaConvidados(
       `<th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:center;width:70px;">Cacifo</th>`
     );
   }
-  // Coluna de Notas — sempre visível
+  // Coluna de Notas - sempre visível
   cabecalhoCols.push(
     `<th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Notas</th>`
   );
@@ -168,7 +168,7 @@ export function imprimirListaConvidados(
 <body>
   <h1>${escapeHtml(tituloFinal)}</h1>
   <div class="info">
-    Data: ${escapeHtml(data)} · Horário: ${escapeHtml(reserva.horario ?? "—")} · Sala: ${escapeHtml(reserva.local?.nome ?? "—")}
+    Data: ${escapeHtml(data)} · Horário: ${escapeHtml(reserva.horario ?? "-")} · Sala: ${escapeHtml(reserva.local?.nome ?? "-")}
   </div>
   <table>
     <thead>

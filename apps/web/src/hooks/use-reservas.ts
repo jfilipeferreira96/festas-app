@@ -207,7 +207,7 @@ export function useReservasConcluidas(data?: string) {
 /**
  * Verifica a disponibilidade de uma sala (sobreposição temporal).
  * Só executa quando data, horário, duração e sala estão preenchidos.
- * Aviso apenas — não bloqueia a submissão.
+ * Aviso apenas - não bloqueia a submissão.
  */
 export function useCheckDisponibilidade(params: {
   data?: string;

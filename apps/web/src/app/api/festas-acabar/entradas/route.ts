@@ -9,7 +9,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "FestasAcabar (Entradas)",
 });
 
-// GET /api/festas-acabar/entradas — entradas livres ativas para o balcão
+// GET /api/festas-acabar/entradas - entradas livres ativas para o balcão
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

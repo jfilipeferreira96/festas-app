@@ -47,7 +47,7 @@ try {
     console.log(`${name.padEnd(maxName + 2)}${String(c.n).padStart(6)} ${star}`);
   }
 
-  console.log("\n✅ Verificação concluída — as tabelas e dados existem na base de dados.");
+  console.log("\n✅ Verificação concluída - as tabelas e dados existem na base de dados.");
 } catch (err) {
   console.error("❌ Erro ao verificar:", err.code || err.message);
   process.exit(1);

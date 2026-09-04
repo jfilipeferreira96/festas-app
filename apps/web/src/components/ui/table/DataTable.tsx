@@ -279,7 +279,7 @@ function DataTable<T extends { id: string }>({
                   <TableCell key={String(column.key)} className="px-4 py-3 text-sm text-text-primary">
                     {column.render
                       ? column.render(row[column.key as keyof T], row)
-                      : String(row[column.key as keyof T] || "—")}
+                      : String(row[column.key as keyof T] || "-")}
                   </TableCell>
                 ))}
                 {(onEdit || onDelete || onView || renderActions) && canManage && (
@@ -328,7 +328,7 @@ function DataTable<T extends { id: string }>({
         </Table>
       </div>
 
-      {/* Optional footer row (e.g. totals) — rendered inside the table card */}
+      {/* Optional footer row (e.g. totals) - rendered inside the table card */}
       {footer && (
         <div className="border-t-2 border-border bg-gray-50">{footer}</div>
       )}

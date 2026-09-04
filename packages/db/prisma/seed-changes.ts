@@ -1,5 +1,5 @@
 /**
- * Changes seed — dados demo para verificação rápida das alterações
+ * Changes seed - dados demo para verificação rápida das alterações
  * dos vídeos 4, 5, 6 e 9 (fecho de caixa, extras, alertas, lanche,
  * festas-acabar / balcão).
  *
@@ -22,7 +22,7 @@ import { createPrismaClient } from "../src/mariadb-adapter";
 
 config({ path: "../../apps/web/.env" });
 
-// Driver adapter (mariadb) — ver packages/db/src/mariadb-adapter.ts
+// Driver adapter (mariadb) - ver packages/db/src/mariadb-adapter.ts
 const prisma = createPrismaClient(process.env.DATABASE_URL!);
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -39,7 +39,7 @@ async function main() {
   const now = new Date();
   const hoje = today();
 
-  // ─── Dependências mínimas (upsert — funciona com ou sem seed-dev) ───
+  // ─── Dependências mínimas (upsert - funciona com ou sem seed-dev) ───
   await prisma.cliente.upsert({
     where: { id: "cliente-v9-001" },
     update: {},
@@ -93,7 +93,7 @@ async function main() {
       tema: "Piratas",
       bolo: "NOSSO_1KG",
       boloTema: "Bolo de chocolate com barco pirata",
-      observacoesLesoes: "Tiago tem braceira no braço esquerdo — evitar piscina de bolas.",
+      observacoesLesoes: "Tiago tem braceira no braço esquerdo - evitar piscina de bolas.",
       notasCacifos: "Cacifos 20 e 21: alergia a glúten (separar bolo). Cacifo 22: meias em falta.",
       metodoPagamento: "DINHEIRO",
       valorPago: 0,
@@ -228,11 +228,11 @@ async function main() {
   });
 
   console.log("✅ Seed de alterações (vídeos 4/5/6/9) aplicado:");
-  console.log("   • reserva-v9-001  — festa EM_CURSO hoje NÃO PAGA (extras: 1 ✓ 1 ○)");
-  console.log("   • reserva-v9-002  — festa EM_CURSO hoje EXCEDIDA (paga)");
-  console.log("   • entrada-v9-001  — entrada ATIVA não paga, lanche por confirmar");
-  console.log("   • entrada-v9-002  — entrada ATIVA paga, lanche TERMINADO");
-  console.log("   • entrada-v9-003  — entrada ATIVA excedida e não paga");
+  console.log("   • reserva-v9-001  - festa EM_CURSO hoje NÃO PAGA (extras: 1 ✓ 1 ○)");
+  console.log("   • reserva-v9-002  - festa EM_CURSO hoje EXCEDIDA (paga)");
+  console.log("   • entrada-v9-001  - entrada ATIVA não paga, lanche por confirmar");
+  console.log("   • entrada-v9-002  - entrada ATIVA paga, lanche TERMINADO");
+  console.log("   • entrada-v9-003  - entrada ATIVA excedida e não paga");
 }
 
 main()

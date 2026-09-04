@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# deploy-festas.sh — DEPLOY DE PRODUÇÃO NUM COMANDO (Terminal do cPanel)
+# deploy-festas.sh - DEPLOY DE PRODUÇÃO NUM COMANDO (Terminal do cPanel)
 # ============================================================================
 # Resolve o problema do "stacking": o Restart do cPanel arranca um processo
 # novo mas NÃO mata o antigo, que fica órfão (PPID=1) a consumir 11 threads
@@ -21,7 +21,7 @@
 #   ✔ MATA todos os processos next-server/Passenger da conta (TERM→KILL)
 #   ✔ extrai o tarball por cima da app
 #   ✔ restaura .env e uploads/ preservados
-#   ✔ touch tmp/restart.txt (Passenger renasce limpo — só 1 processo)
+#   ✔ touch tmp/restart.txt (Passenger renasce limpo - só 1 processo)
 #   ✔ verifica: 1 processo, NLWP ≤ 15, HTTP 200/307
 #   ✖ em caso de falha → ROLLBACK automático (tarball anterior) se existir
 #
@@ -65,13 +65,13 @@ kill_app() {
   sleep 3
   # sobras que ignoraram o TERM → KILL
   if pgrep -u "$USER" -f "next-server" >/dev/null 2>&1; then
-    warn "Processos ignoraram SIGTERM — a forçar (SIGKILL)..."
+    warn "Processos ignoraram SIGTERM - a forçar (SIGKILL)..."
     pkill -9 -u "$USER" -f "next-server"      2>/dev/null
     pkill -9 -u "$USER" -f "PassengerNodeApp" 2>/dev/null
     sleep 1
   fi
   if pgrep -u "$USER" -f "next-server" >/dev/null 2>&1; then
-    fail "Ainda há processos next-server após SIGKILL — verifica manualmente: ps -u $USER -o pid,ppid,nlwp,args"
+    fail "Ainda há processos next-server após SIGKILL - verifica manualmente: ps -u $USER -o pid,ppid,nlwp,args"
   fi
   ok "Zero processos next-server (sem stacking)."
 }
@@ -79,7 +79,7 @@ kill_app() {
 # extrai um tarball para a app
 extract_to_app() {
   local tb="$1"
-  tar -xzf "$tb" -C "$APP" 2>>"$LOG" || fail "Extração falhou de '$tb' — verifica espaço em disco (quota) e permissões."
+  tar -xzf "$tb" -C "$APP" 2>>"$LOG" || fail "Extração falhou de '$tb' - verifica espaço em disco (quota) e permissões."
 }
 
 # reinício gracioso do Passenger
@@ -90,7 +90,7 @@ restart_passenger() {
 
 # rollback: re-extrai o tarball anterior mais recente (se existir) e reinicia
 rollback() {
-  warn "ROLLBACK — a restaurar o bundle anterior..."
+  warn "ROLLBACK - a restaurar o bundle anterior..."
   local prev
   prev=$(ls -1d "$BACKUP_ROOT"/*/deploy.tar.gz 2>/dev/null | grep -v "$BACKUP/" | sort -r | head -1)
   if [ -n "$prev" ]; then
@@ -110,7 +110,7 @@ rollback() {
 mkdir -p "$LOG_DIR"
 {
   echo ""
-  echo "================ $(date '+%F %T') — deploy-festas ================"
+  echo "================ $(date '+%F %T') - deploy-festas ================"
 } >> "$LOG"
 
 say "Deploy festas → $APP  (tarball: $TARBALL)"
@@ -161,12 +161,12 @@ mkdir -p "$APP/apps/web/public/uploads"
 PRISMA_DIR="$APP/node_modules_deps/.prisma/client"
 say "A validar cliente Prisma (engineType=client / WASM)..."
 if [ ! -f "$PRISMA_DIR/query_compiler_bg.wasm" ]; then
-  warn "query_compiler_bg.wasm em falta — bundle gerado sem engineType=\"client\"?"
+  warn "query_compiler_bg.wasm em falta - bundle gerado sem engineType=\"client\"?"
   rollback
 fi
 RUST=$(ls -1 "$PRISMA_DIR" 2>/dev/null | grep -c '\.node$')
 if [ "$RUST" -gt 0 ]; then
-  warn "Encontradas $RUST engines Rust (.node) no bundle — voltaria a criar ~64 threads!"
+  warn "Encontradas $RUST engines Rust (.node) no bundle - voltaria a criar ~64 threads!"
   rollback
 fi
 ok "Prisma WASM validado (query_compiler_bg.wasm, zero engines Rust)."
@@ -195,7 +195,7 @@ if [ "$FOUND" -eq 0 ]; then
   rollback
 fi
 if [ "$FOUND" -gt 1 ]; then
-  warn "Detectados $FOUND processos next-server (esperado: 1) — stacking!"
+  warn "Detectados $FOUND processos next-server (esperado: 1) - stacking!"
   # mata TODOS e deixa o Passenger renascer um único
   kill_app
   restart_passenger
@@ -203,14 +203,14 @@ if [ "$FOUND" -gt 1 ]; then
   curl -sk -o /dev/null --max-time 10 "$APP_URL" >/dev/null 2>&1
   FOUND=$(app_procs | wc -l)
   if [ "$FOUND" -gt 1 ]; then
-    fail "Ainda $FOUND processos após normalização — verifica: ps -u $USER -o pid,ppid,nlwp,args"
+    fail "Ainda $FOUND processos após normalização - verifica: ps -u $USER -o pid,ppid,nlwp,args"
   fi
 fi
 
 # NLWP do processo único
 NLWP=$(app_procs | head -1 | awk '{print $2}')
 if [ -n "$NLWP" ] && [ "$NLWP" -gt "$NLWP_MAX" ]; then
-  warn "Processo com NLWP=$NLWP (> $NLWP_MAX) — bundle com engine Rust?"
+  warn "Processo com NLWP=$NLWP (> $NLWP_MAX) - bundle com engine Rust?"
   rollback
 fi
 

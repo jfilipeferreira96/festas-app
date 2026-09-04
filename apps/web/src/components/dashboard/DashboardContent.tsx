@@ -52,7 +52,7 @@ interface MiniStatProps {
   hint?: string;
   icon: React.ReactNode;
   color: string;       // cor do ícone e do valor (hex)
-  bgColor?: string;    // cor de fundo do sub-card (opcional — se omitido, fica transparente)
+  bgColor?: string;    // cor de fundo do sub-card (opcional - se omitido, fica transparente)
 }
 
 const MiniStat = React.memo(function MiniStat({
@@ -162,7 +162,7 @@ const KPIGrid = React.memo(function KPIGrid() {
     );
   }
 
-  // ── Paletas por cartão (Opção A — 1 cor por cartão) ──
+  // ── Paletas por cartão (Opção A - 1 cor por cartão) ──
   // Reduz ruído visual: cada cartão usa apenas a sua cor de acento.
   const palette = {
     festas:   { fg: "#465fff", bg: "var(--color-brand-50)" },
@@ -210,7 +210,7 @@ const KPIGrid = React.memo(function KPIGrid() {
       >
         <MiniStat
           label="Ativas"
-          value={loadingCont ? "—" : contadores?.ativas ?? 0}
+          value={loadingCont ? "-" : contadores?.ativas ?? 0}
           hint="No espaço agora"
           icon={<DoorOpen size={16} />}
           color={palette.entradas.fg}
@@ -218,7 +218,7 @@ const KPIGrid = React.memo(function KPIGrid() {
         />
         <MiniStat
           label="Concluídas Hoje"
-          value={loadingCont ? "—" : contadores?.concluidasHoje ?? 0}
+          value={loadingCont ? "-" : contadores?.concluidasHoje ?? 0}
           hint={
             contadores
               ? `Total hoje: ${contadores.totalHoje}`
@@ -274,11 +274,11 @@ const KPIGrid = React.memo(function KPIGrid() {
 const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: ReservaEmCurso }) {
   const inicio = new Date(festa.inicioEm);
   const horaInicio = inicio.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-  const nomeSala = festa.local?.nome ?? "—";
-  const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "—";
+  const nomeSala = festa.local?.nome ?? "-";
+  const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "-";
 
   // Find the next pending etapa (first one not concluded, ordered by ordem)
-  // Etapas — oculto per pedido do cliente (12/07/2026). Mantém-se para retrocompatibilidade.
+  // Etapas - oculto per pedido do cliente (12/07/2026). Mantém-se para retrocompatibilidade.
   // const proximaEtapa = festa.etapas?.find(e => !e.concluida);
   // const todasConcluidas = festa.etapas?.length > 0 && festa.etapas.every(e => e.concluida);
 
@@ -292,7 +292,7 @@ const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: 
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {/* Etapas badge removido — substituído por estado simples */}
+        {/* Etapas badge removido - substituído por estado simples */}
         <StatusBadge status="EM_CURSO">Em curso</StatusBadge>
       </div>
     </div>
@@ -327,8 +327,8 @@ const FestasEmCursoSection = React.memo(function FestasEmCursoSection() {
 });
 
 const ProximaFestaRow = React.memo(function ProximaFestaRow({ festa }: { festa: ProximaFesta }) {
-  const nomeSala = festa.local?.nome ?? "—";
-  const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "—";
+  const nomeSala = festa.local?.nome ?? "-";
+  const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "-";
 
   const minutosAteInicio = React.useMemo(() => {
     const agora = new Date();

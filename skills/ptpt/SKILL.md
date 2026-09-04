@@ -1,4 +1,4 @@
-# SKILL — Localização PT-PT
+# SKILL - Localização PT-PT
 
 Padrão obrigatório para datas, horas, moeda, números e textos de UI.
 Nunca usar formatos en-US ou PT-BR nesta aplicação.
@@ -95,7 +95,7 @@ formatarTelefone('912345678')  // → "912 345 678"
 | Registar | Registrar |
 | Configuração | Configuração (igual) |
 
-## Mensagens de UI — padrões
+## Mensagens de UI - padrões
 
 ### Confirmações de acção destrutiva
 > "Tens a certeza que queres eliminar esta reserva? Esta acção não pode ser revertida."
@@ -127,7 +127,7 @@ O `date-fns` com locale `pt` trata disto automaticamente.
 Nunca hardcodar nomes de dias ou meses em português.
 
 ```ts
-// Correcto — deixar o date-fns tratar
+// Correcto - deixar o date-fns tratar
 format(data, 'EEEE', { locale: pt })  // → "segunda-feira"
 format(data, 'MMMM', { locale: pt })  // → "maio"
 

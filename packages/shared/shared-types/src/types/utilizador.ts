@@ -1,5 +1,5 @@
 // ===================================
-// Utilizador — Types for user management
+// Utilizador - Types for user management
 // ===================================
 
 export type FuncaoUtilizador = "ADMINISTRADOR" | "LANCHE" | "CACIFOS" | "MONITOR" | "FESTAS_ACABAR" | "STAFF" | "RECECAO";

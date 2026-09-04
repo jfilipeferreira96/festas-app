@@ -77,7 +77,7 @@ try {
   console.log(`Total:                   ${String(totalRows).padStart(6)}`);
 
   await connection.end();
-  console.log("\n✅ Verificação concluída — os dados existem na base de dados REMOTA.");
+  console.log("\n✅ Verificação concluída - os dados existem na base de dados REMOTA.");
 } catch (error) {
   console.error("\n❌ Erro ao conectar à base de dados remota:");
   console.error(error.message);

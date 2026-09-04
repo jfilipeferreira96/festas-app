@@ -72,7 +72,7 @@ const StatusStepper: React.FC<StatusStepperProps> = ({
               </div>
               {!compact && (
                 <span className="text-[11px] font-medium text-accent-red whitespace-nowrap">
-                  {index === 0 ? "Cancelada" : "—"}
+                  {index === 0 ? "Cancelada" : "-"}
                 </span>
               )}
             </div>

@@ -41,7 +41,7 @@ const DbBadge: React.FC = () => {
   const [dbInfo, setDbInfo] = useState<DbInfoData | null>(null);
 
   useEffect(() => {
-    // Apenas em desenvolvimento — em produção a API retorna 404
+    // Apenas em desenvolvimento - em produção a API retorna 404
     if (process.env.NODE_ENV === "production") return;
 
     fetch("/api/db-info")

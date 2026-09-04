@@ -1,5 +1,5 @@
 /**
- * Labels para o tipo de bolo — usados em FestaDetailModal e FestasTabela
+ * Labels para o tipo de bolo - usados em FestaDetailModal e FestasTabela
  */
 export const BOLO_LABELS: Record<string, string> = {
   PAIS_TRAZEM: "Pais trazem o bolo",

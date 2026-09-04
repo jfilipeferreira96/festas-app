@@ -1,5 +1,5 @@
 // ===================================
-// AlocacaoMonitor — Escalação de monitores por dia + intervalo horário
+// AlocacaoMonitor - Escalação de monitores por dia + intervalo horário
 // ===================================
 
 export interface AlocacaoMonitor {

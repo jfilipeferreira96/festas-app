@@ -140,9 +140,9 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   }, [tab, dataSelecionada, toLocalISO, tomorrowISO]);
 
   const { data: reservas, isLoading } = useReservas(filtros);
-  // Relógio partilhado — alerta de festas a acabar (≤15 min) na tabela
+  // Relógio partilhado - alerta de festas a acabar (≤15 min) na tabela
   const now = useNow(30_000);
-  // Slots do dia (para slots vazios) — só quando há dia único
+  // Slots do dia (para slots vazios) - só quando há dia único
   const { data: slotsDia } = useSlotsDia(diaUnico ?? "");
   // Definições estáticas de slots (para label do slot na coluna Data/Hora)
   const { data: slotsHorario } = useSlotsHorario();
@@ -265,7 +265,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
     <div>
       <PageHeader
         title="Festas"
-        subtitle={`Gestão de festas — ${periodoLabel}`}
+        subtitle={`Gestão de festas - ${periodoLabel}`}
       />
 
       {/* Navegação por data (card próprio, separado das tabs) */}
@@ -347,7 +347,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             label: "Aniversariante",
             sortable: true,
             render: (_v, r) => {
-              const anvNomes = r.aniversariantes?.map(a => a.aniversariante.nome).filter(Boolean).join(", ") || "—";
+              const anvNomes = r.aniversariantes?.map(a => a.aniversariante.nome).filter(Boolean).join(", ") || "-";
               const idades = r.aniversariantes
                 ?.filter(a => a.aniversariante?.dataNascimento)
                 .map(a => `${differenceInYears(new Date(r.data ?? new Date()), new Date(a.aniversariante.dataNascimento!))} anos`)
@@ -370,7 +370,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             label: "Encarregado",
             render: (_v, r) => (
               <div>
-                <p className="text-sm font-medium text-text-primary">{r.cliente?.nome ?? "—"}</p>
+                <p className="text-sm font-medium text-text-primary">{r.cliente?.nome ?? "-"}</p>
                 <p className="text-xs text-text-muted">
                   {r.cliente?.telefone ?? ""}
                   {r.cliente?.telefone && r.cliente?.email ? " · " : ""}
@@ -406,7 +406,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             key: "local",
             label: "Sala",
             render: (_v, r) => (
-              <span className="text-sm text-text-secondary">{r.local?.nome ?? "—"}</span>
+              <span className="text-sm text-text-secondary">{r.local?.nome ?? "-"}</span>
             ),
           },
           {
@@ -414,7 +414,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             label: "Lanche",
             render: (_v, r) => {
               if (!r.horaLanche && !r.salaLancheNome) {
-                return <span className="text-sm text-text-muted">—</span>;
+                return <span className="text-sm text-text-muted">-</span>;
               }
               return (
                 <div className="min-w-[90px]">
@@ -517,7 +517,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             render: (_v, r) => {
               const hasBolo = !!r.bolo;
               const hasMenu = !!r.menu;
-              if (!hasBolo && !hasMenu) return <span className="text-sm text-text-muted">—</span>;
+              if (!hasBolo && !hasMenu) return <span className="text-sm text-text-muted">-</span>;
               return (
                 <div>
                   {hasBolo && (
@@ -540,7 +540,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             label: "Extras",
             render: (_v, r) => {
               const extras = r.extras ?? [];
-              if (extras.length === 0) return <span className="text-sm text-text-muted">—</span>;
+              if (extras.length === 0) return <span className="text-sm text-text-muted">-</span>;
               return (
                 <div className="flex flex-col gap-1 min-w-[120px]">
                   {extras.map((re) => (
@@ -550,7 +550,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                       onClick={() => toggleReservaExtra.mutate(re.id)}
                       disabled={toggleReservaExtra.isPending}
                       className="flex items-center gap-1.5 text-left group/extra disabled:opacity-50"
-                      title={re.concluido ? "Entregue — clicar para reabrir" : "Marcar como entregue"}
+                      title={re.concluido ? "Entregue - clicar para reabrir" : "Marcar como entregue"}
                     >
                       <CheckCircle2
                         size={14}
@@ -770,7 +770,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         </Modal>
       )}
 
-      {/* Detail Modal — shared self-contained modal */}
+      {/* Detail Modal - shared self-contained modal */}
       <FestaDetailModal
         reservaId={viewingReservaId}
         onClose={() => setViewingReservaId(null)}
@@ -845,15 +845,15 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             <div className="bg-surface rounded-lg border border-border p-4 space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Aniversariante</span>
-                <span className="text-text-primary font-medium">{iniciarFestaReserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || "—"}</span>
+                <span className="text-text-primary font-medium">{iniciarFestaReserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || "-"}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Encarregado</span>
-                <span className="text-text-primary">{iniciarFestaReserva.cliente?.nome ?? "—"}</span>
+                <span className="text-text-primary">{iniciarFestaReserva.cliente?.nome ?? "-"}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Sala</span>
-                <span className="text-text-primary">{iniciarFestaReserva.local?.nome ?? "—"}</span>
+                <span className="text-text-primary">{iniciarFestaReserva.local?.nome ?? "-"}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Nº Crianças</span>

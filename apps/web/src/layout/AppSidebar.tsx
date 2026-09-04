@@ -154,7 +154,7 @@ const configItems: NavItem = {
       icon: <UtensilsCrossed className="w-4 h-4" />,
       modulo: "configuracoes",
     },
-    // Etapas Festa — hidden per client request (12/07/2026)
+    // Etapas Festa - hidden per client request (12/07/2026)
     // {
     //   name: "Etapas Festa",
     //   path: "/configuracoes/etapas-festa",
@@ -298,7 +298,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
             ))}
           </ul>
 
-          {/* Configurações Section — only show if at least one sub-item is visible */}
+          {/* Configurações Section - only show if at least one sub-item is visible */}
           {(() => {
             const visibleConfigItems = configItems.subItems?.filter(
               (subItem) => !subItem.modulo || permissoesLoading || canRead(subItem.modulo)

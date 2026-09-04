@@ -1,5 +1,5 @@
 // ===================================
-// @saas/shared-types — Gestão de Festas Infantis
+// @saas/shared-types - Gestão de Festas Infantis
 // ===================================
 
 // Types

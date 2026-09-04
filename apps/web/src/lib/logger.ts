@@ -48,7 +48,7 @@ class Logger {
       level: isProduction ? "info" : "debug",
       format: fileFormat,
       transports: [
-        // Error logs — keep for 30 days
+        // Error logs - keep for 30 days
         new DailyRotateFile({
           filename: path.join(logsDir, "error-%DATE%.log"),
           datePattern: "YYYY-MM-DD",
@@ -56,7 +56,7 @@ class Logger {
           maxSize: "20m",
           maxFiles: "30d",
         }),
-        // HTTP request logs — separate file, keep for 14 days
+        // HTTP request logs - separate file, keep for 14 days
         new DailyRotateFile({
           filename: path.join(logsDir, "http-%DATE%.log"),
           datePattern: "YYYY-MM-DD",
@@ -64,7 +64,7 @@ class Logger {
           maxSize: "20m",
           maxFiles: "14d",
         }),
-        // Combined logs — keep for 14 days
+        // Combined logs - keep for 14 days
         new DailyRotateFile({
           filename: path.join(logsDir, "combined-%DATE%.log"),
           datePattern: "YYYY-MM-DD",

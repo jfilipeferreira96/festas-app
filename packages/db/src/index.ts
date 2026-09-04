@@ -11,7 +11,7 @@ import { createPrismaClient } from "./mariadb-adapter";
  * Targets disponíveis:
  *   local-prod   → DATABASE_URL_LOCAL_PROD  (default)
  *   local-test   → DATABASE_URL_LOCAL_TEST
- *   remote-prod  → DATABASE_URL_REMOTE_PROD (cPanel — DADOS REAIS!)
+ *   remote-prod  → DATABASE_URL_REMOTE_PROD (cPanel - DADOS REAIS!)
  */
 export type DbTarget = "local-prod" | "local-test" | "remote-prod";
 
@@ -133,7 +133,7 @@ function printDbBanner(info: DbInfo) {
 
   const lines = [
     `${c}╔══════════════════════════════════════════════╗${colors.reset}`,
-    `${c}║  ${icon}  DATABASE — Baselandia                     ${c}║${colors.reset}`,
+    `${c}║  ${icon}  DATABASE - Baselandia                     ${c}║${colors.reset}`,
     `${c}║  Target:    ${info.target.padEnd(34)}║${colors.reset}`,
     `${c}║  Host:      ${(info.host + ":" + info.port).padEnd(34)}║${colors.reset}`,
     `${c}║  Schema:    ${info.schema.padEnd(34)}║${colors.reset}`,
@@ -143,7 +143,7 @@ function printDbBanner(info: DbInfo) {
 
   if (info.isRemote) {
     lines.push(`${colors.red}${colors.bold}⚠️  ATENÇÃO: LIGADO À BD REMOTA DE PRODUÇÃO!${colors.reset}`);
-    lines.push(`${colors.red}   Dados reais — cuidado com alterações.${colors.reset}`);
+    lines.push(`${colors.red}   Dados reais - cuidado com alterações.${colors.reset}`);
   }
 
   console.log(lines.join("\n"));

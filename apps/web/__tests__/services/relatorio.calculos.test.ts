@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock do Prisma — os testes abaixo usam as funções PURAS de cálculo (sem BD).
+// Mock do Prisma - os testes abaixo usam as funções PURAS de cálculo (sem BD).
 vi.mock("@festas/db", () => ({
   default: {},
 }));
@@ -30,7 +30,7 @@ function somaValores(linha: LinhaRelatorio): number {
   );
 }
 
-describe("Relatório — Cálculos puros (sem BD)", () => {
+describe("Relatório - Cálculos puros (sem BD)", () => {
   // ── calcularFestas ───────────────────────────────────────────
   describe("calcularFestas()", () => {
     it("soma CARTÃO e OUTRO (não se perdem)", () => {

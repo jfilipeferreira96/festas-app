@@ -19,7 +19,7 @@ const SCHEMA = join(DB_ROOT, "prisma", "schema.prisma");
 const MIGRATIONS_DIR = join(DB_ROOT, "prisma", "migrations");
 const ENV_FILE = resolve(DB_ROOT, "..", "..", "apps", "web", ".env");
 
-// Load env with ABSOLUTE path — ensures DATABASE_URL is always available
+// Load env with ABSOLUTE path - ensures DATABASE_URL is always available
 if (existsSync(ENV_FILE)) {
   dotenv.config({ path: ENV_FILE });
 } else {
@@ -60,7 +60,7 @@ const command = process.argv[2];
 if (!command) {
   console.error("❌ Usage: node scripts/db.js <command> [--target=prod|test]");
   console.error("   Commands: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev, seed:prod");
-  console.error("   Target:   --target=prod|test (ou env DB_TARGET) — escolhe a BD (default: prod)");
+  console.error("   Target:   --target=prod|test (ou env DB_TARGET) - escolhe a BD (default: prod)");
   process.exit(1);
 }
 
@@ -199,7 +199,7 @@ switch (command) {
       // Use migrate reset when we have valid migrations (skip auto-generate to avoid EPERM)
       run(prisma(`migrate reset --force --skip-generate --schema "${SCHEMA}"`));
     } else {
-      // No valid migrations — use db push approach (skip auto-generate to avoid EPERM)
+      // No valid migrations - use db push approach (skip auto-generate to avoid EPERM)
       console.log("   No valid migrations found. Using db push approach.\n");
       cleanMigrations();
       cleanStaleEnums();
@@ -260,7 +260,7 @@ switch (command) {
   }
 
   case "seed:changes": {
-    // Seed de verificação rápida das alterações (vídeos 4/5/6/9) — complementa o seed-dev.
+    // Seed de verificação rápida das alterações (vídeos 4/5/6/9) - complementa o seed-dev.
     const seedPath = join(DB_ROOT, "prisma", "seed-changes.ts");
     run(`npx tsx "${seedPath}"`);
     break;
@@ -269,6 +269,6 @@ switch (command) {
   default:
     console.error(`❌ Unknown command: ${command}`);
     console.error("   Available: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev, seed:prod, seed:changes");
-    console.error("   Target:    --target=prod|test (ou env DB_TARGET) — escolhe a BD (default: prod)");
+    console.error("   Target:    --target=prod|test (ou env DB_TARGET) - escolhe a BD (default: prod)");
     process.exit(1);
 }

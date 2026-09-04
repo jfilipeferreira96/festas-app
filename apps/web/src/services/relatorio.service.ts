@@ -32,7 +32,7 @@ type AccMetodo = Pick<
 
 /**
  * Soma um valor ao acumulador certo, consoante o método de pagamento.
- * Todos os 6 métodos têm coluna própria — nenhum valor se perde.
+ * Todos os 6 métodos têm coluna própria - nenhum valor se perde.
  */
 function somarPorMetodo(acc: AccMetodo, metodo: string | null | undefined, valor: number): void {
   if (valor <= 0) return;
@@ -147,7 +147,7 @@ export const relatorioService = {
   /**
    * Gera relatório financeiro completo para um intervalo de datas.
    * Agrega dados de Reservas (festas) e Entradas Livres.
-   * Só mostra linhas com dados reais — sem linhas hardcoded.
+   * Só mostra linhas com dados reais - sem linhas hardcoded.
    *
    * Inclui festas: CONCLUIDA, EM_CURSO e CONFIRMADAS que estejam pagas.
    */
@@ -202,7 +202,7 @@ export const relatorioService = {
     );
     const ajustesSecao = this.calcularAjustes(ajustes as unknown as AjusteRelatorio[]);
 
-    // Nota: ajustes NÃO somam ao total geral — são write-through (já incluídos
+    // Nota: ajustes NÃO somam ao total geral - são write-through (já incluídos
     // em valorPago/custoTotalFinal das festas/entradas). Secção de auditoria.
     const totalGeral = somarLinhas(
       [festas.total, entradasLivresSecao.total, outros.total],
@@ -224,7 +224,7 @@ export const relatorioService = {
    * Secção 1: Festas de Aniversário
    * Agrupa reservas por tipo de menu.
    * Soma o valor pago (método 1 + método 2 do pagamento dividido).
-   * Sem fallback hardcoded — se não há festas, não há linhas.
+   * Sem fallback hardcoded - se não há festas, não há linhas.
    */
   calcularFestas(reservas: ReservaRelatorio[]): SecaoRelatorio {
     const grupos = new Map<string, LinhaRelatorio>();
@@ -297,7 +297,7 @@ export const relatorioService = {
 
   /**
    * Secção 3: Outros
-   * Cauções, Excesso de Tempo (festas), Meias e Brindes — apenas dados reais.
+   * Cauções, Excesso de Tempo (festas), Meias e Brindes - apenas dados reais.
    */
   calcularOutros(reservas: ReservaRelatorio[], entradas: EntradaRelatorio[]): SecaoRelatorio {
     const lCaucoes40 = criarLinhaVazia("Cauções 40€");
@@ -374,7 +374,7 @@ export const relatorioService = {
    * Secção 4: Ajustes de Pagamento (informativa)
    * Acréscimos cobrados, descontos concedidos e redefinições de preço.
    *
-   * IMPORTANTE: os ajustes são write-through — o valor final da festa/entrada
+   * IMPORTANTE: os ajustes são write-through - o valor final da festa/entrada
    * já reflecte o acerto. Por isso esta secção é apenas auditoria e NÃO soma
    * ao totalGeral (evitar dupla contagem).
    */

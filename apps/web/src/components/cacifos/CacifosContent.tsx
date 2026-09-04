@@ -56,7 +56,7 @@ const FILTER_OPTIONS = [
   { value: "RESERVADO", label: "Reservados" },
 ];
 
-/** Converte Date para ISO (YYYY-MM-DD) em horário LOCAL — evita o desvio
+/** Converte Date para ISO (YYYY-MM-DD) em horário LOCAL - evita o desvio
  *  de dia do toISOString() (UTC), crítico em fusos como Europe/Lisbon. */
 function toLocalISO(date: Date): string {
   const mes = String(date.getMonth() + 1).padStart(2, "0");
@@ -114,7 +114,7 @@ export default function CacifosContent() {
         "Festa";
       for (let i = 0; i < alvo; i++) {
         const cacifoId = livres.shift();
-        if (!cacifoId) break; // pool esgotado — capacidade do dia excedida
+        if (!cacifoId) break; // pool esgotado - capacidade do dia excedida
         map.set(cacifoId, { id: festa.id, nome, horario: festa.horario });
       }
     }
@@ -248,7 +248,7 @@ export default function CacifosContent() {
     imprimirListaConvidados(
       { data: selectedDate },
       cacifos ?? [],
-      `Cacifos — ${formattedDate}`
+      `Cacifos - ${formattedDate}`
     );
   }, [selectedDate, cacifos, formattedDate]);
 
@@ -256,7 +256,7 @@ export default function CacifosContent() {
     <div className="space-y-5">
       <PageHeader
         title="Cacifos"
-        subtitle={`Vista geral dos cacifos — ${formattedDate}`}
+        subtitle={`Vista geral dos cacifos - ${formattedDate}`}
       />
 
       {/* Alerta de cacifos esquecidos */}
@@ -296,7 +296,7 @@ export default function CacifosContent() {
           </div>
           <div>
             <p className="text-xs text-text-muted">Livres</p>
-            <p className="text-lg font-bold text-accent-green-600">{contadores?.livres ?? "—"}</p>
+            <p className="text-lg font-bold text-accent-green-600">{contadores?.livres ?? "-"}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
@@ -305,7 +305,7 @@ export default function CacifosContent() {
           </div>
           <div>
             <p className="text-xs text-text-muted">Ocupados</p>
-            <p className="text-lg font-bold text-accent-red-600">{contadores?.ocupados ?? "—"}</p>
+            <p className="text-lg font-bold text-accent-red-600">{contadores?.ocupados ?? "-"}</p>
           </div>
         </div>
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
@@ -314,7 +314,7 @@ export default function CacifosContent() {
           </div>
           <div>
             <p className="text-xs text-text-muted">Reservados</p>
-            <p className="text-lg font-bold text-brand-600">{contadores?.reservados ?? "—"}</p>
+            <p className="text-lg font-bold text-brand-600">{contadores?.reservados ?? "-"}</p>
           </div>
         </div>
       </div>
@@ -337,7 +337,7 @@ export default function CacifosContent() {
               className="w-44"
             />
 
-            {/* Estado filter — sem sentido na vista de planeamento (estado = lógica de hoje) */}
+            {/* Estado filter - sem sentido na vista de planeamento (estado = lógica de hoje) */}
             {!isFutura && (
             <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-1">
               {FILTER_OPTIONS.map((opt) => (
@@ -393,7 +393,7 @@ export default function CacifosContent() {
         <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-text-primary uppercase tracking-wider">
-              Festas do dia — {formattedDate}
+              Festas do dia - {formattedDate}
             </p>
             <span className="text-xs text-text-muted bg-gray-50 px-2.5 py-1 rounded-full font-medium">
               {festas.length} {festas.length === 1 ? "festa" : "festas"}
@@ -401,7 +401,7 @@ export default function CacifosContent() {
           </div>
           <div className="flex flex-wrap gap-2">
             {festas.map((festa) => {
-              const anvNome = festa.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "—";
+              const anvNome = festa.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "-";
               const isFiltered = filtroFesta === festa.id;
               return (
                 <div
@@ -426,7 +426,7 @@ export default function CacifosContent() {
                       {festa.horario} · {festa.local?.nome ?? ""}
                     </span>
                   </button>
-                  {/* Botão Preencher cacifos — indisponível na vista de planeamento */}
+                  {/* Botão Preencher cacifos - indisponível na vista de planeamento */}
                   {!isFutura && (
                     <button
                       onClick={() => setSelectedReservaId(festa.id)}
@@ -448,13 +448,13 @@ export default function CacifosContent() {
         </div>
       )}
 
-      {/* Entradas Livres summary — atribuir cacifos */}
+      {/* Entradas Livres summary - atribuir cacifos */}
       {entradasLivresHoje.length > 0 && (
         <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-1.5">
               <DoorOpen size={14} className="text-brand-500" />
-              Entradas Livres — {formattedDate}
+              Entradas Livres - {formattedDate}
             </p>
             <span className="text-xs text-text-muted bg-gray-50 px-2.5 py-1 rounded-full font-medium">
               {entradasLivresHoje.length} {entradasLivresHoje.length === 1 ? "entrada" : "entradas"}
@@ -468,7 +468,7 @@ export default function CacifosContent() {
                 return 0;
               })
               .map((entrada) => {
-              const criancaNomes = (entrada.criancas as Array<{ nome: string }> | null)?.map(c => c.nome).join(", ") || "—";
+              const criancaNomes = (entrada.criancas as Array<{ nome: string }> | null)?.map(c => c.nome).join(", ") || "-";
               const hasCacifo = !!entrada.cacifoId;
               return (
                 <div
@@ -492,7 +492,7 @@ export default function CacifosContent() {
                     ) : isFutura ? (
                       /* Vista de planeamento: leitura apenas (atribuição só no próprio dia) */
                       <div className="flex items-center justify-center h-9 rounded-lg border border-border bg-gray-50 text-[10px] text-text-muted">
-                        {entrada.cacifo ? `#${entrada.cacifo.numero}` : "—"}
+                        {entrada.cacifo ? `#${entrada.cacifo.numero}` : "-"}
                       </div>
                     ) : (
                       <Select
@@ -532,7 +532,7 @@ export default function CacifosContent() {
       ) : cacifos && cacifos.length > 0 ? (
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
           {cacifosVisiveis.map((cacifo) => {
-            // Vista de planeamento: ignora o estado atual (lógica de hoje) —
+            // Vista de planeamento: ignora o estado atual (lógica de hoje) -
             // no dia futuro todos os cacifos estarão livres; mostra apenas o planeado.
             const estado = isFutura ? "LIVRE" : cacifo.estado;
             const style = ESTADO_STYLES[estado] ?? {
@@ -544,13 +544,13 @@ export default function CacifosContent() {
               !isFutura &&
               estado === "RESERVADO" &&
               (!cacifo.criancas || !cacifo.criancas.trim() || cacifo.criancas === "Por preencher");
-            // Preview "Planeado" — só existe em datas futuras.
+            // Preview "Planeado" - só existe em datas futuras.
             const previewFesta = isFutura ? preview.get(cacifo.id) : undefined;
             return (
               <button
                 key={cacifo.id}
                 onClick={() => {
-                  // Vista de planeamento é leitura apenas — sem modais nem associações.
+                  // Vista de planeamento é leitura apenas - sem modais nem associações.
                   if (isFutura) return;
                   setSelectedCacifo(cacifo);
                 }}
@@ -671,8 +671,8 @@ export default function CacifosContent() {
             <div className="space-y-2 mb-5">
               {selectedCacifo.reserva && (
                 <>
-                  <DetailRow label="Aniversariante" value={selectedCacifo.reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || selectedCacifo.reserva.cliente?.nome || "—"} />
-                  <DetailRow label="Sala" value={selectedCacifo.reserva.local?.nome ?? "—"} />
+                  <DetailRow label="Aniversariante" value={selectedCacifo.reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || selectedCacifo.reserva.cliente?.nome || "-"} />
+                  <DetailRow label="Sala" value={selectedCacifo.reserva.local?.nome ?? "-"} />
                   {selectedCacifo.reserva.notasCacifos && (
                     <div className="px-3 py-2.5 rounded-lg bg-accent-orange-50 border border-accent-orange-200">
                       <p className="text-[10px] font-semibold text-accent-orange-700 uppercase tracking-wider mb-0.5">Notas Cacifos (Reserva)</p>
@@ -699,7 +699,7 @@ export default function CacifosContent() {
                     <p className="text-xs font-medium text-text-muted mb-1.5 flex items-center gap-1"><Cake size={11} /> Festas</p>
                     <div className="flex flex-wrap gap-2">
                       {festas.map((f) => {
-                        const anvNome = f.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || f.cliente?.nome || "—";
+                        const anvNome = f.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || f.cliente?.nome || "-";
                         return (
                           <button
                             key={f.id}
@@ -725,7 +725,7 @@ export default function CacifosContent() {
                     <p className="text-xs font-medium text-text-muted mb-1.5 flex items-center gap-1"><DoorOpen size={11} /> Entradas Livres</p>
                     <div className="flex flex-wrap gap-2">
                       {entradasLivresHoje.filter(e => !e.cacifoId).map((e) => {
-                        const criancaNomes = (e.criancas as Array<{ nome: string }> | null)?.map(c => c.nome).join(", ") || "—";
+                        const criancaNomes = (e.criancas as Array<{ nome: string }> | null)?.map(c => c.nome).join(", ") || "-";
                         return (
                           <button
                             key={e.id}

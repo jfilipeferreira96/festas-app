@@ -1,4 +1,4 @@
-# SKILL — Base de Dados
+# SKILL - Base de Dados
 
 Padrão para queries, migrações, relações e convenções da base de dados.
 
@@ -102,7 +102,7 @@ enum EstadoCampanha {
 
 ## Modelos e relações principais
 
-> **Conceito chave:** `Reserva` é unificada com `Festa` — não existe modelo `Festa` separado. Quando uma reserva passa a `EM_CURSO`, os campos de runtime (`inicioEm`, `fimPrevisto`, `fimReal`) são preenchidos na própria reserva. O antigo modelo `ItemMenu` foi removido; `Menu` é simplificado para `nome` + `preco`.
+> **Conceito chave:** `Reserva` é unificada com `Festa` - não existe modelo `Festa` separado. Quando uma reserva passa a `EM_CURSO`, os campos de runtime (`inicioEm`, `fimPrevisto`, `fimReal`) são preenchidos na própria reserva. O antigo modelo `ItemMenu` foi removido; `Menu` é simplificado para `nome` + `preco`.
 
 ### Autenticação (Better Auth)
 
@@ -397,7 +397,7 @@ model Menu {
 
 > **Nota:** O modelo `ItemMenu` foi removido. O `Menu` agora tem apenas `nome` e `preco`.
 
-### Marketing — Campanhas & Newsletter
+### Marketing - Campanhas & Newsletter
 
 ```prisma
 model Segmento {
@@ -443,7 +443,7 @@ model EnvioCampanha {
 }
 ```
 
-### Sistema — Audit Log & Notas Rápidas
+### Sistema - Audit Log & Notas Rápidas
 
 ```prisma
 model AuditLog {
@@ -464,7 +464,7 @@ model NotaRapida {
 }
 ```
 
-### RBAC — Funções & Permissões (HARDCODED)
+### RBAC - Funções & Permissões (HARDCODED)
 
 > O modelo `FuncaoPermissao` foi removido. As permissões são definidas em código (`apps/web/src/lib/permissoes.ts`).
 >
@@ -479,11 +479,11 @@ model NotaRapida {
 > - `FESTAS_ACABAR` → `/festas-acabar`
 >
 > **Matriz:**
-> - `ADMINISTRADOR` — administração em todos os módulos.
-> - `LANCHE` — `lanche` (escrita), `menus` (leitura).
-> - `CACIFOS` — `cacifos` (escrita), `reservas` (leitura).
-> - `MONITOR` — `monitores` (leitura).
-> - `FESTAS_ACABAR` — `festas_acabar` (escrita).
+> - `ADMINISTRADOR` - administração em todos os módulos.
+> - `LANCHE` - `lanche` (escrita), `menus` (leitura).
+> - `CACIFOS` - `cacifos` (escrita), `reservas` (leitura).
+> - `MONITOR` - `monitores` (leitura).
+> - `FESTAS_ACABAR` - `festas_acabar` (escrita).
 
 ## Regras de negócio na camada de dados
 
@@ -493,7 +493,7 @@ model NotaRapida {
 
 ### Ao transitar para `EM_CURSO`
 - Registar `inicioEm` e calcular `fimPrevisto` na própria reserva
-- A reserva passa a funcionar como "festa" — os campos de runtime são preenchidos
+- A reserva passa a funcionar como "festa" - os campos de runtime são preenchidos
 
 ### Ao transitar para `CONCLUIDA`
 - Registar `fimReal` na reserva
@@ -577,6 +577,6 @@ vi.mock("@festas/db", () => ({
 
 ## Database scripts
 
-- `packages/db/scripts/db.js` — Operações: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev
-- `packages/db/scripts/fix-enum.sql` — SQL para limpar stale enum types (`_old` suffix) antes do `db push`
+- `packages/db/scripts/db.js` - Operações: generate, push, push:force, migrate, studio, reset, clean, seed, seed:dev
+- `packages/db/scripts/fix-enum.sql` - SQL para limpar stale enum types (`_old` suffix) antes do `db push`
 - Os comandos `clean` e `reset` limpam automaticamente stale enums para evitar erros PostgreSQL

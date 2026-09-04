@@ -8,7 +8,7 @@ export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo };
 // API response type (base + relations from API)
 export interface Reserva extends ReservaBase {
   local: Local;
-  // Estado do lanche (NAO_INICIADO | A_DECORRER | TERMINADO) — devolvido pela API
+  // Estado do lanche (NAO_INICIADO | A_DECORRER | TERMINADO) - devolvido pela API
   estadoLanche?: string;
   salaLanche?: { id: string; nome: string } | null;
   cliente: { id: string; nome: string; email?: string; telefone: string; codigoPostal?: string };
@@ -22,12 +22,12 @@ export interface Reserva extends ReservaBase {
 
 // Helper to get first aniversariante name from array
 export function getAniversarianteNome(r: Reserva): string {
-  return r.aniversariantes?.[0]?.aniversariante?.nome ?? "—";
+  return r.aniversariantes?.[0]?.aniversariante?.nome ?? "-";
 }
 
 // Helper to get all aniversariante names
 export function getAniversarianteNomes(r: Reserva): string {
-  return r.aniversariantes?.map(a => a.aniversariante.nome).filter(Boolean).join(", ") || "—";
+  return r.aniversariantes?.map(a => a.aniversariante.nome).filter(Boolean).join(", ") || "-";
 }
 
 export interface MenuItemInput {

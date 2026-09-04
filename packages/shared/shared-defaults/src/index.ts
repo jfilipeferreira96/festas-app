@@ -1,5 +1,5 @@
 // ===================================
-// @saas/shared-defaults — Gestão de Festas Infantis
+// @saas/shared-defaults - Gestão de Festas Infantis
 // ===================================
 
 export { EXTRAS_DEFAULTS } from "./defaults/extras-defaults";

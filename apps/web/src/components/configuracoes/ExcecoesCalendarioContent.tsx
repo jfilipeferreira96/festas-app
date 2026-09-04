@@ -188,7 +188,7 @@ export default function ExcecoesCalendarioContent() {
     setDeleteModal({ isOpen: false, id: "", nome: "" });
   }, [deleteExcecao, deleteModal.id]);
 
-  // DatePicker (flatpickr) callback — converte Date selecionado para yyyy-MM-dd
+  // DatePicker (flatpickr) callback - converte Date selecionado para yyyy-MM-dd
   const onDataDateChange = useCallback(
     (selectedDates: Date[]) => {
       const d = selectedDates?.[0];

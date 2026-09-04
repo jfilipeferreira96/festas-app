@@ -117,21 +117,21 @@ export default function ConfigPrecosContent() {
         </p>
       </div>
 
-      {/* Festas card — preço por criança */}
+      {/* Festas card - preço por criança */}
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-accent-orange-100 flex items-center justify-center">
             <PartyPopper className="w-5 h-5 text-accent-orange-600" />
           </div>
           <div>
-            <h3 className="font-poppins text-lg font-semibold text-text-primary">Festas — preço por criança</h3>
+            <h3 className="font-poppins text-lg font-semibold text-text-primary">Festas - preço por criança</h3>
             <p className="text-xs text-text-muted">Valor por criança faturada (mínimo aplicado conforme aniversariantes)</p>
           </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">
-              Dia de semana (2ª a 6ª) — por criança
+              Dia de semana (2ª a 6ª) - por criança
             </label>
             <div className="relative">
               <InputField
@@ -148,7 +148,7 @@ export default function ConfigPrecosContent() {
           </div>
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">
-              Fim de semana e feriados — por criança
+              Fim de semana e feriados - por criança
             </label>
             <div className="relative">
               <InputField

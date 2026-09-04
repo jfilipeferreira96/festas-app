@@ -3,7 +3,7 @@
 import React, { useCallback } from "react";
 import { cn } from "@/lib/utils";
 
-// Paleta de cores da marca BasyLandy — fonte única em @saas/shared-defaults
+// Paleta de cores da marca BasyLandy - fonte única em @saas/shared-defaults
 import { FESTA_COLORS } from "@saas/shared-defaults";
 export { FESTA_COLORS };
 

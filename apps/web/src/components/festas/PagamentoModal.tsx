@@ -61,7 +61,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
 
   const handleSave = useCallback(async () => {
     const parseNum = (s: string) => s === "" ? undefined : Number(s);
-    // "Não definido" deve LIMPAR o método guardado — null (não undefined),
+    // "Não definido" deve LIMPAR o método guardado - null (não undefined),
     // porque undefined = "sem alterações" no Prisma e deixaria o método antigo.
     const parseMetodo = (s: string): MetodoPagamento | null =>
       s === "NONE" || s === "" ? null : s as MetodoPagamento;
@@ -90,14 +90,14 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   }, [updatePagamento, reserva.id, pago, metodoPagamento, valorPago, referenciaPagamento, showSplit, metodoPagamento2, valorPago2, caucao, valorCaucao, descontoPercentagem, descontoMotivo, toast, onClose]);
 
   const isLoading = updatePagamento.isPending;
-  const anvNome = reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || reserva.cliente?.nome || "—";
+  const anvNome = reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || reserva.cliente?.nome || "-";
   const metodoLabel = METODO_PAGAMENTO_OPTIONS.find((o) => o.value === metodoPagamento)?.label;
   const temAvisos = Boolean(
     reserva.notasCacifos || reserva.observacoesLesoes || (reserva.cacifos ?? []).some((c) => c.notas?.trim())
   );
 
   return (
-    <Modal isOpen onClose={onClose} size="lg" title={`Pagamento — ${anvNome}`}>
+    <Modal isOpen onClose={onClose} size="lg" title={`Pagamento - ${anvNome}`}>
       <div className="p-5 flex flex-col max-h-[70vh]">
 
         {/* ── Hero: estado + falta liquidar (sempre visível) ── */}
@@ -232,7 +232,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
 }
 
 // ════════════════════════════════════════════════════════════════
-// Tab 1 — Pagamento (estado, valor, método, referência, split)
+// Tab 1 - Pagamento (estado, valor, método, referência, split)
 // ════════════════════════════════════════════════════════════════
 interface TabPagamentoProps {
   pago: boolean;
@@ -312,7 +312,7 @@ const TabPagamento = React.memo(function TabPagamento({
 });
 
 // ════════════════════════════════════════════════════════════════
-// Tab 2 — Caução & Desconto
+// Tab 2 - Caução & Desconto
 // ════════════════════════════════════════════════════════════════
 interface TabCaucaoDescontoProps {
   caucao: string;

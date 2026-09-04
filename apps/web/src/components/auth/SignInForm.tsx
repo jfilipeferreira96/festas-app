@@ -47,7 +47,7 @@ export default function SignInForm() {
       } else {
         success(t("auth.signIn.errors.loginSuccess"));
         // Refresh the persistent AuthProvider's session so the sidebar and
-        // permissions re-render with the newly-authenticated user — no full
+        // permissions re-render with the newly-authenticated user - no full
         // page reload required. The /dashboard server component then redirects
         // non-admin roles to their role-specific home route.
         await checkSession();
@@ -122,7 +122,7 @@ export default function SignInForm() {
               </div>
             </form>
 
-            {/* Criação de conta pública desativada — todas as contas são criadas internamente (Utilizadores).
+            {/* Criação de conta pública desativada - todas as contas são criadas internamente (Utilizadores).
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
                 {t("auth.signIn.dontHaveAccount")} {""}

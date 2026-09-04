@@ -151,7 +151,7 @@ export default function UtilizadoresContent({
         body: formData,
       });
     } catch {
-      // Silently fail — photo is optional, entity was already created
+      // Silently fail - photo is optional, entity was already created
     }
   }, []);
 

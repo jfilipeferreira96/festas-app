@@ -1,5 +1,5 @@
 // ===================================
-// Extra — Types for extras management
+// Extra - Types for extras management
 // ===================================
 
 import type { CategoriaItem } from "./menu";

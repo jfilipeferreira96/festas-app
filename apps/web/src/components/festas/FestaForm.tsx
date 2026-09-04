@@ -177,7 +177,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
   const { data: etapas } = useEtapasFesta();
   const { isGlobalAdmin } = useMinhasPermissoes();
 
-  // Filtra extras da subcategoria "Bolos" — a informação do bolo é capturada
+  // Filtra extras da subcategoria "Bolos" - a informação do bolo é capturada
   // pela secção "Bolo de Aniversário" (TipoBolo + tema + quantidade), pelo que
   // ter extras duplicados (Bolo 1KG, Bolo 2KG, etc.) é redundante.
   const extraItems = useMemo<ExtraItem[]>(
@@ -319,7 +319,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     );
     return (slotsHorario ?? []).map((s) => {
       const fim = addMinutosToTime(s.horaInicio, s.duracaoMin);
-      // A própria reserva em edição ocupa o seu slot — não o desactiva.
+      // A própria reserva em edição ocupa o seu slot - não o desactiva.
       const isOcupado = ocupados.has(s.horaInicio) && s.horaInicio !== reserva?.horario;
       return {
         value: s.horaInicio,
@@ -335,7 +335,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       setValue("horario", horaInicio, { shouldDirty: true, shouldValidate: true });
       if (slot) {
         setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true, shouldValidate: true });
-        // Auto-preencher defaults do slot (cor, hora lanche, sala lanche) — todos editáveis.
+        // Auto-preencher defaults do slot (cor, hora lanche, sala lanche) - todos editáveis.
         if (slot.horaLancheDefault) setValue("horaLanche", slot.horaLancheDefault, { shouldDirty: true });
         if (slot.salaLancheId) setValue("salaLancheId", slot.salaLancheId, { shouldDirty: true, shouldValidate: true });
         // Cor: usar o default do slot apenas se ainda estiver livre nesse dia;
@@ -355,7 +355,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
 
   // ── Auto-preencher / auto-trocar cor conforme disponibilidade do dia ──
   React.useEffect(() => {
-    // Em modo edição, a cor da reserva já está excluída de coresEmUso — nada a fazer.
+    // Em modo edição, a cor da reserva já está excluída de coresEmUso - nada a fazer.
     if (reserva) return;
     const corAtual = getValues("cor");
     // Se não há cor definida OU a cor actual passou a estar ocupada (mudança de data),
@@ -454,7 +454,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
           (reserva.valorCaucao && Number(reserva.valorCaucao) > 0))
     )
   );
-  // Modal dedicada de pagamento (com acertos/auditoria) — usada em modo edição
+  // Modal dedicada de pagamento (com acertos/auditoria) - usada em modo edição
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
 
   // ── Pré-preencher valorCaucao com o default das configurações ──
@@ -513,7 +513,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     // ── Validação manual de aniversariantes (fora do schema Zod) ──
     if (!aniversariantes.some((a) => a.nome.trim())) {
       setShowAniversarianteError(true);
-      return; // Não submete — o utilizador precisa de preencher o nome
+      return; // Não submete - o utilizador precisa de preencher o nome
     }
     setShowDataNascimentoError(false);
     if (!aniversariantes.filter((a) => a.nome.trim()).every((a) => a.dataNascimento)) {
@@ -542,7 +542,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       monitoresIds: data.monitoresIds, etapasIds: data.etapasIds,
       cor: data.cor || undefined,
       // Guard: se a reserva tem menu mas os extras (menus) ainda não carregaram,
-      // não enviar menuId — evita apagar o menu por acidente (race condition).
+      // não enviar menuId - evita apagar o menu por acidente (race condition).
       menuId: reserva ? (reserva.menu && menuExtras.length === 0 ? undefined : data.menuId || null) : (data.menuId || undefined),
       // Bolo (TipoBolo)
       bolo: (data.bolo || undefined) as TipoBolo | undefined,
@@ -552,7 +552,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
       // Notas por equipa
       notasCacifos: data.notasCacifos || undefined,
       notasLanche: data.notasLanche || undefined,
-      // Pagamento — em edição, o pagamento é gerido exclusivamente na modal
+      // Pagamento - em edição, o pagamento é gerido exclusivamente na modal
       // "Gerir pagamento" (com auditoria de acertos): os campos são omitidos
       // (undefined) para não sobrescrever alterações feitas aí.
       metodoPagamento: (reserva ? undefined : data.metodoPagamento || undefined) as MetodoPagamento | undefined,
@@ -589,7 +589,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
     }
   }, [reserva, aniversariantes, encarregadosAdicionais, selectedExtrasIds, extrasTexto, menuExtras, updateReserva, createReserva, onClose]);
 
-  /** Handler chamado quando a validação Zod falha — mostra erros e faz scroll. */
+  /** Handler chamado quando a validação Zod falha - mostra erros e faz scroll. */
   const onInvalid = useCallback(() => {
     setShowAniversarianteError(!aniversariantes.some((a) => a.nome.trim()));
     // Scroll para o primeiro campo com erro
@@ -665,7 +665,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: ReservaFo
 }
 
 // ════════════════════════════════════════════════════════════════
-// STEP 1 — Configurações Gerais
+// STEP 1 - Configurações Gerais
 // ════════════════════════════════════════════════════════════════
 interface Step1Props {
   register: ReturnType<typeof useForm<ReservaFormData>>["register"];
@@ -914,12 +914,12 @@ function Step1Geral({
             label="Horário personalizado (fora dos slots)"
           />
           {!horarioCustom && slotOptions.length === 0 && (
-            <span className="text-xs text-text-muted">Sem slots configurados — active a opção para definir a hora manualmente.</span>
+            <span className="text-xs text-text-muted">Sem slots configurados - active a opção para definir a hora manualmente.</span>
           )}
         </div>
       )}
 
-      {/* ── Menu (antes do bolo — pedido do cliente) ── */}
+      {/* ── Menu (antes do bolo - pedido do cliente) ── */}
       <div className="flex gap-4">
         <div className="flex-1">
           <label className="block text-xs font-medium text-text-secondary mb-1">Menu</label>
@@ -1095,7 +1095,7 @@ function Step1Geral({
         </label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Notas — Cacifos</label>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Notas - Cacifos</label>
             <textarea
               {...register("notasCacifos")}
               placeholder="Instruções para a equipa de cacifos (alergias, restrições, pedidos especiais)..."
@@ -1104,7 +1104,7 @@ function Step1Geral({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Notas — Lanche</label>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Notas - Lanche</label>
             <textarea
               {...register("notasLanche")}
               placeholder="Instruções para a equipa de lanche (alergias, restrições alimentares)..."
@@ -1224,7 +1224,7 @@ function Step1Geral({
 }
 
 // ════════════════════════════════════════════════════════════════
-// Resumo de pagamento (modo edição) — leitura apenas + atalho "Gerir pagamento"
+// Resumo de pagamento (modo edição) - leitura apenas + atalho "Gerir pagamento"
 // ════════════════════════════════════════════════════════════════
 function PagamentoResumoEdit({ reserva, onGerir }: { reserva: Reserva; onGerir: () => void }) {
   const metodo1 = METODO_PAGAMENTO_OPTIONS.find((o) => o.value === reserva.metodoPagamento)?.label;
@@ -1251,13 +1251,13 @@ function PagamentoResumoEdit({ reserva, onGerir }: { reserva: Reserva; onGerir: 
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Valor pago</p>
           <p className="text-sm font-medium text-text-primary">
-            {reserva.valorPago ? formatEuro(Number(reserva.valorPago)) : "—"}
+            {reserva.valorPago ? formatEuro(Number(reserva.valorPago)) : "-"}
           </p>
         </div>
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-wider text-text-muted">Método</p>
           <p className="text-sm font-medium text-text-primary truncate">
-            {metodo1 ?? "—"}{metodo2 ? ` + ${metodo2}` : ""}
+            {metodo1 ?? "-"}{metodo2 ? ` + ${metodo2}` : ""}
           </p>
         </div>
         <div>

@@ -187,7 +187,7 @@ const SlotCard = React.memo(function SlotCard({
     );
   }
 
-  // Slot vazio — clicável
+  // Slot vazio - clicável
   return (
     <button
       onClick={handleClick}

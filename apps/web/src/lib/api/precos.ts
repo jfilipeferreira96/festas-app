@@ -10,7 +10,7 @@ export interface ConfiguracaoPreco {
   // Preço por criança
   precoCriancaSemana: number;
   precoCriancaFimSemana: number;
-  // Preço de entrada livre (por hora — legado)
+  // Preço de entrada livre (por hora - legado)
   precoEntradaHoraSemana: number;
   precoEntradaHoraFimSemana: number;
   // Entrada livre (tarifário por escalão)

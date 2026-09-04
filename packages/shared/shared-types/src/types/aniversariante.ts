@@ -1,5 +1,5 @@
 // ===================================
-// Aniversariante — Types for birthday child management
+// Aniversariante - Types for birthday child management
 // ===================================
 
 export interface Aniversariante {

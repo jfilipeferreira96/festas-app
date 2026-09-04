@@ -10,7 +10,7 @@ export default function NewsletterPage() {
       <div className="bg-surface rounded-[14px] p-8 shadow-card border border-border mt-4 text-center">
         <Mail size={48} className="mx-auto text-text-muted mb-3" />
         <p className="text-sm text-text-muted">
-          Gestão de newsletter — em desenvolvimento.
+          Gestão de newsletter - em desenvolvimento.
         </p>
         <p className="text-xs text-text-muted mt-1">
           Consulte a página de Divulgações para criar e gerir campanhas.

@@ -44,7 +44,7 @@ type QuickTab = "geral" | "criancas";
 interface FestaDetailModalProps {
   reservaId: string | null;
   onClose: () => void;
-  /** Oculta secções de preço (Pagamento, Caução, Desconto, valores monetários) — usado para o papel CACIFOS. */
+  /** Oculta secções de preço (Pagamento, Caução, Desconto, valores monetários) - usado para o papel CACIFOS. */
   hidePrices?: boolean;
 }
 
@@ -83,7 +83,7 @@ export default function FestaDetailModal({ reservaId, onClose, hidePrices = fals
         )}
       </div>
 
-      {/* Pagamento Modal — edita pagamento dentro do modal de detalhes */}
+      {/* Pagamento Modal - edita pagamento dentro do modal de detalhes */}
       {showPagamento && reserva && (
         <PagamentoModal reserva={reserva} onClose={() => setShowPagamento(false)} />
       )}
@@ -116,7 +116,7 @@ function DetailContent({
           <FestaColorDot color={reserva.cor} />
           <div>
             <h2 className="text-lg font-semibold text-text-primary">
-              {reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || "—"}
+              {reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || "-"}
             </h2>
             <p className="text-sm text-text-muted">
               {reserva.aniversariantes
@@ -167,7 +167,7 @@ function DetailContent({
             <span className="ml-0.5 text-[10px] opacity-70">({numCacifos} cacifos)</span>
           )}
         </button>
-        {/* Botão de impressão — sempre visível */}
+        {/* Botão de impressão - sempre visível */}
         <button
           type="button"
           onClick={() => imprimirListaConvidados(reserva, reserva.cacifos ?? [])}
@@ -200,7 +200,7 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
         <div className="grid grid-cols-2 gap-3">
           <DetailRow icon={<Calendar size={13} />} label="Data" value={formatDate(reserva.data)} />
           <DetailRow icon={<Clock size={13} />} label="Horário" value={`${reserva.horario} (${formatDuration(reserva.duracaoMinutos)})`} />
-          <DetailRow icon={<MapPin size={13} />} label="Sala" value={reserva.local?.nome ?? "—"} />
+          <DetailRow icon={<MapPin size={13} />} label="Sala" value={reserva.local?.nome ?? "-"} />
           {reserva.horaLanche && (
             <DetailRow icon={<Clock size={13} />} label="Hora Lanche" value={reserva.horaLanche} />
           )}
@@ -220,8 +220,8 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
       {/* Encarregado */}
       <Section title="Encarregado" icon={<Users size={13} />}>
         <div className="space-y-1.5">
-          <DetailRow icon={<Users size={13} />} label="Nome" value={reserva.cliente?.nome ?? "—"} />
-          <DetailRow icon={<Phone size={13} />} label="Telefone" value={reserva.cliente?.telefone ?? "—"} />
+          <DetailRow icon={<Users size={13} />} label="Nome" value={reserva.cliente?.nome ?? "-"} />
+          <DetailRow icon={<Phone size={13} />} label="Telefone" value={reserva.cliente?.telefone ?? "-"} />
           {reserva.cliente?.email && <DetailRow icon={<Mail size={13} />} label="Email" value={reserva.cliente.email} />}
         </div>
       </Section>
@@ -275,7 +275,7 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
         </Section>
       )}
 
-      {/* Etapas — oculto per pedido do cliente (12/07/2026)
+      {/* Etapas - oculto per pedido do cliente (12/07/2026)
       {reserva.etapas && reserva.etapas.length > 0 && (
         <Section title={`Etapas (${reserva.etapas.filter(e => e.concluida).length}/${reserva.etapas.length})`} icon={<CheckCircle2 size={13} />}>
           <div className="space-y-1">
@@ -291,7 +291,7 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
         </Section>
       )} */}
 
-      {/* Pagamento — oculto para CACIFOS (hidePrices) */}
+      {/* Pagamento - oculto para CACIFOS (hidePrices) */}
       {!hidePrices && (
       <Section title="Pagamento" icon={<CreditCard size={13} />} action={
         <button
@@ -325,7 +325,7 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
       </Section>
       )}
 
-      {/* Caução — oculto para CACIFOS (hidePrices) */}
+      {/* Caução - oculto para CACIFOS (hidePrices) */}
       {!hidePrices && (
       <Section title="Caução" icon={<Shield size={13} />}>
         <div className="space-y-1.5">
@@ -372,7 +372,7 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
       </Section>
       )}
 
-      {/* Desconto — oculto para CACIFOS (hidePrices) */}
+      {/* Desconto - oculto para CACIFOS (hidePrices) */}
       {!hidePrices && (reserva.descontoPercentagem != null && reserva.descontoPercentagem > 0) && (
         <Section title="Desconto" icon={<Percent size={13} />}>
           <div className="space-y-1.5">
@@ -395,9 +395,9 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
         </Section>
       )}
 
-      {/* Notas Importantes — Lanche */}
+      {/* Notas Importantes - Lanche */}
       {reserva.notasLanche && (
-        <Section title="Notas — Lanche" icon={<Sandwich size={13} />}>
+        <Section title="Notas - Lanche" icon={<Sandwich size={13} />}>
           <p className="text-sm text-text-secondary whitespace-pre-wrap">{reserva.notasLanche}</p>
         </Section>
       )}
@@ -506,9 +506,9 @@ function CriancasTab({ reserva }: { reserva: Reserva }) {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-text-primary">
-                        {porPreencher ? <span className="text-text-muted">—</span> : c.criancas}
+                        {porPreencher ? <span className="text-text-muted">-</span> : c.criancas}
                       </td>
-                      <td className="px-3 py-2 text-xs text-text-muted">{c.notas ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs text-text-muted">{c.notas ?? "-"}</td>
                     </tr>
                   );
                 })}
@@ -534,7 +534,7 @@ function CriancasTab({ reserva }: { reserva: Reserva }) {
         </div>
       )}
 
-      {/* Sem cacifos — placeholder */}
+      {/* Sem cacifos - placeholder */}
       {totalCacifos === 0 && (
         <div className="py-8 text-center">
           <Users size={32} className="mx-auto text-text-muted mb-2" />

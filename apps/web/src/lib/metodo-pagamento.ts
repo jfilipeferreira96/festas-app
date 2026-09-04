@@ -1,5 +1,5 @@
 /**
- * Método de pagamento — fonte única de verdade.
+ * Método de pagamento - fonte única de verdade.
  *
  * TODOS os selects e displays de método de pagamento (festas, entradas livres,
  * dashboard, relatórios) devem usar estas opções/labels para evitar
@@ -24,9 +24,9 @@ export const METODO_PAGAMENTO_LABELS: Record<string, string> = Object.fromEntrie
 /**
  * Label legível de um método.
  * @param value  Valor guardado (ex.: "MULTIBANCO", null, "NONE")
- * @param fallback Texto quando não definido (default "—")
+ * @param fallback Texto quando não definido (default "-")
  */
-export function metodoPagamentoLabel(value?: string | null, fallback = "—"): string {
+export function metodoPagamentoLabel(value?: string | null, fallback = "-"): string {
   if (!value || value === "NONE") return fallback;
   return METODO_PAGAMENTO_LABELS[value] ?? value;
 }

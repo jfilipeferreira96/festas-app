@@ -24,7 +24,7 @@ describe("Fecho de Caixa Service", () => {
   beforeAll(async () => {
     await seedTestData();
     // Derivar o dia da reserva confirmada (split MBWAY 50 + MULTIBANCO 240)
-    // a partir do valor armazenado — evita flakiness de fuso horário.
+    // a partir do valor armazenado - evita flakiness de fuso horário.
     const reserva = await testPrisma.reserva.findUnique({
       where: { id: TEST_IDS.RESERVA_CONFIRMADA },
       select: { data: true },

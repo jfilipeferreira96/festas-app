@@ -247,7 +247,7 @@ export const dashboardService = {
    * Lista os aniversariantes (filhos de clientes) cujo próximo aniversário
    * ocorre nos próximos `dias` dias. Para cada um indica se o cliente já tem
    * reserva marcada para esse mês (para alertar "ainda sem reserva").
-   * Ignora o ano — compara apenas mês/dia.
+   * Ignora o ano - compara apenas mês/dia.
    */
   async getAniversariosProximos(dias = 30): Promise<
     {
@@ -282,7 +282,7 @@ export const dashboardService = {
       if (!a.dataNascimento) continue;
       const nasc = new Date(a.dataNascimento);
 
-      // Próximo aniversário (mês/dia) — este ano ou no próximo
+      // Próximo aniversário (mês/dia) - este ano ou no próximo
       let prox = new Date(anoAtual, nasc.getMonth(), nasc.getDate());
       // Se já passou hoje, usa o ano seguinte (mas dentro da janela pode incluir 29 fev etc.)
       const hojeZero = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());

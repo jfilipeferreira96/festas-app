@@ -326,7 +326,7 @@ export const reservaService = {
   /**
    * Verifica a disponibilidade de um local para uma data/horário/duração,
    * considerando sobreposição temporal (não apenas match exato de horário).
-   * Não bloqueia — serve apenas para alertar o utilizador antes de gravar.
+   * Não bloqueia - serve apenas para alertar o utilizador antes de gravar.
    */
   async checkDisponibilidade(params: {
     data: string;
@@ -880,7 +880,7 @@ export const reservaService = {
 
   /**
    * Alterna o estado de conclusão de um extra da reserva
-   * (entregue/prestado no dia da festa — check na tabela de festas).
+   * (entregue/prestado no dia da festa - check na tabela de festas).
    */
   async toggleReservaExtra(reservaExtraId: string) {
     const reservaExtra = await prisma.reservaExtra.findUnique({

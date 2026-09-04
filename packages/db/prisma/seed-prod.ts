@@ -1,5 +1,5 @@
 /**
- * Production seed — MINIMUM data to bring the app online.
+ * Production seed - MINIMUM data to bring the app online.
  *
  * Creates ONLY:
  *   - 7 users (admin + role accounts via Better Auth)
@@ -33,7 +33,7 @@ import { createPrismaClient } from "../src/mariadb-adapter";
 // (db.js also passes --env-file; dotenv ignores a missing file silently.)
 config({ path: "../../apps/web/.env" });
 
-// Driver adapter (mariadb) — ver packages/db/src/mariadb-adapter.ts
+// Driver adapter (mariadb) - ver packages/db/src/mariadb-adapter.ts
 const prisma = createPrismaClient(process.env.DATABASE_URL!);
 
 const seedAuth = betterAuth({
@@ -89,7 +89,7 @@ async function main() {
   console.log("\n✅ Production seed complete!");
 }
 
-// ─── Users (admin + role accounts) — single source: seed-roles.ts ──
+// ─── Users (admin + role accounts) - single source: seed-roles.ts ──
 async function seedUsers() {
   console.log("  Creating users...\n");
 
@@ -255,7 +255,7 @@ async function seedExcecoesCalendario() {
   console.log("  Creating calendar exceptions (PT holidays)...");
 
   const anoAtual = new Date().getFullYear();
-  // [mês-01, dia-01, nome] — feriados nacionais fixos de Portugal
+  // [mês-01, dia-01, nome] - feriados nacionais fixos de Portugal
   const feriadosFixos: [string, string, string][] = [
     ["01", "01", "Ano Novo"],
     ["05", "01", "Dia do Trabalhador"],

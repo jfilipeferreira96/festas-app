@@ -1,5 +1,5 @@
 // ===================================
-// Relatório — Types
+// Relatório - Types
 // ===================================
 
 export interface LinhaRelatorio {

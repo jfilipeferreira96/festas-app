@@ -1,5 +1,5 @@
 // ===================================
-// Reserva — Types for reservation/party management
+// Reserva - Types for reservation/party management
 // ===================================
 
 export type EstadoReserva = "RESERVA" | "CONFIRMADO" | "EM_CURSO" | "CONCLUIDA" | "CANCELADA";
@@ -65,7 +65,7 @@ export interface Reserva {
   pago: boolean;
   referenciaPagamento?: string;
 
-  // Pagamento dividido (até 2 métodos — restante pode ser pago de outra forma)
+  // Pagamento dividido (até 2 métodos - restante pode ser pago de outra forma)
   metodoPagamento2?: MetodoPagamento;
   valorPago2?: number;
 

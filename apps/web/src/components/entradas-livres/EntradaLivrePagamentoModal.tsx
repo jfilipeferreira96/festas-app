@@ -28,16 +28,16 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
   const [pago, setPago] = useState(entrada.pago);
   const [metodoPagamento, setMetodoPagamento] = useState(entrada.metodoPagamento ?? "NONE");
 
-  // Pagamento dividido (2º método) — escondido por omissão, como na modal das festas
+  // Pagamento dividido (2º método) - escondido por omissão, como na modal das festas
   const [showSplit, setShowSplit] = useState(Boolean(entrada.metodoPagamento2));
   const [metodoPagamento2, setMetodoPagamento2] = useState(entrada.metodoPagamento2 ?? "NONE");
   const [valorPago2, setValorPago2] = useState(entrada.valorPago2 != null ? String(entrada.valorPago2) : "");
 
   const custo = entrada.custoTotalFinal ?? entrada.custoTotal ?? 0;
-  const criancaNomes = entrada.criancas?.map(c => c.nome).join(", ") || entrada.encarregadoNome || "—";
+  const criancaNomes = entrada.criancas?.map(c => c.nome).join(", ") || entrada.encarregadoNome || "-";
 
   const handleSave = useCallback(async () => {
-    // "Não definido" deve LIMPAR o método guardado — null (não undefined),
+    // "Não definido" deve LIMPAR o método guardado - null (não undefined),
     // porque undefined = "sem alterações" no Prisma (mesmo comportamento
     // da modal de pagamento das festas).
     const metodo = metodoPagamento === "NONE" || metodoPagamento === "" ? null : metodoPagamento;
@@ -58,7 +58,7 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
   const isLoading = atualizarPagamento.isPending;
 
   return (
-    <Modal isOpen onClose={onClose} size="lg" title={`Pagamento — ${criancaNomes}`}>
+    <Modal isOpen onClose={onClose} size="lg" title={`Pagamento - ${criancaNomes}`}>
       <div className="p-5 flex flex-col max-h-[70vh]">
 
         {/* ── Hero: estado + total (sempre visível) ── */}
@@ -109,7 +109,7 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
             {pago && <p className="text-xs text-text-muted mt-1">* Obrigatório quando marcado como pago</p>}
           </div>
 
-          {/* Pagamento dividido (2º método) — escondido por omissão */}
+          {/* Pagamento dividido (2º método) - escondido por omissão */}
           <div className="border-t border-border pt-3 space-y-2">
             <Checkbox
               checked={showSplit}

@@ -1,5 +1,5 @@
 // ===================================
-// Defaults — Extras disponíveis por omissão
+// Defaults - Extras disponíveis por omissão
 // ===================================
 
 export interface ExtraDefault {

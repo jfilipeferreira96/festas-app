@@ -1,4 +1,4 @@
-# SKILL — Layout e Estrutura de Páginas
+# SKILL - Layout e Estrutura de Páginas
 
 Padrão obrigatório ao criar qualquer nova página ou secção.
 
@@ -141,7 +141,7 @@ import { Card } from '@/components/ui/card'
 </Card>
 ```
 
-Nunca usar `div` com classes de sombra e border directamente — usar `<Card>`.
+Nunca usar `div` com classes de sombra e border directamente - usar `<Card>`.
 
 ## Modais
 
@@ -158,7 +158,7 @@ Usar `<BaseModal>` de `@/components/ui/BaseModal.tsx` ou `<CreateModal>` / `<Edi
 </BaseModal>
 ```
 
-O modal fecha ao clicar no overlay ou premir Escape — excepto se o formulário estiver "dirty"
+O modal fecha ao clicar no overlay ou premir Escape - excepto se o formulário estiver "dirty"
 (consultar skill `form/SKILL.md` para o comportamento de confirmação).
 
 ## Responsividade
@@ -169,7 +169,7 @@ O modal fecha ao clicar no overlay ou premir Escape — excepto se o formulário
 | `768px–1024px` (tablet) | Sidebar colapsada (só ícones, 64px) |
 | `> 1024px` (desktop) | Sidebar expandida (220px) com labels |
 
-Usar sempre classes Tailwind com prefixo `md:` e `lg:` — nunca media queries em CSS manual.
+Usar sempre classes Tailwind com prefixo `md:` e `lg:` - nunca media queries em CSS manual.
 
 ## Notificações e Toasts
 

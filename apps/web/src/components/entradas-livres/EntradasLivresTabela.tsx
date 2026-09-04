@@ -31,7 +31,7 @@ const FILTER_OPTIONS = [
 ];
 
 function formatCurrency(value: number | undefined | null): string {
-  if (value == null) return "—";
+  if (value == null) return "-";
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
 }
 

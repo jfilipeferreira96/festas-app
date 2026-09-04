@@ -58,7 +58,7 @@ const columns: Column<Cliente>[] = [
     render: (value) => (
       <div className="flex items-center gap-1.5">
         <Mail size={14} className="text-text-muted" />
-        <span className="text-sm text-text-primary">{value || "—"}</span>
+        <span className="text-sm text-text-primary">{value || "-"}</span>
       </div>
     ),
   },
@@ -77,7 +77,7 @@ const columns: Column<Cliente>[] = [
     key: "aniversariantes",
     label: "Aniversariantes",
     render: (_value, c) => {
-      if (!c.aniversariantes || c.aniversariantes.length === 0) return <span className="text-text-muted">—</span>;
+      if (!c.aniversariantes || c.aniversariantes.length === 0) return <span className="text-text-muted">-</span>;
       return (
         <div className="space-y-1">
           {c.aniversariantes.map((a) => (
@@ -229,7 +229,7 @@ export default function ClientesContent() {
           ) : (
             <span className="inline-flex items-center gap-1.5 text-xs text-text-muted px-3 py-2 rounded-lg bg-gray-50 border border-border">
               <Lock size={13} />
-              Apenas leitura — contacte a administração para alterações
+              Apenas leitura - contacte a administração para alterações
             </span>
           )
         }

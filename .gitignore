@@ -64,7 +64,7 @@ prisma/generated/
 .kilocoderules
 .roo/
 
-# Package manager — project uses npm
+# Package manager - project uses npm
 yarn.lock
 
 # Docker overrides

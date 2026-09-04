@@ -1,4 +1,4 @@
-// scripts/deploy-db.js — launcher de comandos de BD para cPanel (CommonJS)
+// scripts/deploy-db.js - launcher de comandos de BD para cPanel (CommonJS)
 // -----------------------------------------------------------------------------
 // Copiado para deploy/scripts/db.js por scripts/build-deploy.mjs.
 //
@@ -48,7 +48,7 @@ if (!process.env.DATABASE_URL) {
 
 const command = process.argv[2];
 
-// --- Driver adapter (mariadb) — mesma lógica de packages/db/src/mariadb-adapter.ts ---
+// --- Driver adapter (mariadb) - mesma lógica de packages/db/src/mariadb-adapter.ts ---
 // A engine Rust do Prisma criava ~64 threads (1 por CPU do host) contadas no
 // limite nproc=100 do CloudLinux. Com o adapter, queries em JS puro.
 // CJS inline porque este script corre no cPanel sem TS/tsx.
@@ -133,7 +133,7 @@ async function cmdTruncate(keepAuth) {
     });
 
     console.log("\n✅ Dados apagados (" + names.length + " tabelas). Schema intacto.");
-    console.log("   (O AUTO_INCREMENT não é reiniciado — para reiniciar usa db:reset.)");
+    console.log("   (O AUTO_INCREMENT não é reiniciado - para reiniciar usa db:reset.)");
   } finally {
     await prisma.$disconnect();
   }

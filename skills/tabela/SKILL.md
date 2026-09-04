@@ -1,10 +1,10 @@
-# SKILL — Tabelas com Filtros e Paginação
+# SKILL - Tabelas com Filtros e Paginação
 
 Padrão para todas as listagens da aplicação: reservas, monitores, utilizadores, locais, extras, etapas de festa, campanhas, clientes.
 
 ## Componente base
 
-Usar sempre `<DataTable>` de `@/components/ui/table/DataTable` — nunca `<table>` directamente nas páginas.
+Usar sempre `<DataTable>` de `@/components/ui/table/DataTable` - nunca `<table>` directamente nas páginas.
 
 ```tsx
 import { DataTable } from '@/components/ui/table/DataTable'
@@ -149,7 +149,7 @@ Configuração de paginação em `@/lib/pagination-config.ts`.
 ## Estado de carregamento
 
 A tabela mostra skeleton rows durante o carregamento.
-Nunca mostrar spinner centrado na página — usar skeleton nas próprias linhas.
+Nunca mostrar spinner centrado na página - usar skeleton nas próprias linhas.
 
 ## Estado sem resultados
 
@@ -166,7 +166,7 @@ O DataTable mostra mensagem centrada quando não há dados:
 ## Ordenação
 
 Colunas com `sortable: true` mostram ícone de seta ao hover.
-A ordenação é sempre feita no servidor — não ordenar arrays no cliente.
+A ordenação é sempre feita no servidor - não ordenar arrays no cliente.
 Estado da ordenação fica na URL: `?ordenarPor=data&ordem=desc`.
 
 ## Páginas que usam DataTable

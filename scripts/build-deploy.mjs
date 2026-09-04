@@ -16,11 +16,11 @@
  *        - .env    -> variáveis de PRODUÇÃO
  *        - README-DEPLOY.md -> instruções cPanel
  *   3. valida que a engine Prisma para Linux está presente no bundle.
- *   4. cria deploy.tar.gz com `tar` (formato Unix nativo — extração fiável no
+ *   4. cria deploy.tar.gz com `tar` (formato Unix nativo - extração fiável no
  *      cPanel) E deploy.zip com `archiver` (alternativa, forward-slash).
  *
  * VANTAGEM: o servidor cPanel NÃO precisa de correr `npm install` nem `npm run
- * build` — o node_modules já vem dentro do bundle (apenas o estritamente
+ * build` - o node_modules já vem dentro do bundle (apenas o estritamente
  * necessário, traçado pelo Next.js). É só extrair e arrancar.
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -31,7 +31,7 @@
  * etc. em runtime. Esses pacotes TÊM de existir na pasta node_modules/ do bundle,
  * senão a app arranca com "Cannot find module".
  *
- * MAS — o node_modules que vai no bundle é o **traçado** (só o que a app
+ * MAS - o node_modules que vai no bundle é o **traçado** (só o que a app
  * realmente usa em produção), não o node_modules completo de desenvolvimento:
  *   • node_modules de dev: ~1-2 GB (com TypeScript, vitest, ferramentas...)
  *   • node_modules traçado (no bundle): ~110-130 MB  → zip: ~45 MB
@@ -120,7 +120,7 @@ function human(bytes) {
 // --- test helpers -----------------------------------------------------------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** Tenta ligar-se à porta — resolve true se aceitar ligação (servidor up). */
+/** Tenta ligar-se à porta - resolve true se aceitar ligação (servidor up). */
 function checkPort(port, host = "127.0.0.1") {
   return new Promise((resolve) => {
     const sock = createConnection({ port, host }, () => {
@@ -222,7 +222,7 @@ async function testDeploy() {
     ok(`Servidor respondeu na porta ${TEST_PORT}.`);
 
     // --- 5. HTTP GET /entrar --------------------------------------------------
-    await sleep(5000); // 5s — dar tempo ao Prisma + Next.js inicializar
+    await sleep(5000); // 5s - dar tempo ao Prisma + Next.js inicializar
     log("HTTP GET http://localhost:" + TEST_PORT + "/entrar ...");
     const resp = await fetch(`http://localhost:${TEST_PORT}/entrar`, {
       redirect: "manual", // não seguir redirects automaticamente
@@ -258,7 +258,7 @@ async function testDeploy() {
     const hasBodyTag = body.includes("<body");
 
     if (!hasBodyTag && !isRedirect) {
-      console.error(`\n✗ ERRO: HTML sem <body> — resposta inválida/corrompida.`);
+      console.error(`\n✗ ERRO: HTML sem <body> - resposta inválida/corrompida.`);
       console.error(`   Status: ${status} | Content-Type: ${contentType}`);
       console.error(`   Body (primeiros 1000 chars):\n${body.slice(0, 1000)}`);
       return false;
@@ -275,15 +275,15 @@ async function testDeploy() {
 
     // ── RESULTADO ────────────────────────────────────────────────────────────
     if ((status === 200 && isHtml) || (isRedirect && isHtml)) {
-      ok(`HTTP ${status} — Content-Type: ${contentType}`);
+      ok(`HTTP ${status} - Content-Type: ${contentType}`);
       if (hasFormTag || hasEmailInput || hasPasswordInput) {
         ok(`Elementos do form: ${hasFormTag ? "<form> ✓" : "<form> ✗"} | ${hasEmailInput ? "email ✓" : "email ✗"} | ${hasPasswordInput ? "password ✓" : "password ✗"}`);
-        console.log("\n✅ TESTE LOCAL PASSOU — o bundle deploy/ arranca e serve a página de login com form renderizado!\n");
+        console.log("\n✅ TESTE LOCAL PASSOU - o bundle deploy/ arranca e serve a página de login com form renderizado!\n");
       } else {
         console.warn(`⚠️  Form não renderizado (provável: BD remota inacessível no teste local).`);
         console.warn(`   No cPanel (localhost), o form deve aparecer se as credenciais MySQL estiverem corretas.`);
         console.warn(`   Elementos: <form>: ${hasFormTag} | email: ${hasEmailInput} | password: ${hasPasswordInput}`);
-        console.log("\n✅ TESTE LOCAL PASSOU (parcial) — a app arranca sem erros de crash. O form requer BD acessível.\n");
+        console.log("\n✅ TESTE LOCAL PASSOU (parcial) - a app arranca sem erros de crash. O form requer BD acessível.\n");
       }
       return true;
     }
@@ -324,7 +324,7 @@ async function testDeploy() {
 }
 
 // ---------------------------------------------------------------------------
-console.log("\n🚀  build-deploy.mjs — empacotamento para cPanel\n");
+console.log("\n🚀  build-deploy.mjs - empacotamento para cPanel\n");
 
 // 1. BUILD (opcional) -------------------------------------------------------
 if (DO_BUILD) {
@@ -351,12 +351,12 @@ log("A copiar standalone -> deploy/ (pode demorar ~1 min)...");
 cpSync(STANDALONE, DEPLOY, { recursive: true });
 ok("standalone copiado.");
 
-// 2a0. FIX LOCAL PACKAGES — @festas/auth, @festas/db -------------------------
+// 2a0. FIX LOCAL PACKAGES - @festas/auth, @festas/db -------------------------
 // CRÍTICO: O standalone do Next.js copia os ficheiros .ts (TypeScript) dos
 // packages locais porque os exports apontam para ./src/index.ts. O Node.js em
 // produção NÃO executa TypeScript. Substituímos src/ por dist/ (JS compilado)
 // e atualizamos os exports nos package.json.
-log("A corrigir packages locais (@festas/auth, @festas/db) — TypeScript → JS compilado...");
+log("A corrigir packages locais (@festas/auth, @festas/db) - TypeScript → JS compilado...");
 {
   const LOCAL_PKGS = [
     { name: "@festas/auth", dir: join(ROOT, "packages", "auth") },
@@ -391,7 +391,7 @@ log("A corrigir packages locais (@festas/auth, @festas/db) — TypeScript → JS
       ok(`${name}: src/ (TypeScript) removido.`);
     }
 
-    // 3. Atualizar package.json no deploy — exports.default → ./dist/index.js
+    // 3. Atualizar package.json no deploy - exports.default → ./dist/index.js
     const pkgJsonPath = join(deployPkgDir, "package.json");
     if (existsSync(pkgJsonPath)) {
       const pkg = JSON.parse(readFileSync(pkgJsonPath, "utf8"));
@@ -419,7 +419,7 @@ log("A corrigir packages locais (@festas/auth, @festas/db) — TypeScript → JS
 }
 ok("Packages locais corrigidos (TypeScript → JavaScript compilado).");
 
-// 2a1. CloudLinux — renomear node_modules para node_modules_deps -----------
+// 2a1. CloudLinux - renomear node_modules para node_modules_deps -----------
 // O CloudLinux Node.js Selector NÃO permite uma pasta "node_modules" real na
 // raiz da aplicação (exige um symlink para virtualenv). Renomeamos para
 // "node_modules_deps" e configuramos NODE_PATH no app.js para resolução de
@@ -470,7 +470,7 @@ writeFileSync(
 );
 ok("package.json criado (start + scripts db:* para cPanel).");
 
-// 2b. .next/static (assets do cliente — NÃO vêm no standalone)
+// 2b. .next/static (assets do cliente - NÃO vêm no standalone)
 const webNext = join(DEPLOY, "apps", "web", ".next");
 mkdirSync(webNext, { recursive: true });
 if (existsSync(STATIC_DIR)) {
@@ -489,7 +489,7 @@ if (existsSync(PUBLIC_DIR)) {
   ok("public/ copiado.");
 }
 
-// 2d. uploads/ (fotos de perfil — pasta persistente gravável)
+// 2d. uploads/ (fotos de perfil - pasta persistente gravável)
 const uploads = join(webPublic, "uploads", "profile-photos");
 mkdirSync(uploads, { recursive: true });
 writeFileSync(join(webPublic, "uploads", ".gitkeep"), "");
@@ -508,11 +508,11 @@ if (existsSync(ENV_PROD)) {
   err("apps/web/.env.production não existe. Cria-o com as credenciais de produção.");
 }
 
-// 2f. app.js — entry point do Phusion Passenger -----------------------------
+// 2f. app.js - entry point do Phusion Passenger -----------------------------
 //    CommonJS (require) para máxima compatibilidade com todas as versões do
 //    Passenger. Carrega .env manualmente e define NODE_PATH para node_modules_deps.
-const APP_JS = `// app.js — entry point do Phusion Passenger (cPanel Node.js App)
-// Auto-gerado por scripts/build-deploy.mjs — NÃO EDITAR À MÃO (regenerar no próximo deploy).
+const APP_JS = `// app.js - entry point do Phusion Passenger (cPanel Node.js App)
+// Auto-gerado por scripts/build-deploy.mjs - NÃO EDITAR À MÃO (regenerar no próximo deploy).
 //
 // Em cPanel: "Application startup file" = app.js
 //
@@ -551,7 +551,7 @@ if (fs.existsSync(envPath)) {
 //    comportamentos pesados de dev caso o "Application mode" do cPanel esteja
 //    mal configurado (dev = mais processos/threads/RAM).
 process.env.NODE_ENV = "production";
-// 2) Limitar o thread pool do libuv (I/O fs/DNS). Fixa o valor por robustez —
+// 2) Limitar o thread pool do libuv (I/O fs/DNS). Fixa o valor por robustez -
 //    relevante para o limite de processos/threads do CloudLinux.
 process.env.UV_THREADPOOL_SIZE = process.env.UV_THREADPOOL_SIZE || "4";
 process.env.HOSTNAME = process.env.HOSTNAME || "0.0.0.0";
@@ -567,7 +567,7 @@ if (!fs.existsSync(nmReal) && fs.existsSync(nmDeps)) {
   try {
     fs.symlinkSync(nmDeps, nmReal, process.platform === "win32" ? "junction" : "dir");
   } catch (e) {
-    // Falha de permissões não é fatal — Prisma procura outros locais.
+    // Falha de permissões não é fatal - Prisma procura outros locais.
   }
 }
 
@@ -602,15 +602,15 @@ if (existsSync(seedSimpleSource)) {
   console.warn("⚠️  seed-simple.js não encontrado. Pulando...");
 }
 
-// 2f2. app2.js — TESTE de configuração (servir HTML estático) ---------------
+// 2f2. app2.js - TESTE de configuração (servir HTML estático) ---------------
 // Ficheiro de teste que serve uma página HTML simples (sem node_modules).
 // O utilizador pode mudar o "Application startup file" para app2.js no cPanel
 // para verificar que a configuração Node.js + Passenger está correcta.
 cpSync(join(__dirname, "app2.js"), join(DEPLOY, "app2.js"));
 ok("app2.js (teste de configuração) copiado.");
 
-// 2g. README-DEPLOY.md — instruções de deploy no cPanel ---------------------
-const README = `# 🚀 Deploy no cPanel — Festas (Next.js standalone)
+// 2g. README-DEPLOY.md - instruções de deploy no cPanel ---------------------
+const README = `# 🚀 Deploy no cPanel - Festas (Next.js standalone)
 
 Este bundle é **self-contained**: já inclui o \`node_modules\` necessário e o build
 \`.next\`. **NÃO é preciso correr \`npm install\` nem \`npm run build\` no servidor.**
@@ -674,7 +674,7 @@ Se ainda não o fizeste, cria as tabelas no MySQL de produção. Podes:
 
 ### 5. Arrancar / reiniciar
 - Na UI do cPanel Node.js App, clicar **Restart** (ou **Start**).
-- Abrir o **Application URL** — a app deve arrancar.
+- Abrir o **Application URL** - a app deve arrancar.
 
 ## 🗄️ Comandos de BD no servidor (cPanel)
 
@@ -756,7 +756,7 @@ ok("scripts/diagnose.js (diagnóstico de deployment) copiado.");
 // Com `engineType = "client"` no schema.prisma o Prisma compila as queries em
 // JS/WASM (query_compiler_bg.wasm) e NÃO carrega a engine Rust. Isto é o que
 // elimina as ~64 threads tokio-runtime-w (limite nproc=100 do CloudLinux).
-// NOTA: `previewFeatures = ["driverAdapters"]` SOZINHO NÃO chega — a engine
+// NOTA: `previewFeatures = ["driverAdapters"]` SOZINHO NÃO chega - a engine
 // Rust continua a carregar (medido: +7 threads por CPU lógica após a 1ª query).
 // O crítico agora é o adapter + driver + WASM do compilador no node_modules_deps
 // e NENHUMA engine .node nativa no bundle.
@@ -772,7 +772,7 @@ if (existsSync(prismaClientSrc)) {
   cpSync(prismaClientSrc, prismaClientDir, { recursive: true });
   ok("Cliente Prisma copiado para node_modules_deps/.prisma/client/.");
 } else {
-  err("FALHA CRÍTICA: node_modules/.prisma/client não existe — corre `npm run db:generate` primeiro.");
+  err("FALHA CRÍTICA: node_modules/.prisma/client não existe - corre `npm run db:generate` primeiro.");
 }
 
 // Validação 1: o WASM do query compiler TEM de existir (engineType "client").
@@ -780,14 +780,14 @@ const compilerWasm = join(prismaClientDir, "query_compiler_bg.wasm");
 if (existsSync(compilerWasm)) {
   ok("Query compiler WASM presente: .prisma/client/query_compiler_bg.wasm");
 } else {
-  err('FALHA CRÍTICA: query_compiler_bg.wasm em falta — o schema.prisma tem engineType = "client"?');
+  err('FALHA CRÍTICA: query_compiler_bg.wasm em falta - o schema.prisma tem engineType = "client"?');
 }
 
-// Validação 2: NENHUMA engine Rust (.node) pode existir no bundle — cada
+// Validação 2: NENHUMA engine Rust (.node) pode existir no bundle - cada
 // libquery_engine*.node arranca um pool tokio com 1 thread por CPU visível.
 const rustEngines = readdirSync(prismaClientDir).filter((f) => f.endsWith(".node") || f.includes("libquery_engine") || (f.includes("query_engine") && f.endsWith(".node")));
 if (rustEngines.length > 0) {
-  err(`FALHA CRÍTICA: engines Rust no bundle (${rustEngines.join(", ")}) — regenera o cliente com engineType = "client".`);
+  err(`FALHA CRÍTICA: engines Rust no bundle (${rustEngines.join(", ")}) - regenera o cliente com engineType = "client".`);
 } else {
   ok("Zero engines Rust no bundle (sem threads tokio-runtime-w).");
 }
@@ -836,7 +836,7 @@ const adapterDeps = ["mariadb", "@prisma/adapter-mariadb"];
         log(`Copiado para o bundle: ${name}`);
       }
 
-      // Enfileirar deps de produção (package.json da pasta RESOLVIDA — pode
+      // Enfileirar deps de produção (package.json da pasta RESOLVIDA - pode
       // ser a nested, cujo grafo de deps é o que interessa em runtime).
       let pkgJson;
       try {
@@ -862,7 +862,7 @@ for (const dep of adapterDeps) {
   }
 }
 if (!adapterOk) {
-  err("O Prisma com driverAdapters precisa destes pacotes em runtime — bundle inválido.");
+  err("O Prisma com driverAdapters precisa destes pacotes em runtime - bundle inválido.");
 }
 
 // 4. TAMANHO DO BUNDLE -------------------------------------------------------
@@ -872,7 +872,7 @@ ok(`Tamanho do bundle (descomprimido): ${human(size)}`);
 // 5. EMPACOTAR (TAR.GZ + ZIP) ------------------------------------------------
 if (DO_ZIP) {
   // ────────────────────────────────────────────────────────────────────────
-  // 5a. deploy.tar.gz — FORMATO UNIX NATIVO (recomendado para cPanel)
+  // 5a. deploy.tar.gz - FORMATO UNIX NATIVO (recomendado para cPanel)
   // ────────────────────────────────────────────────────────────────────────
   // O cPanel extrai tar.gz de forma MUITO mais fiável do que zip:
   //   • tar armazena permissões Unix nativas (755 dirs / 644 files)
@@ -880,7 +880,7 @@ if (DO_ZIP) {
   //   • o extractor nativo do cPanel (baseado em GNU tar) é robusto
   // Isto resolve o erro "checkdir error: cannot create... Permission denied"
   // que ocorre ao extrair zips grandes no File Manager do cPanel.
-  log("A criar deploy.tar.gz (formato Unix nativo — recomendado para cPanel)...");
+  log("A criar deploy.tar.gz (formato Unix nativo - recomendado para cPanel)...");
   const { create: tarCreate } = await import("tar");
   if (existsSync(DEPLOY_TARGZ)) rmSync(DEPLOY_TARGZ);
 
@@ -901,7 +901,7 @@ if (DO_ZIP) {
   }
 
   // ────────────────────────────────────────────────────────────────────────
-  // 5b. deploy.zip — ALTERNATIVA (com archiver, forward-slash)
+  // 5b. deploy.zip - ALTERNATIVA (com archiver, forward-slash)
   // ────────────────────────────────────────────────────────────────────────
   // Mantido como fallback para hosts que só aceitam zip.
   log("A criar deploy.zip com archiver (alternativa, forward-slash)...");
@@ -938,10 +938,10 @@ console.log("📦 DEPLOY PRONTO\n");
 console.log(`   Pasta: ${relative(ROOT, DEPLOY)}/`);
 if (existsSync(DEPLOY_TARGZ)) console.log(`   TAR.GZ: ${relative(ROOT, DEPLOY_TARGZ)}  ← RECOMENDADO para cPanel`);
 if (existsSync(DEPLOY_ZIP)) console.log(`   ZIP:    ${relative(ROOT, DEPLOY_ZIP)}`);
-console.log("\n   Próximos passos (cPanel) — ver deploy/README-DEPLOY.md");
+console.log("\n   Próximos passos (cPanel) - ver deploy/README-DEPLOY.md");
 console.log("──────────────────────────────────────────────────────────\n");
 
-// 7. TESTE LOCAL (opcional — --no-test para saltar) --------------------------
+// 7. TESTE LOCAL (opcional - --no-test para saltar) --------------------------
 // Arranca `node app.js` a partir da pasta deploy/ localmente e verifica que a
 // página de login (/entrar) responde com HTML 200. Isto valida que o bundle
 // está realmente pronto para o cPanel (sem erros de require, TypeScript, etc.)

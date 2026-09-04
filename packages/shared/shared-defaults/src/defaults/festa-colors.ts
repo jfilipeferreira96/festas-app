@@ -1,5 +1,5 @@
 // ===================================
-// FESTA COLORS — Paleta de cores BasyLandy
+// FESTA COLORS - Paleta de cores BasyLandy
 // ===================================
 // Fonte única de verdade para cores de festa (pulseiras, slots, reservas, UI).
 // Usada pelo seed:dev e pelo FestaColorPicker do frontend.

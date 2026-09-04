@@ -11,7 +11,7 @@ import { alocacaoMonitorService } from "@/services/alocacaoMonitor.service";
 // H:MM → minutos desde meia-noite
 const H = (h: number, m = 0) => h * 60 + m;
 
-// Datas fixas e determinísticas (UTC) — evitam dependência de "hoje"
+// Datas fixas e determinísticas (UTC) - evitam dependência de "hoje"
 const DATA = "2026-01-15";
 const DATA_ANTERIOR = "2026-01-10";
 const DATA_POSTERIOR = "2026-01-20";
@@ -117,7 +117,7 @@ describe("AlocacaoMonitorService", () => {
         localId: TEST_IDS.LOCAL_1,
       });
 
-      // Adjacente logo a seguir (12:00 – 14:00) — não sobreposta
+      // Adjacente logo a seguir (12:00 – 14:00) - não sobreposta
       const aloc2 = await alocacaoMonitorService.create({
         data: DATA,
         horaInicio: H(12),
@@ -255,7 +255,7 @@ describe("AlocacaoMonitorService", () => {
         localId: TEST_IDS.LOCAL_1,
       });
 
-      // Intervalo [DATA_ANTERIOR, DATA_POSTERIOR) — inclui anterior + DATA, exclui posterior
+      // Intervalo [DATA_ANTERIOR, DATA_POSTERIOR) - inclui anterior + DATA, exclui posterior
       const range = await alocacaoMonitorService.list({
         dataInicio: DATA_ANTERIOR,
         dataFim: DATA,

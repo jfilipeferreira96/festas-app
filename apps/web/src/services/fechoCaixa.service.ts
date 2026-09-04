@@ -53,7 +53,7 @@ export const fechoCaixaService = {
    * acrescenta a lista de ajustes do dia para auditoria.
    *
    * Nota: os acertos de pagamento são aplicados por write-through em
-   * `valorPago`/`custoTotalFinal`, pelo que já estão refletidos nos totais —
+   * `valorPago`/`custoTotalFinal`, pelo que já estão refletidos nos totais -
    * a lista de ajustes é apenas auditoria (não soma, evita dupla contagem).
    */
   async getFechoCaixa(dataISO: string, user?: SessionUser): Promise<FechoCaixa> {
@@ -65,7 +65,7 @@ export const fechoCaixaService = {
     const dataFim = new Date(data);
     dataFim.setDate(dataFim.getDate() + 1);
 
-    // Mesma agregação do relatório — consistência garantida com /relatorios
+    // Mesma agregação do relatório - consistência garantida com /relatorios
     const rel = await relatorioService.getRelatorioFinanceiro(data, data);
 
     const porMetodo = {

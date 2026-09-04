@@ -43,7 +43,7 @@ async function findOrCreateCliente(
   telefone: string,
   email?: string
 ): Promise<string> {
-  // 1. Procurar por email (se fornecido) — email é @unique
+  // 1. Procurar por email (se fornecido) - email é @unique
   if (email && email.trim()) {
     const byEmail = await prisma.cliente.findFirst({ where: { email: email.trim() } });
     if (byEmail) return byEmail.id;
@@ -157,7 +157,7 @@ export const entradaLivreService = {
       orderBy: { inicioEm: "desc" },
     });
 
-    // Client-side filter for criança names (JSON field — Prisma can't search inside JSON easily)
+    // Client-side filter for criança names (JSON field - Prisma can't search inside JSON easily)
     let resultado = entradas.map((e: any) => ({
       ...e,
       custoHora: Number(e.custoHora),
@@ -217,7 +217,7 @@ export const entradaLivreService = {
 
     const { criancas, duracaoMinutos, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
-    // Tarifário global: preço por escalão (1h/2h + hora adicional) — aplica-se a todos os dias.
+    // Tarifário global: preço por escalão (1h/2h + hora adicional) - aplica-se a todos os dias.
     const configPreco = await configuracaoPrecoService.getConfig();
     // custoHora mantém-se para registo histórico (linelegado); usa o escalão aplicável.
     const custoHora = Number(configPreco.precoEntrada1h ?? 6);

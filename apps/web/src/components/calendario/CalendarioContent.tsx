@@ -95,7 +95,7 @@ interface CalendarEvent {
   titulo: string;
   subtitulo: string;
   className: string; // classes tailwind (bg/text)
-  hex?: string; // cor inline (monitores — por local)
+  hex?: string; // cor inline (monitores - por local)
   estado?: string; // para badge (festas/entradas)
   raw: Reserva | EntradaLivre | AlocacaoMonitor;
 }
@@ -124,7 +124,7 @@ function reservaToEvent(r: Reserva): CalendarEvent {
 function entradaToEvent(e: EntradaLivre): CalendarEvent {
   const inicio = parseISO(e.inicioEm);
   const key = format(inicio, "yyyy-MM-dd");
-  const criancasNomes = (e.criancas ?? []).map((c) => c.nome).join(", ") || "—";
+  const criancasNomes = (e.criancas ?? []).map((c) => c.nome).join(", ") || "-";
   return {
     id: e.id,
     tipo: "entradas",
@@ -147,7 +147,7 @@ function alocacaoToEvent(a: AlocacaoMonitor): CalendarEvent {
     dateKey: key,
     horario: minutosParaHora(a.horaInicio),
     duracaoMinutos: a.horaFim - a.horaInicio,
-    titulo: a.monitor?.nome ?? "—",
+    titulo: a.monitor?.nome ?? "-",
     subtitulo: a.local?.nome ?? "",
     className: "", // usa hex por local
     hex: corPorId(a.localId).bg,
@@ -171,7 +171,7 @@ export default function CalendarioContent() {
 
   const isLoading = loadingReservas || loadingEntradas || loadingAlocacoes;
 
-  // Agrupar por data — depende do tipo activo
+  // Agrupar por data - depende do tipo activo
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
     const source: CalendarEvent[] =
@@ -216,7 +216,7 @@ export default function CalendarioContent() {
     if (viewMode === "semana") {
       const start = startOfWeek(currentDate, { weekStartsOn: 1 });
       const end = endOfWeek(currentDate, { weekStartsOn: 1 });
-      return `${format(start, "d MMM", { locale: pt })} — ${format(end, "d MMM yyyy", { locale: pt })}`;
+      return `${format(start, "d MMM", { locale: pt })} - ${format(end, "d MMM yyyy", { locale: pt })}`;
     }
     return format(currentDate, "d 'de' MMMM 'de' yyyy", { locale: pt });
   }, [currentDate, viewMode]);
@@ -673,7 +673,7 @@ function FestaDetail({ r }: { r: Reserva }) {
   return (
     <>
       <DetailRow label="Aniversariante" value={getAniversarianteNome(r)} />
-      <DetailRow label="Encarregado" value={r.cliente?.nome ?? "—"} />
+      <DetailRow label="Encarregado" value={r.cliente?.nome ?? "-"} />
       <DetailRow label="Data" value={format(parseISO(r.data), "d/MM/yyyy")} />
       <DetailRow
         label="Horário"
@@ -681,7 +681,7 @@ function FestaDetail({ r }: { r: Reserva }) {
           r.duracaoMinutos % 60 > 0 ? (r.duracaoMinutos % 60).toString().padStart(2, "0") : ""
         })`}
       />
-      <DetailRow label="Sala" value={r.local?.nome ?? "—"} />
+      <DetailRow label="Sala" value={r.local?.nome ?? "-"} />
       <DetailRow label="Crianças" value={String(r.numCriancas)} />
       <div className="flex items-center gap-2">
         <span className="text-xs text-text-muted w-28 shrink-0">Estado:</span>
@@ -692,7 +692,7 @@ function FestaDetail({ r }: { r: Reserva }) {
 }
 
 function EntradaDetail({ e }: { e: EntradaLivre }) {
-  const criancas = (e.criancas ?? []).map((c) => c.nome).join(", ") || "—";
+  const criancas = (e.criancas ?? []).map((c) => c.nome).join(", ") || "-";
   return (
     <>
       <DetailRow label="Crianças" value={criancas} />
@@ -716,8 +716,8 @@ function EntradaDetail({ e }: { e: EntradaLivre }) {
 function AlocacaoDetail({ a }: { a: AlocacaoMonitor }) {
   return (
     <>
-      <DetailRow label="Monitor" value={a.monitor?.nome ?? "—"} />
-      <DetailRow label="Local" value={a.local?.nome ?? "—"} />
+      <DetailRow label="Monitor" value={a.monitor?.nome ?? "-"} />
+      <DetailRow label="Local" value={a.local?.nome ?? "-"} />
       <DetailRow label="Data" value={format(parseISO(a.data), "d/MM/yyyy")} />
       <DetailRow label="Horário" value={formatarIntervalo(a.horaInicio, a.horaFim)} />
       {a.observacoes ? <DetailRow label="Observações" value={a.observacoes} /> : null}

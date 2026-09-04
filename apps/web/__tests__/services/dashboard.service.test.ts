@@ -218,7 +218,7 @@ describe("Dashboard Service", () => {
   });
 
   // ── festasHoje inclui CONCLUIDA ──────────────────────────────
-  describe("getKPIs() — festasHoje", () => {
+  describe("getKPIs() - festasHoje", () => {
     it("deve contar festas CONCLUIDAS de hoje (não apenas CONFIRMADO/EM_CURSO)", async () => {
       const hoje = new Date();
       const reserva = await testPrisma.reserva.create({

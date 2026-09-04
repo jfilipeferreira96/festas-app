@@ -1,5 +1,5 @@
 // ============================================
-// RBAC — Permissões HARDCODED (sem tabela na BD)
+// RBAC - Permissões HARDCODED (sem tabela na BD)
 // ============================================
 // Fonte de verdade para permissões por papel. Isomórfico (client + server).
 // O papel vem de `session.user.funcao` (Better Auth + campo `funcao` no modelo User).
@@ -77,11 +77,11 @@ export const FUNCOES: FuncaoUtilizador[] = [
 // ── Matriz papel → módulo → nível ────────────
 // ADMINISTRADOR: tudo.
 // LANCHE: lanche (escrita) + menus (leitura).
-// CACIFOS: cacifos (escrita) + reservas (leitura — ponto de vista festas/crianças).
-// MONITOR: monitores (leitura — vê Gantt + notas diárias).
-// FESTAS_ACABAR: festas_acabar (escrita — tabela de festas a acabar).
-// RECECAO: reservas (escrita), clientes (escrita), cacifos (leitura) — faz check-in e cria reservas.
-// STAFF: reservas (leitura), cacifos (escrita), festas_acabar (leitura) — apoio geral no parque.
+// CACIFOS: cacifos (escrita) + reservas (leitura - ponto de vista festas/crianças).
+// MONITOR: monitores (leitura - vê Gantt + notas diárias).
+// FESTAS_ACABAR: festas_acabar (escrita - tabela de festas a acabar).
+// RECECAO: reservas (escrita), clientes (escrita), cacifos (leitura) - faz check-in e cria reservas.
+// STAFF: reservas (leitura), cacifos (escrita), festas_acabar (leitura) - apoio geral no parque.
 export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAcesso>>> = {
   ADMINISTRADOR: {
     reservas: "administracao",

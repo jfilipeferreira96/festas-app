@@ -1,5 +1,5 @@
 // ===================================
-// Cacifo — Types for locker management
+// Cacifo - Types for locker management
 // ===================================
 
 export type EstadoCacifo = "LIVRE" | "OCUPADO" | "RESERVADO";

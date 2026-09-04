@@ -85,7 +85,7 @@ function RelatorioPeriodoTab() {
 
   const { data: relatorio, isLoading, isError, error } = useRelatorioFinanceiro(pesquisaInicio, pesquisaFim);
 
-  // Estável (useCallback) — evita re-inicialização do flatpickr a cada render.
+  // Estável (useCallback) - evita re-inicialização do flatpickr a cada render.
   const handleInicioChange = useCallback(([date]: Date[]) => {
     if (!date) return;
     setDataInicio(toLocalISODate(date));

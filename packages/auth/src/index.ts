@@ -61,7 +61,7 @@ export const auth = betterAuth({
         const altProto = parsed.protocol === "https:" ? "http:" : "https:";
         expanded.add(`${altProto}//${parsed.host}`);
       } catch {
-        // URL inválida — ignorar
+        // URL inválida - ignorar
       }
     }
     return [...expanded];

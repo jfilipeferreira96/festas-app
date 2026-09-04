@@ -14,7 +14,7 @@ datasource db {
 }
 
 // ============================================
-// AUTH — Better Auth core tables
+// AUTH - Better Auth core tables
 // ============================================
 
 model User {
@@ -237,7 +237,7 @@ model Extra {
   precoUnitario Decimal       @db.Decimal(10, 2)
   icone         String?
   categoria     CategoriaItem @default(EXTRA)
-  subcategoria  String?       // Ex: "Diversão", "Premium" — para agrupar extras no formulário
+  subcategoria  String?       // Ex: "Diversão", "Premium" - para agrupar extras no formulário
   requerTexto   Boolean       @default(false) // Se true, mostra input de texto ao selecionar
   // Flag para menus: true = apenas fim-de-semana/feriados, false = apenas dias de semana, null = todos os dias
   fimDeSemana   Boolean?
@@ -338,10 +338,10 @@ model ConfiguracaoPreco {
   // Preço POR CRIANÇA (festa)
   precoCriancaSemana            Decimal  @db.Decimal(10, 2) @default(15)
   precoCriancaFimSemana         Decimal  @db.Decimal(10, 2) @default(20)
-  // Entrada livre (preço por hora — linear, legado)
+  // Entrada livre (preço por hora - linear, legado)
   precoEntradaHoraSemana        Decimal  @db.Decimal(10, 2) @default(10)
   precoEntradaHoraFimSemana     Decimal  @db.Decimal(10, 2) @default(12)
-  // Entrada livre (tarifário por escalão — aplica-se a todos os dias)
+  // Entrada livre (tarifário por escalão - aplica-se a todos os dias)
   precoEntrada1h                Decimal  @db.Decimal(10, 2) @default(6)
   precoEntrada2h                Decimal  @db.Decimal(10, 2) @default(10)
   // Entrada livre: hora adicional (ex.: 1h extra = 5€)
@@ -353,7 +353,7 @@ model ConfiguracaoPreco {
   precoMeias                    Decimal  @db.Decimal(10, 2) @default(2)
   // Excesso de tempo
   precoExcessoFixo              Decimal  @db.Decimal(10, 2) @default(5)
-  // Caução por defeito (valor sugerido ao criar reserva — sobrescrevível)
+  // Caução por defeito (valor sugerido ao criar reserva - sobrescrevível)
   caucaoDefault                 Decimal  @db.Decimal(10, 2) @default(40)
   // Lanche em entrada livre (suplemento por pessoa quando temLanche = true)
   precoLancheEntrada            Decimal  @db.Decimal(10, 2) @default(3)
@@ -417,7 +417,7 @@ model Reserva {
 
   // ── Lanche ──
   estadoLanche         EstadoLanche  @default(NAO_INICIADO)
-  horaLanche           String?       // HH:MM — hora planeada do lanche
+  horaLanche           String?       // HH:MM - hora planeada do lanche
 
   // Pagamento
   metodoPagamento     MetodoPagamento?
@@ -425,7 +425,7 @@ model Reserva {
   pago                Boolean           @default(false)
   referenciaPagamento String?
 
-  // Pagamento dividido (até 2 métodos — o restante pode ser pago de outra forma)
+  // Pagamento dividido (até 2 métodos - o restante pode ser pago de outra forma)
   metodoPagamento2    MetodoPagamento?
   valorPago2          Decimal?          @db.Decimal(10, 2)
 
@@ -458,7 +458,7 @@ model Reserva {
   localId         String
   local           Local         @relation(fields: [localId], references: [id])
 
-  // Sala do lanche (opcional — tabela separada SalaLanche)
+  // Sala do lanche (opcional - tabela separada SalaLanche)
   salaLanche      SalaLanche?   @relation(fields: [salaLancheId], references: [id])
 
   // Relations
@@ -500,7 +500,7 @@ model ReservaMonitor {
   @@map("reserva_monitor")
 }
 
-// Pivot M:N — Reserva ↔ Aniversariante (múltiplos aniversariantes por festa)
+// Pivot M:N - Reserva ↔ Aniversariante (múltiplos aniversariantes por festa)
 model ReservaAniversariante {
   id              String        @id @default(cuid())
   reservaId       String
@@ -575,7 +575,7 @@ model Cacifo {
 }
 
 // ============================================
-// MENUS (simplificado — nome + preço)
+// MENUS (simplificado - nome + preço)
 // ============================================
 
 model Menu {
@@ -597,7 +597,7 @@ model Menu {
 }
 
 // ============================================
-// MARKETING — Campanhas & Newsletter
+// MARKETING - Campanhas & Newsletter
 // ============================================
 
 model Segmento {
@@ -671,7 +671,7 @@ model EnvioCampanha {
 }
 
 // ============================================
-// SISTEMA — Audit Log & Notas Rápidas
+// SISTEMA - Audit Log & Notas Rápidas
 // ============================================
 
 model AuditLog {
@@ -699,7 +699,7 @@ model NotaRapida {
 }
 
 // ============================================
-// RBAC — Permissões HARDCODED (sem modelo na BD)
+// RBAC - Permissões HARDCODED (sem modelo na BD)
 // ============================================
 // As permissões são definidas em apps/web/src/lib/permissoes.ts
 // (matriz fixa por FuncaoUtilizador). Não há tabela na base de dados.
@@ -737,7 +737,7 @@ model SlotHorario {
   ordem             Int      @default(0)
   // ── Defaults aplicados ao criar uma festa neste slot ──
   corDefault        String?  // Cor sugerida para a festa (ex: "#0095C8")
-  horaLancheDefault String?  // HH:MM — hora sugerida do lanche
+  horaLancheDefault String?  // HH:MM - hora sugerida do lanche
   salaLancheId      String?  // FK opcional para SalaLanche
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -757,7 +757,7 @@ model EntradaLivre {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  // ── Crianças (flexível — pode ser 1 ou mais) ──
+  // ── Crianças (flexível - pode ser 1 ou mais) ──
   criancas        Json                // Array de { nome: string, idade?: number }
 
   // ── Dados do Encarregado ────────────
@@ -809,7 +809,7 @@ model EntradaLivre {
   // ── Lanche ──
   temLanche       Boolean            @default(false) // Se a entrada inclui lanche
   estadoLanche    EstadoLanche       @default(NAO_INICIADO)
-  horaLanche      String?            // HH:MM — hora planeada do lanche
+  horaLanche      String?            // HH:MM - hora planeada do lanche
 
   // ── Adultos (encarregados que acompanham e pagam) ──
   numAdultos      Int                @default(0) // Nº de adultos que entram e pagam
@@ -856,7 +856,7 @@ model AjustePagamento {
   // Quando modo = POR_CRIANCA: preço unitário aplicado (valor guarda o total resultante)
   precoPorCabeca  Decimal? @db.Decimal(10, 2)
 
-  // Método associado ao acerto (opcional — se vazio, usa o método principal da entidade)
+  // Método associado ao acerto (opcional - se vazio, usa o método principal da entidade)
   metodoPagamento MetodoPagamento?
 
   // ── Alvo do acerto (exatamente um dos dois) ──
@@ -876,7 +876,7 @@ model AjustePagamento {
 }
 
 // ============================================
-// NOTAS DIÁRIAS (manhã / tarde) — vista MONITOR
+// NOTAS DIÁRIAS (manhã / tarde) - vista MONITOR
 // ============================================
 model NotaDiaria {
   id         String   @id @default(cuid())
@@ -891,7 +891,7 @@ model NotaDiaria {
 }
 
 // ============================================
-// SALAS DE LANCHE — tabela separada de Locais
+// SALAS DE LANCHE - tabela separada de Locais
 // ============================================
 // Espaços dedicados ao lanche das festas (ex: Sala 1, Sala 2).
 // Usada como default nos Slots de Horário e associada às Reservas.

@@ -9,7 +9,7 @@ import type {
 } from "@saas/shared-types";
 
 /**
- * Serviço de Lanche — usado pela conta LANCHE.
+ * Serviço de Lanche - usado pela conta LANCHE.
  * Permite ver os lanches a preparar no dia (festas + entradas livres)
  * e registar notas/alergias por festa.
  */
@@ -91,11 +91,11 @@ export const lancheService = {
       return {
         reservaId: r.id,
         tipo: "FESTA",
-        nomeFesta: nomesAniv || "—",
+        nomeFesta: nomesAniv || "-",
         data: r.data.toISOString(),
         horario: r.horario,
         horaLanche: r.horaLanche ?? undefined,
-        localNome: r.local?.nome ?? "—",
+        localNome: r.local?.nome ?? "-",
         salaLancheNome: r.salaLanche?.nome ?? undefined,
         cor: r.cor ?? undefined,
         numCriancas: r.numCriancas,
@@ -174,11 +174,11 @@ export const lancheService = {
     return {
       reservaId: reserva.id,
       tipo: "FESTA",
-      nomeFesta: nomesAniv || "—",
+      nomeFesta: nomesAniv || "-",
       data: reserva.data.toISOString(),
       horario: reserva.horario,
       horaLanche: reserva.horaLanche ?? undefined,
-      localNome: reserva.local?.nome ?? "—",
+      localNome: reserva.local?.nome ?? "-",
       salaLancheNome: reserva.salaLanche?.nome ?? undefined,
       cor: reserva.cor ?? undefined,
       numCriancas: reserva.numCriancas,

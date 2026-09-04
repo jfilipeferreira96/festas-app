@@ -42,7 +42,7 @@ const euro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR"
 /** Converte "dd-mm-yyyy" (formato do DatePicker) → "yyyy-mm-dd" (ISO esperado pela API). */
 function dmyToIso(dateStr: string): string {
   const m = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (!m) return dateStr; // já ISO ou vazio — devolver inalterado
+  if (!m) return dateStr; // já ISO ou vazio - devolver inalterado
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
@@ -168,7 +168,7 @@ export default function MonitoresContent() {
         sortable: true,
         render: (_value, m) => (
           <span className="text-sm text-text-secondary">
-            {m.valorHora != null ? euro.format(Number(m.valorHora)) : "—"}
+            {m.valorHora != null ? euro.format(Number(m.valorHora)) : "-"}
           </span>
         ),
       });
@@ -199,7 +199,7 @@ export default function MonitoresContent() {
         body: formData,
       });
     } catch {
-      // Silently fail — photo is optional, entity was already created
+      // Silently fail - photo is optional, entity was already created
     }
   }, []);
 
@@ -431,7 +431,7 @@ export default function MonitoresContent() {
                         <td className="px-4 py-3 text-center text-text-primary">{m.dias}</td>
                         <td className="px-4 py-3 text-center text-text-primary">{m.horas.toFixed(1)} h</td>
                         <td className="px-4 py-3 text-right text-text-primary">
-                          {m.valorHora > 0 ? euro.format(m.valorHora) : "—"}
+                          {m.valorHora > 0 ? euro.format(m.valorHora) : "-"}
                         </td>
                         <td className="px-4 py-3 text-right text-brand-500 font-semibold">
                           {euro.format(m.custoTotal)}
@@ -629,7 +629,7 @@ export default function MonitoresContent() {
                 <div className="flex justify-between text-sm">
                   <span className="text-text-secondary">Valor/Hora</span>
                   <span className="font-medium text-text-primary">
-                    {horasResultado.valorHora > 0 ? euro.format(horasResultado.valorHora) : "—"}
+                    {horasResultado.valorHora > 0 ? euro.format(horasResultado.valorHora) : "-"}
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-semibold border-t border-border pt-2 mt-2">

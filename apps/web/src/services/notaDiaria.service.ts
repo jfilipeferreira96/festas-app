@@ -2,7 +2,7 @@ import prisma from "@festas/db";
 import type { NotaDiaria, UpsertNotaDiariaDTO } from "@saas/shared-types";
 
 /**
- * Serviço de Notas Diárias — usado pela vista MONITOR.
+ * Serviço de Notas Diárias - usado pela vista MONITOR.
  * O ADMINISTRADOR escreve notas de manhã e tarde; o MONITOR lê-as.
  */
 export const notaDiariaService = {

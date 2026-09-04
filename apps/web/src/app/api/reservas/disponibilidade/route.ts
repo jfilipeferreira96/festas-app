@@ -20,7 +20,7 @@ const handleError = createRouteErrorHandler({
 });
 
 // GET /api/reservas/disponibilidade?data=&horario=&duracaoMinutos=&localId=&excludeId=
-// Verifica sobreposição temporal (duração) — aviso apenas, não bloqueia.
+// Verifica sobreposição temporal (duração) - aviso apenas, não bloqueia.
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

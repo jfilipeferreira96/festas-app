@@ -24,14 +24,14 @@ const euro = new Intl.NumberFormat("pt-PT", {
 });
 
 function formatTime(iso?: string): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   try {
     return new Date(iso).toLocaleTimeString("pt-PT", {
       hour: "2-digit",
       minute: "2-digit",
     });
   } catch {
-    return "—";
+    return "-";
   }
 }
 
@@ -56,14 +56,14 @@ interface ConcluirResumoModalProps {
 
   /** Modal title, e.g. "Finalizar Festa" or "Concluir Entrada" */
   titulo: string;
-  /** Entity name — aniversariante (festa) or first criança (entrada livre) */
+  /** Entity name - aniversariante (festa) or first criança (entrada livre) */
   entidadeNome: string;
   /** Local / sala name */
   localNome?: string;
 
-  /** ISO string — when the festa/entrada started */
+  /** ISO string - when the festa/entrada started */
   inicioEm?: string;
-  /** ISO string — planned end time */
+  /** ISO string - planned end time */
   fimPrevisto?: string;
   /** Planned duration in minutes */
   duracaoMinutos: number;

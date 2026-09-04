@@ -85,7 +85,7 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
           <InfoItem
             icon={<MapPin size={14} />}
             label="Local"
-            value={reserva.local?.nome ?? "—"}
+            value={reserva.local?.nome ?? "-"}
           />
           <InfoItem
             icon={<Clock size={14} />}
@@ -95,12 +95,12 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
           <InfoItem
             icon={<Clock size={14} />}
             label="Duração real"
-            value={duracaoReal ?? "—"}
+            value={duracaoReal ?? "-"}
           />
           <InfoItem
             icon={<User size={14} />}
             label="Encarregado"
-            value={reserva.cliente?.nome ?? "—"}
+            value={reserva.cliente?.nome ?? "-"}
           />
           {reserva.cliente?.telefone && (
             <InfoItem
@@ -141,7 +141,7 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
               <div className="flex items-center gap-2">
                 <Sparkles size={13} className="text-text-muted" />
                 <span className="text-xs text-text-secondary">
-                  <span className="text-text-muted">Tema:</span> {reserva.tema || "—"}
+                  <span className="text-text-muted">Tema:</span> {reserva.tema || "-"}
                   {reserva.cor && (
                     <span className="inline-flex items-center gap-1 ml-2">
                       <span className="w-3 h-3 rounded-full inline-block border border-gray-300" style={{ backgroundColor: reserva.cor }} />
@@ -258,7 +258,7 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
           </div>
         )}
 
-        {/* Etapas — oculto per pedido do cliente (12/07/2026)
+        {/* Etapas - oculto per pedido do cliente (12/07/2026)
         {reserva.etapas && reserva.etapas.length > 0 && (
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-text-primary mb-2">Etapas</h3>

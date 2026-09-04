@@ -28,7 +28,7 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
 }
 
-// PATCH /api/lanche/:reservaId — atualizar notas de lanche / itens / observações lesões
+// PATCH /api/lanche/:reservaId - atualizar notas de lanche / itens / observações lesões
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);
@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
 }
 
-// PUT /api/lanche/:reservaId/estado — atualizar estado do lanche
+// PUT /api/lanche/:reservaId/estado - atualizar estado do lanche
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);

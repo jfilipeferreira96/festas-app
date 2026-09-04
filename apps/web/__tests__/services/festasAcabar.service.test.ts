@@ -49,7 +49,7 @@ describe("Festas Acabar Service", () => {
       const festas = await festasAcabarService.getFestas();
       const ids = festas.map((f: { id: string }) => f.id);
 
-      // RESERVA_PENDENTE está em estado RESERVA — não deve aparecer
+      // RESERVA_PENDENTE está em estado RESERVA - não deve aparecer
       expect(ids).not.toContain(TEST_IDS.RESERVA_PENDENTE);
     });
 

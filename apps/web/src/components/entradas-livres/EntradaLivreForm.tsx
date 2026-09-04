@@ -66,7 +66,7 @@ const DURACAO_OPTIONS = [
   { value: "180", label: "3 horas" },
 ];
 
-// Estado de pagamento — Select de 3 estados para obrigar selecção explícita
+// Estado de pagamento - Select de 3 estados para obrigar selecção explícita
 const ESTADO_PAGAMENTO_OPTIONS = [
   { value: "", label: "Seleccionar..." },
   { value: "true", label: "Pago" },
@@ -128,7 +128,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const [showSplitPayment, setShowSplitPayment] = React.useState(
     !!entrada?.metodoPagamento2 || !!entrada?.valorPago2
   );
-  // Modal dedicada de pagamento (com acertos/auditoria) — usada em modo edição
+  // Modal dedicada de pagamento (com acertos/auditoria) - usada em modo edição
   const [showPagamentoModal, setShowPagamentoModal] = React.useState(false);
 
   const defaultValues = useMemo<Partial<EntradaLivreFormData>>(
@@ -170,7 +170,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const pago = watch("pago");
   const cacifoIdWatched = watch("cacifoId");
 
-  // Tarifário global (singleton) — usado para auto-preenchimento do custo
+  // Tarifário global (singleton) - usado para auto-preenchimento do custo
   const { data: configPreco } = useConfigPreco();
 
   // Custo calculado a partir do tarifário global:
@@ -264,7 +264,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       { value: "", label: "Nenhum" },
       ...cacifosLivres.map((c) => ({
         value: c.id,
-        label: `#${c.numero}${c.nome ? ` — ${c.nome}` : ""}`,
+        label: `#${c.numero}${c.nome ? ` - ${c.nome}` : ""}`,
       })),
     ],
     [cacifosLivres]
@@ -547,7 +547,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               </div>
               <div className="flex-1">
                 <label className="block text-xs font-medium text-text-secondary mb-1">
-                  Custo total (€) — editável
+                  Custo total (€) - editável
                 </label>
                 <div className="flex items-center gap-2">
                   <InputField
@@ -712,7 +712,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               <CreditCard size={14} className="text-brand-500" /> Pagamento
             </div>
 
-            {/* Estado + Método — na criação, campos; na edição, resumo + "Gerir pagamento" */}
+            {/* Estado + Método - na criação, campos; na edição, resumo + "Gerir pagamento" */}
             {isEdit && entrada ? (
               <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-surface border border-border">
                 <div className="flex items-center gap-2.5 min-w-0">
@@ -801,7 +801,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               </div>
             </div>
 
-            {/* Pagamento dividido (apenas na criação — na edição usar "Gerir pagamento") */}
+            {/* Pagamento dividido (apenas na criação - na edição usar "Gerir pagamento") */}
             {!isEdit && (
               <div className="border-t border-border pt-3 space-y-2">
                 <Checkbox

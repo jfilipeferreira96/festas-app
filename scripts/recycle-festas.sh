@@ -19,16 +19,16 @@ mkdir -p "$LOG_DIR"
   P=$(ps -u "$USER" --no-headers 2>/dev/null | wc -l)
   T=$(ps -Lu "$USER" --no-headers 2>/dev/null | wc -l)
   Z=$(ps -u "$USER" -o stat= 2>/dev/null | grep -c Z)
-  # Órfãos da app: node/next-server adotados pelo init (PPID=1) — sobra de
+  # Órfãos da app: node/next-server adotados pelo init (PPID=1) - sobra de
   # restart/deploy que o app server já não controla.
   O=$(ps -u "$USER" -o ppid=,comm= 2>/dev/null | awk '$1==1 && $2 ~ /node|next-server|Passenger/' | wc -l)
   echo "metricas: processos=$P threads=$T zombies=$Z orfaos=$O"
 
   # 2. Decisão
   if [ "$T" -le "$THRESHOLD" ] && [ "$Z" -eq 0 ] && [ "$O" -eq 0 ]; then
-    echo "OK (threads=${T}<=${THRESHOLD}, sem zombies/orfaos) — sem reciclagem"
+    echo "OK (threads=${T}<=${THRESHOLD}, sem zombies/orfaos) - sem reciclagem"
   else
-    echo "ANOMALIA (threads=${T} zombies=${Z} orfaos=${O}) — a reciclar..."
+    echo "ANOMALIA (threads=${T} zombies=${Z} orfaos=${O}) - a reciclar..."
 
     # Termina processos node órfãos/obsoletos (TERM = gracioso). A app renasce
     # no próximo request. Este script corre como bash (sem 'node' no cmdline).

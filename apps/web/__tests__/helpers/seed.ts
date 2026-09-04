@@ -203,7 +203,7 @@ export async function seedTestData(): Promise<void> {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Reserva confirmada (today, 10:00) — com meias + split payment demo
+  // Reserva confirmada (today, 10:00) - com meias + split payment demo
   await testPrisma.reserva.upsert({
     where: { id: TEST_IDS.RESERVA_CONFIRMADA },
     update: {},
@@ -231,7 +231,7 @@ export async function seedTestData(): Promise<void> {
       // Meias (compra obrigatória)
       meiasQuantidade: 18,
       meiasPrecoUnit: 2,
-      // Split payment (caução MBWAY + resto multibanco) — já paga
+      // Split payment (caução MBWAY + resto multibanco) - já paga
       pago: true,
       metodoPagamento: "MBWAY",
       valorPago: 50,
@@ -260,7 +260,7 @@ export async function seedTestData(): Promise<void> {
       estado: "RESERVA",
       clienteId: TEST_IDS.CLIENTE_2,
       localId: TEST_IDS.LOCAL_2,
-      // Bolo — pais trazem (tema e quantidade não se aplicam)
+      // Bolo - pais trazem (tema e quantidade não se aplicam)
       bolo: "PAIS_TRAZEM",
       // Notas por equipa
       notasCacifos: "Gemidos de dois anos",
@@ -315,7 +315,7 @@ export async function seedTestData(): Promise<void> {
     create: { id: TEST_IDS.RESERVA_EXTRA_2, reservaId: TEST_IDS.RESERVA_EM_CURSO, extraId: TEST_IDS.EXTRA_2, quantidade: 2, concluido: true },
   });
 
-  // ── Ajuste de Pagamento (acréscimo exemplo — write-through) ──
+  // ── Ajuste de Pagamento (acréscimo exemplo - write-through) ──
   // ACRESCIMO 10€ na confirmada (meias). O valorPago do seed já considera o acerto.
   await testPrisma.ajustePagamento.upsert({
     where: { id: TEST_IDS.AJUSTE_ACRESCIMO },

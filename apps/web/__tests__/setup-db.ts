@@ -57,7 +57,7 @@ console.log("Test database name:", testDbName);
 console.log("Creating test database in MySQL...");
 try {
   // Connect via baseUrl (main DATABASE_URL, an existing user DB) to run the
-  // CREATE statement — avoids Prisma P3004 ("mysql is a system database"),
+  // CREATE statement - avoids Prisma P3004 ("mysql is a system database"),
   // which fires when the connection URL has no database path.
   execSync(`npx prisma db execute --url "${baseUrl}" --stdin`, {
     input: `CREATE DATABASE IF NOT EXISTS \`${testDbName}\`;`,

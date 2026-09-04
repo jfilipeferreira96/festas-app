@@ -1,4 +1,4 @@
-# SKILL — Tempo Real
+# SKILL - Tempo Real
 
 Padrão para funcionalidades que actualizam sem interacção do utilizador.
 Usado em: página de Festas, Dashboard (KPIs), Cacifos.
@@ -15,10 +15,10 @@ Usado em: página de Festas, Dashboard (KPIs), Cacifos.
 Começar com polling. Migrar para WebSocket apenas se o polling causar problemas
 de performance com múltiplos utilizadores simultâneos.
 
-## Timer de festa — implementação
+## Timer de festa - implementação
 
 O timer é calculado no cliente a partir da `inicioEm` guardada na reserva (unificada com festa).
-Nunca confiar num contador incrementado localmente — pode desfasar.
+Nunca confiar num contador incrementado localmente - pode desfasar.
 
 ### Componente CountdownTimer
 
@@ -76,7 +76,7 @@ function formatarDuracao(ms: number): string {
 }
 ```
 
-## Polling — implementação com TanStack Query
+## Polling - implementação com TanStack Query
 
 Usar `refetchInterval` do TanStack Query para polling automático:
 
@@ -119,7 +119,7 @@ Quando `emAtraso === true` (tempo restante negativo), o card da festa deve:
 - Mostrar o timer do atraso em vermelho: "Em atraso: 00:12:30"
 - Emitir notificação sonora opcional (configurável nas preferências)
 
-## Finalizar festa — fluxo
+## Finalizar festa - fluxo
 
 1. Utilizador clica "Finalizar Festa"
 2. Modal de confirmação: "Tens a certeza que queres finalizar a Festa do Tomás?"

@@ -85,7 +85,7 @@ export default function FestasContent() {
     <div>
      <PageHeader
         title="Festas"
-        subtitle={`Acompanhe em tempo real — ${todayStr}`}
+        subtitle={`Acompanhe em tempo real - ${todayStr}`}
       />
 
       {/* KPI: Crianças no parque (em festas + entradas livres). Exclui canceladas. */}
@@ -97,7 +97,7 @@ export default function FestasContent() {
           <div>
             <p className="text-[11px] text-text-muted leading-tight">Crianças em festas</p>
             <p className="text-xl font-bold text-text-primary font-poppins leading-tight">
-              {kpis?.criancasFestas ?? "—"}
+              {kpis?.criancasFestas ?? "-"}
             </p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function FestasContent() {
           <div>
             <p className="text-[11px] text-text-muted leading-tight">Total no parque</p>
             <p className="text-xl font-bold text-text-primary font-poppins leading-tight">
-              {kpis?.totalCriancasNoParque ?? "—"}
+              {kpis?.totalCriancasNoParque ?? "-"}
               <span className="text-xs font-normal text-text-muted ml-1">crianças</span>
             </p>
           </div>
@@ -166,7 +166,7 @@ export default function FestasContent() {
         </Modal>
       )}
 
-      {/* Detail Modal — shared self-contained modal */}
+      {/* Detail Modal - shared self-contained modal */}
       <FestaDetailModal
         reservaId={viewingReservaId}
         onClose={() => setViewingReservaId(null)}
@@ -366,7 +366,7 @@ function FestaCard({
        isOverdue ? "border-accent-red-400" : isWaitingStart ? "border-primary-300" : "border-border"
      } ${isEndingSoon ? "animate-alerta-piscar" : ""}`}
    >
-     {/* Color bar — cor da festa para identificação das pulseiras */}
+     {/* Color bar - cor da festa para identificação das pulseiras */}
      {festa.cor && (
        <div className="h-3" style={{ backgroundColor: festa.cor }} />
      )}
@@ -403,7 +403,7 @@ function FestaCard({
              </span>
            )}
          </div>
-          {/* Botão de impressão rápido — visível directamente no card */}
+          {/* Botão de impressão rápido - visível directamente no card */}
           <button
             type="button"
             onClick={handleImprimir}
@@ -413,7 +413,7 @@ function FestaCard({
           >
             <Printer size={16} />
           </button>
-          {/* Botão de pagamento rápido — visível directamente no card */}
+          {/* Botão de pagamento rápido - visível directamente no card */}
           <button
             type="button"
             onClick={onPagamento}
@@ -423,7 +423,7 @@ function FestaCard({
           >
             <Wallet size={16} />
           </button>
-          {/* 3-dots dropdown — acções secundárias */}
+          {/* 3-dots dropdown - acções secundárias */}
           <div className="relative shrink-0">
             <button
               ref={dropdownTriggerRef}
@@ -494,7 +494,7 @@ function FestaCard({
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-text-muted mt-1">
-          <span>{festa.local?.nome ?? "—"}</span>
+          <span>{festa.local?.nome ?? "-"}</span>
           <span>·</span>
           <span>{festa.horario}</span>
           <span>·</span>
@@ -625,7 +625,7 @@ function FestaCard({
           </div>
         )}
 
-        {/* Pagamento — clicável para abrir PagamentoModal */}
+        {/* Pagamento - clicável para abrir PagamentoModal */}
         <button
           type="button"
           onClick={onPagamento}
@@ -697,7 +697,7 @@ function FestaCard({
           </div>
         )}
 
-        {/* Etapas — oculto per pedido do cliente (12/07/2026)
+        {/* Etapas - oculto per pedido do cliente (12/07/2026)
             O bloco etapas foi removido da UI. Mantém-se comentado para referência.
         {festa.etapas && festa.etapas.length > 0 && (
           <div className="space-y-1.5 pt-1">
@@ -766,7 +766,7 @@ function FestaCard({
         )} */}
       </div>
 
-      {/* Actions — quick buttons (Cacifos / Crianças / Ver tudo / Finalizar) */}
+      {/* Actions - quick buttons (Cacifos / Crianças / Ver tudo / Finalizar) */}
       <div className="p-4 border-t border-border flex flex-wrap items-center gap-2">
         <button
           onClick={() => setShowCacifos(!showCacifos)}

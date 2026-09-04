@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * teste-threads.mjs — prova empírica: o driver adapter elimina as threads tokio?
+ * teste-threads.mjs - prova empírica: o driver adapter elimina as threads tokio?
  *
  * Cria um PrismaClient (com adapter mariadb), corre uma query e conta as
  * threads do processo. Critério (cPanel nproc=100):

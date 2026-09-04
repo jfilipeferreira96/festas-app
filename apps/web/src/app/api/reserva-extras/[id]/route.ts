@@ -13,8 +13,8 @@ const handleError = createRouteErrorHandler({
   serviceName: "ReservaExtra",
 });
 
-// PATCH /api/reserva-extras/[id] — alterna o estado de conclusão do extra
-// (entregue/prestado no dia da festa — check na tabela de festas)
+// PATCH /api/reserva-extras/[id] - alterna o estado de conclusão do extra
+// (entregue/prestado no dia da festa - check na tabela de festas)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
