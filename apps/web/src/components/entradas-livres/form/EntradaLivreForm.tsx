@@ -18,6 +18,7 @@ import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import {
   buildEntradaLivreDefaults,
   buildEntradaPayload,
+  DATA_NASCIMENTO_DEFAULT,
   entradaLivreFormSchema,
   type EntradaLivreFormData,
 } from "./entrada-livre-form.schema";
@@ -32,14 +33,11 @@ interface EntradaLivreFormProps {
   onClose: () => void;
 }
 
-function idadeDeDataNascimento(dataNascimento: string): string {
-  if (!dataNascimento) return "";
-  const nasc = new Date(dataNascimento);
-  const agora = new Date();
-  let anos = agora.getFullYear() - nasc.getFullYear();
-  const m = agora.getMonth() - nasc.getMonth();
-  if (m < 0 || (m === 0 && agora.getDate() < nasc.getDate())) anos--;
-  return String(Math.max(0, anos));
+function dataNascimentoDeFilho(dataNascimento: string | undefined): string {
+  // Usa a data do filho conhecida; caso contrário o default do schema (2020-01-01).
+  if (!dataNascimento) return DATA_NASCIMENTO_DEFAULT;
+  const iso = dataNascimento.split("T")[0];
+  return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : DATA_NASCIMENTO_DEFAULT;
 }
 
 export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormProps) {
@@ -112,7 +110,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   ]);
 
   const custoCalculado = custoComponentes.total;
-  const custoFinal = watch("custoTotal") ?? custoCalculado;
 
   const [custoEdited, setCustoEdited] = useState(false);
   useEffect(() => {
@@ -148,7 +145,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         criancasArray.replace(
           filhos.map((filho) => ({
             nome: filho.nome,
-            idade: idadeDeDataNascimento(filho.dataNascimento),
+            dataNascimento: dataNascimentoDeFilho(filho.dataNascimento),
             querLanche: true,
           }))
         );
@@ -181,7 +178,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   return (
     <div className="flex flex-col max-h-[70vh]">
       <FormProvider {...methods}>
-        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
+        <form autoComplete="off" onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-6">
             <PessoasEntradaSection
               criancas={criancasArray}
@@ -189,20 +186,19 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               onOpenSearchCliente={() => setShowClienteSearch(true)}
             />
             <DuracaoLancheSection
-              custoCalculado={custoCalculado}
               custoTempoPorPessoa={custoTempoPorPessoa}
               precoLancheEntrada={Number(configPreco?.precoLancheEntrada ?? 3)}
               cacifoOptions={cacifoOptions}
-              onCustoEditado={() => setCustoEdited(true)}
             />
             <ExtrasEntradaSection numPessoas={custoComponentes.totalPessoas} />
             <ObservacoesSection />
             <PagamentoEntradaSection
               entrada={entrada}
               custoComponentes={custoComponentes}
-              custoFinal={custoFinal}
+              custoCalculado={custoCalculado}
               precoMeias={Number(configPreco?.precoMeias ?? 1.5)}
               onOpenPagamento={() => setShowPagamentoModal(true)}
+              onCustoEditado={() => setCustoEdited(true)}
             />
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end shrink-0">

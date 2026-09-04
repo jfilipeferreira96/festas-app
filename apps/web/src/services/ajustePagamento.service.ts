@@ -62,12 +62,14 @@ export const ajustePagamentoService = {
     if (data.reservaId) {
       const reserva = await prisma.reserva.findUnique({ where: { id: data.reservaId } });
       if (!reserva) throw new Error("NOT_FOUND");
-      const atual = Number(reserva.valorPago ?? 0);
+      // Write-through no campo do total: valorTotal (novo) com fallback para valorPago (registos antigos)
+      const campoTotal = reserva.valorTotal != null ? "valorTotal" : "valorPago";
+      const atual = Number(reserva[campoTotal] ?? 0);
       const novo = Math.round((atual + delta) * 100) / 100;
       if (novo < 0) throw new Error("VALOR_INVALIDO");
       await prisma.reserva.update({
         where: { id: data.reservaId },
-        data: { valorPago: novo },
+        data: { [campoTotal]: novo },
       });
     } else if (data.entradaLivreId) {
       const entrada = await prisma.entradaLivre.findUnique({ where: { id: data.entradaLivreId } });
@@ -139,9 +141,10 @@ export const ajustePagamentoService = {
         novoTotal = Math.round(precoPorCabeca! * criancas * 100) / 100;
       }
 
+      const campoTotal = reserva.valorTotal != null ? "valorTotal" : "valorPago";
       await prisma.reserva.update({
         where: { id: data.reservaId },
-        data: { valorPago: novoTotal },
+        data: { [campoTotal]: novoTotal },
       });
     } else if (data.entradaLivreId) {
       const entrada = await prisma.entradaLivre.findUnique({ where: { id: data.entradaLivreId } });
@@ -185,10 +188,12 @@ export const ajustePagamentoService = {
     if (ajuste.reservaId) {
       const reserva = await prisma.reserva.findUnique({ where: { id: ajuste.reservaId } });
       if (reserva) {
-        const novo = Math.max(0, Math.round((Number(reserva.valorPago ?? 0) + delta) * 100) / 100);
+        // Reverter no campo do total: valorTotal (novo) com fallback para valorPago (registos antigos)
+        const campoTotal = reserva.valorTotal != null ? "valorTotal" : "valorPago";
+        const novo = Math.max(0, Math.round((Number(reserva[campoTotal] ?? 0) + delta) * 100) / 100);
         await prisma.reserva.update({
           where: { id: ajuste.reservaId },
-          data: { valorPago: novo },
+          data: { [campoTotal]: novo },
         });
       }
     } else if (ajuste.entradaLivreId) {

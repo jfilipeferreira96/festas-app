@@ -24,6 +24,7 @@ export interface EntradaLivre {
   excessoMinutos: number;
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
   metodoPagamento?: string;
+  valorPago?: number; // Valor recebido no pagamento 1
   pago: boolean;
   pagoExcesso: boolean;
   // Pagamento dividido (até 2 métodos)
@@ -64,6 +65,7 @@ export interface CriarEntradaLivreDTO {
   duracaoMinutos: number;
   custoTotal?: number;
   metodoPagamento?: string;
+  valorPago?: number;
   pago?: boolean;
   cacifoId?: string;
   extrasIds?: string[];

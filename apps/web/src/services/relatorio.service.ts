@@ -102,6 +102,7 @@ interface ReservaRelatorio {
   numCriancas: number;
   estado: string;
   pago: boolean;
+  valorTotal?: unknown;
   metodoPagamento: string | null;
   valorPago: unknown;
   metodoPagamento2: string | null;
@@ -238,9 +239,14 @@ export const relatorioService = {
       linha.quantidade += 1;
       linha.totalCriancas += r.numCriancas;
 
-      // Pagamento principal + pagamento dividido (até 2 métodos)
-      somarPorMetodo(linha, r.metodoPagamento, toNum(r.valorPago));
-      somarPorMetodo(linha, r.metodoPagamento2, toNum(r.valorPago2));
+      // Pagamento principal + dividido (até 2 métodos).
+      // Regra: total = valorTotal ?? valorPago; pag.1 = valorPago (registos novos)
+      // ou total - pag.2 (registos antigos, em que valorPago era o total).
+      const totalFesta = toNum(r.valorTotal ?? r.valorPago);
+      const recebido2 = Math.min(toNum(r.valorPago2), totalFesta);
+      const recebido1 = r.valorTotal != null ? toNum(r.valorPago) : totalFesta - recebido2;
+      somarPorMetodo(linha, r.metodoPagamento, recebido1);
+      somarPorMetodo(linha, r.metodoPagamento2, recebido2);
     }
 
     const linhas = Array.from(grupos.values()).sort((a, b) => b.quantidade - a.quantidade);

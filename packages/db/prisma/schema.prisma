@@ -426,8 +426,9 @@ model Reserva {
   horaLanche           String?       // HH:MM - hora planeada do lanche
 
   // Pagamento
+  valorTotal          Decimal?          @db.Decimal(10, 2)  // Total acordado (editável no form); fallback p/ leitura: valorPago
   metodoPagamento     MetodoPagamento?
-  valorPago           Decimal?          @db.Decimal(10, 2)
+  valorPago           Decimal?          @db.Decimal(10, 2)  // Valor recebido no pagamento 1
   pago                Boolean           @default(false)
   referenciaPagamento String?
 
@@ -793,6 +794,7 @@ model EntradaLivre {
 
   // ── Pagamento ───────────────────────
   metodoPagamento MetodoPagamento?
+  valorPago       Decimal?           @db.Decimal(10, 2)  // Valor recebido no pagamento 1
   pago            Boolean             @default(false)
   pagoExcesso     Boolean             @default(false)
 

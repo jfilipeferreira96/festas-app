@@ -5,6 +5,7 @@ interface InputProps {
   type?: "text" | "number" | "email" | "password" | "date" | "time" | string;
   id?: string;
   name?: string;
+  autoComplete?: string;
   placeholder?: string;
   defaultValue?: string | number;
   value?: string | number;
@@ -26,6 +27,7 @@ const Input: FC<InputProps> = React.forwardRef<HTMLInputElement, InputProps>(({
   type = "text",
   id,
   name,
+  autoComplete,
   placeholder,
   defaultValue,
   value,
@@ -63,6 +65,7 @@ const Input: FC<InputProps> = React.forwardRef<HTMLInputElement, InputProps>(({
         type={type}
         id={id}
         name={name}
+        autoComplete={autoComplete ?? "off"}
         placeholder={displayPlaceholder}
         defaultValue={defaultValue}
         value={value}

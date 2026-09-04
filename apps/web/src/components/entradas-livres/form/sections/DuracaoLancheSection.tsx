@@ -11,19 +11,15 @@ import { formatEuro } from "@/lib/format";
 import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-livre-form.schema";
 
 interface DuracaoLancheSectionProps {
-  custoCalculado: number;
   custoTempoPorPessoa: number;
   precoLancheEntrada: number;
   cacifoOptions: { value: string; label: string }[];
-  onCustoEditado: () => void;
 }
 
 export default function DuracaoLancheSection({
-  custoCalculado,
   custoTempoPorPessoa,
   precoLancheEntrada,
   cacifoOptions,
-  onCustoEditado,
 }: DuracaoLancheSectionProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext<EntradaLivreFormData>();
   const duracao = watch("duracaoMinutos");
@@ -50,23 +46,9 @@ export default function DuracaoLancheSection({
           )}
         </div>
         <div className="flex-1">
-          <FieldLabel>Custo total (€) - editável</FieldLabel>
-          <div className="flex items-center gap-2">
-            <InputField
-              type="number"
-              step={0.01}
-              min={0}
-              placeholder="0.00"
-              value={watch("custoTotal") != null ? String(watch("custoTotal")) : ""}
-              onChange={(e) => {
-                const v = e.target.value;
-                onCustoEditado();
-                setValue("custoTotal", v === "" ? undefined : Number(v), { shouldDirty: true });
-              }}
-              error={!!errors.custoTotal}
-              hint={errors.custoTotal?.message}
-            />
-            <span className="text-xs text-text-muted whitespace-nowrap">≈ {formatEuro(custoCalculado)}</span>
+          <FieldLabel>Valor por pessoa</FieldLabel>
+          <div className="h-11 flex items-center px-4 rounded-lg border border-border bg-gray-50 dark:bg-gray-800/50 text-sm font-medium text-text-primary">
+            {formatEuro(custoTempoPorPessoa)}
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { CreateReservaData, Reserva } from "@/lib/api/reservas";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
-import { calcIdade, toISODate } from "@/lib/format";
+import { calcIdade, isFimDeSemana, toISODate } from "@/lib/format";
 
 export interface FestaFormInitialValues {
   data?: string;
@@ -61,8 +61,12 @@ export const festaFormSchema = z.object({
   observacoesLesoes: z.string(),
   observacoesBrindes: z.string(),
   outrosExtras: z.string(),
+  // Pagamento unificado: Total a pagar (editável) + Recebido nesta fase (pag. 1) + split (pag. 2)
+  totalAPagar: z.number().min(0, "O total não pode ser negativo").optional(),
   metodoPagamento: z.enum(METODOS_PAGAMENTO).optional(),
-  valorPago: z.number().min(0).optional(),
+  valorRecebido1: z.number().min(0).optional(),
+  metodoPagamento2: z.enum(METODOS_PAGAMENTO).optional(),
+  valorRecebido2: z.number().min(0).optional(),
   pago: z.boolean().optional(),
   caucao: z.enum(CAUCOES).optional(),
   valorCaucao: z.number().min(0).optional(),
@@ -147,8 +151,12 @@ export function buildFestaDefaults(
     observacoesLesoes: reserva?.observacoesLesoes ?? "",
     observacoesBrindes: reserva?.observacoesBrindes ?? "",
     outrosExtras: reserva?.outrosExtras ?? "",
+    // Pagamento unificado: total acordado (valorTotal, fallback valorPago) + recebido pag.1
+    totalAPagar: reserva ? Number(reserva.valorTotal ?? reserva.valorPago ?? 0) || undefined : undefined,
     metodoPagamento: undefined,
-    valorPago: reserva?.valorPago ? Number(reserva.valorPago) : undefined,
+    valorRecebido1: reserva?.valorPago ? Number(reserva.valorPago) : undefined,
+    metodoPagamento2: undefined,
+    valorRecebido2: reserva?.valorPago2 ? Number(reserva.valorPago2) : undefined,
     pago: reserva?.pago ?? false,
     caucao: (reserva?.caucao || undefined) as FestaFormData["caucao"],
     valorCaucao: reserva?.valorCaucao ? Number(reserva.valorCaucao) : undefined,
@@ -218,10 +226,56 @@ export function buildFestaPayload(
     observacoesLesoes: data.observacoesLesoes || undefined,
     observacoesBrindes: data.observacoesBrindes || undefined,
     outrosExtras: data.outrosExtras || undefined,
+    valorTotal: opts.isEdit ? undefined : data.totalAPagar || undefined,
     metodoPagamento: opts.isEdit ? undefined : data.metodoPagamento,
-    valorPago: opts.isEdit ? undefined : data.valorPago || undefined,
+    valorPago: opts.isEdit ? undefined : data.valorRecebido1 || undefined,
+    metodoPagamento2: opts.isEdit ? undefined : data.metodoPagamento2,
+    valorPago2: opts.isEdit ? undefined : data.valorRecebido2 || undefined,
     pago: opts.isEdit ? undefined : data.pago,
     caucao: opts.isEdit ? undefined : data.caucao,
     valorCaucao: opts.isEdit ? undefined : data.valorCaucao || undefined,
+  };
+}
+
+export interface EstimativaFestaInfo {
+  estimativa: number;
+  precoCrianca: number;
+  criancasFaturadas: number;
+  minimoAplicavel: number;
+}
+
+interface EstimativaConfig {
+  precoCriancaSemana: number;
+  precoCriancaFimSemana: number;
+  minimosCriancasPorAniversariante?: { aniversariantes: number; minimo: number }[] | null;
+}
+
+/**
+ * Estimativa do total da festa: preço por criança × nº de crianças faturadas
+ * (respeitando o mínimo aplicável por nº de aniversariantes).
+ */
+export function calcularEstimativaFesta(
+  config: EstimativaConfig | null | undefined,
+  dataFesta: string | undefined,
+  previsaoCriancas: number | undefined,
+  numAniversariantes: number
+): EstimativaFestaInfo {
+  if (!config || !dataFesta) {
+    return { estimativa: 0, precoCrianca: 0, criancasFaturadas: 0, minimoAplicavel: 0 };
+  }
+  const precoCrianca = isFimDeSemana(dataFesta)
+    ? Number(config.precoCriancaFimSemana)
+    : Number(config.precoCriancaSemana);
+  const numAniv = numAniversariantes || 1;
+  const minimoAplicavel =
+    (config.minimosCriancasPorAniversariante ?? [])
+      .filter((m) => m.aniversariantes <= numAniv)
+      .sort((a, b) => b.aniversariantes - a.aniversariantes)[0]?.minimo ?? 10;
+  const criancasFaturadas = Math.max(previsaoCriancas ?? 10, minimoAplicavel);
+  return {
+    estimativa: precoCrianca * criancasFaturadas,
+    precoCrianca,
+    criancasFaturadas,
+    minimoAplicavel,
   };
 }

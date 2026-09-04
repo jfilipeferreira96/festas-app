@@ -20,6 +20,7 @@ import type { Reserva } from "@/lib/api/reservas";
 import {
   buildFestaDefaults,
   buildFestaPayload,
+  calcularEstimativaFesta,
   CORES_PREDEFINIDAS,
   festaFormSchema,
   type FestaFormData,
@@ -66,6 +67,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const watchedMenuId = watch("menuId");
   const previsaoCriancas = watch("previsaoCriancas");
   const aniversariantes = watch("aniversariantes");
+  const watchedTotalAPagar = watch("totalAPagar");
+  const watchedRecebido1 = watch("valorRecebido1");
+  const watchedRecebido2 = watch("valorRecebido2");
 
   const extraItems = useMemo(
     () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo && e.subcategoria !== "Bolos"),
@@ -108,6 +112,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const [showClienteSearch, setShowClienteSearch] = useState(false);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [menuWarning, setMenuWarning] = useState("");
+  const [recebidoEdited, setRecebidoEdited] = useState(false);
 
   useEffect(() => {
     if (!slotsHorario) return;
@@ -157,19 +162,37 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     }
   }, [reserva, coresEmUso, setValue, getValues]);
 
+  const estimativaFesta = useMemo(
+    () =>
+      calcularEstimativaFesta(
+        configPreco,
+        watchedData,
+        previsaoCriancas,
+        aniversariantes.filter((a) => a.nome.trim()).length
+      ),
+    [configPreco, watchedData, previsaoCriancas, aniversariantes]
+  );
+
   useEffect(() => {
-    if (reserva?.valorPago && reserva.valorPago > 0) return;
+    if (reserva && (reserva.valorTotal != null || (reserva.valorPago && reserva.valorPago > 0))) return;
     if (!watchedData || !configPreco) return;
-    const precoCrianca = isFimDeSemana(watchedData)
-      ? Number(configPreco.precoCriancaFimSemana)
-      : Number(configPreco.precoCriancaSemana);
-    const numAniversariantes = aniversariantes.filter((a) => a.nome.trim()).length || 1;
-    const minimoAplicavel = (configPreco.minimosCriancasPorAniversariante ?? [])
-      .filter((m) => m.aniversariantes <= numAniversariantes)
-      .sort((a, b) => b.aniversariantes - a.aniversariantes)[0]?.minimo ?? 10;
-    const criancasFaturadas = Math.max(previsaoCriancas ?? 10, minimoAplicavel);
-    setValue("valorPago", precoCrianca * criancasFaturadas);
-  }, [watchedData, configPreco, reserva?.valorPago, previsaoCriancas, aniversariantes, setValue]);
+    if (estimativaFesta.estimativa > 0) {
+      setValue("totalAPagar", estimativaFesta.estimativa, { shouldDirty: true });
+    }
+  }, [watchedData, configPreco, reserva, estimativaFesta, setValue]);
+
+  // Recebido no pag. 1 segue o total até edição manual
+  useEffect(() => {
+    if (recebidoEdited || reserva) return;
+    if (watchedTotalAPagar != null && watchedTotalAPagar > 0) {
+      setValue("valorRecebido1", watchedTotalAPagar, { shouldDirty: true });
+    }
+  }, [watchedTotalAPagar, recebidoEdited, reserva, setValue]);
+
+  const faltaPagamento = useMemo(
+    () => Math.max((watchedTotalAPagar ?? 0) - (watchedRecebido1 ?? 0) - (watchedRecebido2 ?? 0), 0),
+    [watchedTotalAPagar, watchedRecebido1, watchedRecebido2]
+  );
 
   useEffect(() => {
     if (!watchedData || menuExtras.length === 0 || reserva) return;
@@ -257,7 +280,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   return (
     <div className="flex flex-col max-h-[70vh]">
       <FormProvider {...methods}>
-        <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
+        <form autoComplete="off" onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-6">
             <PessoasSection
               aniversariantes={aniversariantesArray}
@@ -277,7 +300,12 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
             />
             <MenuBoloSection menuOptions={menuOptions} menuWarning={menuWarning} />
             <ExtrasNotasSection extraItems={extraItems} />
-            <PagamentoSection reserva={reserva} onOpenPagamento={() => setShowPagamentoModal(true)} />
+            <PagamentoSection
+              reserva={reserva}
+              onOpenPagamento={() => setShowPagamentoModal(true)}
+              estimativa={estimativaFesta}
+              onRecebidoEditado={() => setRecebidoEdited(true)}
+            />
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end shrink-0">
             <Button variant="outline" type="button" onClick={onClose}>

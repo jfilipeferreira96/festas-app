@@ -112,6 +112,7 @@ export default function PessoasSection({
         <div className="flex gap-4">
           <div className="flex-1">
             <InputField
+              autoComplete="nope"
               {...register("encarregadoNome")}
               placeholder="Nome do responsável"
               error={!!errors.encarregadoNome}
@@ -121,6 +122,7 @@ export default function PessoasSection({
           <div className="flex-1">
             <InputField
               type="tel"
+              autoComplete="nope"
               {...register("encarregadoContacto")}
               placeholder="Telefone"
               error={!!errors.encarregadoContacto}
@@ -132,6 +134,7 @@ export default function PessoasSection({
           <div className="flex-1">
             <InputField
               type="email"
+              autoComplete="nope"
               {...register("encarregadoEmail")}
               placeholder="Email"
               error={!!errors.encarregadoEmail}

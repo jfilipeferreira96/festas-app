@@ -42,6 +42,7 @@ interface CreateReservaData {
   observacoesBrindes?: string;
   outrosExtras?: string;
   // Pagamento
+  valorTotal?: number;
   metodoPagamento?: string;
   valorPago?: number;
   pago?: boolean;
@@ -97,6 +98,7 @@ interface UpdateReservaData {
   observacoesLesoes?: string;
   observacoesBrindes?: string;
   outrosExtras?: string;
+  valorTotal?: number | null;
   metodoPagamento?: string;
   valorPago?: number;
   pago?: boolean;
@@ -454,6 +456,7 @@ export const reservaService = {
         observacoesLesoes: data.observacoesLesoes,
         observacoesBrindes: data.observacoesBrindes,
         outrosExtras: data.outrosExtras,
+        valorTotal: data.valorTotal,
         metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
         metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
         valorPago: data.valorPago,
@@ -590,6 +593,7 @@ export const reservaService = {
         observacoesLesoes: data.observacoesLesoes,
         observacoesBrindes: data.observacoesBrindes,
         outrosExtras: data.outrosExtras,
+        valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
         metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
         metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
         valorPago: data.valorPago,
@@ -655,6 +659,7 @@ export const reservaService = {
 
   async atualizarPagamento(id: string, data: {
     pago?: boolean;
+    valorTotal?: number | null;
     metodoPagamento?: string;
     valorPago?: number;
     metodoPagamento2?: string;
@@ -672,6 +677,7 @@ export const reservaService = {
       where: { id },
       data: {
         pago: data.pago,
+        valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
         metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
         valorPago: data.valorPago,
         metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
@@ -774,7 +780,9 @@ export const reservaService = {
     const custoMeias =
       (reserva.meiasQuantidade ?? 0) * Number(reserva.meiasPrecoUnit ?? 0);
 
-    const custoTotalFinal = Number(reserva.valorPago ?? 0) + custoExcesso + custoMeias;
+    // Total acordado (valorTotal) com fallback para valorPago (registos antigos)
+    const custoTotalFinal =
+      Number(reserva.valorTotal ?? reserva.valorPago ?? 0) + custoExcesso + custoMeias;
 
     // Save cacifos snapshot before releasing
     const cacifos = await prisma.cacifo.findMany({

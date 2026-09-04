@@ -601,7 +601,7 @@ async function seedReservas() {
         tema: c.tema, cor: c.cor, bolo: c.boloTipo, boloTema: c.bolo,
         observacoesGerais: c.obs,
         observacoesBrindes: c.brindes,
-        metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
+        valorTotal: c.dur * 1.4, metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
         caucao: "PAGA",
         clienteId: c.cli, localId: c.local,
       },
@@ -643,7 +643,7 @@ async function seedReservas() {
         inicioEm: start, fimPrevisto: fim, fimReal,
         tema: c.tema, cor: c.cor, bolo: "BOLO_ARTISTICO", boloTema: c.bolo,
         observacoesGerais: c.obs,
-        metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
+        valorTotal: c.dur * 1.4, metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
         caucao: "PAGA",
         clienteId: c.cli, localId: c.local,
       },
@@ -685,7 +685,7 @@ async function seedReservas() {
         inicioEm: start, fimPrevisto: fim, fimReal,
         tema: c.tema, cor: c.cor, bolo: "BOLO_ARTISTICO", boloTema: c.bolo,
         observacoesGerais: c.obs,
-        metodoPagamento: "DINHEIRO", valorPago: c.dur * 1.2, pago: true,
+        valorTotal: c.dur * 1.2, metodoPagamento: "DINHEIRO", valorPago: c.dur * 1.2, pago: true,
         caucao: "PAGA_NO_DIA",
         clienteId: c.cli, localId: c.local,
       },
@@ -717,7 +717,7 @@ async function seedReservas() {
       bolo: "NOSSO_1KG", boloTema: "Bolo de cenoura com decoração de fadas",
       observacoesGerais: "Leonor quer tudo lilás e brilhante.",
       observacoesBrindes: "Varinhas de condão para todos.",
-      metodoPagamento: "CARTAO", valorPago: 145.00, pago: true,
+      valorTotal: 145.00, metodoPagamento: "CARTAO", valorPago: 145.00, pago: true,
       caucao: "PAGA",
       cacifosHistorico: [
         { numero: 21, estado: "OCUPADO", criancas: "Leonor, Diana" },
@@ -759,7 +759,7 @@ async function seedReservas() {
       observacoesBrindes: "Sacos com pulseiras e adesivos.",
       observacoesLesoes: "Marta tem gesso no braço direito - evitar escalada e trampolins.",
       outrosExtras: "Palhaçada ao início (15 min)",
-      metodoPagamento: "MBWAY", valorPago: 175.00, pago: true,
+      valorTotal: 175.00, metodoPagamento: "MBWAY", valorPago: 175.00, pago: true,
       caucao: "PAGA",
       notas: "Marta faz 8 anos. Decoração cor-de-rosa.",
       notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde - confirmar com os pais no pagamento e na saída.",
@@ -809,7 +809,7 @@ async function seedReservas() {
       observacoesLesoes: "Laura é alérgica a amendoim.",
       observacoesBrindes: "Mini-unicórnios de pelúcia para todos.",
       notasCacifos: "Cacifos 16 e 23 com alertas - verificar meias em falta no pagamento.",
-      metodoPagamento: "DINHEIRO", valorPago: 100.00, pago: false,
+      valorTotal: 150.00, metodoPagamento: "DINHEIRO", valorPago: 100.00, pago: false,
       caucao: "PAGA_NO_DIA",
       notas: "Beatriz quer decoração de unicórnios.",
       clienteId: "cliente-002", localId: "local-002",
@@ -844,7 +844,7 @@ async function seedReservas() {
       bolo: "A_DECIDIR", boloTema: "Bolo em formato de bola de futebol",
       observacoesGerais: "Francisco é alérgico a frutos secos.",
       observacoesBrindes: "Chinelos de futebol para os meninos.",
-      metodoPagamento: "MULTIBANCO", valorPago: 0, pago: false,
+      valorTotal: 120.00, metodoPagamento: "MULTIBANCO", valorPago: 0, pago: false,
       caucao: "NAO_PAGA",
       notas: "Francisco é alérgico a frutos secos.",
       clienteId: "cliente-003", localId: "local-002",
@@ -871,7 +871,7 @@ async function seedReservas() {
       bolo: "BOLO_ARTISTICO", boloTema: "Bolo com logo dos Vingadores",
       observacoesGerais: "Decoração temática super-heróis.",
       observacoesBrindes: "Capas de super-herói para as crianças.",
-      metodoPagamento: "MBWAY", valorPago: 200.00, pago: true,
+      valorTotal: 200.00, metodoPagamento: "MBWAY", valorPago: 200.00, pago: true,
       caucao: "PAGA",
       clienteId: "cliente-002", localId: "local-001",
     },
@@ -898,7 +898,7 @@ async function seedReservas() {
       bolo: "A_DECIDIR", boloTema: "Bolo com animais da selva",
       observacoesGerais: "Matilde quer tema safari com animais de pelúcia.",
       observacoesBrindes: "Binóculos de brincar.",
-      metodoPagamento: "DINHEIRO", valorPago: 50.00, pago: false,
+      valorTotal: 120.00, metodoPagamento: "DINHEIRO", valorPago: 50.00, pago: false,
       caucao: "NAO_PAGA",
       clienteId: "cliente-004", localId: "local-002",
     },
@@ -921,7 +921,7 @@ async function seedReservas() {
       tema: "Sereia", cor: "#00A68A",
       bolo: "A_DECIDIR", boloTema: "Bolo oceano com sereia",
       observacoesGerais: "Mariana adora o mar e sereias.",
-      metodoPagamento: "CARTAO", valorPago: 0, pago: false,
+      valorTotal: 130.00, metodoPagamento: "CARTAO", valorPago: 0, pago: false,
       caucao: "NAO_PAGA",
       clienteId: "cliente-008", localId: "local-003",
     },
@@ -945,7 +945,7 @@ async function seedReservas() {
       bolo: "NOSSO_1KG", boloTema: "Bolo oceano com sereia",
       observacoesGerais: "Mariana adora o mar e sereias.",
       observacoesBrindes: "Conchas e estrelas-do-mar de brincar.",
-      metodoPagamento: "CARTAO", valorPago: 120.00, pago: true,
+      valorTotal: 120.00, metodoPagamento: "CARTAO", valorPago: 120.00, pago: true,
       caucao: "PAGA",
       clienteId: "cliente-008", localId: "local-003",
     },
@@ -996,6 +996,7 @@ async function seedReservas() {
     await prisma.reserva.update({
       where: { id: r.id },
       data: {
+        valorTotal: valorOriginal,
         valorPago: valor1,
         metodoPagamento2: metodos2[i],
         valorPago2: valor2,
@@ -1080,7 +1081,7 @@ async function seedReservas() {
       criadoPorId: adminUser?.id ?? null,
     },
   });
-  await prisma.reserva.update({ where: { id: "reserva-001" }, data: { valorPago: { increment: 15 } } });
+  await prisma.reserva.update({ where: { id: "reserva-001" }, data: { valorTotal: { increment: 15 } } });
 
   // 2) DESCONTO na festa CONCLUIDA de hoje (cortesia cliente habitual)
   await prisma.ajustePagamento.upsert({
@@ -1094,7 +1095,7 @@ async function seedReservas() {
       criadoPorId: adminUser?.id ?? null,
     },
   });
-  await prisma.reserva.update({ where: { id: "reserva-today-3" }, data: { valorPago: { decrement: 10 } } });
+  await prisma.reserva.update({ where: { id: "reserva-today-3" }, data: { valorTotal: { decrement: 10 } } });
 
   // 3) REDEFINICAO POR_CRIANCA na festa CONFIRMADA de hoje (12€ × 22 crianças = 264€)
   await prisma.ajustePagamento.upsert({
@@ -1109,7 +1110,7 @@ async function seedReservas() {
       criadoPorId: adminUser?.id ?? null,
     },
   });
-  await prisma.reserva.update({ where: { id: "reserva-002" }, data: { valorPago: 264.00 } });
+  await prisma.reserva.update({ where: { id: "reserva-002" }, data: { valorTotal: 264.00 } });
 
   // 4) ACRESCIMO numa entrada livre com lanche (2 × 4,50€)
   // → criado em seedEntradasLivres() (a entrada só existe depois dessa fase)
@@ -1189,6 +1190,7 @@ async function seedEntradasLivres() {
       temLanche: false,
       numAdultos: 0,
       pago: true,
+      valorPago: 15.0,
       metodoPagamento: "MBWAY",
       criancas: [{ nome: "Miguel", idade: 6 }, { nome: "Sofia", idade: 4 }],
     },
@@ -1248,6 +1250,7 @@ async function seedEntradasLivres() {
       custoExcesso: 6.0,
       custoTotalFinal: 26.0,
       pago: true,
+      valorPago: 26.0,
       pagoExcesso: true,
       metodoPagamento: "MULTIBANCO",
       criancas: [{ nome: "Tomás", idade: 7 }, { nome: "João", idade: 5 }],
@@ -1305,6 +1308,7 @@ async function seedEntradasLivres() {
         temLanche: a.lanche,
         numAdultos: a.adultos,
         pago: a.pago,
+        valorPago: a.pago ? Math.round(((a.custo / 60) * a.dur) * 100) / 100 : 0,
         metodoPagamento: a.met,
         criancas: a.criancas,
       },
@@ -1330,6 +1334,7 @@ async function seedEntradasLivres() {
       temLanche: true,
       numAdultos: 1,
       pago: true,
+      valorPago: 20.0,
       metodoPagamento: "MBWAY",
       criancas: [{ nome: "Tomás", idade: 5 }, { nome: "Madalena", idade: 3 }],
     },
@@ -1392,6 +1397,7 @@ async function seedEntradasLivres() {
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
         pago: true,
+        valorPago: custoTotal + custoExcesso,
         pagoExcesso: c.excesso > 0,
         metodoPagamento: c.met,
         criancas: c.criancas,
@@ -1435,6 +1441,7 @@ async function seedEntradasLivres() {
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
         pago: true,
+        valorPago: custoTotal + custoExcesso,
         pagoExcesso: c.excesso > 0,
         metodoPagamento: c.met,
         criancas: c.criancas,
@@ -1508,6 +1515,7 @@ async function seedEntradasLivres() {
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
         pago: true,
+        valorPago: custoTotal + custoExcesso,
         pagoExcesso: c.excesso > 0,
         metodoPagamento: c.met,
         criancas: c.criancas,

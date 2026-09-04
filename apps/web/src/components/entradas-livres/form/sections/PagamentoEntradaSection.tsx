@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
-import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import FieldLabel from "@/components/form/FieldLabel";
@@ -10,12 +9,8 @@ import { formatEuro } from "@/lib/format";
 import { METODO_PAGAMENTO_OPTIONS, metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/components/shared/PagamentoCard";
-import {
-  DURACAO_ENTRADA_OPTIONS,
-  ESTADO_PAGAMENTO_OPTIONS,
-  type EntradaLivreFormData,
-  type EntradaLivreMetodoPagamento,
-} from "../entrada-livre-form.schema";
+import { PagamentoRegistoSection } from "@/components/shared/pagamento/PagamentoRegistoSection";
+import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData, type EntradaLivreMetodoPagamento } from "../entrada-livre-form.schema";
 
 interface CustoComponentes {
   totalPessoas: number;
@@ -28,20 +23,23 @@ interface CustoComponentes {
 interface PagamentoEntradaSectionProps {
   entrada?: EntradaLivre | null;
   custoComponentes: CustoComponentes;
-  custoFinal: number;
+  custoCalculado: number;
   precoMeias: number;
   onOpenPagamento: () => void;
+  onCustoEditado: () => void;
 }
 
 export default function PagamentoEntradaSection({
   entrada,
   custoComponentes,
-  custoFinal,
+  custoCalculado,
   precoMeias,
   onOpenPagamento,
+  onCustoEditado,
 }: PagamentoEntradaSectionProps) {
   const isEdit = !!entrada;
   const { setValue, watch, formState: { errors } } = useFormContext<EntradaLivreFormData>();
+  const [registarPagamento, setRegistarPagamento] = useState(false);
   const [showSplit, setShowSplit] = useState(false);
 
   const duracao = watch("duracaoMinutos");
@@ -71,32 +69,50 @@ export default function PagamentoEntradaSection({
         />
       ) : (
         <div className="space-y-3">
-          <div>
-            <FieldLabel required>Estado do pagamento</FieldLabel>
-            <Select
-              options={ESTADO_PAGAMENTO_OPTIONS}
-              placeholder="Seleccionar..."
-              value={watch("pago") === undefined ? "" : watch("pago") ? "true" : "false"}
-              onChange={(val) => setValue("pago", val === "true", { shouldValidate: true, shouldDirty: true })}
-              error={!!errors.pago}
-            />
-            {errors.pago && <p className="text-xs text-error-500 mt-1">{errors.pago.message}</p>}
-          </div>
-          <div>
-            <FieldLabel>Método de pagamento</FieldLabel>
-            <Select
-              options={METODO_PAGAMENTO_OPTIONS}
-              placeholder="Seleccionar método"
-              value={watch("metodoPagamento") ?? "NONE"}
-              onChange={(val) =>
-                setValue(
-                  "metodoPagamento",
-                  val === "NONE" ? undefined : (val as EntradaLivreMetodoPagamento),
-                  { shouldDirty: true }
-                )
+          <Checkbox
+            checked={registarPagamento}
+            onChange={setRegistarPagamento}
+            label="Registar pagamento na entrada (opcional)"
+          />
+          {registarPagamento && (
+            <PagamentoRegistoSection
+              totalValor={watch("custoTotal")}
+              onTotalChange={(v) => {
+                onCustoEditado();
+                setValue("custoTotal", v, { shouldDirty: true });
+              }}
+              totalCalculado={custoCalculado}
+              erroTotal={errors.custoTotal?.message}
+              recebido1={watch("valorRecebido1")}
+              onRecebido1Change={(v) => {
+                onCustoEditado();
+                setValue("valorRecebido1", v, { shouldDirty: true });
+              }}
+              metodo1={watch("metodoPagamento")}
+              onMetodo1Change={(v) =>
+                setValue("metodoPagamento", v as EntradaLivreMetodoPagamento | undefined, { shouldDirty: true })
               }
+              split={showSplit}
+              onSplitToggle={(checked) => {
+                setShowSplit(checked);
+                if (!checked) {
+                  setValue("metodoPagamento2", undefined, { shouldDirty: true });
+                  setValue("valorRecebido2", 0, { shouldDirty: true });
+                }
+              }}
+              metodo2={watch("metodoPagamento2")}
+              onMetodo2Change={(v) =>
+                setValue("metodoPagamento2", v as EntradaLivreMetodoPagamento | undefined, { shouldDirty: true })
+              }
+              valor2={watch("valorRecebido2") ?? 0}
+              onValor2Change={(v) => setValue("valorRecebido2", v, { shouldDirty: true })}
+              falta={Math.max((watch("custoTotal") ?? custoCalculado) - (watch("valorRecebido1") ?? 0) - (watch("valorRecebido2") ?? 0), 0)}
+              pago={watch("pago") ?? false}
+              onPagoChange={(checked) => setValue("pago", checked, { shouldDirty: true })}
+              metodoOptions={METODO_PAGAMENTO_OPTIONS}
+              breakdown={<BreakdownEntrada custoComponentes={custoComponentes} custoFinal={watch("custoTotal") ?? custoCalculado} precoMeias={precoMeias} meias={meias} duracaoLabel={duracaoLabel} />}
             />
-          </div>
+          )}
         </div>
       )}
 
@@ -127,80 +143,58 @@ export default function PagamentoEntradaSection({
         </div>
       </div>
 
-      {!isEdit && (
-        <div className="border-t border-border pt-3 space-y-2">
-          <Checkbox
-            checked={showSplit}
-            onChange={(checked) => {
-              setShowSplit(checked);
-              if (!checked) {
-                setValue("metodoPagamento2", undefined, { shouldDirty: true });
-                setValue("valorPago2", 0, { shouldDirty: true });
-              }
-            }}
-            label="Dividir pagamento (2º método)"
-          />
-          {showSplit && (
-            <div className="grid grid-cols-2 gap-3 pt-1">
-              <div>
-                <FieldLabel>2º Método</FieldLabel>
-                <Select
-                  options={METODO_PAGAMENTO_OPTIONS}
-                  placeholder="2º método"
-                  value={watch("metodoPagamento2") ?? "NONE"}
-                  onChange={(val) =>
-                    setValue(
-                      "metodoPagamento2",
-                      val === "NONE" ? undefined : (val as EntradaLivreMetodoPagamento),
-                      { shouldDirty: true }
-                    )
-                  }
-                />
-              </div>
-              <div>
-                <FieldLabel>Valor 2º Método (€)</FieldLabel>
-                <InputField
-                  type="number"
-                  step={0.01}
-                  min={0}
-                  placeholder="0,00"
-                  value={watch("valorPago2") ?? 0}
-                  onChange={(e) => setValue("valorPago2", e.target.value === "" ? 0 : parseFloat(e.target.value), { shouldDirty: true })}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+      {!isEdit && !registarPagamento && (
+        <BreakdownEntrada
+          custoComponentes={custoComponentes}
+          custoFinal={custoCalculado}
+          precoMeias={precoMeias}
+          meias={meias}
+          duracaoLabel={duracaoLabel}
+          comTitulo
+        />
       )}
+    </PagamentoCard>
+  );
+}
 
-      <div className="border-t border-border pt-3 space-y-1.5">
+interface BreakdownProps {
+  custoComponentes: CustoComponentes;
+  custoFinal: number;
+  precoMeias: number;
+  meias: number;
+  duracaoLabel: string;
+  comTitulo?: boolean;
+}
+
+function BreakdownEntrada({ custoComponentes, custoFinal, precoMeias, meias, duracaoLabel, comTitulo }: BreakdownProps) {
+  return (
+    <div className={`space-y-1.5 ${comTitulo ? "border-t border-border pt-3" : ""}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-text-muted">
+          Tempo ({duracaoLabel} × {custoComponentes.totalPessoas}p)
+        </span>
+        <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoTempo)}</span>
+      </div>
+      {custoComponentes.custoLanche > 0 && (
         <div className="flex items-center justify-between">
           <span className="text-xs text-text-muted">
-            Tempo ({duracaoLabel} × {custoComponentes.totalPessoas}p)
+            Lanche ({custoComponentes.criancasComLanche} {custoComponentes.criancasComLanche === 1 ? "criança" : "crianças"})
           </span>
-          <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoTempo)}</span>
+          <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoLanche)}</span>
         </div>
-        {custoComponentes.custoLanche > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-text-muted">
-              Lanche ({custoComponentes.criancasComLanche} {custoComponentes.criancasComLanche === 1 ? "criança" : "crianças"})
-            </span>
-            <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoLanche)}</span>
-          </div>
-        )}
-        {meias > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-text-muted">
-              Meias ({meias} {meias === 1 ? "par" : "pares"})
-            </span>
-            <span className="text-xs text-text-secondary">{formatEuro(meias * precoMeias)}</span>
-          </div>
-        )}
-        <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
-          <span className="text-sm font-semibold text-text-primary">Total</span>
-          <span className="text-base font-bold text-primary-500">{formatEuro(custoFinal)}</span>
+      )}
+      {meias > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-text-muted">
+            Meias ({meias} {meias === 1 ? "par" : "pares"})
+          </span>
+          <span className="text-xs text-text-secondary">{formatEuro(meias * precoMeias)}</span>
         </div>
+      )}
+      <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
+        <span className="text-sm font-semibold text-text-primary">Total</span>
+        <span className="text-base font-bold text-primary-500">{formatEuro(custoFinal)}</span>
       </div>
-    </PagamentoCard>
+    </div>
   );
 }

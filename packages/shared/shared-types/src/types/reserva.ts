@@ -60,8 +60,9 @@ export interface Reserva {
   outrosExtras?: string;
 
   // Pagamento
+  valorTotal?: number; // Total acordado (editável no form); fallback para leitura: valorPago
   metodoPagamento?: MetodoPagamento;
-  valorPago?: number;
+  valorPago?: number; // Valor recebido no pagamento 1
   pago: boolean;
   referenciaPagamento?: string;
 

@@ -29,6 +29,7 @@ interface CriarEntradaLivreDTO {
   horaLanche?: string;
   // Adultos (encarregados que acompanham e pagam)
   numAdultos?: number;
+  valorPago?: number; // Valor recebido no pagamento 1
   // Pagamento dividido (até 2 métodos)
   metodoPagamento2?: MetodoPagamento;
   valorPago2?: number;
@@ -186,6 +187,7 @@ export const entradaLivreService = {
       ...e,
       custoHora: Number(e.custoHora),
       custoTotal: Number(e.custoTotal),
+      valorPago: e.valorPago != null ? Number(e.valorPago) : null,
       custoExcesso: e.custoExcesso ? Number(e.custoExcesso) : null,
       custoTotalFinal: e.custoTotalFinal ? Number(e.custoTotalFinal) : null,
     }));
@@ -226,6 +228,7 @@ export const entradaLivreService = {
       ...entrada,
       custoHora: Number(entrada.custoHora),
       custoTotal: Number(entrada.custoTotal),
+      valorPago: entrada.valorPago != null ? Number(entrada.valorPago) : null,
       custoExcesso: entrada.custoExcesso ? Number(entrada.custoExcesso) : null,
       custoTotalFinal: entrada.custoTotalFinal ? Number(entrada.custoTotalFinal) : null,
     };
@@ -393,6 +396,7 @@ export const entradaLivreService = {
       ...updated,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
+      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
       custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
     };
@@ -429,13 +433,14 @@ export const entradaLivreService = {
       ...updated,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
+      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
       custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
     };
   },
 
   // ── Atualizar pagamento ─────────────────────────
-  async atualizarPagamento(id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: MetodoPagamento | null; metodoPagamento2?: MetodoPagamento | null; valorPago2?: number | null }) {
+  async atualizarPagamento(id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: MetodoPagamento | null; valorPago?: number | null; metodoPagamento2?: MetodoPagamento | null; valorPago2?: number | null }) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
 
@@ -464,6 +469,7 @@ export const entradaLivreService = {
       ...updated,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
+      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
       custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
     };
@@ -479,6 +485,7 @@ export const entradaLivreService = {
       encarregadoEmail?: string;
       duracaoMinutos?: number;
       custoTotal?: number;
+      valorPago?: number; // Valor recebido no pagamento 1
       metodoPagamento?: MetodoPagamento;
       pago?: boolean;
       cacifoId?: string | null;
@@ -642,6 +649,7 @@ export const entradaLivreService = {
       ...updated,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
+      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
       custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
     };

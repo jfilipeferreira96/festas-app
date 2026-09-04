@@ -34,6 +34,7 @@ export interface EntradaLivre {
   cliente?: { id: string; nome: string; email: string | null; telefone: string };
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
   metodoPagamento?: string;
+  valorPago?: number; // Valor recebido no pagamento 1
   pago: boolean;
   pagoExcesso: boolean;
   // Pagamento dividido (até 2 métodos)
@@ -65,6 +66,7 @@ export interface CriarEntradaLivreDTO {
   duracaoMinutos: number;
   custoTotal?: number;
   metodoPagamento?: string | null;
+  valorPago?: number | null;
   pago?: boolean;
   cacifoId?: string | null;
   extrasIds?: string[];
@@ -92,6 +94,7 @@ export interface AtualizarEntradaLivreDTO {
   duracaoMinutos?: number;
   custoTotal?: number;
   metodoPagamento?: string | null;
+  valorPago?: number | null;
   pago?: boolean;
   cacifoId?: string | null;
   horaLanche?: string | null;
@@ -140,7 +143,7 @@ export const entradaLivreApi = {
   cancelar: (id: string) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/cancelar`, { method: "PATCH" }),
 
-  atualizarPagamento: (id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: string | null; metodoPagamento2?: string | null; valorPago2?: number | null }) =>
+  atualizarPagamento: (id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: string | null; valorPago?: number | null; metodoPagamento2?: string | null; valorPago2?: number | null }) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/pagamento`, {
       method: "PATCH",
       body: JSON.stringify(data),

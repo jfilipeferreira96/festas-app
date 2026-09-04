@@ -6,27 +6,31 @@ import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
-import Switch from "@/components/form/switch/Switch";
 import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
-import { metodoPagamentoLabel, METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
 import type { Reserva } from "@/lib/api/reservas";
 import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/components/shared/PagamentoCard";
+import { PagamentoRegistoSection } from "@/components/shared/pagamento/PagamentoRegistoSection";
 import {
   CAUCAO_OPTIONS,
+  type EstimativaFestaInfo,
   type FestaFormData,
   type FestaFormCaucao,
-  type FestaFormMetodoPagamento,
 } from "../festa-form.schema";
 
 interface PagamentoSectionProps {
   reserva?: Reserva | null;
   onOpenPagamento: () => void;
+  /** Estimativa calculada (preço por criança × crianças faturadas). */
+  estimativa?: EstimativaFestaInfo;
+  /** Chamado quando o utilizador edita manualmente o "Recebi nesta fase". */
+  onRecebidoEditado?: () => void;
 }
 
-export default function PagamentoSection({ reserva, onOpenPagamento }: PagamentoSectionProps) {
+export default function PagamentoSection({ reserva, onOpenPagamento, estimativa, onRecebidoEditado }: PagamentoSectionProps) {
   const { register, setValue, watch } = useFormContext<FestaFormData>();
   const [registarPagamento, setRegistarPagamento] = useState(false);
+  const [split, setSplit] = useState(false);
 
   if (reserva) {
     const caucaoLabel = CAUCAO_OPTIONS.find((o) => o.value === reserva.caucao)?.label ?? "Não paga";
@@ -38,12 +42,11 @@ export default function PagamentoSection({ reserva, onOpenPagamento }: Pagamento
         <PagamentoResumo
           items={[
             { label: "Estado", value: reserva.pago ? "Pago" : "Por pagar", tone: reserva.pago ? "verde" : "laranja" },
+            { label: "Total", value: formatEuro(Number(reserva.valorTotal ?? reserva.valorPago ?? 0)) },
             { label: "Valor pago", value: reserva.valorPago ? formatEuro(Number(reserva.valorPago)) : "-" },
             {
               label: "Método",
-              value: `${metodoPagamentoLabel(reserva.metodoPagamento, "-")}${
-                reserva.metodoPagamento2 ? ` + ${metodoPagamentoLabel(reserva.metodoPagamento2, "")}` : ""
-              }`,
+              value: `${metodoResumo(reserva)}`,
             },
             { label: "Caução", value: `${caucaoLabel}${caucaoValor}` },
           ]}
@@ -51,6 +54,12 @@ export default function PagamentoSection({ reserva, onOpenPagamento }: Pagamento
       </PagamentoCard>
     );
   }
+
+  const total = watch("totalAPagar");
+  const recebido1 = watch("valorRecebido1");
+  const valor2 = watch("valorRecebido2") ?? 0;
+  const falta = Math.max((total ?? 0) - (recebido1 ?? 0) - (split ? valor2 : 0), 0);
+  const totalFinal = total ?? estimativa?.estimativa ?? 0;
 
   return (
     <div className="space-y-3">
@@ -62,46 +71,50 @@ export default function PagamentoSection({ reserva, onOpenPagamento }: Pagamento
 
       {registarPagamento && (
         <PagamentoCard titulo="Pagamento & Caução">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-            <span className="text-sm font-medium text-text-primary">
-              {watch("pago") ? "✓ Pago" : "Por pagar"}
-            </span>
-            <Switch
-              checked={watch("pago") ?? false}
-              onChange={(checked) => setValue("pago", checked, { shouldDirty: true })}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <FieldLabel>Valor a Pagar (€)</FieldLabel>
-              <InputField
-                type="number"
-                step={0.01}
-                min={0}
-                placeholder="0,00"
-                {...register("valorPago", { valueAsNumber: true })}
-              />
-              <p className="text-[11px] text-text-muted mt-1">
-                Estimado: preço por criança × nº de crianças — editável.
-              </p>
-            </div>
-            <div>
-              <FieldLabel>Método de Pagamento</FieldLabel>
-              <Select
-                options={METODO_PAGAMENTO_OPTIONS}
-                value={watch("metodoPagamento") ?? "NONE"}
-                onChange={(val) =>
-                  setValue(
-                    "metodoPagamento",
-                    val === "NONE" ? undefined : (val as FestaFormMetodoPagamento),
-                    { shouldDirty: true }
-                  )
-                }
-                placeholder="Seleccionar..."
-              />
-            </div>
-          </div>
+          <PagamentoRegistoSection
+            totalValor={total}
+            onTotalChange={(v) => setValue("totalAPagar", v, { shouldDirty: true })}
+            totalCalculado={estimativa?.estimativa ?? 0}
+            recebido1={recebido1}
+            onRecebido1Change={(v) => {
+              onRecebidoEditado?.();
+              setValue("valorRecebido1", v, { shouldDirty: true });
+            }}
+            metodo1={watch("metodoPagamento")}
+            onMetodo1Change={(v) => setValue("metodoPagamento", v as FestaFormData["metodoPagamento"], { shouldDirty: true })}
+            split={split}
+            onSplitToggle={(checked) => {
+              setSplit(checked);
+              if (!checked) {
+                setValue("metodoPagamento2", undefined, { shouldDirty: true });
+                setValue("valorRecebido2", undefined, { shouldDirty: true });
+              }
+            }}
+            metodo2={watch("metodoPagamento2")}
+            onMetodo2Change={(v) => setValue("metodoPagamento2", v as FestaFormData["metodoPagamento2"], { shouldDirty: true })}
+            valor2={valor2}
+            onValor2Change={(v) => setValue("valorRecebido2", v, { shouldDirty: true })}
+            falta={falta}
+            pago={watch("pago") ?? false}
+            onPagoChange={(checked) => setValue("pago", checked, { shouldDirty: true })}
+            breakdown={
+              <>
+                {estimativa && estimativa.precoCrianca > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-muted">
+                      Crianças ({estimativa.criancasFaturadas} × {formatEuro(estimativa.precoCrianca)}
+                      {estimativa.minimoAplicavel > 0 ? ` · mín. ${estimativa.minimoAplicavel}` : ""})
+                    </span>
+                    <span className="text-xs text-text-secondary">{formatEuro(estimativa.estimativa)}</span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-1.5 border-t border-border/50">
+                  <span className="text-sm font-semibold text-text-primary">Total</span>
+                  <span className="text-base font-bold text-primary-500">{formatEuro(totalFinal)}</span>
+                </div>
+              </>
+            }
+          />
 
           <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
             <span className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
@@ -133,10 +146,28 @@ export default function PagamentoSection({ reserva, onOpenPagamento }: Pagamento
           </div>
 
           <p className="text-[11px] text-text-muted">
-            Referência, pagamento dividido e descontos ficam disponíveis em "Gerir pagamento" após criar a reserva.
+            Referência e descontos ficam disponíveis em "Gerir pagamento" após criar a reserva.
           </p>
         </PagamentoCard>
       )}
     </div>
   );
 }
+
+function metodoResumo(reserva: Reserva): string {
+  const labelDe = (m?: string | null) => {
+    if (!m) return "-";
+    return METODO_LABELS[m] ?? m;
+  };
+  const base = labelDe(reserva.metodoPagamento);
+  return reserva.metodoPagamento2 ? `${base} + ${labelDe(reserva.metodoPagamento2)}` : base;
+}
+
+const METODO_LABELS: Record<string, string> = {
+  DINHEIRO: "Dinheiro",
+  MULTIBANCO: "Multibanco",
+  MBWAY: "MB Way",
+  TRANSFERENCIA: "Transferência",
+  CARTAO: "Cartão",
+  OUTRO: "Outro",
+};

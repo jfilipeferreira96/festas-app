@@ -123,6 +123,7 @@ export const dashboardService = {
           pago: true,
         },
         select: {
+          valorTotal: true,
           metodoPagamento: true,
           valorPago: true,
           metodoPagamento2: true,
@@ -157,9 +158,14 @@ export const dashboardService = {
     };
 
     for (const r of reservasHoje) {
-      // Pagamento principal + dividido
-      somar(r.metodoPagamento, r.valorPago);
-      somar(r.metodoPagamento2, r.valorPago2);
+      // Pagamento principal + dividido.
+      // Regra: total = valorTotal ?? valorPago; pag.1 = valorPago (registos novos)
+      // ou total - pag.2 (registos antigos, em que valorPago era o total).
+      const totalFesta = Number(r.valorTotal ?? r.valorPago ?? 0);
+      const recebido2 = Math.min(Number(r.valorPago2 ?? 0), totalFesta);
+      const recebido1 = r.valorTotal != null ? Number(r.valorPago ?? 0) : totalFesta - recebido2;
+      somar(r.metodoPagamento, recebido1);
+      somar(r.metodoPagamento2, recebido2);
       // Excesso de tempo (só se foi pago)
       if (r.pagoExcesso) somar(r.metodoPagamento, r.custoExcesso);
     }

@@ -119,7 +119,7 @@ export const festasAcabarService = {
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
         localNome: r.local?.nome ?? "-",
         pago: r.pago,
-        valorPago: r.valorPago != null ? Number(r.valorPago) : null,
+        valorPago: r.valorTotal != null ? Number(r.valorTotal) : r.valorPago != null ? Number(r.valorPago) : null,
         extras: r.extras.map((re) => ({
           id: re.id,
           nome: re.extra?.nome ?? "Extra",

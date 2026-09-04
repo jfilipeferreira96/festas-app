@@ -16,6 +16,8 @@ type PropsType = {
   defaultDate?: DateOption;
   /** Data mínima selecionável (flatpickr minDate) - ex.: bloquear datas passadas. */
   minDate?: DateOption;
+  /** Data máxima selecionável (flatpickr maxDate) - ex.: bloquear datas futuras. */
+  maxDate?: DateOption;
   label?: string;
   placeholder?: string;
   className?: string;
@@ -28,6 +30,7 @@ export default function DatePicker({
   label,
   defaultDate,
   minDate,
+  maxDate,
   placeholder,
   className,
 }: PropsType) {
@@ -55,6 +58,7 @@ export default function DatePicker({
       allowInput: true,
       defaultDate: parseISO(defaultDate),
       minDate: parseISO(minDate),
+      maxDate: parseISO(maxDate),
       onChange,
       locale: Portuguese,
     });
@@ -64,7 +68,7 @@ export default function DatePicker({
         flatPickr.destroy();
       }
     };
-  }, [mode, onChange, id, defaultDate, minDate]);
+  }, [mode, onChange, id, defaultDate, minDate, maxDate]);
 
   return (
     <div className={className}>

@@ -1,11 +1,25 @@
 import { z } from "zod";
+import { calcIdade, toISODate } from "@/lib/format";
 import type { CriarEntradaLivreDTO, EntradaLivre } from "@/lib/api/entradaLivre";
 
 const METODOS_PAGAMENTO = ["DINHEIRO", "MULTIBANCO", "MBWAY", "TRANSFERENCIA", "CARTAO", "OUTRO"] as const;
 
+/** Data de nascimento por omissão (quando desconhecida) - igual ao placeholder pedido. */
+export const DATA_NASCIMENTO_DEFAULT = "2020-01-01";
+
+/**
+ * Aproxima a data de nascimento a partir de uma idade conhecida
+ * (registos antigos só guardavam a idade) - 01-01 do ano calculado.
+ */
+export function dataNascimentoDeIdade(idade?: number | null): string {
+  if (idade == null || !Number.isFinite(idade) || idade < 0) return DATA_NASCIMENTO_DEFAULT;
+  const ano = new Date().getFullYear() - Math.floor(idade);
+  return `${ano}-01-01`;
+}
+
 const criancaSchema = z.object({
   nome: z.string().min(1, "Nome obrigatório"),
-  idade: z.string(),
+  dataNascimento: z.string(),
   querLanche: z.boolean(),
 });
 
@@ -15,20 +29,19 @@ export const entradaLivreFormSchema = z.object({
   encarregadoTelefone: z.string().min(9, "Contacto inválido"),
   encarregadoEmail: z.string().email("Email inválido").optional().or(z.literal("")),
   duracaoMinutos: z.number().min(60, "Duração mínima é 1 hora"),
+  // Pagamento unificado: Total a pagar (editável) + Recebido nesta fase (pag. 1) + split (pag. 2)
   custoTotal: z.number().min(0, "O custo não pode ser negativo").optional(),
   metodoPagamento: z.enum(METODOS_PAGAMENTO).optional(),
-  pago: z
-    .boolean()
-    .optional()
-    .refine((v) => v !== undefined, { message: "É obrigatório indicar o estado do pagamento" }),
+  valorRecebido1: z.number().min(0).optional(),
+  metodoPagamento2: z.enum(METODOS_PAGAMENTO).optional(),
+  valorRecebido2: z.number().min(0).optional(),
+  pago: z.boolean().optional(),
   cacifoId: z.string(),
   observacoes: z.string(),
   observacoesLesoes: z.string(),
   temLanche: z.boolean(),
   horaLanche: z.string(),
   numAdultos: z.number().min(0),
-  metodoPagamento2: z.enum(METODOS_PAGAMENTO).optional(),
-  valorPago2: z.number().min(0).optional(),
   meiasQuantidade: z.number().min(0),
   extrasIds: z.array(z.string()),
   extrasQuantidades: z.record(z.string(), z.number()),
@@ -43,27 +56,24 @@ export const DURACAO_ENTRADA_OPTIONS = [
   { value: "180", label: "3 horas" },
 ];
 
-export const ESTADO_PAGAMENTO_OPTIONS = [
-  { value: "", label: "Seleccionar..." },
-  { value: "true", label: "Pago" },
-  { value: "false", label: "Não pago" },
-];
-
 export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefined): EntradaLivreFormData {
   return {
     criancas: entrada?.criancas?.length
       ? entrada.criancas.map((c) => ({
           nome: c.nome,
-          idade: c.idade != null ? String(c.idade) : "",
+          dataNascimento: dataNascimentoDeIdade(c.idade),
           querLanche: c.querLanche !== false,
         }))
-      : [{ nome: "", idade: "", querLanche: true }],
+      : [{ nome: "", dataNascimento: DATA_NASCIMENTO_DEFAULT, querLanche: true }],
     encarregadoNome: entrada?.encarregadoNome ?? "",
     encarregadoTelefone: entrada?.encarregadoTelefone ?? "",
     encarregadoEmail: entrada?.encarregadoEmail ?? "",
     duracaoMinutos: entrada?.duracaoMinutos ?? 60,
     custoTotal: entrada?.custoTotal,
     metodoPagamento: undefined,
+    valorRecebido1: entrada?.valorPago != null ? Number(entrada.valorPago) : undefined,
+    metodoPagamento2: undefined,
+    valorRecebido2: entrada?.valorPago2 != null ? Number(entrada.valorPago2) : 0,
     pago: entrada?.pago,
     cacifoId: entrada?.cacifoId ?? "",
     observacoes: entrada?.observacoes ?? "",
@@ -71,8 +81,6 @@ export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefin
     temLanche: entrada?.temLanche ?? false,
     horaLanche: entrada?.horaLanche ?? "",
     numAdultos: entrada?.numAdultos ?? 0,
-    metodoPagamento2: undefined,
-    valorPago2: entrada?.valorPago2 ?? 0,
     meiasQuantidade: entrada?.meiasQuantidade ?? 0,
     extrasIds: entrada?.extras?.map((e) => e.extraId) ?? [],
     extrasQuantidades: Object.fromEntries(
@@ -85,10 +93,12 @@ export function buildEntradaPayload(
   data: EntradaLivreFormData,
   opts: { isEdit: boolean }
 ): CriarEntradaLivreDTO {
+  const hoje = toISODate(new Date());
   return {
     criancas: data.criancas.map((c) => ({
       nome: c.nome.trim(),
-      idade: c.idade ? parseInt(c.idade, 10) : undefined,
+      // Idade calculada a partir da data de nascimento (API continua a receber só a idade)
+      idade: c.dataNascimento ? calcIdade(c.dataNascimento, hoje) : undefined,
       querLanche: c.querLanche,
     })),
     encarregadoNome: data.encarregadoNome,
@@ -97,7 +107,8 @@ export function buildEntradaPayload(
     duracaoMinutos: data.duracaoMinutos,
     custoTotal: data.custoTotal,
     metodoPagamento: opts.isEdit ? undefined : data.metodoPagamento,
-    pago: opts.isEdit ? undefined : data.pago,
+    valorPago: opts.isEdit ? undefined : data.valorRecebido1 || undefined,
+    pago: opts.isEdit ? undefined : (data.pago ?? false),
     cacifoId: data.cacifoId || null,
     extrasIds: data.extrasIds,
     extrasQuantidades: Object.fromEntries(
@@ -109,7 +120,7 @@ export function buildEntradaPayload(
     horaLanche: data.horaLanche || (opts.isEdit ? null : undefined),
     numAdultos: data.numAdultos,
     metodoPagamento2: opts.isEdit ? undefined : data.metodoPagamento2,
-    valorPago2: opts.isEdit ? undefined : data.valorPago2 || undefined,
+    valorPago2: opts.isEdit ? undefined : data.valorRecebido2 || undefined,
     meiasQuantidade: data.meiasQuantidade || undefined,
   };
 }
