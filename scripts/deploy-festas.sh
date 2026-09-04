@@ -19,7 +19,8 @@
 #   ✔ snapshot de métricas antes (processos/threads) → logs/deploy.log
 #   ✔ backup de .env + uploads/ + tarball anterior (rotação de 3)
 #   ✔ MATA todos os processos next-server/Passenger da conta (TERM→KILL)
-#   ✔ extrai o tarball por cima da app
+#   ✔ limpa artefactos da versão anterior (.next, node_modules_deps, packages)
+#   ✔ extrai o tarball para uma app limpa (sem ficheiros órfãos)
 #   ✔ restaura .env e uploads/ preservados
 #   ✔ touch tmp/restart.txt (Passenger renasce limpo - só 1 processo)
 #   ✔ verifica: 1 processo, NLWP ≤ 15, HTTP 200/307
@@ -146,6 +147,19 @@ done
 
 # ── 4. MATAR TUDO (o passo que o Restart do cPanel NÃO faz) ─────────────────
 kill_app
+
+# ── 4b. LIMPAR ARTEFACTOS DA VERSÃO ANTERIOR (o tar extrai por cima) ────────
+# Sem este passo, ficheiros do deploy anterior que não existam no novo bundle
+# ficam no disco: rotas/API apagadas continuam a responder (.next/server),
+# chunks JS/CSS antigos acumulam, pacotes órfãos em node_modules_deps.
+# .env e uploads/ NÃO se tocam (preservados no passo 3, restaurados no 6).
+say "A limpar artefactos da versão anterior (.next, node_modules_deps, packages, src)..."
+rm -rf "$APP/apps/web/.next" \
+       "$APP/node_modules_deps" \
+       "$APP/packages" \
+       "$APP/apps/web/src" \
+       "$APP/apps/web/server.js"
+ok "Artefactos antigos removidos."
 
 # ── 5. EXTRAIR NOVO BUNDLE ──────────────────────────────────────────────────
 say "A extrair novo bundle para $APP ..."
