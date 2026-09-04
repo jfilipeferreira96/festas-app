@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 /**
- * Cached session getter — React's cache() deduplicates calls within
+ * Cached session getter - React's cache() deduplicates calls within
  * a single server render. Both RootLayout and ProtectedLayout can
  * call this safely; only one actual session validation occurs.
  */

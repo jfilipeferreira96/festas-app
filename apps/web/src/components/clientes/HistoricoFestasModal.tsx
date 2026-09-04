@@ -81,7 +81,7 @@ export default function HistoricoFestasModal({
                   <div className="flex items-center gap-1.5 sm:flex-1 min-w-0">
                     <MapPin size={14} className="text-text-muted shrink-0" />
                     <span className="text-sm text-text-secondary truncate">
-                      {festa.local?.nome ?? "—"}
+                      {festa.local?.nome ?? "-"}
                     </span>
                   </div>
 
@@ -101,7 +101,7 @@ export default function HistoricoFestasModal({
                         </span>
                       </>
                     ) : (
-                      <span className="text-xs text-text-muted">—</span>
+                      <span className="text-xs text-text-muted">-</span>
                     )}
                   </div>
 

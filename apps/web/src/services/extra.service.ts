@@ -1,5 +1,8 @@
 import prisma from "@festas/db";
 
+const BASES_COBRANCA = ["POR_UNIDADE", "POR_PESSOA"] as const;
+type BaseCobranca = (typeof BASES_COBRANCA)[number];
+
 interface CreateExtraData {
   nome: string;
   descricao?: string;
@@ -8,6 +11,7 @@ interface CreateExtraData {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
   activo?: boolean;
   locaisIds?: string[];
@@ -21,9 +25,16 @@ interface UpdateExtraData {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
   activo?: boolean;
   locaisIds?: string[];
+}
+
+function validarBaseCobranca(base: BaseCobranca | undefined) {
+  if (base !== undefined && !BASES_COBRANCA.includes(base)) {
+    throw new Error("BASE_COBRANCA_INVALID");
+  }
 }
 
 export const extraService = {
@@ -59,6 +70,7 @@ export const extraService = {
   async create(data: CreateExtraData) {
     if (!data.nome) throw new Error("NOME_REQUIRED");
     if (data.precoUnitario === undefined || data.precoUnitario < 0) throw new Error("PRICE_REQUIRED");
+    validarBaseCobranca(data.baseCobranca);
 
     return prisma.extra.create({
       data: {
@@ -69,6 +81,7 @@ export const extraService = {
         categoria: data.categoria ?? "EXTRA",
         subcategoria: data.subcategoria,
         requerTexto: data.requerTexto ?? false,
+        baseCobranca: data.baseCobranca ?? "POR_UNIDADE",
         fimDeSemana: data.fimDeSemana ?? null,
         activo: data.activo !== undefined ? data.activo : true,
         locais: data.locaisIds
@@ -81,6 +94,7 @@ export const extraService = {
 
   async update(id: string, data: UpdateExtraData) {
     await this.getById(id);
+    validarBaseCobranca(data.baseCobranca);
 
     if (data.locaisIds) {
       await prisma.extraLocal.deleteMany({ where: { extraId: id } });
@@ -96,6 +110,7 @@ export const extraService = {
         categoria: data.categoria,
         subcategoria: data.subcategoria,
         requerTexto: data.requerTexto,
+        baseCobranca: data.baseCobranca,
         fimDeSemana: data.fimDeSemana,
         activo: data.activo,
         locais: data.locaisIds

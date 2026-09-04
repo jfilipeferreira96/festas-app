@@ -261,7 +261,7 @@ export default function DivulgacoesContent() {
               key: "segmentoId",
               label: "Segmento",
               render: (v) => (
-                <span className="text-xs text-text-secondary">{v || "—"}</span>
+                <span className="text-xs text-text-secondary">{v || "-"}</span>
               ),
             },
             {
@@ -284,7 +284,7 @@ export default function DivulgacoesContent() {
                     ? new Date(c.enviadaEm).toLocaleDateString("pt-PT")
                     : c.agendadaPara
                       ? `Agendado: ${new Date(c.agendadaPara).toLocaleDateString("pt-PT")}`
-                      : "—"}
+                      : "-"}
                 </span>
               ),
             },

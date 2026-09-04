@@ -1,5 +1,5 @@
 // ===================================
-// Lanche — vista de lanches a preparar + notas/alergias
+// Lanche - vista de lanches a preparar + notas/alergias
 // ===================================
 // Usado pela conta LANCHE para saber o que preparar e registar alergias.
 

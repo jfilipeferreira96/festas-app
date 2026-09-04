@@ -110,7 +110,7 @@ export default function SlotsHorarioContent() {
     [salasLanche]
   );
 
-  // Ordenar por horário (ordem cronológica — sem campo explícito de ordem)
+  // Ordenar por horário (ordem cronológica - sem campo explícito de ordem)
   const sortedSlots = useMemo(
     () => [...(slots ?? [])].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)),
     [slots]
@@ -155,7 +155,7 @@ export default function SlotsHorarioContent() {
         sortable: false,
         render: (_value, s) => (
           <span className="text-sm text-text-secondary">
-            {s.horaLancheDefault ?? "—"}
+            {s.horaLancheDefault ?? "-"}
           </span>
         ),
       },
@@ -165,7 +165,7 @@ export default function SlotsHorarioContent() {
         sortable: false,
         render: (_value, s) => (
           <span className="text-sm text-text-secondary">
-            {s.salaLancheNome ?? "—"}
+            {s.salaLancheNome ?? "-"}
           </span>
         ),
       },

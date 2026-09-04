@@ -3,7 +3,7 @@
 import React, { useCallback } from "react";
 import { Plus, Clock } from "lucide-react";
 import type { SlotDia } from "@/lib/api/slotsHorario";
-import type { FestaFormInitialValues } from "./FestaForm";
+import type { FestaFormInitialValues } from "./form/FestaForm";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 
 interface SlotsPorPreencherProps {

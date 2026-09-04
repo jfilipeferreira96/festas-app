@@ -14,14 +14,14 @@ import {
 } from "@/lib/permissoes";
 import type { Modulo, NivelAcesso } from "@/lib/permissoes";
 
-describe("RBAC — Matriz hardcoded", () => {
+describe("RBAC - Matriz hardcoded", () => {
   describe("FUNCOES", () => {
     it("deve conter os 7 papéis: ADMINISTRADOR, LANCHE, CACIFOS, MONITOR, FESTAS_ACABAR, STAFF, RECECAO", () => {
       expect(FUNCOES).toEqual(["ADMINISTRADOR", "LANCHE", "CACIFOS", "MONITOR", "FESTAS_ACABAR", "STAFF", "RECECAO"]);
     });
   });
 
-  describe("PERMISSOES — ADMINISTRADOR", () => {
+  describe("PERMISSOES - ADMINISTRADOR", () => {
     it("deve ter administracao em todos os módulos", () => {
       for (const mod of MODULOS) {
         expect(PERMISSOES.ADMINISTRADOR[mod]).toBe("administracao");
@@ -29,7 +29,7 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 
-  describe("PERMISSOES — LANCHE", () => {
+  describe("PERMISSOES - LANCHE", () => {
     it("deve ter escrita no módulo lanche", () => {
       expect(PERMISSOES.LANCHE.lanche).toBe("escrita");
     });
@@ -51,7 +51,7 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 
-  describe("PERMISSOES — CACIFOS", () => {
+  describe("PERMISSOES - CACIFOS", () => {
     it("deve ter escrita no módulo cacifos", () => {
       expect(PERMISSOES.CACIFOS.cacifos).toBe("escrita");
     });
@@ -73,7 +73,7 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 
-  describe("PERMISSOES — clientes (módulo)", () => {
+  describe("PERMISSOES - clientes (módulo)", () => {
     it("ADMINISTRADOR deve ter administracao em clientes", () => {
       expect(PERMISSOES.ADMINISTRADOR.clientes).toBe("administracao");
     });
@@ -89,7 +89,7 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 
-  describe("PERMISSOES — MONITOR", () => {
+  describe("PERMISSOES - MONITOR", () => {
     it("deve ter leitura no módulo monitores", () => {
       expect(PERMISSOES.MONITOR.monitores).toBe("leitura");
     });
@@ -110,7 +110,7 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 
-  describe("PERMISSOES — FESTAS_ACABAR", () => {
+  describe("PERMISSOES - FESTAS_ACABAR", () => {
     it("deve ter escrita no módulo festas_acabar", () => {
       expect(PERMISSOES.FESTAS_ACABAR.festas_acabar).toBe("escrita");
     });
@@ -131,7 +131,7 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 
-  describe("PERMISSOES — STAFF", () => {
+  describe("PERMISSOES - STAFF", () => {
     it("deve ter leitura no módulo reservas", () => {
       expect(PERMISSOES.STAFF.reservas).toBe("leitura");
     });
@@ -158,12 +158,12 @@ describe("RBAC — Matriz hardcoded", () => {
     });
   });
 
-  describe("PERMISSOES — RECECAO", () => {
+  describe("PERMISSOES - RECECAO", () => {
     it("deve ter escrita no módulo reservas", () => {
       expect(PERMISSOES.RECECAO.reservas).toBe("escrita");
     });
 
-    it("deve ter apenas leitura no módulo clientes (não editar — privacidade/rotação de staff)", () => {
+    it("deve ter apenas leitura no módulo clientes (não editar - privacidade/rotação de staff)", () => {
       expect(PERMISSOES.RECECAO.clientes).toBe("leitura");
       expect(hasAccess("RECECAO", "clientes", "escrita")).toBe(false);
       expect(canRead("RECECAO", "clientes")).toBe(true);

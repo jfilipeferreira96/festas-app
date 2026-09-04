@@ -4,8 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
  * Next.js Middleware for Gestão de Festas Infantis.
  *
  * Simple middleware that handles:
- * 1. Protected routes — redirect to signin if not authenticated
- * 2. Guest routes — redirect to dashboard if already authenticated
+ * 1. Protected routes - redirect to signin if not authenticated
+ * 2. Guest routes - redirect to dashboard if already authenticated
  */
 
 // Paths that should NOT be handled by the middleware

@@ -9,7 +9,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "FestasAcabarTV",
 });
 
-// GET /api/festas-acabar/tv — dados para o ecrã TV (±5 min)
+// GET /api/festas-acabar/tv - dados para o ecrã TV (±5 min)
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

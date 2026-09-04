@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    // Lanche é um módulo próprio — LANCHE tem escrita, ADMINISTRADOR tudo
+    // Lanche é um módulo próprio - LANCHE tem escrita, ADMINISTRADOR tudo
     const denied = checkModulo(auth.user, "lanche", "escrita");
     if (denied) return denied;
 

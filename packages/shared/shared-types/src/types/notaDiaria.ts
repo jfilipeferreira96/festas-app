@@ -1,5 +1,5 @@
 // ===================================
-// NotaDiaria — Notas de manhã/tarde para a vista MONITOR
+// NotaDiaria - Notas de manhã/tarde para a vista MONITOR
 // ===================================
 
 export interface NotaDiaria {

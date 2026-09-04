@@ -1,5 +1,5 @@
 // ===================================
-// Campanha — Types for marketing campaign management
+// Campanha - Types for marketing campaign management
 // ===================================
 
 export type TipoCampanha = "EMAIL" | "SMS";

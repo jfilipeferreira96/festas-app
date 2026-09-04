@@ -16,7 +16,7 @@ const ESTADOS_VALIDOS = ["NAO_INICIADO", "A_DECORRER", "TERMINADO"];
 // PATCH /api/festas-acabar/entrada/:entradaLivreId/lanche
 // Confirmação do lanche de uma entrada livre pelo balcão (FESTAS_ACABAR).
 // A rota /api/lanche/entrada/[id] exige módulo "lanche" escrita,
-// inacessível a esta função — daí a rota dedicada.
+// inacessível a esta função - daí a rota dedicada.
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);

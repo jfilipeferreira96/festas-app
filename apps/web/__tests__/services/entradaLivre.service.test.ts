@@ -55,8 +55,8 @@ describe("Entrada Livre Service", () => {
       });
     });
 
-    it("should filter by data (tomorrow — expect empty)", async () => {
-      // Data em horário LOCAL (não UTC) — evita flake quando a suite corre
+    it("should filter by data (tomorrow - expect empty)", async () => {
+      // Data em horário LOCAL (não UTC) - evita flake quando a suite corre
       // logo após a meia-noite local: o seed usa dias locais, mas o
       // toISOString() serializa o dia UTC e saltava para o dia errado.
       const amanha = new Date();
@@ -271,7 +271,7 @@ describe("Entrada Livre Service", () => {
         temLanche: false,
       });
 
-      // Sem querLanche — registo antigo: todas as crianças contam
+      // Sem querLanche - registo antigo: todas as crianças contam
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Lanche Retro",
         encarregadoTelefone: "912345614",
@@ -368,7 +368,7 @@ describe("Entrada Livre Service", () => {
           encarregadoTelefone: "912345678",
           duracaoMinutos: 60,
           criancas: [{ nome: "Criança" }],
-          // pago omitted — must throw
+          // pago omitted - must throw
         } as any)
       ).rejects.toThrow("PAGAMENTO_OBRIGATORIO");
     });
@@ -385,7 +385,7 @@ describe("Entrada Livre Service", () => {
       ).rejects.toThrow("PAGAMENTO_OBRIGATORIO");
     });
 
-    it("should create entrada with pago=false (não pago) — valid", async () => {
+    it("should create entrada with pago=false (não pago) - valid", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Não Pago Válido",
         encarregadoTelefone: "912345678",
@@ -720,8 +720,8 @@ describe("Entrada Livre Service", () => {
     });
   });
 
-  // ── create() — Cliente creation (marketing base de contactos) ─
-  describe("create() — Cliente creation", () => {
+  // ── create() - Cliente creation (marketing base de contactos) ─
+  describe("create() - Cliente creation", () => {
     it("should create a new Cliente when encarregado is new", async () => {
       const countBefore = await testPrisma.cliente.count();
 
@@ -796,7 +796,7 @@ describe("Entrada Livre Service", () => {
   });
 
   // ── v2: meias e split payment ──────────────────────────────────
-  describe("create() — meias e pagamento dividido", () => {
+  describe("create() - meias e pagamento dividido", () => {
     it("deve criar entrada com meiasQuantidade e metodoPagamento2", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Meias Split",

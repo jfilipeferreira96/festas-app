@@ -21,11 +21,12 @@ import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import { useEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useConfigPreco } from "@/hooks/use-precos";
+import { calcularCustoExtras } from "@/lib/extras-custo";
 import type { StatusType } from "@/components/ui/status-badge/StatusBadge";
 import type { ConfiguracaoPreco } from "@/lib/api/precos";
 
 function formatCurrency(value: number | undefined | null): string {
-  if (value == null) return "—";
+  if (value == null) return "-";
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
 }
 
@@ -69,7 +70,7 @@ function useCurrentTime() {
 interface EntradaLivreDetailModalProps {
   entradaId: string | null;
   onClose: () => void;
-  /** Oculta secções de preço — usado para o papel CACIFOS. */
+  /** Oculta secções de preço - usado para o papel CACIFOS. */
   hidePrices?: boolean;
 }
 
@@ -89,14 +90,18 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
     const precoPorPessoa = getTierPricePerPerson(entrada.duracaoMinutos, configPreco);
     const custoTempo = +(precoPorPessoa * totalPessoas).toFixed(2);
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 4.5);
-    const custoLanche = entrada.temLanche ? +(precoLanche * totalPessoas).toFixed(2) : 0;
+    const criancasComLanche = entrada.temLanche
+      ? (entrada.criancas ?? []).filter((c: { querLanche?: boolean }) => c.querLanche !== false).length
+      : 0;
+    const custoLanche = +(precoLanche * criancasComLanche).toFixed(2);
     const custoMeias = entrada.meiasQuantidade
       ? +((entrada.meiasPrecoUnit ?? Number(configPreco?.precoMeias ?? 2.5)) * entrada.meiasQuantidade).toFixed(2)
       : 0;
-    const custoExtras = entrada.extras?.reduce(
-      (sum, e) => sum + Number(e.extra?.precoUnitario ?? 0) * (e.quantidade ?? 1),
-      0,
-    ) ?? 0;
+    const custoExtras = calcularCustoExtras(
+      (entrada.extras ?? []).map((e) => ({ extraId: e.extraId, quantidade: e.quantidade ?? 1 })),
+      (entrada.extras ?? []).map((e) => e.extra),
+      totalPessoas
+    );
     return {
       totalPessoas,
       precoPorPessoa,
@@ -216,7 +221,7 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
                     <DetailRow label="Subtotal calculado" value={formatCurrency(breakdown.subtotal)} />
                   )}
                   <div className="border-t border-border my-2" />
-                  {/* Custo final (guardado — pode ter override manual) */}
+                  {/* Custo final (guardado - pode ter override manual) */}
                   <DetailRow icon={<CreditCard size={12} />} label="Custo Final" value={formatCurrency(entrada.custoTotal)} bold />
                   {breakdown && Math.abs(breakdown.subtotal - Number(entrada.custoTotal)) > 0.01 && (
                     <p className="text-[10px] text-text-muted px-3">⚠ Valor ajustado manualmente</p>
@@ -269,7 +274,7 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
       </div>
     </Modal>
 
-    {/* Pagamento — mesma modal unificada das restantes páginas */}
+    {/* Pagamento - mesma modal unificada das restantes páginas */}
     {showPagamento && entrada && (
       <EntradaLivrePagamentoModal entrada={entrada} onClose={() => setShowPagamento(false)} />
     )}
@@ -311,7 +316,7 @@ function TimerSection({ inicioEm, duracaoMinutos, now }: { inicioEm: string; dur
         <div className={`text-center ${isOvertime ? "bg-accent-red-100 rounded-lg" : ""}`}>
           <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-0.5">Excesso</p>
           <p className={`text-lg font-bold font-mono tracking-wider ${isOvertime ? "text-accent-red-600" : "text-text-muted"}`}>
-            {isOvertime ? `+${formatMs(excessMs)}` : "—"}
+            {isOvertime ? `+${formatMs(excessMs)}` : "-"}
           </p>
         </div>
       </div>

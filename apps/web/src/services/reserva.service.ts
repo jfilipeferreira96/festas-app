@@ -60,6 +60,7 @@ interface CreateReservaData {
   // Related
   extrasIds?: string[];
   extrasTexto?: Record<string, string>;
+  extrasQuantidades?: Record<string, number>;
   monitoresIds?: string[];
   etapasIds?: string[];
   // Aniversariantes (multiple)
@@ -112,6 +113,7 @@ interface UpdateReservaData {
   meiasPrecoUnit?: number;
   extrasIds?: string[];
   extrasTexto?: Record<string, string>;
+  extrasQuantidades?: Record<string, number>;
   monitoresIds?: string[];
   etapasIds?: string[];
   aniversariantes?: AniversarianteInput[];
@@ -128,6 +130,18 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   CONCLUIDA: [],
   CANCELADA: [],
 };
+
+const BOLO_SEM_QUANTIDADE: readonly string[] = ["PAIS_TRAZEM", "A_DECIDIR"];
+
+function quantidadeDeExtra(quantidades: Record<string, number> | undefined, extraId: string) {
+  const q = quantidades?.[extraId];
+  return Math.max(1, Math.round(q ?? 1));
+}
+
+function normalizarBoloQuantidade(bolo: TipoBolo | undefined, quantidade: number | null | undefined) {
+  if (!bolo || BOLO_SEM_QUANTIDADE.includes(bolo)) return null;
+  return quantidade && quantidade > 0 ? Math.round(quantidade) : 1;
+}
 
 async function findOrCreateCliente(input: AniversarianteInput): Promise<string> {
   if (!input.encarregadoEmail && !input.encarregadoTelefone) {
@@ -326,7 +340,7 @@ export const reservaService = {
   /**
    * Verifica a disponibilidade de um local para uma data/horário/duração,
    * considerando sobreposição temporal (não apenas match exato de horário).
-   * Não bloqueia — serve apenas para alertar o utilizador antes de gravar.
+   * Não bloqueia - serve apenas para alertar o utilizador antes de gravar.
    */
   async checkDisponibilidade(params: {
     data: string;
@@ -430,7 +444,7 @@ export const reservaService = {
         cor: data.cor,
         bolo: data.bolo,
         boloTema: data.boloTema,
-        boloQuantidade: data.boloQuantidade,
+        boloQuantidade: normalizarBoloQuantidade(data.bolo, data.boloQuantidade),
         numCriancasConfirmadas: data.numCriancasConfirmadas,
         notasCacifos: data.notasCacifos,
         notasLanche: data.notasLanche,
@@ -454,7 +468,13 @@ export const reservaService = {
         meiasPrecoUnit,
         estado: "RESERVA",
         extras: data.extrasIds
-          ? { create: data.extrasIds.map((extraId) => ({ extraId, textoPersonalizado: data.extrasTexto?.[extraId] })) }
+          ? {
+              create: data.extrasIds.map((extraId) => ({
+                extraId,
+                quantidade: quantidadeDeExtra(data.extrasQuantidades, extraId),
+                textoPersonalizado: data.extrasTexto?.[extraId],
+              })),
+            }
           : undefined,
         monitores: data.monitoresIds
           ? { create: data.monitoresIds.map((monitorId) => ({ monitorId })) }
@@ -559,7 +579,10 @@ export const reservaService = {
         cor: data.cor,
         bolo: data.bolo,
         boloTema: data.boloTema,
-        boloQuantidade: data.boloQuantidade,
+        boloQuantidade:
+          data.bolo !== undefined
+            ? normalizarBoloQuantidade(data.bolo, data.boloQuantidade ?? (reserva.boloQuantidade ?? undefined))
+            : data.boloQuantidade,
         numCriancasConfirmadas: data.numCriancasConfirmadas,
         notasCacifos: data.notasCacifos,
         notasLanche: data.notasLanche,
@@ -580,7 +603,13 @@ export const reservaService = {
         meiasQuantidade: data.meiasQuantidade,
         meiasPrecoUnit: data.meiasPrecoUnit,
         extras: data.extrasIds
-          ? { create: data.extrasIds.map((extraId) => ({ extraId, textoPersonalizado: data.extrasTexto?.[extraId] })) }
+          ? {
+              create: data.extrasIds.map((extraId) => ({
+                extraId,
+                quantidade: quantidadeDeExtra(data.extrasQuantidades, extraId),
+                textoPersonalizado: data.extrasTexto?.[extraId],
+              })),
+            }
           : undefined,
         monitores: data.monitoresIds
           ? { create: data.monitoresIds.map((monitorId) => ({ monitorId })) }
@@ -880,7 +909,7 @@ export const reservaService = {
 
   /**
    * Alterna o estado de conclusão de um extra da reserva
-   * (entregue/prestado no dia da festa — check na tabela de festas).
+   * (entregue/prestado no dia da festa - check na tabela de festas).
    */
   async toggleReservaExtra(reservaExtraId: string) {
     const reservaExtra = await prisma.reservaExtra.findUnique({

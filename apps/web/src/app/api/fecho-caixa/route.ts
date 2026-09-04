@@ -15,7 +15,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "FechoCaixa",
 });
 
-// GET /api/fecho-caixa?data=YYYY-MM-DD — totais do dia por método de pagamento
+// GET /api/fecho-caixa?data=YYYY-MM-DD - totais do dia por método de pagamento
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

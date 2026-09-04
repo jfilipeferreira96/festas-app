@@ -1,5 +1,5 @@
 /**
- * Dev seed script — Comprehensive sample data for development.
+ * Dev seed script - Comprehensive sample data for development.
  *
  * Creates:
  * - 5 Users (with Better Auth) + RBAC permissions
@@ -9,7 +9,7 @@
  * - Alocações de monitores (escalonamento por dia + intervalo horário)
  * - 1 Configuração Cacifos + 40 Cacifos
  * - 8 Clientes with 10 Aniversariantes
- * - 10 Reservas (past, today, future — various states) ALL with:
+ * - 10 Reservas (past, today, future - various states) ALL with:
  *   → cor, tema, bolo, previsaoCriancas, observações
  *   → pagamento (metodo, valor, pago, caução)
  *   → menus
@@ -33,7 +33,7 @@ import { wipeDatabase } from "../src/wipe-database";
 
 config({ path: "../../apps/web/.env" });
 
-// Driver adapter (mariadb) — ver packages/db/src/mariadb-adapter.ts
+// Driver adapter (mariadb) - ver packages/db/src/mariadb-adapter.ts
 const prisma = createPrismaClient(process.env.DATABASE_URL!);
 
 const seedAuth = betterAuth({
@@ -124,7 +124,7 @@ async function main() {
   console.log("\n✅ Dev seed complete!");
 }
 
-  // ─── Essential (Users) — single source of truth: seed-roles.ts ─
+  // ─── Essential (Users) - single source of truth: seed-roles.ts ─
   async function seedEssential() {
     console.log("  Creating auth users...");
 
@@ -170,7 +170,7 @@ async function seedExtras() {
     { id: "extra-003", nome: "Máquina de Gelo", precoUnitario: 25.0, descricao: "Máquina de gelo seco", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
     { id: "extra-004", nome: "Pinturas Faciais", precoUnitario: 30.0, descricao: "Pinturas faciais artísticas", categoria: "EXTRA" as const, subcategoria: "Diversão", requerTexto: false },
     { id: "extra-005", nome: "Algodão Doce", precoUnitario: 3.0, descricao: "Algodão doce por unidade", categoria: "EXTRA" as const, subcategoria: "Comida", requerTexto: false },
-    { id: "extra-006", nome: "Lembranças", precoUnitario: 35.0, descricao: "Saco de lembranças por criança", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true },
+    { id: "extra-006", nome: "Lembranças", precoUnitario: 35.0, descricao: "Saco de lembranças por criança", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true, baseCobranca: "POR_PESSOA" as const },
     { id: "extra-007", nome: "Brinde Personalizado", precoUnitario: 0.0, descricao: "Brinde com texto personalizado", categoria: "EXTRA" as const, subcategoria: "Brindes", requerTexto: true },
     { id: "extra-menu-001", nome: "Menu Principal", precoUnitario: 20.0, descricao: "Menu completo com sumo, croissants, nuggets, pipocas e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
     { id: "extra-menu-002", nome: "Menu Carne", precoUnitario: 15.0, descricao: "Menu com nuggets, pizza, sumo e bolo", categoria: "MENU" as const, subcategoria: "Completo", requerTexto: false },
@@ -191,11 +191,11 @@ async function seedExtras() {
     { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA" as const, subcategoria: "Extras ao lanche", requerTexto: false },
     // ─── Extras à diversão BasyLandy ────────────────────────────
-    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
-    { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
+    { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
     { id: "extra-diversao-convites", nome: "Convites Personalizados", precoUnitario: 15.0, descricao: "Pacote de 30 convites personalizados. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: true },
-    { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
-    { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
+    { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA" as const, subcategoria: "Extras à diversão", requerTexto: false, baseCobranca: "POR_PESSOA" as const },
     // ─── Bolos BasyLandy ────────────────────────────────────────
     { id: "extra-bolo-1kg", nome: "Bolo 1KG", precoUnitario: 17.5, descricao: "Bolo de aniversário de 1kg.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
     { id: "extra-bolo-2kg", nome: "Bolo 2KG (hóstia incluída)", precoUnitario: 30.0, descricao: "Bolo de aniversário de 2kg com hóstia incluída.", categoria: "EXTRA" as const, subcategoria: "Bolos", requerTexto: false },
@@ -204,6 +204,12 @@ async function seedExtras() {
   for (const extra of extras) {
     await prisma.extra.upsert({ where: { id: extra.id }, update: {}, create: extra });
   }
+
+  // Cobrança por pessoa (idempotente - upsert acima tem update: {})
+  await prisma.extra.updateMany({
+    where: { id: { in: ["extra-006", "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
+    data: { baseCobranca: "POR_PESSOA" },
+  });
 
   // Novos extras/menus BasyLandy → associados a todos os locais
   const basyLandyIds = [
@@ -496,7 +502,7 @@ async function seedReservas() {
     "reserva-today-conc-001", "reserva-today-conc-002",
     "reserva-001", "reserva-002", "reserva-003",
     "reserva-future-001", "reserva-future-002", "reserva-future-003",
-    // Old em-curso extras (removidos — hoje tem apenas 3 festas)
+    // Old em-curso extras (removidos - hoje tem apenas 3 festas)
     "reserva-em-curso-a", "reserva-em-curso-b", "reserva-em-curso-c", "reserva-em-curso-d",
     // Old confirmadas hoje (removidos)
     "reserva-conf-hoje-1", "reserva-conf-hoje-2", "reserva-conf-hoje-3",
@@ -565,8 +571,8 @@ async function seedReservas() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // YESTERDAY (-1 dia) — 6 CONCLUIDA (5 em slots + 1 horário custom)
-  // Slots: 10:00 / 14:00 / 16:30 / 18:30 — todos 135 min
+  // YESTERDAY (-1 dia) - 6 CONCLUIDA (5 em slots + 1 horário custom)
+  // Slots: 10:00 / 14:00 / 16:30 / 18:30 - todos 135 min
   // ═══════════════════════════════════════════════════════════
   const ontemStr = toDateStr(daysAgo(1));
   const ontemConfigs = [
@@ -610,7 +616,7 @@ async function seedReservas() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // CONCLUIDA esta semana (-2 a -5 dias) — 5 reservas (todas em slots)
+  // CONCLUIDA esta semana (-2 a -5 dias) - 5 reservas (todas em slots)
   // ═══════════════════════════════════════════════════════════
   const concluidasSemanaConfigs = [
     { dias: 2, hora: "10:00", min: 0, dur: 135, n: 14, p: 16, tema: "Safari", cor: "#00A68A", local: "local-001", cli: "cliente-002", aniv: "aniv-003", mons: ["monitor-001"], bolo: "Bolo selva", obs: "Animais de pelúcia.", menuNome: "Menu Safari", menuPreco: 8.50 },
@@ -652,7 +658,7 @@ async function seedReservas() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // CONCLUIDA semana passada (-7 a -11 dias) — 5 reservas (todas em slots)
+  // CONCLUIDA semana passada (-7 a -11 dias) - 5 reservas (todas em slots)
   // ═══════════════════════════════════════════════════════════
   const concluidasPasConfigs = [
     { dias: 8, hora: "10:00", min: 0, dur: 135, n: 16, p: 18, tema: "Piratas", cor: "#8A8E91", local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001"], bolo: "Bolo pirata", obs: "Caça ao tesouro.", menuNome: "Menu Pirata", menuPreco: 9.00 },
@@ -693,10 +699,10 @@ async function seedReservas() {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // TODAY — 3 festas (todas em slots: 10:00 / 14:00 / 16:30)
+  // TODAY - 3 festas (todas em slots: 10:00 / 14:00 / 16:30)
   // ═══════════════════════════════════════════════════════════
 
-  // ── 1) CONCLUIDA manhã — slot 10:00, 135 min (Leonor, Fada, Sala Arco-Íris)
+  // ── 1) CONCLUIDA manhã - slot 10:00, 135 min (Leonor, Fada, Sala Arco-Íris)
   const tConcStart = dateAt(todayDate, 10, 0);
   await prisma.reserva.upsert({
     where: { id: "reserva-today-3" },
@@ -729,7 +735,7 @@ async function seedReservas() {
   await prisma.reservaExtra.upsert({ where: { id: "rext-today-3" }, update: {}, create: { id: "rext-today-3", reservaId: "reserva-today-3", extraId: "extra-004", quantidade: 1, concluido: true } });
   await createEtapas("reserva-today-3", 6, 6, tConcStart);
 
-  // ── 2) EM_CURSO — slot 14:00, 135 min (Marta, Princesa, Sala Azul)
+  // ── 2) EM_CURSO - slot 14:00, 135 min (Marta, Princesa, Sala Azul)
   // Começou há 60 min, dura 135 min → 75 min restantes
   const tEmCurso = addMin(now, -60);
   const fimPrevEmCurso = addMin(tEmCurso, 135);
@@ -738,8 +744,8 @@ async function seedReservas() {
     update: {
       estado: "EM_CURSO", inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso, fimReal: null,
       horario: "14:00", duracaoMinutos: 135,
-      notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde — confirmar com os pais no pagamento e na saída.",
-      observacoesLesoes: "Marta tem gesso no braço direito — evitar escalada e trampolins.",
+      notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde - confirmar com os pais no pagamento e na saída.",
+      observacoesLesoes: "Marta tem gesso no braço direito - evitar escalada e trampolins.",
     },
     create: {
       id: "reserva-001",
@@ -751,12 +757,12 @@ async function seedReservas() {
       bolo: "NOSSO_2KG", boloTema: "Bolo de chocolate com coroa dourada",
       observacoesGerais: "Marta faz 8 anos. Gosta de cor-de-rosa. Sem restrições alimentares.",
       observacoesBrindes: "Sacos com pulseiras e adesivos.",
-      observacoesLesoes: "Marta tem gesso no braço direito — evitar escalada e trampolins.",
+      observacoesLesoes: "Marta tem gesso no braço direito - evitar escalada e trampolins.",
       outrosExtras: "Palhaçada ao início (15 min)",
       metodoPagamento: "MBWAY", valorPago: 175.00, pago: true,
       caucao: "PAGA",
       notas: "Marta faz 8 anos. Decoração cor-de-rosa.",
-      notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde — confirmar com os pais no pagamento e na saída.",
+      notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde - confirmar com os pais no pagamento e na saída.",
       clienteId: "cliente-001", localId: "local-001",
     },
   });
@@ -769,26 +775,26 @@ async function seedReservas() {
   await prisma.reservaExtra.upsert({ where: { id: "rext-001-3" }, update: {}, create: { id: "rext-001-3", reservaId: "reserva-001", extraId: "extra-006", quantidade: 18, concluido: false } });
   // Cacifos: 15 preenchidos de 18, cacifos 1-15 (vários com notas para testar avisos)
   await fillCacifos("reserva-001", 18, 15, 1, false, [
-    "Alergia a frutos secos — evitar bolo e bombons com amendoim",
+    "Alergia a frutos secos - evitar bolo e bombons com amendoim",
     undefined,
-    "Asma — bomba na mochila azul; avisar os pais na saída",
-    undefined,
-    undefined,
-    "Sem meias — comprou no parque (talão colado à porta do cacifo)",
+    "Asma - bomba na mochila azul; avisar os pais na saída",
     undefined,
     undefined,
-    "Alergia a lactose — bolo sem leite e sumo sem iogurte",
-    undefined,
-    "Sai apenas com a avó — não entregar a terceiros",
+    "Sem meias - comprou no parque (talão colado à porta do cacifo)",
     undefined,
     undefined,
+    "Alergia a lactose - bolo sem leite e sumo sem iogurte",
     undefined,
-    "Meias tamanho 28 esquecidas no cacifo — devolver na saída",
+    "Sai apenas com a avó - não entregar a terceiros",
+    undefined,
+    undefined,
+    undefined,
+    "Meias tamanho 28 esquecidas no cacifo - devolver na saída",
   ]);
   // Etapas: 2/6 concluídas
   await createEtapas("reserva-001", 2, 6, tEmCurso);
 
-  // ── 3) CONFIRMADO — slot 16:30, 135 min (Beatriz, Unicórnios, Sala Arco-Íris)
+  // ── 3) CONFIRMADO - slot 16:30, 135 min (Beatriz, Unicórnios, Sala Arco-Íris)
   await prisma.reserva.upsert({
     where: { id: "reserva-002" },
     update: {},
@@ -802,7 +808,7 @@ async function seedReservas() {
       observacoesGerais: "Beatriz quer decoração de unicórnios. Muito glitter!",
       observacoesLesoes: "Laura é alérgica a amendoim.",
       observacoesBrindes: "Mini-unicórnios de pelúcia para todos.",
-      notasCacifos: "Cacifos 16 e 23 com alertas — verificar meias em falta no pagamento.",
+      notasCacifos: "Cacifos 16 e 23 com alertas - verificar meias em falta no pagamento.",
       metodoPagamento: "DINHEIRO", valorPago: 100.00, pago: false,
       caucao: "PAGA_NO_DIA",
       notas: "Beatriz quer decoração de unicórnios.",
@@ -814,17 +820,17 @@ async function seedReservas() {
   await prisma.reservaExtra.upsert({ where: { id: "rext-002-1" }, update: {}, create: { id: "rext-002-1", reservaId: "reserva-002", extraId: "extra-002", quantidade: 1 } });
   await prisma.reservaExtra.upsert({ where: { id: "rext-002-2" }, update: {}, create: { id: "rext-002-2", reservaId: "reserva-002", extraId: "extra-004", quantidade: 1 } });
   await fillCacifos("reserva-002", 22, 8, 16, false, [
-    "Alergia a amendoim (Laura) — separar do bolo com creme de chocolate",
+    "Alergia a amendoim (Laura) - separar do bolo com creme de chocolate",
     undefined,
-    "Irmã mais velha vem buscar às 18:00 — contacto da mãe no balcão",
+    "Irmã mais velha vem buscar às 18:00 - contacto da mãe no balcão",
     undefined,
-    "Sem meias — pagar 2,50€ no balcão",
+    "Sem meias - pagar 2,50€ no balcão",
     undefined,
     undefined,
-    "Mochila com bomba de asma — entregar directamente à mãe",
+    "Mochila com bomba de asma - entregar directamente à mãe",
   ]);
 
-  // ── TOMORROW 1) RESERVA — slot 14:00, 135 min (Francisco, Futebol, Sala Arco-Íris)
+  // ── TOMORROW 1) RESERVA - slot 14:00, 135 min (Francisco, Futebol, Sala Arco-Íris)
   const tomorrowStr = toDateStr(daysFromNow(1));
   await prisma.reserva.upsert({
     where: { id: "reserva-003" },
@@ -849,7 +855,7 @@ async function seedReservas() {
   await prisma.reservaExtra.upsert({ where: { id: "rext-003-1" }, update: {}, create: { id: "rext-003-1", reservaId: "reserva-003", extraId: "extra-001", quantidade: 1 } });
 
   // ═══════════════════════════════════════════════════════════
-  // +3 days — CONFIRMADO (Beatriz Lopes, Super-Heróis, Sala Azul)
+  // +3 days - CONFIRMADO (Beatriz Lopes, Super-Heróis, Sala Azul)
   // ═══════════════════════════════════════════════════════════
   const future3Str = toDateStr(daysFromNow(3));
   await prisma.reserva.upsert({
@@ -876,7 +882,7 @@ async function seedReservas() {
   await prisma.reservaExtra.upsert({ where: { id: "rext-f1-2" }, update: {}, create: { id: "rext-f1-2", reservaId: "reserva-future-001", extraId: "extra-006", quantidade: 16 } });
 
   // ═══════════════════════════════════════════════════════════
-  // +5 days — RESERVA (Matilde, Safari, Sala Arco-Íris)
+  // +5 days - RESERVA (Matilde, Safari, Sala Arco-Íris)
   // EXEMPLO DE HORÁRIO CUSTOM (não corresponde a nenhum slot → festasSemSlot)
   // ═══════════════════════════════════════════════════════════
   const future5Str = toDateStr(daysFromNow(5));
@@ -901,7 +907,7 @@ async function seedReservas() {
   await prisma.menu.upsert({ where: { id: "menu-f2" }, update: {}, create: { id: "menu-f2", nome: "Menu Safari", preco: 7.50, notas: "Croissants, sumo, bolo safari", reservaId: "reserva-future-002" } });
 
   // ═══════════════════════════════════════════════════════════
-  // +7 days — RESERVA (Mariana, Mermaid, Parque Trampolins)
+  // +7 days - RESERVA (Mariana, Mermaid, Parque Trampolins)
   // ═══════════════════════════════════════════════════════════
   const future7Str = toDateStr(daysFromNow(7));
   await prisma.reserva.upsert({
@@ -924,7 +930,7 @@ async function seedReservas() {
   await prisma.menu.upsert({ where: { id: "menu-f3" }, update: {}, create: { id: "menu-f3", nome: "Menu Pequeno", preco: 6.00, notas: "Sumo e bolo", reservaId: "reserva-future-003" } });
 
   // ═══════════════════════════════════════════════════════════
-  // TOMORROW (+1) — 2 festas (ambas em slots)
+  // TOMORROW (+1) - 2 festas (ambas em slots)
   // ═══════════════════════════════════════════════════════════
   // 2ª festa de amanhã: CONFIRMADO (Mariana, Sereia, Parque Trampolins, slot 10:00)
   await prisma.reserva.upsert({
@@ -1058,7 +1064,7 @@ async function seedReservas() {
   }
 
   // ─── Ajustes de pagamento (exemplos: acréscimo, desconto, redefinição) ───
-  // Nota: os ajustes são write-through — os valores finais já refletem os acertos.
+  // Nota: os ajustes são write-through - os valores finais já refletem os acertos.
   const adminUser = await prisma.user.findFirst({ where: { funcao: "ADMINISTRADOR" } });
 
   // 1) ACRESCIMO na festa EM_CURSO de hoje (meias compradas no parque)
@@ -1083,7 +1089,7 @@ async function seedReservas() {
     create: {
       id: "ajuste-seed-desconto-001",
       tipo: "DESCONTO", valor: 10.00,
-      motivo: "Cliente habitual — desconto de cortesia",
+      motivo: "Cliente habitual - desconto de cortesia",
       reservaId: "reserva-today-3",
       criadoPorId: adminUser?.id ?? null,
     },
@@ -1149,7 +1155,7 @@ async function seedMarketing() {
       id: "campanha-001",
       tipo: "EMAIL",
       estado: "RASCUNHO",
-      assunto: "🎂 Festas de Verão — Promoção 20%!",
+      assunto: "🎂 Festas de Verão - Promoção 20%!",
       mensagem: "Olá!\n\nEste verão, as festas dos seus filhos têm desconto! Reserve até 30 de junho e garanta 20% de desconto.\n\nCom carinho,\nEquipa Festas",
       segmentoId: "segmento-001",
     },
@@ -1271,7 +1277,7 @@ async function seedEntradasLivres() {
     },
   });
 
-  // ─── MAIS ATIVAS (hoje) — 5 entradas em vários estados ──────────
+  // ─── MAIS ATIVAS (hoje) - 5 entradas em vários estados ──────────
   const ativasExtras = [
     { id: "entrada-livre-ativa-003", hora: 11, min: 0, dur: 60, custo: 10.0, nome: "Mariana Alves", tel: "911111112", email: "mariana@email.pt", pago: true, met: MP("DINHEIRO"), lanche: false, adultos: 0, criancas: [{ nome: "João", idade: 5 }, { nome: "Rita", idade: 7 }] },
     { id: "entrada-livre-ativa-004", hora: 13, min: 30, dur: 90, custo: 12.0, nome: "Carlos Pereira", tel: "922222223", email: "carlos@email.pt", pago: false, met: undefined, lanche: true, adultos: 1, criancas: [{ nome: "Pedro", idade: 8 }, { nome: "Inês", idade: 6 }, { nome: "Tiago", idade: 4 }] },
@@ -1305,7 +1311,7 @@ async function seedEntradasLivres() {
     });
   }
 
-  // ─── ENTRADA ATIVA HOJE — COM LANCHE + ADULTO (para teste visual) ────
+  // ─── ENTRADA ATIVA HOJE - COM LANCHE + ADULTO (para teste visual) ────
   const entradaLancheStart = dateAt(todayDate, 12, 0);
   await prisma.entradaLivre.upsert({
     where: { id: "entrada-livre-ativa-lanche-001" },
@@ -1329,7 +1335,7 @@ async function seedEntradasLivres() {
     },
   });
 
-  // 4) ACRESCIMO nesta entrada livre com lanche (2 × 4,50€) — write-through
+  // 4) ACRESCIMO nesta entrada livre com lanche (2 × 4,50€) - write-through
   const adminUserAjuste = await prisma.user.findFirst({ where: { funcao: "ADMINISTRADOR" } });
   await prisma.ajustePagamento.upsert({
     where: { id: "ajuste-seed-acrescimo-002" },
@@ -1348,7 +1354,7 @@ async function seedEntradasLivres() {
     data: { custoTotalFinal: 29.00 },
   });
 
-  // ─── CONCLUIDAS esta semana (-1 a -5 dias) — 7 entradas ──────────
+  // ─── CONCLUIDAS esta semana (-1 a -5 dias) - 7 entradas ──────────
   const concluidasSemana = [
     { dias: 1, hora: 10, min: 0, dur: 60, custo: 10.0, nome: "Rui Costa", tel: "966666667", met: MP("MBWAY"), excesso: 15, lanche: false, adultos: 0, criancas: [{ nome: "Diogo", idade: 6 }] },
     { dias: 2, hora: 14, min: 30, dur: 90, custo: 8.0, nome: "Sandra Ribeiro", tel: "977777778", met: MP("DINHEIRO"), excesso: 0, lanche: true, adultos: 0, criancas: [{ nome: "Beatriz", idade: 5 }, { nome: "Carlos", idade: 7 }] },
@@ -1393,7 +1399,7 @@ async function seedEntradasLivres() {
     });
   }
 
-  // ─── CONCLUIDAS semana passada (-7 a -11 dias) — 5 entradas ──────
+  // ─── CONCLUIDAS semana passada (-7 a -11 dias) - 5 entradas ──────
   const concluidasPas = [
     { dias: 7, hora: 14, min: 0, dur: 90, custo: 10.0, nome: "Luís Pereira", tel: "940000014", met: MP("DINHEIRO"), excesso: 0, lanche: false, adultos: 0, criancas: [{ nome: "Mariana", idade: 6 }] },
     { dias: 8, hora: 10, min: 30, dur: 60, custo: 8.0, nome: "Helena Costa", tel: "950000015", met: MP("MBWAY"), excesso: 10, lanche: true, adultos: 1, criancas: [{ nome: "João", idade: 5 }, { nome: "Beatriz", idade: 7 }] },
@@ -1436,7 +1442,7 @@ async function seedEntradasLivres() {
     });
   }
 
-  // ─── CANCELADAS — 3 entradas ─────────────────────────────────────
+  // ─── CANCELADAS - 3 entradas ─────────────────────────────────────
   const canceladasExtras = [
     { dias: 2, hora: 9, min: 0, dur: 60, custo: 10.0, nome: "Vasco Almeida", tel: "990000019", obs: "Criança adoeceu", lanche: false, adultos: 0, criancas: [{ nome: "Leonor", idade: 5 }] },
     { dias: 4, hora: 14, min: 0, dur: 90, custo: 8.0, nome: "Marta Cardoso", tel: "901000020", obs: "Mudança de planos", lanche: false, adultos: 0, criancas: [{ nome: "Diogo", idade: 6 }, { nome: "Sofia", idade: 4 }] },
@@ -1549,7 +1555,7 @@ async function seedEntradasLivres() {
     }
   }
 
-  console.log("  ✓ 3 configurações, 30 entradas livres (7 ativas, 16 concluídas, 4 canceladas — 4 concluídas hoje)\n");
+  console.log("  ✓ 3 configurações, 30 entradas livres (7 ativas, 16 concluídas, 4 canceladas - 4 concluídas hoje)\n");
   console.log(`  ✓ ${semCliente.length} encarregados de entradas livres ligados à base de clientes (marketing)\n`);
 }
 

@@ -14,10 +14,10 @@ export interface ConfiguracaoPreco {
   // Preço POR CRIANÇA (festa)
   precoCriancaSemana: number;
   precoCriancaFimSemana: number;
-  // Entrada livre (preço por hora — linear, legado)
+  // Entrada livre (preço por hora - linear, legado)
   precoEntradaHoraSemana: number;
   precoEntradaHoraFimSemana: number;
-  // Entrada livre (tarifário por escalão — aplica-se a todos os dias)
+  // Entrada livre (tarifário por escalão - aplica-se a todos os dias)
   precoEntrada1h: number;
   precoEntrada2h: number;
   precoEntradaHoraAdicional: number;
@@ -27,7 +27,7 @@ export interface ConfiguracaoPreco {
   precoMeias: number;
   // Excesso de tempo
   precoExcessoFixo: number;
-  // Caução por defeito (valor sugerido ao criar reserva — sobrescrevível)
+  // Caução por defeito (valor sugerido ao criar reserva - sobrescrevível)
   caucaoDefault: number;
   // Lanche em entrada livre (suplemento por pessoa quando temLanche = true)
   precoLancheEntrada: number;

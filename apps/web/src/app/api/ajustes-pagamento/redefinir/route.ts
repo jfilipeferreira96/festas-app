@@ -23,7 +23,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "AjustePagamento",
 });
 
-// POST /api/ajustes-pagamento/redefinir — redefine o preço final (total ou por criança)
+// POST /api/ajustes-pagamento/redefinir - redefine o preço final (total ou por criança)
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

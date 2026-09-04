@@ -1,4 +1,4 @@
-// app2.js — TESTE de configuração cPanel / CloudLinux (CommonJS)
+// app2.js - TESTE de configuração cPanel / CloudLinux (CommonJS)
 // -----------------------------------------------------------------------------
 // Serve uma página HTML simples para verificar que o Node.js + Phusion Passenger
 // estão configurados correctamente. NÃO precisa de node_modules.

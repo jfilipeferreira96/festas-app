@@ -37,7 +37,7 @@ export default function MonitoresEscalacaoContent() {
 
   const formattedDate = formatDate(selectedDate);
 
-  // Estável (useCallback) — evita re-inicialização do flatpickr a cada render.
+  // Estável (useCallback) - evita re-inicialização do flatpickr a cada render.
   const handleDateChange = useCallback(([date]: Date[]) => {
     if (!date) return;
     setSelectedDate(toLocalISODate(date));
@@ -88,7 +88,7 @@ export default function MonitoresEscalacaoContent() {
     <div className="space-y-5">
       <PageHeader
         title="Monitores"
-        subtitle={`Escalação por dia — ${formattedDate}`}
+        subtitle={`Escalação por dia - ${formattedDate}`}
         actions={
           <div className="flex items-center gap-2">
             <button
@@ -153,7 +153,7 @@ export default function MonitoresEscalacaoContent() {
         onEdit={handleBarClick}
       />
 
-      {/* Notas Diárias (manhã / tarde) — admin escreve, monitor lê */}
+      {/* Notas Diárias (manhã / tarde) - admin escreve, monitor lê */}
       <NotasDiariasPanel data={selectedDate} />
 
       {/* Modal de detalhe (ao clicar numa barra) */}
@@ -170,7 +170,7 @@ export default function MonitoresEscalacaoContent() {
                 </div>
                 <div>
                   <h2 className="text-lg font-semibold text-text-primary">
-                    {selectedAlocacao.monitor?.nome ?? "—"}
+                    {selectedAlocacao.monitor?.nome ?? "-"}
                   </h2>
                   <p className="text-xs text-text-muted">
                     {formatDate(selectedAlocacao.data?.split("T")[0] ?? selectedDate)}
@@ -188,7 +188,7 @@ export default function MonitoresEscalacaoContent() {
                     className="w-2.5 h-2.5 rounded-full"
                     style={{ backgroundColor: corPorId(selectedAlocacao.localId).bg }}
                   />
-                  {selectedAlocacao.local?.nome ?? "—"}
+                  {selectedAlocacao.local?.nome ?? "-"}
                 </span>
               </div>
               <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50">

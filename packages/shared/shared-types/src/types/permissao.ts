@@ -1,5 +1,5 @@
 // ===================================
-// Permissão — RBAC hardcoded (sem modelo na BD)
+// Permissão - RBAC hardcoded (sem modelo na BD)
 // ===================================
 // As permissões são definidas em apps/web/src/lib/permissoes.ts
 // (matriz fixa por FuncaoUtilizador). Apenas tipos partilhados aqui.

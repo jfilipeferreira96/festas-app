@@ -15,7 +15,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "AjustePagamento",
 });
 
-// DELETE /api/ajustes-pagamento/[id] — remove o ajuste e reverte o total
+// DELETE /api/ajustes-pagamento/[id] - remove o ajuste e reverte o total
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

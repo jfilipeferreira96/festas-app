@@ -12,7 +12,7 @@ export interface EntradaLivreExtraItem {
   extraId: string;
   quantidade: number;
   textoPersonalizado?: string;
-  extra: { id: string; nome: string; precoUnitario: number };
+  extra: { id: string; nome: string; precoUnitario: number; baseCobranca?: "POR_UNIDADE" | "POR_PESSOA" };
 }
 
 export interface EntradaLivre {
@@ -68,6 +68,7 @@ export interface CriarEntradaLivreDTO {
   pago?: boolean;
   cacifoId?: string | null;
   extrasIds?: string[];
+  extrasQuantidades?: Record<string, number>;
   observacoes?: string;
   observacoesLesoes?: string;
   // Lanche
@@ -95,6 +96,7 @@ export interface AtualizarEntradaLivreDTO {
   cacifoId?: string | null;
   horaLanche?: string | null;
   extrasIds?: string[];
+  extrasQuantidades?: Record<string, number>;
   observacoes?: string;
   observacoesLesoes?: string;
   // Lanche

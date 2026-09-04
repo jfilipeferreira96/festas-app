@@ -110,7 +110,7 @@ export default function FestasAcabarContent() {
       render: (_v, f) => (
         <span className="font-medium text-text-primary whitespace-nowrap flex items-center gap-1">
           <Clock size={13} className="text-text-muted" />
-          {f.fimPrevisto ? format(parseISO(f.fimPrevisto), "HH:mm") : "—"}
+          {f.fimPrevisto ? format(parseISO(f.fimPrevisto), "HH:mm") : "-"}
         </span>
       ),
     },
@@ -134,7 +134,7 @@ export default function FestasAcabarContent() {
       key: "localNome",
       label: "Sala",
       render: (_v, f) => (
-        <span className="text-sm text-text-secondary">{f.localNome || "—"}</span>
+        <span className="text-sm text-text-secondary">{f.localNome || "-"}</span>
       ),
     },
     {
@@ -149,7 +149,7 @@ export default function FestasAcabarContent() {
       key: "tempo",
       label: "Tempo",
       render: (_v, f) => {
-        if (!f.inicioEm) return <span className="text-sm text-text-muted">—</span>;
+        if (!f.inicioEm) return <span className="text-sm text-text-muted">-</span>;
         const decorridoMin = Math.floor((now - parseISO(f.inicioEm).getTime()) / 60_000);
         const atrasada = f.fimPrevisto ? now > parseISO(f.fimPrevisto).getTime() : false;
         return (
@@ -186,7 +186,7 @@ export default function FestasAcabarContent() {
       label: "Extras",
       render: (_v, f) => {
         if (!f.extras || f.extras.length === 0) {
-          return <span className="text-xs text-text-muted/50">—</span>;
+          return <span className="text-xs text-text-muted/50">-</span>;
         }
         return (
           <div className="flex flex-col gap-1 min-w-[120px]">
@@ -197,7 +197,7 @@ export default function FestasAcabarContent() {
                 onClick={() => toggleReservaExtra.mutate(re.id)}
                 disabled={toggleReservaExtra.isPending}
                 className="flex items-center gap-1.5 text-left group/extra disabled:opacity-50"
-                title={re.concluido ? "Entregue — clicar para reabrir" : "Marcar como entregue"}
+                title={re.concluido ? "Entregue - clicar para reabrir" : "Marcar como entregue"}
               >
                 <CheckCircle2
                   size={14}
@@ -222,7 +222,7 @@ export default function FestasAcabarContent() {
             <span className="text-xs text-brand-800 whitespace-normal">{f.observacoesBrindes}</span>
           </div>
         ) : (
-          <span className="text-xs text-text-muted/50">—</span>
+          <span className="text-xs text-text-muted/50">-</span>
         ),
     },
     {
@@ -235,7 +235,7 @@ export default function FestasAcabarContent() {
             <span className="text-xs text-brand-800 whitespace-normal">{f.observacoesBrindesPais}</span>
           </div>
         ) : (
-          <span className="text-xs text-text-muted/50">—</span>
+          <span className="text-xs text-text-muted/50">-</span>
         ),
     },
     {
@@ -248,7 +248,7 @@ export default function FestasAcabarContent() {
             <span className="text-xs text-accent-orange-800 whitespace-normal">{f.observacoesLesoes}</span>
           </div>
         ) : (
-          <span className="text-xs text-text-muted/50">—</span>
+          <span className="text-xs text-text-muted/50">-</span>
         ),
     },
     {
@@ -256,7 +256,7 @@ export default function FestasAcabarContent() {
       label: "Obs. Cacifos",
       render: (_v, f) => {
         const notas = f.notasCacifos || f.observacoesCacifo;
-        if (!notas) return <span className="text-xs text-text-muted/50">—</span>;
+        if (!notas) return <span className="text-xs text-text-muted/50">-</span>;
         return (
           <div className="inline-flex items-start gap-1.5 max-w-[280px] rounded-lg bg-brand-50 border border-brand-200 px-2.5 py-1.5">
             <Package size={13} className="text-brand-600 shrink-0 mt-0.5" />

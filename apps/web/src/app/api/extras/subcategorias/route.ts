@@ -9,7 +9,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "Extra",
 });
 
-// GET /api/extras/subcategorias — retorna subcategorias distintas para autocomplete
+// GET /api/extras/subcategorias - retorna subcategorias distintas para autocomplete
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);

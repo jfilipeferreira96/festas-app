@@ -12,7 +12,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".png": "image/png",
 };
 
-// GET /api/uploads/profile-photos/:filename — serves uploaded profile photos
+// GET /api/uploads/profile-photos/:filename - serves uploaded profile photos
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ filename: string }> }

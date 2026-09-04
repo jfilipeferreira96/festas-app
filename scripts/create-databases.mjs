@@ -1,5 +1,5 @@
 /**
- * Cria as bases de dados lógicas no MySQL LOCAL (XAMPP) — root sem password.
+ * Cria as bases de dados lógicas no MySQL LOCAL (XAMPP) - root sem password.
  *   - baselandia_prod  → base de dados principal de desenvolvimento (espelha o esquema de produção)
  *   - baselandia_test  → base de dados de testes (vitest)
  *
@@ -25,4 +25,4 @@ for (const db of DBS) {
   console.log(`✅ Base de dados garantida: ${db}`);
 }
 await conn.end();
-console.log("\nFeito — separação lógica criada (prod + test).");
+console.log("\nFeito - separação lógica criada (prod + test).");

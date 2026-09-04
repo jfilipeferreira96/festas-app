@@ -10,13 +10,13 @@ interface ProfilePhotoUploadProps {
   currentPhotoUrl?: string | null;
   /** Name for fallback initial */
   name?: string | null;
-  /** Upload endpoint — when provided, uploads immediately. When omitted, only previews. */
+  /** Upload endpoint - when provided, uploads immediately. When omitted, only previews. */
   uploadEndpoint?: string;
   /** Size in px */
   size?: number;
   /** Callback after successful upload (when uploadEndpoint is provided) */
   onUploadSuccess?: (imageUrl: string) => void;
-  /** Callback when a file is selected (when no uploadEndpoint — preview-only mode) */
+  /** Callback when a file is selected (when no uploadEndpoint - preview-only mode) */
   onFileSelect?: (file: File) => void;
   /** External pending file to preview (used in create flow) */
   pendingFile?: File | null;

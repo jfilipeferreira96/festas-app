@@ -1,5 +1,5 @@
 // ===================================
-// Audit — Types for audit log
+// Audit - Types for audit log
 // ===================================
 
 export interface AuditLog {

@@ -1,5 +1,5 @@
 // ===================================
-// Relatório — Types
+// Relatório - Types
 // ===================================
 
 export interface LinhaRelatorio {
@@ -18,6 +18,7 @@ export interface SecaoRelatorio {
   titulo: string;
   linhas: LinhaRelatorio[];
   total: LinhaRelatorio;
+  linhasInformativas?: LinhaRelatorio[];
 }
 
 export interface RelatorioFinanceiro {

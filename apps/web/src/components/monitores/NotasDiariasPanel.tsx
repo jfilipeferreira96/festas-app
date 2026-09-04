@@ -53,7 +53,7 @@ export default function NotasDiariasPanel({ data }: NotasDiariasPanelProps) {
           <StickyNote size={16} className="text-primary-500" />
         </div>
         <h3 className="text-sm font-semibold text-text-primary">
-          Notas do Dia — {formattedDate}
+          Notas do Dia - {formattedDate}
         </h3>
       </div>
 
@@ -72,7 +72,7 @@ export default function NotasDiariasPanel({ data }: NotasDiariasPanelProps) {
           ) : (
             <div className="p-3 rounded-lg bg-gray-50 border border-border min-h-[100px]">
               <p className="text-sm text-text-primary whitespace-pre-wrap">
-                {notasManha || "—"}
+                {notasManha || "-"}
               </p>
             </div>
           )}
@@ -92,7 +92,7 @@ export default function NotasDiariasPanel({ data }: NotasDiariasPanelProps) {
           ) : (
             <div className="p-3 rounded-lg bg-gray-50 border border-border min-h-[100px]">
               <p className="text-sm text-text-primary whitespace-pre-wrap">
-                {notasTarde || "—"}
+                {notasTarde || "-"}
               </p>
             </div>
           )}

@@ -1,5 +1,5 @@
 // ===================================
-// Entrada Livre — Types
+// Entrada Livre - Types
 // ===================================
 
 export interface CriancaInput {

@@ -73,7 +73,7 @@ export function imprimirFechoCaixa(fecho: FechoCaixa): void {
 <html lang="pt">
 <head>
   <meta charset="utf-8">
-  <title>Fecho de Caixa — ${escapeHtml(fecho.data)}</title>
+  <title>Fecho de Caixa - ${escapeHtml(fecho.data)}</title>
   <style>
     * { font-family: 'Inter', Arial, sans-serif; box-sizing: border-box; }
     body { padding: 30px; color: #1a1a1a; }

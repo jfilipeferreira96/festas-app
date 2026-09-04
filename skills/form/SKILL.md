@@ -1,4 +1,4 @@
-# SKILL — Formulários
+# SKILL - Formulários
 
 Padrão obrigatório para todos os formulários da aplicação.
 
@@ -106,10 +106,10 @@ z.number().min(1, 'O valor deve ser maior que zero')
 z.string().min(1, 'Este campo é obrigatório')
 ```
 
-## Mensagens de erro — regras PT-PT
+## Mensagens de erro - regras PT-PT
 
 - Sempre começar com maiúscula
-- Nunca usar "Por favor" — é redundante
+- Nunca usar "Por favor" - é redundante
 - Usar linguagem directa: "Introduza", "Seleccione", "O campo X é obrigatório"
 - Nunca deixar a mensagem de erro em inglês (erro do Zod por defeito)
 
@@ -126,7 +126,7 @@ z.string().min(1, 'Este campo é obrigatório')
 | Estado | Comportamento |
 |---|---|
 | Idle | Formulário limpo, pronto para preenchimento |
-| Dirty | Utilizador alterou pelo menos um campo — pedir confirmação antes de fechar |
+| Dirty | Utilizador alterou pelo menos um campo - pedir confirmação antes de fechar |
 | Submitting | Botão de guardar com spinner, campos desactivados |
 | Success | Toast de confirmação, fechar modal ou redirecionar |
 | Error | Mostrar mensagem de erro da API no topo do formulário |

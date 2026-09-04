@@ -37,8 +37,8 @@ festas/
 │   ├── auth/             # Better Auth configuration (@festas/auth)
 │   ├── db/               # Prisma schema & database client (@festas/db)
 │   └── shared/
-│       ├── shared-types/ # @saas/shared-types — TypeScript interfaces
-│       └── shared-defaults/ # @saas/shared-defaults — Default configurations
+│       ├── shared-types/ # @saas/shared-types - TypeScript interfaces
+│       └── shared-defaults/ # @saas/shared-defaults - Default configurations
 ├── skills/               # AI agent skill files (form, estado, realtime, tabela, layout, db, ptpt)
 ├── AGENTS.md             # Agent context file
 ├── PROJECTO.md           # Design system, navigation, types
@@ -156,9 +156,9 @@ All API routes are defined in `apps/web/src/app/api/[resource]/route.ts` and fol
 
 ## Documentation
 
-- [`PROJECTO.md`](PROJECTO.md) — Design system, navigation, modules, TypeScript types
-- [`PAGINAS.md`](PAGINAS.md) — Detailed page descriptions and business rules
-- [`AGENTS.md`](AGENTS.md) — Agent context file for AI coding assistants
+- [`PROJECTO.md`](PROJECTO.md) - Design system, navigation, modules, TypeScript types
+- [`PAGINAS.md`](PAGINAS.md) - Detailed page descriptions and business rules
+- [`AGENTS.md`](AGENTS.md) - Agent context file for AI coding assistants
 
 ## License
 

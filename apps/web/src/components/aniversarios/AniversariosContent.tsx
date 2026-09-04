@@ -14,7 +14,7 @@ import type { AniversarioProximo } from "@/lib/api/dashboard";
 /** Linha com id (DataTable exige id). */
 type AniversarioRow = AniversarioProximo & { id: string };
 
-/** Tabela de aniversários próximos — para incorporar dentro da página de Clientes (sub-tab). */
+/** Tabela de aniversários próximos - para incorporar dentro da página de Clientes (sub-tab). */
 export function AniversariosTabela() {
   const [dias, setDias] = useState(30);
   const [pesquisa, setPesquisa] = useState("");
@@ -51,7 +51,7 @@ export function AniversariosTabela() {
       label: "Idade",
       sortable: true,
       render: (v) => (
-        <span className="text-sm text-text-secondary">{v != null ? `${v} anos` : "—"}</span>
+        <span className="text-sm text-text-secondary">{v != null ? `${v} anos` : "-"}</span>
       ),
     },
     {
@@ -76,7 +76,7 @@ export function AniversariosTabela() {
       render: (_v, item) => (
         <div className="flex items-center gap-1.5">
           <Phone size={13} className="text-text-muted" />
-          <span className="text-sm text-text-secondary">{item.cliente.telefone || "—"}</span>
+          <span className="text-sm text-text-secondary">{item.cliente.telefone || "-"}</span>
         </div>
       ),
     },
@@ -107,7 +107,7 @@ export function AniversariosTabela() {
             Criar reserva
           </Link>
         ) : (
-          <span className="text-xs text-text-muted">—</span>
+          <span className="text-xs text-text-muted">-</span>
         ),
     },
   ];
@@ -126,7 +126,7 @@ export function AniversariosTabela() {
       <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs mb-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Período — Select do projeto */}
+            {/* Período - Select do projeto */}
             <div className="w-44">
               <Select
                 options={periodoOptions}

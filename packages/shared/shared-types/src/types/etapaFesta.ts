@@ -1,5 +1,5 @@
 // ===================================
-// EtapaFesta — Types for party stages/checklist
+// EtapaFesta - Types for party stages/checklist
 // ===================================
 
 export interface EtapaFesta {

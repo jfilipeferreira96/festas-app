@@ -1,5 +1,5 @@
 // ===================================
-// Defaults — Itens de lanche por omissão
+// Defaults - Itens de lanche por omissão
 // ===================================
 
 export interface ItemLancheDefault {

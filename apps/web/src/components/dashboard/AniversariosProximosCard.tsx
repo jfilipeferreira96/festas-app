@@ -67,14 +67,14 @@ export const AniversariosProximosCard = React.memo(function AniversariosProximos
                       </div>
                     </td>
                     <td className="py-2.5 px-3 text-text-secondary whitespace-nowrap">
-                      {item.idadeQueFaz != null ? `${item.idadeQueFaz} anos` : "—"}
+                      {item.idadeQueFaz != null ? `${item.idadeQueFaz} anos` : "-"}
                     </td>
                     <td className="py-2.5 px-3 text-text-secondary whitespace-nowrap capitalize">
                       {format(data, "dd MMM", { locale: pt })}
                     </td>
                     <td className="py-2.5 px-3 text-text-secondary">{item.cliente.nome}</td>
                     <td className="py-2.5 px-3 text-text-secondary whitespace-nowrap">
-                      {item.cliente.telefone || "—"}
+                      {item.cliente.telefone || "-"}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       {semReserva ? (

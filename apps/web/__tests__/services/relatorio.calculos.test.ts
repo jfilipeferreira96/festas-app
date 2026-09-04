@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-// Mock do Prisma — os testes abaixo usam as funções PURAS de cálculo (sem BD).
+// Mock do Prisma - os testes abaixo usam as funções PURAS de cálculo (sem BD).
 vi.mock("@festas/db", () => ({
   default: {},
 }));
@@ -30,7 +30,7 @@ function somaValores(linha: LinhaRelatorio): number {
   );
 }
 
-describe("Relatório — Cálculos puros (sem BD)", () => {
+describe("Relatório - Cálculos puros (sem BD)", () => {
   // ── calcularFestas ───────────────────────────────────────────
   describe("calcularFestas()", () => {
     it("soma CARTÃO e OUTRO (não se perdem)", () => {
@@ -153,6 +153,56 @@ describe("Relatório — Cálculos puros (sem BD)", () => {
       expect(entradas.total.valorMultibanco).toBe(15);
     });
 
+    it("reparte o split sem dupla contagem (método 2 = valorPago2, método 1 = resto)", () => {
+      const entradas = relatorioService.calcularEntradasLivres([
+        {
+          duracaoMinutos: 60,
+          custoTotal: 20,
+          custoTotalFinal: 20,
+          metodoPagamento: "DINHEIRO",
+          metodoPagamento2: "MBWAY",
+          valorPago2: 8,
+          pago: true,
+          criancas: [{ nome: "A" }],
+          meiasQuantidade: null,
+          meiasPrecoUnit: null,
+          extras: [],
+        },
+      ]);
+
+      // Total 20: 8 no método 2 e apenas 12 no método 1 (não 20 + 8)
+      expect(entradas.total.valorMbway).toBe(8);
+      expect(entradas.total.valorNumerario).toBe(12);
+      expect(somaValores(entradas.total)).toBe(20);
+    });
+
+    it("lista extras como linhas informativas (não somam ao total)", () => {
+      const entradas = relatorioService.calcularEntradasLivres([
+        {
+          duracaoMinutos: 60,
+          custoTotal: 20,
+          custoTotalFinal: 20,
+          metodoPagamento: "DINHEIRO",
+          metodoPagamento2: null,
+          valorPago2: null,
+          pago: true,
+          criancas: [{ nome: "A" }],
+          meiasQuantidade: null,
+          meiasPrecoUnit: null,
+          extras: [{ quantidade: 2, extra: { precoUnitario: 5 } }], // 10€ já no custoTotal
+        },
+      ]);
+
+      // O custoTotal (20) não inclui os extras por duplicado
+      expect(somaValores(entradas.total)).toBe(20);
+      // Extras aparecem como informativos
+      const info = entradas.linhasInformativas ?? [];
+      expect(info).toHaveLength(1);
+      expect(info[0]!.descricao).toBe("Lanches e Extras");
+      expect(info[0]!.quantidade).toBe(2);
+      expect(info[0]!.valorNumerario).toBe(10);
+    });
+
     it("classifica por duração (1H / 2H / 3H)", () => {
       const entradas = relatorioService.calcularEntradasLivres([
         {
@@ -181,7 +231,7 @@ describe("Relatório — Cálculos puros (sem BD)", () => {
 
   // ── calcularOutros ───────────────────────────────────────────
   describe("calcularOutros()", () => {
-    it("contabiliza meias (reservas + entradas) numa linha própria", () => {
+    it("lista meias (reservas + entradas) como informativas - não somam ao total", () => {
       const outros = relatorioService.calcularOutros(
         [
           {
@@ -205,10 +255,15 @@ describe("Relatório — Cálculos puros (sem BD)", () => {
         ],
       );
 
-      const linhaMeias = outros.linhas.find((l) => l.descricao === "Meias");
+      // Meias saíram das linhas reais...
+      expect(outros.linhas.find((l) => l.descricao === "Meias")).toBeUndefined();
+      // ...e estão nas informativas
+      const linhaMeias = outros.linhasInformativas?.find((l) => l.descricao === "Meias");
       expect(linhaMeias).toBeDefined();
       expect(linhaMeias!.quantidade).toBe(15); // 10 + 5
       expect(linhaMeias!.valorNumerario).toBe(30); // 20 + 10
+      // Não somam ao total da secção
+      expect(somaValores(outros.total)).toBe(0);
     });
 
     it("contabiliza excesso de tempo das festas (só se pago)", () => {
@@ -271,7 +326,7 @@ describe("Relatório — Cálculos puros (sem BD)", () => {
       expect(lOutros!.valorNumerario).toBe(50);
     });
 
-    it("total da secção = soma de todas as colunas de todas as linhas", () => {
+    it("total da secção soma só cauções e excesso (brindes ficam informativos)", () => {
       const outros = relatorioService.calcularOutros(
         [
           {
@@ -289,9 +344,16 @@ describe("Relatório — Cálculos puros (sem BD)", () => {
         [],
       );
 
-      // CARTÃO: 40 (caução) + 5 (excesso) + 8 (meias) + 10 (brindes) = 63
-      expect(outros.total.valorCartao).toBe(63);
-      expect(somaValores(outros.total)).toBe(63);
+      // CARTÃO: 40 (caução) + 5 (excesso) = 45. Meias (8) e brindes (10) são informativas.
+      expect(outros.total.valorCartao).toBe(45);
+      expect(somaValores(outros.total)).toBe(45);
+
+      const brindes = outros.linhasInformativas?.find((l) => l.descricao === "Brindes");
+      expect(brindes).toBeDefined();
+      expect(brindes!.valorCartao).toBe(10);
+      const meias = outros.linhasInformativas?.find((l) => l.descricao === "Meias");
+      expect(meias).toBeDefined();
+      expect(meias!.valorCartao).toBe(8);
     });
   });
 });

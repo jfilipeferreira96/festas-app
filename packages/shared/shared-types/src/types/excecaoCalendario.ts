@@ -1,5 +1,5 @@
 // ===================================
-// Exceção de Calendário — feriados e dias bloqueados
+// Exceção de Calendário - feriados e dias bloqueados
 // ===================================
 
 export type TipoExcecaoCalendario = "FERIADO" | "BLOQUEADO";

@@ -44,7 +44,7 @@
   --color-white: #ffffff;
   --color-black: #101828;
 
-  /* ── Primary (Blue) — main actions, buttons, active nav ── */
+  /* ── Primary (Blue) - main actions, buttons, active nav ── */
   --color-primary-25: #f0f5ff;
   --color-primary-50: #eef4ff;
   --color-primary-100: #dde8ff;
@@ -58,7 +58,7 @@
   --color-primary-900: #1a3668;
   --color-primary-950: #112346;
 
-  /* ── Brand (Primary Blue) — main actions, buttons, active nav ── */
+  /* ── Brand (Primary Blue) - main actions, buttons, active nav ── */
   --color-brand-50: #ecf3ff;
   --color-brand-100: #dde9ff;
   --color-brand-200: #c2d6ff;
@@ -70,7 +70,7 @@
   --color-brand-800: #252dae;
   --color-brand-950: #161950;
 
-  /* ── Secondary (Orange) — icons, secondary highlights ──── */
+  /* ── Secondary (Orange) - icons, secondary highlights ──── */
   --color-secondary-25: #fff8f2;
   --color-secondary-50: #fff3e8;
   --color-secondary-100: #ffe5cc;
@@ -84,7 +84,7 @@
   --color-secondary-900: #6b340d;
   --color-secondary-950: #3d1c07;
 
-  /* ── Accent Green — "Em curso", success badges ─────────── */
+  /* ── Accent Green - "Em curso", success badges ─────────── */
   --color-accent-green-25: #f0fdf5;
   --color-accent-green-50: #e6faed;
   --color-accent-green-100: #c5f0d4;
@@ -98,7 +98,7 @@
   --color-accent-green-900: #13482c;
   --color-accent-green-950: #0a2918;
 
-  /* ── Accent Orange — warnings, "A começar" ─────────────── */
+  /* ── Accent Orange - warnings, "A começar" ─────────────── */
   --color-accent-orange-25: #fffaf5;
   --color-accent-orange-50: #fff5eb;
   --color-accent-orange-100: #ffe8cc;
@@ -112,7 +112,7 @@
   --color-accent-orange-900: #6b3d11;
   --color-accent-orange-950: #3d220a;
 
-  /* ── Accent Purple — paid lockers, "Concluída" ─────────── */
+  /* ── Accent Purple - paid lockers, "Concluída" ─────────── */
   --color-accent-purple-25: #faf5ff;
   --color-accent-purple-50: #f5edff;
   --color-accent-purple-100: #e6d5ff;
@@ -126,7 +126,7 @@
   --color-accent-purple-900: #3a1c47;
   --color-accent-purple-950: #22102a;
 
-  /* ── Accent Red — alerts, errors, notifications ────────── */
+  /* ── Accent Red - alerts, errors, notifications ────────── */
   --color-accent-red-25: #fff5f5;
   --color-accent-red-50: #feecec;
   --color-accent-red-100: #fcd4d4;
@@ -140,7 +140,7 @@
   --color-accent-red-900: #5e1711;
   --color-accent-red-950: #350d0a;
 
-  /* ── Accent Teal — parties, party icon colour ──────────── */
+  /* ── Accent Teal - parties, party icon colour ──────────── */
   --color-accent-teal-25: #f0fdfb;
   --color-accent-teal-50: #e6faf7;
   --color-accent-teal-100: #c5f2ec;
@@ -454,7 +454,7 @@
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Alerta suave a piscar — festa a acabar / lanche atrasado */
+/* Alerta suave a piscar - festa a acabar / lanche atrasado */
 @keyframes alerta-piscar {
   0%, 100% {
     background-color: transparent;

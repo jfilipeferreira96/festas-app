@@ -1,5 +1,5 @@
 // ===================================
-// Local — Types for room/space management
+// Local - Types for room/space management
 // ===================================
 
 export interface Local {

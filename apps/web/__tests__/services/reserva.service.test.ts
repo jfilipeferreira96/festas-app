@@ -60,7 +60,7 @@ describe("Reserva Service", () => {
       expect(reserva.estado).toBe("RESERVA");
       expect(reserva.local.id).toBe(TEST_IDS.LOCAL_1);
 
-      // Cleanup (create() já não pré-reserva cacifos — materialização é no dia)
+      // Cleanup (create() já não pré-reserva cacifos - materialização é no dia)
       await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
@@ -799,7 +799,7 @@ describe("Reserva Service", () => {
   });
 
   // ── v2: Dia bloqueado, meias, split payment ────────────────────
-  describe("create() — dia bloqueado rejeita criação", () => {
+  describe("create() - dia bloqueado rejeita criação", () => {
     it("deve rejeitar criação numa data bloqueada (DAY_BLOCKED)", async () => {
       // Criar exceção de bloqueio dedicada (evita dependência de seed/timezone)
       const bloqueado = new Date();
@@ -834,7 +834,7 @@ describe("Reserva Service", () => {
     });
   });
 
-  describe("create() — meias e split payment", () => {
+  describe("create() - meias e split payment", () => {
     it("deve aplicar meiasQuantidade e metodoPagamento2 na criação", async () => {
       const futuro = new Date();
       futuro.setDate(futuro.getDate() + 60);
@@ -867,7 +867,7 @@ describe("Reserva Service", () => {
   });
 
   // ── salaLanche (sala de lanche na reserva) ─────────────────────
-  describe("create() / update() — salaLancheId", () => {
+  describe("create() / update() - salaLancheId", () => {
     const salaIdRef = { current: "" };
     const reservaIdRef = { current: "" };
     const futuroStr = (() => {
@@ -924,9 +924,9 @@ describe("Reserva Service", () => {
     });
   });
 
-  // ── Cacifos — pré-reserva materializada no dia da festa ──────
-  describe("cacifos — materialização no dia (pool diário)", () => {
-    // Garante uma pool de cacifos limpa (LIVRE) — testes anteriores podem ter deixado
+  // ── Cacifos - pré-reserva materializada no dia da festa ──────
+  describe("cacifos - materialização no dia (pool diário)", () => {
+    // Garante uma pool de cacifos limpa (LIVRE) - testes anteriores podem ter deixado
     // cacifos pré-reservados que não foram limpos.
     beforeEach(async () => {
       await testPrisma.cacifo.updateMany({ where: {}, data: { estado: "LIVRE", reservaId: null, criancas: null, notas: null } });

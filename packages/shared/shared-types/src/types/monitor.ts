@@ -1,5 +1,5 @@
 // ===================================
-// Monitor — Types for monitor management
+// Monitor - Types for monitor management
 // ===================================
 
 export interface Monitor {

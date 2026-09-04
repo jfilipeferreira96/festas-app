@@ -1,4 +1,4 @@
-# Skills — Gestão de Festas Infantis
+# Skills - Gestão de Festas Infantis
 
 Pasta de skills reutilizáveis para o agente de desenvolvimento.
 Antes de criar qualquer componente, página ou função, consulta as skills relevantes.
@@ -28,7 +28,7 @@ Antes de criar qualquer componente, página ou função, consulta as skills rele
 - Labels PT-PT para cada estado
 - Componente Badge para apresentação
 - Stepper de estado da reserva
-- Nota: Não existe `EstadoFesta` separado — usa `EstadoReserva`
+- Nota: Não existe `EstadoFesta` separado - usa `EstadoReserva`
 
 ### `realtime/SKILL.md`
 - Timer de festa com `useTimer`
@@ -50,8 +50,8 @@ Antes de criar qualquer componente, página ou função, consulta as skills rele
 
 ### `db/SKILL.md`
 - Enums: EstadoReserva, EstadoCacifo (3 valores), MetodoPagamento, EstadoCaucao, CategoriaItem (MENU/EXTRA), TipoCampanha, EstadoCampanha
-- Reserva unificada com Festa — não existe modelo Festa separado
-- Menu simplificado (nome + preco) — ItemMenu foi removido
+- Reserva unificada com Festa - não existe modelo Festa separado
+- Menu simplificado (nome + preco) - ItemMenu foi removido
 - Convenções: camelCase no Prisma, @@map para snake_case no DB
 - Testes com schema `test` isolado, mock `@festas/db`
 

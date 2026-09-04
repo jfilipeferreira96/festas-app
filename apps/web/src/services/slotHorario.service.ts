@@ -154,7 +154,7 @@ export const slotHorarioService = {
                 festa.aniversariantes
                   ?.map((a) => a.aniversariante?.nome)
                   .filter(Boolean)
-                  .join(", ") || "—",
+                  .join(", ") || "-",
               cor: festa.cor ?? null,
               numCriancas: festa.numCriancas ?? 0,
               estado: festa.estado,
@@ -173,7 +173,7 @@ export const slotHorarioService = {
           f.aniversariantes
             ?.map((a) => a.aniversariante?.nome)
             .filter(Boolean)
-            .join(", ") || "—",
+            .join(", ") || "-",
         cor: f.cor ?? null,
         numCriancas: f.numCriancas ?? 0,
         estado: f.estado,

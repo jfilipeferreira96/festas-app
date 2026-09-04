@@ -27,7 +27,7 @@ import {
   useConcluirEntradaLivre,
   useCancelarEntradaLivre,
 } from "@/hooks/use-entrada-livre";
-import EntradaLivreForm from "./EntradaLivreForm";
+import EntradaLivreForm from "./form/EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
 import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
@@ -134,7 +134,7 @@ export default function EntradasAtivasContent() {
     <div>
       <PageHeader
         title="Entradas Livres"
-        subtitle={`Acompanhe em tempo real — ${todayStr}`}
+        subtitle={`Acompanhe em tempo real - ${todayStr}`}
         actions={
           <Button onClick={() => setShowForm(true)} className="gap-2">
             <Plus size={16} />
@@ -323,7 +323,7 @@ function EntradaAtivaCard({
               <span>{entrada.encarregadoNome}</span>
             </div>
           </div>
-          {/* Botão de pagamento rápido — abre modal com acertos */}
+          {/* Botão de pagamento rápido - abre modal com acertos */}
           <button
             type="button"
             onClick={() => onPagamento(entrada)}
@@ -337,7 +337,7 @@ function EntradaAtivaCard({
           >
             <Wallet size={16} />
           </button>
-          {/* 3-dots dropdown — acções secundárias */}
+          {/* 3-dots dropdown - acções secundárias */}
           <div className="relative shrink-0">
             <button
               ref={dropdownTriggerRef}
@@ -407,7 +407,7 @@ function EntradaAtivaCard({
           </div>
         </div>
 
-        {/* Avisos aos pais — observações e lesões/alergias */}
+        {/* Avisos aos pais - observações e lesões/alergias */}
         {(entrada.observacoes?.trim() || entrada.observacoesLesoes?.trim()) && (
           <div className="space-y-1.5 mb-3">
             {entrada.observacoes?.trim() && (
@@ -446,7 +446,7 @@ function EntradaAtivaCard({
           <div className={`text-center px-3 py-2 rounded-lg ${timer.isOvertime ? "bg-accent-red-50" : "bg-gray-50"}`}>
             <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-0.5">Excesso</p>
             <p className={`text-lg font-bold font-mono tracking-wider ${timer.excess ? "text-accent-red-600" : "text-text-muted"}`}>
-              {timer.excess ?? "—"}
+              {timer.excess ?? "-"}
             </p>
           </div>
         </div>
@@ -474,7 +474,7 @@ function EntradaAtivaCard({
           <span className="flex items-center gap-1"><Phone size={11} /> {entrada.encarregadoTelefone}</span>
         </div>
 
-        {/* Actions — quick buttons */}
+        {/* Actions - quick buttons */}
         <div className="flex items-center gap-2 pt-2 border-t border-border">
           <button
             onClick={() => onView(entrada.id)}

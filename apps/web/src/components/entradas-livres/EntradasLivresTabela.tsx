@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useEntradasLivres, useEliminarEntradaLivre, useConcluirEntradaLivre, useCancelarEntradaLivre, useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
-import EntradaLivreForm from "./EntradaLivreForm";
+import EntradaLivreForm from "./form/EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
 import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
@@ -31,7 +31,7 @@ const FILTER_OPTIONS = [
 ];
 
 function formatCurrency(value: number | undefined | null): string {
-  if (value == null) return "—";
+  if (value == null) return "-";
   return new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value);
 }
 

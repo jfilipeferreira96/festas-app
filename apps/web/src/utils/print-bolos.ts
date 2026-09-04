@@ -32,7 +32,7 @@ function escapeHtml(text: string): string {
 
 /**
  * Imprime a lista de bolos NOSSOS (1kg, 2kg, artístico) das festas dadas,
- * agrupada por tipo — pronta para a cozinha/pastelaria.
+ * agrupada por tipo - pronta para a cozinha/pastelaria.
  */
 export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
   const bolos = reservas.filter((r) => r.bolo && BOLOS_NOSSOS.includes(r.bolo));
@@ -50,14 +50,14 @@ export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
     .map((g) => {
       const linhas = g.itens
         .map((r) => {
-          const anv = r.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "—";
-          const pessoas = r.numCriancasConfirmadas ?? r.numCriancas ?? "—";
+          const anv = r.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "-";
+          const pessoas = r.numCriancasConfirmadas ?? r.numCriancas ?? "-";
           return `<tr>
-        <td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:70px;font-weight:600;color:#555;">${escapeHtml(r.horario ?? "—")}</td>
+        <td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:70px;font-weight:600;color:#555;">${escapeHtml(r.horario ?? "-")}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;font-size:15px;">${escapeHtml(anv)}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#444;">${escapeHtml(r.boloTema ?? "")}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:90px;">${escapeHtml(String(pessoas))}</td>
-        <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#666;">${escapeHtml(r.local?.nome ?? "—")}</td>
+        <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#666;">${escapeHtml(r.local?.nome ?? "-")}</td>
       </tr>`;
         })
         .join("");
@@ -83,7 +83,7 @@ export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
 <html lang="pt">
 <head>
   <meta charset="utf-8">
-  <title>Bolos — ${escapeHtml(dataTitulo)}</title>
+  <title>Bolos - ${escapeHtml(dataTitulo)}</title>
   <style>
     * { font-family: 'Inter', Arial, sans-serif; box-sizing: border-box; }
     body { padding: 30px; color: #1a1a1a; }

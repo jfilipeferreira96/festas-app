@@ -55,7 +55,7 @@ const FILTRO_OPTIONS = [
 
 type FiltroEstado = (typeof FILTRO_OPTIONS)[number]["value"];
 
-/** Row types — DataTable requires { id: string } */
+/** Row types - DataTable requires { id: string } */
 type LancheFestaRow = LancheFesta & { id: string };
 type LancheEntradaRow = LancheEntradaLivre & { id: string };
 
@@ -86,7 +86,7 @@ export default function LancheContent() {
     [now]
   );
 
-  // Stable handler for DatePicker — avoids flatpickr re-init on every render.
+  // Stable handler for DatePicker - avoids flatpickr re-init on every render.
   const handleDataChange = useCallback((selectedDates: Date[]) => {
     if (selectedDates.length > 0) {
       const d = selectedDates[0];
@@ -140,7 +140,7 @@ export default function LancheContent() {
     setHoraLancheEdit(festa.horaLanche ?? "");
   }, []);
 
-  // Imprime a lista de crianças (nomes) de uma festa — busca o detalhe da reserva
+  // Imprime a lista de crianças (nomes) de uma festa - busca o detalhe da reserva
   // para obter aniversariantes + cacifos e reutiliza o utilitário das festas.
   const handleImprimirFesta = useCallback(async (festa: LancheFesta) => {
     setPrintingId(festa.reservaId);
@@ -193,7 +193,7 @@ export default function LancheContent() {
       sortable: true,
       render: (_v, f) => (
         <span className="font-medium text-text-primary whitespace-nowrap">
-          {f.horaLanche ?? f.horario ?? "—"}
+          {f.horaLanche ?? f.horario ?? "-"}
         </span>
       ),
     },
@@ -219,7 +219,7 @@ export default function LancheContent() {
       sortable: true,
       render: (_v, f) => (
         <span className="text-sm text-text-secondary block text-center">
-          {f.numConfirmados ?? "—"}
+          {f.numConfirmados ?? "-"}
         </span>
       ),
     },
@@ -229,7 +229,7 @@ export default function LancheContent() {
       sortable: true,
       render: (_v, f) => (
         <span className="text-sm text-text-secondary block text-center">
-          {f.numCriancas || f.previsaoCriancas || "—"}
+          {f.numCriancas || f.previsaoCriancas || "-"}
         </span>
       ),
     },
@@ -237,7 +237,7 @@ export default function LancheContent() {
       key: "menu",
       label: "Menu",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary">{f.menu?.nome ?? "—"}</span>
+        <span className="text-xs text-text-secondary">{f.menu?.nome ?? "-"}</span>
       ),
     },
     {
@@ -245,7 +245,7 @@ export default function LancheContent() {
       label: "Extras (Lanche)",
       render: (_v, f) => (
         <span className="text-xs text-text-secondary">
-          {f.extrasLancheNomes?.length ? f.extrasLancheNomes.join(", ") : "—"}
+          {f.extrasLancheNomes?.length ? f.extrasLancheNomes.join(", ") : "-"}
         </span>
       ),
     },
@@ -253,7 +253,7 @@ export default function LancheContent() {
       key: "salaLancheNome",
       label: "Sala Lanche",
       render: (_v, f) => (
-        <span className="text-xs text-text-secondary">{f.salaLancheNome ?? "—"}</span>
+        <span className="text-xs text-text-secondary">{f.salaLancheNome ?? "-"}</span>
       ),
     },
     {
@@ -261,11 +261,11 @@ export default function LancheContent() {
       label: "Obs. Lanche",
       render: (_v, f) => (
         <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-          {f.notasLancheReserva || f.notasLanche || "—"}
+          {f.notasLancheReserva || f.notasLanche || "-"}
         </span>
       ),
     },
-    // Obs. Cacifos — escondida para a função LANCHE (só vê obs. de lanche)
+    // Obs. Cacifos - escondida para a função LANCHE (só vê obs. de lanche)
     ...(!isFuncaoLanche
       ? [
           {
@@ -273,7 +273,7 @@ export default function LancheContent() {
             label: "Obs. Cacifos",
             render: (_v: string | null, f: LancheFestaRow) => (
               <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-                {f.notasCacifos || f.observacoesCacifo || "—"}
+                {f.notasCacifos || f.observacoesCacifo || "-"}
               </span>
             ),
           },
@@ -301,7 +301,7 @@ export default function LancheContent() {
       sortable: true,
       render: (_v, e) => (
         <span className="font-medium text-text-primary whitespace-nowrap">
-          {e.horaLanche ?? (e.inicioEm ? format(parseISO(e.inicioEm), "HH:mm") : "—")}
+          {e.horaLanche ?? (e.inicioEm ? format(parseISO(e.inicioEm), "HH:mm") : "-")}
         </span>
       ),
     },
@@ -366,7 +366,7 @@ export default function LancheContent() {
         subtitle={formatDataLabel(dataSel)}
       />
 
-      {/* Resumo de estados — cards compactos (estilo cacifos) */}
+      {/* Resumo de estados - cards compactos (estilo cacifos) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 no-print">
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-border shadow-theme-xs">
           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-orange-50">
@@ -458,7 +458,7 @@ export default function LancheContent() {
             {(alergias as unknown as { reservaId: string; nomeFesta: string; notasLanche: string }[]).map((a) => (
               <li key={a.reservaId} className="flex items-start gap-2 text-sm text-warning-900">
                 <span className="font-medium">{a.nomeFesta}:</span>
-                <span>{a.notasLanche || "—"}</span>
+                <span>{a.notasLanche || "-"}</span>
               </li>
             ))}
           </ul>

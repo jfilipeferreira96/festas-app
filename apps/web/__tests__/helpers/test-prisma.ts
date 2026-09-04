@@ -13,12 +13,12 @@ config({ path: resolve(__dirname, "../../.env") });
  *
  * MySQL uses a separate DATABASE for test isolation (PostgreSQL used a "schema").
  *
- * Uses the shared driver-adapter factory (@festas/db/mariadb-adapter) —
+ * Uses the shared driver-adapter factory (@festas/db/mariadb-adapter) -
  * required because the schema has `previewFeatures = ["driverAdapters"]`
  * (the PrismaClient constructor no longer accepts a bare `datasources` URL).
  *
  * Resolution priority:
- *   1. DATABASE_URL_TEST — explicit test connection string
+ *   1. DATABASE_URL_TEST - explicit test connection string
  *   2. Derived from DATABASE_URL by appending "_test" to the database name
  *      (e.g. mysql://user:pass@host:3306/festas -> .../festas_test)
  */

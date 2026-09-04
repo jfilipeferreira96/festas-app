@@ -1,5 +1,5 @@
 /**
- * Production seed — MINIMUM data to bring the app online.
+ * Production seed - MINIMUM data to bring the app online.
  *
  * Creates ONLY:
  *   - 7 users (admin + role accounts via Better Auth)
@@ -34,7 +34,7 @@ import { wipeDatabase } from "../src/wipe-database";
 // (db.js also passes --env-file; dotenv ignores a missing file silently.)
 config({ path: "../../apps/web/.env" });
 
-// Driver adapter (mariadb) — ver packages/db/src/mariadb-adapter.ts
+// Driver adapter (mariadb) - ver packages/db/src/mariadb-adapter.ts
 const prisma = createPrismaClient(process.env.DATABASE_URL!);
 
 const seedAuth = betterAuth({
@@ -74,7 +74,7 @@ async function main() {
   console.log("\n✅ Production seed complete!");
 }
 
-// ─── Users (admin + role accounts) — single source: seed-roles.ts ──
+// ─── Users (admin + role accounts) - single source: seed-roles.ts ──
 async function seedUsers() {
   console.log("  Creating users...\n");
 
@@ -130,10 +130,11 @@ async function seedExtras() {
     categoria: "MENU" | "EXTRA";
     subcategoria: string;
     requerTexto: boolean;
+    fimDeSemana?: boolean;
   }[] = [
     // ─── Menus BasyLandy ────────────────────────────────────────
-    { id: "extra-menu-basy-semana", nome: "Menu BasyLandy (Semana)", precoUnitario: 14.0, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Preço de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
-    { id: "extra-menu-basy-fimsemana", nome: "Menu BasyLandy (Fim-de-semana)", precoUnitario: 15.9, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Aplicado a sábados, domingos e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
+    { id: "extra-menu-basy-semana", nome: "Menu BasyLandy (Semana)", precoUnitario: 14.0, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Preço de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: false },
+    { id: "extra-menu-basy-fimsemana", nome: "Menu BasyLandy (Fim-de-semana)", precoUnitario: 15.9, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Aplicado a sábados, domingos e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: true },
     { id: "extra-menu-almoco-jantar", nome: "Almoço/Jantar (Suplemento)", precoUnitario: 3.5, descricao: "Pizza, fruta e nuggets. Suplemento a acrescentar ao menu base (almoço/jantar).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
     // ─── Extras ao lanche BasyLandy ────────────────────────────
     { id: "extra-lanche-cenoura", nome: "Cenoura Baby", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
@@ -167,10 +168,17 @@ async function seedExtras() {
         categoria: extra.categoria,
         subcategoria: extra.subcategoria,
         requerTexto: extra.requerTexto,
+        fimDeSemana: extra.fimDeSemana,
       },
       create: extra,
     });
   }
+
+  // Cobrança por pessoa (idempotente)
+  await prisma.extra.updateMany({
+    where: { id: { in: ["extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
+    data: { baseCobranca: "POR_PESSOA" },
+  });
 
   // Associar todos os extras/menus BasyLandy a todos os locais
   const basyLandyIds = [
@@ -223,6 +231,7 @@ async function seedConfiguracaoPreco() {
         precoExcessoFixo: 5,
         caucaoDefault: 40,
         precoLancheEntrada: 4.5,
+        valorHoraMonitorDefault: 8,
         duracaoDefaultFestaMin: 135,
         duracaoExcessoBlocoMin: 30,
       },
@@ -237,7 +246,7 @@ async function seedExcecoesCalendario() {
   console.log("  Creating calendar exceptions (PT holidays)...");
 
   const anoAtual = new Date().getFullYear();
-  // [mês-01, dia-01, nome] — feriados nacionais fixos de Portugal
+  // [mês-01, dia-01, nome] - feriados nacionais fixos de Portugal
   const feriadosFixos: [string, string, string][] = [
     ["01", "01", "Ano Novo"],
     ["05", "01", "Dia do Trabalhador"],

@@ -21,11 +21,11 @@ import { clienteService } from "@/services/cliente.service";
 import { monitorService } from "@/services/monitor.service";
 import { localService } from "@/services/local.service";
 
-describe("Reserva Service — Filtragem", () => {
+describe("Reserva Service - Filtragem", () => {
   beforeAll(async () => { await seedTestData(); });
   afterAll(async () => { await cleanTestData(); await testPrisma.$disconnect(); });
 
-  describe("list() — sem filtros", () => {
+  describe("list() - sem filtros", () => {
     it("deve retornar todas as reservas", async () => {
       const result = await reservaService.list();
       expect(result.items.length).toBeGreaterThanOrEqual(3);
@@ -40,7 +40,7 @@ describe("Reserva Service — Filtragem", () => {
     });
   });
 
-  describe("list() — filtro por estado", () => {
+  describe("list() - filtro por estado", () => {
     it("deve retornar apenas reservas CONFIRMADO", async () => {
       const result = await reservaService.list({ estado: "CONFIRMADO" });
       expect(result.items.length).toBeGreaterThanOrEqual(1);
@@ -59,7 +59,7 @@ describe("Reserva Service — Filtragem", () => {
     });
   });
 
-  describe("list() — filtro por data", () => {
+  describe("list() - filtro por data", () => {
     it("deve retornar reservas apenas do dia especificado", async () => {
       const today = new Date().toISOString().split("T")[0];
       const result = await reservaService.list({ data: today });
@@ -71,7 +71,7 @@ describe("Reserva Service — Filtragem", () => {
     });
   });
 
-  describe("list() — filtro por localId", () => {
+  describe("list() - filtro por localId", () => {
     it("deve retornar reservas apenas do local especificado", async () => {
       const result = await reservaService.list({ localId: "test-local-001" });
       expect(result.items.length).toBeGreaterThanOrEqual(1);
@@ -84,7 +84,7 @@ describe("Reserva Service — Filtragem", () => {
     });
   });
 
-  describe("list() — filtros combinados", () => {
+  describe("list() - filtros combinados", () => {
     it("deve filtrar por estado E localId simultaneamente", async () => {
       const today = new Date().toISOString().split("T")[0];
       const result = await reservaService.list({
@@ -99,7 +99,7 @@ describe("Reserva Service — Filtragem", () => {
   });
 });
 
-describe("Cliente Service — Pesquisa", () => {
+describe("Cliente Service - Pesquisa", () => {
   beforeAll(async () => { await seedTestData(); });
   afterAll(async () => { await cleanTestData(); await testPrisma.$disconnect(); });
 
@@ -148,7 +148,7 @@ describe("Cliente Service — Pesquisa", () => {
   });
 });
 
-describe("Monitor Service — Filtragem", () => {
+describe("Monitor Service - Filtragem", () => {
   beforeAll(async () => { await seedTestData(); });
   afterAll(async () => { await cleanTestData(); await testPrisma.$disconnect(); });
 
@@ -183,7 +183,7 @@ describe("Monitor Service — Filtragem", () => {
   });
 });
 
-describe("Local Service — Listagem", () => {
+describe("Local Service - Listagem", () => {
   beforeAll(async () => { await seedTestData(); });
   afterAll(async () => { await cleanTestData(); await testPrisma.$disconnect(); });
 

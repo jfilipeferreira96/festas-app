@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/notas-diarias — upsert notas (manhã + tarde)
+// PUT /api/notas-diarias - upsert notas (manhã + tarde)
 // Acesso: ADMINISTRADOR (escrita)
 export async function PUT(request: NextRequest) {
   try {

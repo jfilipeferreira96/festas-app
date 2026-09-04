@@ -19,13 +19,13 @@ export function toLocalISODate(d: Date): string {
  * @example formatDate("2026-05-21") -> "21/05/2026"
  */
 export function formatDate(dateStr: string): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   
   // Se for ISO string completa, extrair apenas a data
   const dateOnly = dateStr.split("T")[0];
   
   const [year, month, day] = dateOnly.split("-");
-  if (!year || !month || !day) return "—";
+  if (!year || !month || !day) return "-";
   
   return `${day}/${month}/${year}`;
 }
@@ -35,7 +35,7 @@ export function formatDate(dateStr: string): string {
  * @example formatDateTime("2026-05-21", "10:00") -> "21/05/2026 às 10:00"
  */
 export function formatDateTime(dateStr: string, time?: string): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   return `${formatDate(dateStr)}${time ? ` às ${time}` : ""}`;
 }
 
@@ -44,10 +44,10 @@ export function formatDateTime(dateStr: string, time?: string): string {
  * @example formatShortDate("2026-05-21") -> "21/05"
  */
 export function formatShortDate(dateStr: string): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   const dateOnly = dateStr.split("T")[0];
   const [_, month, day] = dateOnly.split("-");
-  if (!month || !day) return "—";
+  if (!month || !day) return "-";
   return `${day}/${month}`;
 }
 

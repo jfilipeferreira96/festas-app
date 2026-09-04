@@ -1,4 +1,4 @@
-# AGENTS.md — Gestão de Festas Infantis
+# AGENTS.md - Gestão de Festas Infantis
 
 > Universal agent context file. Used by Cline, KiloCode, Cursor, Copilot, and other AI coding agents.
 
@@ -32,10 +32,10 @@ festas/
 │   ├── auth/             # Better Auth configuration (@festas/auth)
 │   ├── db/               # Prisma schema & database client (@festas/db)
 │   └── shared/
-│       ├── shared-types/ # @saas/shared-types — TypeScript interfaces
-│       └── shared-defaults/ # @saas/shared-defaults — Default configurations
+│       ├── shared-types/ # @saas/shared-types - TypeScript interfaces
+│       └── shared-defaults/ # @saas/shared-defaults - Default configurations
 ├── skills/               # AI agent skill files (form, estado, realtime, tabela, layout, db, ptpt)
-├── AGENTS.md             # This file — agent context
+├── AGENTS.md             # This file - agent context
 ├── PROJECTO.md           # Design system, navigation, types
 └── PAGINAS.md            # Page descriptions and business rules
 ```
@@ -65,9 +65,9 @@ festas/
 
 `User`, `Session`, `Account`, `Verification`, `Cliente`, `Aniversariante`, `Local`, `Extra`, `ExtraLocal`, `Monitor`, `MonitorLocal`, `ConfiguracaoCacifo`, `Reserva`, `ReservaExtra`, `ReservaMonitor`, `ReservaAniversariante`, `EtapaFesta`, `ReservaEtapa`, `Participante`, `Cacifo`, `Menu`, `Segmento`, `NewsletterContacto`, `ContactoSegmento`, `Campanha`, `EnvioCampanha`, `AuditLog`, `NotaRapida`, `EntradaLivre`, `ExcecaoCalendario`, `SlotHorario`, `ConfiguracaoPreco`, `NotaDiaria`
 
-> **Important:** `Reserva` is unified with `Festa` — there is no separate `Festa` model. When a reserva enters `EM_CURSO` state, runtime fields (`inicioEm`, `fimPrevisto`, `fimReal`) are populated. The old `ItemMenu` model was removed; `Menu` is simplified to `nome` + `preco` + `notasLanche`.
+> **Important:** `Reserva` is unified with `Festa` - there is no separate `Festa` model. When a reserva enters `EM_CURSO` state, runtime fields (`inicioEm`, `fimPrevisto`, `fimReal`) are populated. The old `ItemMenu` model was removed; `Menu` is simplified to `nome` + `preco` + `notasLanche`.
 >
-> **RBAC is hardcoded** — the `FuncaoPermissao` model was removed. Permissions are defined in code (`src/lib/permissoes.ts`). Five roles exist: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`, `MONITOR`, `FESTAS_ACABAR`. Each non-admin role is redirected to a role-specific home page via `getHomeRoute()`.
+> **RBAC is hardcoded** - the `FuncaoPermissao` model was removed. Permissions are defined in code (`src/lib/permissoes.ts`). Five roles exist: `ADMINISTRADOR`, `LANCHE`, `CACIFOS`, `MONITOR`, `FESTAS_ACABAR`. Each non-admin role is redirected to a role-specific home page via `getHomeRoute()`.
 >
 > **New pricing model:** Festas are priced per-child (`precoCriancaSemana`/`precoCriancaFimSemana`) with minimums by nº of aniversariantes. `ConfiguracaoPreco` is a singleton holding all tariffs. `ExcecaoCalendario` marks feriados (affect price) and blocked days (prevent booking). `SlotHorario` defines preset party time slots (default 2h15m = 135 min). `EntradaLivre` supports multiple children, mandatory socks (meias), and split payments (up to 2 methods).
 >
@@ -89,7 +89,7 @@ festas/
 
 ## API Architecture (apps/web/src)
 
-### Pattern — ALL endpoints MUST follow this:
+### Pattern - ALL endpoints MUST follow this:
 
 ```
 API Route → Service → Prisma
@@ -204,8 +204,8 @@ if (error.message in ERROR_MAP) {
 
 The app uses Next.js route groups:
 
-- `(guest)/` — Public pages (auth, password recovery) — no sidebar
-- `(protected)/` — Authenticated pages — sidebar + header layout
+- `(guest)/` - Public pages (auth, password recovery) - no sidebar
+- `(protected)/` - Authenticated pages - sidebar + header layout
 
 ### Routes (App Router)
 
@@ -242,15 +242,15 @@ The app uses Next.js route groups:
 ### Layout Structure
 
 Protected pages use `AppSidebar` + `AppHeader` + `Backdrop` from `src/layout/`:
-- `AppSidebar` — Fixed sidebar (220px) with navigation
-- `AppHeader` — Top bar with user info
-- `Backdrop` — Mobile sidebar overlay
+- `AppSidebar` - Fixed sidebar (220px) with navigation
+- `AppHeader` - Top bar with user info
+- `Backdrop` - Mobile sidebar overlay
 
 ### Data Fetching Pattern
 
-1. **API Client** in `lib/api/[resource].ts` — typed fetch wrapper with `credentials: "include"`
-2. **Custom Hook** in `hooks/use-[resource].ts` — TanStack Query (useQuery/useMutation)
-3. **Component** — uses hooks, never fetches directly
+1. **API Client** in `lib/api/[resource].ts` - typed fetch wrapper with `credentials: "include"`
+2. **Custom Hook** in `hooks/use-[resource].ts` - TanStack Query (useQuery/useMutation)
+3. **Component** - uses hooks, never fetches directly
 
 ### Component Rules
 
@@ -370,18 +370,18 @@ The `db:clean` and `db:reset` commands clean stale enum values before running `p
 ## Environment Variables
 
 **App** (`apps/web/.env`):
-- `DATABASE_URL` — MySQL connection string (`mysql://user:pass@host:3306/festas`)
-- `BETTER_AUTH_SECRET` — Auth secret key
-- `BETTER_AUTH_URL` — Backend URL (same as app URL)
-- `NEXT_PUBLIC_APP_URL` — Frontend URL (http://localhost:3000)
-- `MAILJET_API_KEY`, `MAILJET_API_SECRET`, `MAILJET_SENDER_EMAIL`, `MAILJET_SENDER_NAME` — Email config
+- `DATABASE_URL` - MySQL connection string (`mysql://user:pass@host:3306/festas`)
+- `BETTER_AUTH_SECRET` - Auth secret key
+- `BETTER_AUTH_URL` - Backend URL (same as app URL)
+- `NEXT_PUBLIC_APP_URL` - Frontend URL (http://localhost:3000)
+- `MAILJET_API_KEY`, `MAILJET_API_SECRET`, `MAILJET_SENDER_EMAIL`, `MAILJET_SENDER_NAME` - Email config
 
 ## Critical Rules
 
-- **NEVER use `any` type** — Always use proper types or `unknown` with type guards
-- **PT-PT only** — All UI text in Portuguese of Portugal
-- **Design tokens** — Use CSS custom properties from `@theme` in `globals.css`, never raw hex colors
-- **lucide-react** — Only icon library allowed
-- **date-fns with pt locale** — For all date formatting
-- **Intl.NumberFormat('pt-PT')** — For currency formatting (€)
-- **Node.js v22** — Required for tsdown/rolldown compatibility
+- **NEVER use `any` type** - Always use proper types or `unknown` with type guards
+- **PT-PT only** - All UI text in Portuguese of Portugal
+- **Design tokens** - Use CSS custom properties from `@theme` in `globals.css`, never raw hex colors
+- **lucide-react** - Only icon library allowed
+- **date-fns with pt locale** - For all date formatting
+- **Intl.NumberFormat('pt-PT')** - For currency formatting (€)
+- **Node.js v22** - Required for tsdown/rolldown compatibility

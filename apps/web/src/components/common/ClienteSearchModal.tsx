@@ -233,7 +233,7 @@ export default function ClienteSearchModal({
               )}
             </div>
 
-            {/* Selecção de filhos (aniversariantes) — opcional */}
+            {/* Selecção de filhos (aniversariantes) - opcional */}
             {selectedCliente.aniversariantes &&
               selectedCliente.aniversariantes.length > 0 && (
                 <div>

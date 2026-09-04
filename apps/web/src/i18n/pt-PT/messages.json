@@ -226,7 +226,7 @@
     "alvoInvalido": "Ajuste deve referir-se a uma festa ou a uma entrada livre",
     "modoInvalido": "Modo de redefinição inválido",
     "criancasInvalido": "Não há crianças associadas para calcular o preço por criança",
-    "redefinicaoNaoRemovivel": "Redefinições de preço não podem ser removidas — crie uma nova redefinição para corrigir"
+    "redefinicaoNaoRemovivel": "Redefinições de preço não podem ser removidas - crie uma nova redefinição para corrigir"
   },
   "fechoCaixa": {
     "dataInvalida": "Data inválida"
@@ -244,7 +244,7 @@
     "serverError": "Erro interno do servidor",
     "forbidden": "Acesso proibido",
     "badRequest": "Pedido inválido",
-    "conflict": "Conflito — recurso já existe",
+    "conflict": "Conflito - recurso já existe",
     "tooManyRequests": "Demasiados pedidos. Tente novamente mais tarde."
   }
 }

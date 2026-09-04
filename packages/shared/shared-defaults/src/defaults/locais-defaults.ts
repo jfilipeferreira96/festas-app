@@ -1,5 +1,5 @@
 // ===================================
-// Defaults — Locais (salas) por omissão
+// Defaults - Locais (salas) por omissão
 // ===================================
 
 export interface LocalDefault {

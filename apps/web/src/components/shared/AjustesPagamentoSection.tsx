@@ -36,7 +36,7 @@ const METODO_OPTIONS = [
 interface AjustesPagamentoSectionProps {
   reservaId?: string;
   entradaLivreId?: string;
-  /** Nº de crianças (confirmadas ?? previstas) — usado no preview do preço por criança */
+  /** Nº de crianças (confirmadas ?? previstas) - usado no preview do preço por criança */
   numCriancas?: number | null;
 }
 

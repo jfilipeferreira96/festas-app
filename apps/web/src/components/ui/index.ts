@@ -1,4 +1,4 @@
-// Design System — barrel exports
+// Design System - barrel exports
 // Only components actively used in the application are exported here.
 // TailAdmin template leftovers have been removed (Sprint 1 P0.1).
 

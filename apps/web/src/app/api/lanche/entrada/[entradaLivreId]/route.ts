@@ -11,7 +11,7 @@ const handleError = createRouteErrorHandler({
 
 type Params = { params: Promise<{ entradaLivreId: string }> };
 
-// PATCH /api/lanche/entrada/:entradaLivreId — atualizar estado lanche entrada livre
+// PATCH /api/lanche/entrada/:entradaLivreId - atualizar estado lanche entrada livre
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const auth = await requireAuth(request);

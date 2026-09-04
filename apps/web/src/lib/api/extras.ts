@@ -1,8 +1,8 @@
 import { api } from "./utils";
-import type { Extra } from "@saas/shared-types";
+import type { Extra, BaseCobranca } from "@saas/shared-types";
 
 // Re-export the shared type for use in components
-export type { Extra };
+export type { Extra, BaseCobranca };
 
 export interface CreateExtraInput {
   nome: string;
@@ -12,6 +12,7 @@ export interface CreateExtraInput {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
   locaisIds?: string[];
 }
@@ -24,6 +25,7 @@ export interface UpdateExtraInput {
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
   requerTexto?: boolean;
+  baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
   locaisIds?: string[];
 }

@@ -180,7 +180,7 @@ describe("SlotHorario Service", () => {
   });
 
   // ── Ligação slots ↔ festas (getSlotsDia) ────────────────────────
-  describe("getSlotsDia() — ligação slots ↔ festas", () => {
+  describe("getSlotsDia() - ligação slots ↔ festas", () => {
     const DIA_TESTE = (() => {
       const d = new Date();
       d.setDate(d.getDate() + 100);
@@ -214,7 +214,7 @@ describe("SlotHorario Service", () => {
         },
       });
 
-      // Festa com horário CUSTOM (22:00, 30 min) — não sobrepõe nenhum slot
+      // Festa com horário CUSTOM (22:00, 30 min) - não sobrepõe nenhum slot
       await testPrisma.reserva.create({
         data: {
           id: reservaIds[1],
@@ -229,7 +229,7 @@ describe("SlotHorario Service", () => {
         },
       });
 
-      // Festa CANCELADA que sobrepõe o slot — deve ser ignorada
+      // Festa CANCELADA que sobrepõe o slot - deve ser ignorada
       await testPrisma.reserva.create({
         data: {
           id: reservaIds[2],

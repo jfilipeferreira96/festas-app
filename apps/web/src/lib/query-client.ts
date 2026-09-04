@@ -6,9 +6,9 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 60 * 1000,
       retry: (failureCount, error) => {
-        // Never retry on 401 — session is invalid
+        // Never retry on 401 - session is invalid
         if (error instanceof ApiError && error.status === 401) return false;
-        // Don't retry on 403/404 — the resource doesn't exist or access is denied
+        // Don't retry on 403/404 - the resource doesn't exist or access is denied
         if (error instanceof ApiError && (error.status === 403 || error.status === 404)) return false;
         return failureCount < 2;
       },
@@ -26,7 +26,7 @@ export const queryClient = new QueryClient({
  */
 queryClient.getQueryCache().config.onError = (error) => {
   if (error instanceof ApiError && error.status === 401) {
-    // Don't redirect if already on a guest/auth page — avoid infinite loops
+    // Don't redirect if already on a guest/auth page - avoid infinite loops
     const path = window.location.pathname;
     const guestPaths = ["/", "/signin", "/signup", "/reset-password", "/reset-password-confirm"];
     if (guestPaths.some((p) => path === p || path.startsWith(p))) {

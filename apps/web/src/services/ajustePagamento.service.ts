@@ -106,7 +106,7 @@ export const ajustePagamentoService = {
   /**
    * Redefine o preço final de uma festa ou entrada livre.
    * modo TOTAL: valor absoluto novo. modo POR_CRIANCA: precoPorCabeca × nº crianças.
-   * Regista ajuste REDEFINICAO no histórico (não removível — não guardamos o valor anterior).
+   * Regista ajuste REDEFINICAO no histórico (não removível - não guardamos o valor anterior).
    */
   async redefinirPreco(data: RedefinirPrecoDTO, user?: SessionUser) {
     if (!MODOS_REDEFINICAO.includes(data.modo)) throw new Error("MODO_INVALIDO");

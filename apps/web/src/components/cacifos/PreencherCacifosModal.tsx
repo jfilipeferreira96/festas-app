@@ -77,7 +77,7 @@ export default React.memo(function PreencherCacifosModal({
   }, [reservaId, preselectedCacifoId, cacifosList, queryClient, toast]);
 
   // ── Trigger B: materializar pré-reserva quando a festa é HOJE ──
-  // Os cacifos são um pool físico diário — só se reservam no dia da festa.
+  // Os cacifos são um pool físico diário - só se reservam no dia da festa.
   const materializadoRef = React.useRef<string | null>(null);
   React.useEffect(() => {
     if (!reservaId || !reserva) return;
@@ -87,7 +87,7 @@ export default React.memo(function PreencherCacifosModal({
     const atribuidos = (cacifos ?? []).length;
     if (alvo <= 0 || atribuidos >= alvo) return;
 
-    // Só materializa no dia da festa — datas futuras reservam-se no dia.
+    // Só materializa no dia da festa - datas futuras reservam-se no dia.
     const hoje = new Date().toISOString().split("T")[0];
     if (!reserva.data.startsWith(hoje)) return;
 
@@ -97,7 +97,7 @@ export default React.memo(function PreencherCacifosModal({
         queryClient.invalidateQueries({ queryKey: ["cacifos"] });
         if (res.indisponiveis > 0) {
           toast.warning(
-            `Pré-reservados ${res.reservados.length} de ${alvo - atribuidos} cacifos — pool livre insuficiente.`
+            `Pré-reservados ${res.reservados.length} de ${alvo - atribuidos} cacifos - pool livre insuficiente.`
           );
         }
       })
@@ -264,7 +264,7 @@ function isFutura(reserva: NonNullable<ReturnType<typeof useReserva>["data"]>): 
 
 function ModalHeader({ reserva }: { reserva: ReturnType<typeof useReserva>["data"] }) {
   if (!reserva) return null;
-  const anvNomes = reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "—";
+  const anvNomes = reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "-";
   return (
     <div className="flex items-center gap-3 pb-3 border-b border-border">
       <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-brand-50">
@@ -273,7 +273,7 @@ function ModalHeader({ reserva }: { reserva: ReturnType<typeof useReserva>["data
       <div className="flex-1">
         <h2 className="text-lg font-semibold text-text-primary">{anvNomes}</h2>
         <p className="text-sm text-text-muted">
-          {formatDate(reserva.data)} · {reserva.horario} · {reserva.local?.nome ?? "—"}
+          {formatDate(reserva.data)} · {reserva.horario} · {reserva.local?.nome ?? "-"}
         </p>
       </div>
     </div>

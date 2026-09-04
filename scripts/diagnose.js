@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * diagnose.js — Diagnóstico de deployment para cPanel/Phusion Passenger.
+ * diagnose.js - Diagnóstico de deployment para cPanel/Phusion Passenger.
  *
  * Testa EXATAMENTE o que o endpoint de login faz, passo a passo:
  *   1. Node.js version
@@ -15,7 +15,7 @@
  *   cd /home/USERNAME/app   (ou onde estiver a raiz da app)
  *   node scripts/diagnose.js
  *
- * NÃO usa a app Next.js — é um script standalone que simula o mesmo caminho.
+ * NÃO usa a app Next.js - é um script standalone que simula o mesmo caminho.
  */
 "use strict";
 
@@ -53,7 +53,7 @@ section("1. Node.js");
 var nodeMajor = parseInt(process.versions.node.split(".")[0], 10);
 check("Node.js version", true, "v" + process.versions.node);
 if (nodeMajor < 18) {
-  check("Node.js >= 18", false, "Versão demasiado antiga — Next.js 15 precisa de Node 18+");
+  check("Node.js >= 18", false, "Versão demasiado antiga - Next.js 15 precisa de Node 18+");
   allOk = false;
 } else if (nodeMajor < 22) {
   console.log("   ⚠️  Recomendado: Node.js v22 (atual: v" + process.versions.node + ")");
@@ -201,7 +201,7 @@ function testDbQuery() {
   }
 
   if (!mysql2) {
-    console.log("   ℹ️  mysql2 não está no bundle — a saltar query directa.");
+    console.log("   ℹ️  mysql2 não está no bundle - a saltar query directa.");
     console.log("   (A app usa o engine Prisma, que funciona sob Passenger.)");
     testAuth();
     return;
@@ -267,7 +267,7 @@ function finish() {
     console.log("   Verifica: COOKIE_SECURE, COOKIE_SAMESITE no .env");
     console.log("   E: BETTER_AUTH_URL vs NEXT_PUBLIC_APP_URL (têm de bater certo com o domínio)");
   } else {
-    console.log("❌ Falhas encontradas — vê os ❌ acima.");
+    console.log("❌ Falhas encontradas - vê os ❌ acima.");
     console.log("   Copia este output completo para análise.");
   }
   process.exit(allOk ? 0 : 1);

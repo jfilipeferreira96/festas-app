@@ -2,7 +2,7 @@ import { differenceInYears } from "date-fns";
 import prisma from "@festas/db";
 
 /**
- * Serviço de Festas a Acabar — usado pela conta FESTAS_ACABAR.
+ * Serviço de Festas a Acabar - usado pela conta FESTAS_ACABAR.
  * Mostra as festas EM_CURSO, ordenadas por hora de saída (fimPrevisto).
  */
 export const festasAcabarService = {
@@ -49,12 +49,12 @@ export const festasAcabarService = {
 
       return {
         id: r.id,
-        nomeFesta: nomesAniv || "—",
+        nomeFesta: nomesAniv || "-",
         cor: r.cor,
         numCriancas: r.numCriancas,
         inicioEm: r.inicioEm?.toISOString() ?? null,
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
-        localNome: r.local?.nome ?? "—",
+        localNome: r.local?.nome ?? "-",
         estado: r.estado,
       };
     });
@@ -65,7 +65,7 @@ export const festasAcabarService = {
         : "";
       return {
         id: e.id,
-        criancasNomes: criancasNomes || "—",
+        criancasNomes: criancasNomes || "-",
         encarregadoNome: e.encarregadoNome,
         inicioEm: e.inicioEm?.toISOString() ?? null,
         fimPrevisto: e.fimPrevisto?.toISOString() ?? null,
@@ -111,13 +111,13 @@ export const festasAcabarService = {
 
       return {
         id: r.id,
-        nomeFesta: nomesAniv || "—",
+        nomeFesta: nomesAniv || "-",
         cor: r.cor,
         idadeAniversariante,
         numCriancas: r.numCriancas,
         inicioEm: r.inicioEm?.toISOString() ?? null,
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
-        localNome: r.local?.nome ?? "—",
+        localNome: r.local?.nome ?? "-",
         pago: r.pago,
         valorPago: r.valorPago != null ? Number(r.valorPago) : null,
         extras: r.extras.map((re) => ({
@@ -136,7 +136,7 @@ export const festasAcabarService = {
   },
 
   /**
-   * Entradas livres ATIVAS — para o balcão (FESTAS_ACABAR) acompanhar
+   * Entradas livres ATIVAS - para o balcão (FESTAS_ACABAR) acompanhar
    * pagamento, tempo e confirmação do lanche. Sem acções de gestão
    * (concluir/pagar ficam na página de admin /entradas-livres).
    */
@@ -152,7 +152,7 @@ export const festasAcabarService = {
         : [];
       return {
         id: e.id,
-        criancasNomes: criancas.map((c) => c.nome).filter(Boolean).join(", ") || "—",
+        criancasNomes: criancas.map((c) => c.nome).filter(Boolean).join(", ") || "-",
         numCriancas: criancas.length,
         encarregadoNome: e.encarregadoNome,
         inicioEm: e.inicioEm.toISOString(),

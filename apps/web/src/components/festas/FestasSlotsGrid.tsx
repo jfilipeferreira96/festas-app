@@ -5,7 +5,7 @@ import { Clock, Plus, Users, MapPin, Eye, Pencil, CheckCircle2, Play, SquareChec
 import { useSlotsDia } from "@/hooks/use-slots-horario";
 import type { SlotDia, FestaSemSlot } from "@/lib/api/slotsHorario";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
-import type { FestaFormInitialValues } from "./FestaForm";
+import type { FestaFormInitialValues } from "./form/FestaForm";
 
 type FestaAction =
   | "view"
@@ -187,7 +187,7 @@ const SlotCard = React.memo(function SlotCard({
     );
   }
 
-  // Slot vazio — clicável
+  // Slot vazio - clicável
   return (
     <button
       onClick={handleClick}

@@ -6,7 +6,7 @@
  * Rust criava ~1 thread por CPU visível (nproc=64 no servidor → 64 threads),
  * que eram contadas no limite de processos do LVE (nproc=100) e causavam
  * "Unable to fork". Com o adapter, as queries correm em JS puro sobre o event
- * loop — zero threads extra. Ver plans/diagnostico-processos-cpanel.md.
+ * loop - zero threads extra. Ver plans/diagnostico-processos-cpanel.md.
  *
  * A biblioteca `mariadb` é um CLIENTE JavaScript (como a mysql2): não instala
  * nada no servidor e liga-se a servidores MySQL/MariaDB via protocolo MySQL,
@@ -27,7 +27,7 @@ import type { PoolConfig } from "mariadb";
 export type PrismaLogLevel = "info" | "query" | "warn" | "error";
 
 export interface CreatePrismaClientOptions {
-  /** Nº máximo de ligações no pool (default 5 — MySQL partilhado do cPanel). */
+  /** Nº máximo de ligações no pool (default 5 - MySQL partilhado do cPanel). */
   connectionLimit?: number;
   /** Timeout (ms) para obter uma ligação do pool (default 10s). */
   acquireTimeout?: number;
@@ -56,7 +56,7 @@ export function buildMariaDbConfig(url: string, options: CreatePrismaClientOptio
       options.acquireTimeout ??
       (Number.isFinite(urlPoolTimeout) && urlPoolTimeout > 0 ? urlPoolTimeout * 1000 : 10_000),
     connectTimeout: 10_000,
-    // O Prisma gere transações/datas ele próprio — nada de timezone no driver.
+    // O Prisma gere transações/datas ele próprio - nada de timezone no driver.
   };
 }
 
@@ -64,7 +64,7 @@ export function buildMariaDbConfig(url: string, options: CreatePrismaClientOptio
  * Cria um PrismaClient ligado via driver adapter (JS puro, sem engine Rust).
  *
  * Com `previewFeatures = ["driverAdapters"]` no schema, o adapter é OBRIGATÓRIO
- * no construtor — TODAS as instanciações de PrismaClient têm de passar por aqui.
+ * no construtor - TODAS as instanciações de PrismaClient têm de passar por aqui.
  * O Prisma é dono do pool: `$disconnect()` fecha-o.
  */
 export function createPrismaClient(url: string, options: CreatePrismaClientOptions = {}): PrismaClient {

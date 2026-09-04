@@ -23,7 +23,7 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
     const map = new Map<string, { id: string; nome: string; items: AlocacaoMonitor[] }>();
     for (const a of alocacoes) {
       const monitorId = a.monitorId;
-      const nome = a.monitor?.nome ?? "—";
+      const nome = a.monitor?.nome ?? "-";
       if (!map.has(monitorId)) {
         map.set(monitorId, { id: monitorId, nome, items: [] });
       }
@@ -153,7 +153,7 @@ export default function MonitorTimeline({ alocacoes, onEdit, loading }: MonitorT
           {alocacoes.length} {alocacoes.length === 1 ? "alocação" : "alocações"} · {rows.length}{" "}
           {rows.length === 1 ? "monitor" : "monitores"}
         </span>
-        <span className="tabular-nums">Horário: 00h — 24h</span>
+        <span className="tabular-nums">Horário: 00h - 24h</span>
       </div>
     </div>
   );

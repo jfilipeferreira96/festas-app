@@ -73,7 +73,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
 
   /**
    * Single session check with a 5-second timeout.
-   * No retries — if this fails, the user is considered logged out.
+   * No retries - if this fails, the user is considered logged out.
    * Deduplicated: concurrent calls share the same in-flight request.
    */
   const checkSession = async (): Promise<void> => {
@@ -99,7 +99,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
           setUser(null);
         }
       } catch {
-        // Any error (timeout, network, etc.) — treat as logged out
+        // Any error (timeout, network, etc.) - treat as logged out
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -120,7 +120,7 @@ export function AuthProvider({ children, initialUser }: AuthProviderProps) {
       return () => clearInterval(interval);
     }
 
-    // No server info or initialUser is null — perform a client-side session check.
+    // No server info or initialUser is null - perform a client-side session check.
     // This handles client-side navigation after login (e.g., router.push from /signin)
     // where the RootLayout hasn't re-rendered and initialUser is stale (null).
     const safetyTimeout = setTimeout(() => {

@@ -237,7 +237,7 @@ describe("ConfiguracaoPreco Service", () => {
     it("should return the 1h tier price for weekend too (60 minutes)", async () => {
       const sabado = new Date("2025-01-18T00:00:00");
       const preco = await configuracaoPrecoService.calcularPrecoEntrada(60, sabado);
-      // 1ª hora = 6€ — mesma tarifa em fim-de-semana
+      // 1ª hora = 6€ - mesma tarifa em fim-de-semana
       expect(preco).toBe(6);
     });
 

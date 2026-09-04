@@ -59,7 +59,7 @@ export default function FechoCaixaContent({ embedded = false }: FechoCaixaConten
   return (
     <div>
       {!embedded && (
-        <PageHeader title="Fecho de Caixa" subtitle={`Quanto se recebeu — ${dataFmt}`} />
+        <PageHeader title="Fecho de Caixa" subtitle={`Quanto se recebeu - ${dataFmt}`} />
       )}
 
       {/* Controlos */}
@@ -141,7 +141,7 @@ export default function FechoCaixaContent({ embedded = false }: FechoCaixaConten
             </div>
           </div>
 
-          {/* Ajustes do dia — auditoria */}
+          {/* Ajustes do dia - auditoria */}
           <div className={`${embedded ? "mt-3" : "mt-4"} bg-surface rounded-[14px] p-5 shadow-card border border-border`}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-text-primary flex items-center gap-1.5">

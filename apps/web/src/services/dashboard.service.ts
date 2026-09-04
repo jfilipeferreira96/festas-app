@@ -107,8 +107,8 @@ export const dashboardService = {
 
   /**
    * Receitas do dia agrupadas por método de pagamento.
-   * Contabiliza reservas e entradas livres pagas hoje.
-   * Inclui: pagamento dividido, excesso de tempo e meias.
+   * Fonte única: valorPago (festas) e custoTotalFinal (entradas).
+   * Inclui pagamento dividido e excesso de tempo pago.
    */
   async getReceitasHoje(): Promise<Record<string, number>> {
     const hoje = new Date();
@@ -130,9 +130,6 @@ export const dashboardService = {
           // Excesso de tempo (se já pago)
           custoExcesso: true,
           pagoExcesso: true,
-          // Meias
-          meiasQuantidade: true,
-          meiasPrecoUnit: true,
         },
       }),
       prisma.entradaLivre.findMany({
@@ -147,9 +144,6 @@ export const dashboardService = {
           custoTotalFinal: true,
           metodoPagamento2: true,
           valorPago2: true,
-          // Meias
-          meiasQuantidade: true,
-          meiasPrecoUnit: true,
         },
       }),
     ]);
@@ -168,22 +162,14 @@ export const dashboardService = {
       somar(r.metodoPagamento2, r.valorPago2);
       // Excesso de tempo (só se foi pago)
       if (r.pagoExcesso) somar(r.metodoPagamento, r.custoExcesso);
-      // Meias (quantidade × preço unitário)
-      const qtdMeias = r.meiasQuantidade ?? 0;
-      if (qtdMeias > 0) {
-        somar(r.metodoPagamento, qtdMeias * Number(r.meiasPrecoUnit ?? 0));
-      }
     }
     for (const e of entradasHoje) {
-      // custoTotalFinal inclui o excesso; fallback para custoTotal
+      // Fonte única: custoTotalFinal inclui o excesso; fallback para custoTotal
       const valor = Number(e.custoTotalFinal ?? e.custoTotal ?? 0);
-      somar(e.metodoPagamento, valor);
-      somar(e.metodoPagamento2, e.valorPago2);
-      // Meias
-      const qtdMeias = e.meiasQuantidade ?? 0;
-      if (qtdMeias > 0) {
-        somar(e.metodoPagamento, qtdMeias * Number(e.meiasPrecoUnit ?? 0));
-      }
+      // Pagamento dividido: método 2 = valorPago2, método 1 = resto
+      const valorMetodo2 = Math.min(Number(e.valorPago2 ?? 0), valor);
+      somar(e.metodoPagamento2, valorMetodo2);
+      somar(e.metodoPagamento, valor - valorMetodo2);
     }
 
     return receitas;
@@ -247,7 +233,7 @@ export const dashboardService = {
    * Lista os aniversariantes (filhos de clientes) cujo próximo aniversário
    * ocorre nos próximos `dias` dias. Para cada um indica se o cliente já tem
    * reserva marcada para esse mês (para alertar "ainda sem reserva").
-   * Ignora o ano — compara apenas mês/dia.
+   * Ignora o ano - compara apenas mês/dia.
    */
   async getAniversariosProximos(dias = 30): Promise<
     {
@@ -282,7 +268,7 @@ export const dashboardService = {
       if (!a.dataNascimento) continue;
       const nasc = new Date(a.dataNascimento);
 
-      // Próximo aniversário (mês/dia) — este ano ou no próximo
+      // Próximo aniversário (mês/dia) - este ano ou no próximo
       let prox = new Date(anoAtual, nasc.getMonth(), nasc.getDate());
       // Se já passou hoje, usa o ano seguinte (mas dentro da janela pode incluir 29 fev etc.)
       const hojeZero = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());

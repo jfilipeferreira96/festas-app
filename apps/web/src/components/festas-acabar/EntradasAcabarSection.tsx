@@ -18,7 +18,7 @@ function formatHora(iso: string): string {
   try {
     return format(parseISO(iso), "HH:mm");
   } catch {
-    return "—";
+    return "-";
   }
 }
 

@@ -14,7 +14,7 @@ type PropsType = {
   mode?: "single" | "multiple" | "range" | "time";
   onChange?: Hook | Hook[];
   defaultDate?: DateOption;
-  /** Data mínima selecionável (flatpickr minDate) — ex.: bloquear datas passadas. */
+  /** Data mínima selecionável (flatpickr minDate) - ex.: bloquear datas passadas. */
   minDate?: DateOption;
   label?: string;
   placeholder?: string;

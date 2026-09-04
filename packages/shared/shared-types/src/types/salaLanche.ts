@@ -1,5 +1,5 @@
 // ===================================
-// Sala de Lanche — espaços dedicados ao lanche das festas
+// Sala de Lanche - espaços dedicados ao lanche das festas
 // ===================================
 
 export interface SalaLanche {

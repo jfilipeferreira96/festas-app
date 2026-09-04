@@ -21,7 +21,7 @@ interface UpdateAlocacaoData {
 interface ListFiltros {
   data?: string; // dia específico
   dataInicio?: string; // início do intervalo (inclusive)
-  dataFim?: string; // fim do intervalo (exclusive — exclusive do dia seguinte)
+  dataFim?: string; // fim do intervalo (exclusive - exclusive do dia seguinte)
   monitorId?: string;
   localId?: string;
 }

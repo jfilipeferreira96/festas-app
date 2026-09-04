@@ -44,7 +44,7 @@ describe("Relatório Service", () => {
 
   // ── getRelatorioFinanceiro ────────────────────────────────────
   describe("getRelatorioFinanceiro()", () => {
-    it("should return 3 sections (festas, entradasLivres, outros) — no escolas", async () => {
+    it("should return 3 sections (festas, entradasLivres, outros) - no escolas", async () => {
       const { ontem, amanha } = getIntervaloTeste();
       const relatorio = await relatorioService.getRelatorioFinanceiro(ontem, amanha);
 
@@ -107,7 +107,7 @@ describe("Relatório Service", () => {
 
       expect(relatorio.festas.total.quantidade).toBe(0);
       expect(relatorio.entradasLivres.total.quantidade).toBe(0);
-      // Sem fallback hardcoded — se não há dados, linhas é array vazio
+      // Sem fallback hardcoded - se não há dados, linhas é array vazio
       expect(relatorio.festas.linhas.length).toBe(0);
       expect(relatorio.entradasLivres.linhas.length).toBe(0);
     });
@@ -252,7 +252,7 @@ describe("Relatório Service", () => {
 
       const acrescimos = secao.linhas.find((l) => l.descricao === "Acréscimos cobrados");
       expect(acrescimos?.quantidade).toBe(2);
-      expect(acrescimos?.valorNumerario).toBe(10); // |valor| — sinal ignorado na auditoria
+      expect(acrescimos?.valorNumerario).toBe(10); // |valor| - sinal ignorado na auditoria
       expect(acrescimos?.valorMbway).toBe(5);
 
       const descontos = secao.linhas.find((l) => l.descricao === "Descontos concedidos");
@@ -280,7 +280,7 @@ describe("Relatório Service", () => {
     });
   });
 
-  describe("getRelatorioFinanceiro() — secção ajustes", () => {
+  describe("getRelatorioFinanceiro() - secção ajustes", () => {
     it("inclui ajuste seeded (ACRESCIMO 10€ DINHEIRO) na auditoria sem somar ao totalGeral", async () => {
       const { ontem, amanha } = getIntervaloTeste();
       const relatorio = await relatorioService.getRelatorioFinanceiro(ontem, amanha);

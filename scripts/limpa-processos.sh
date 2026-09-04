@@ -1,11 +1,11 @@
 #!/bin/bash
 # =============================================================================
-# limpa-processos.sh — EMERGÊNCIA: libertar processos/threads da conta
+# limpa-processos.sh - EMERGÊNCIA: libertar processos/threads da conta
 # =============================================================================
 # PARA QUÊ
 #   Quando a conta atinge o limite de processos do CloudLinux (100/100), o SSH,
 #   Terminal e até o File Manager podem falhar (não há slots para novos
-#   processos). O cron continua a tentar correr a cada minuto — mais cedo ou
+#   processos). O cron continua a tentar correr a cada minuto - mais cedo ou
 #   tarde apanha um slot livre e este script limpa os processos da app,
 #   libertando dezenas de slots de uma vez. O Passenger/LiteSpeed renasce a
 #   app automaticamente no próximo request do site.
@@ -56,11 +56,11 @@ NOW=$(date +%s)
 
   if [ "$1" != "force" ]; then
     if [ "$T" -lt "$THRESHOLD" ]; then
-      echo "abaixo do threshold ($THRESHOLD) — nada a fazer"
+      echo "abaixo do threshold ($THRESHOLD) - nada a fazer"
       exit 0
     fi
     if [ $((NOW - LAST)) -lt "$COOLDOWN" ]; then
-      echo "cooldown ativo (última limpeza há $((NOW - LAST))s) — nada a fazer"
+      echo "cooldown ativo (última limpeza há $((NOW - LAST))s) - nada a fazer"
       exit 0
     fi
   fi
@@ -68,7 +68,7 @@ NOW=$(date +%s)
   echo "A LIMPAR processos da app (threads=$T >= $THRESHOLD)..."
 
   # Matar processos node da conta. O Passenger arranca a app como
-  # "node .../app.js" / "PassengerNodeApp" — o padrão 'node' apanha ambos.
+  # "node .../app.js" / "PassengerNodeApp" - o padrão 'node' apanha ambos.
   # Este script corre como bash (sem 'node' no cmdline), pelo que não se
   # mata a si próprio. Zombies com pai node são limpos indiretamente.
   pkill -KILL -u "$USER" -f "node" 2>/dev/null
@@ -79,5 +79,5 @@ NOW=$(date +%s)
   touch "$APP/tmp/restart.txt" 2>/dev/null
 
   echo "$NOW" > "$STAMP"
-  echo "limpeza concluída — slots libertados; app renasce no próximo request"
+  echo "limpeza concluída - slots libertados; app renasce no próximo request"
 } >> "$LOG" 2>&1
