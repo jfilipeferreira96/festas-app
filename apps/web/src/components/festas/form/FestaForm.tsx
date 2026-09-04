@@ -274,7 +274,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               isAdmin={isGlobalAdmin}
               onSelectSlot={handleSelectSlot}
               dataInicial={defaultValues.data}
-              reservaId={reserva?.id}
             />
             <MenuBoloSection menuOptions={menuOptions} menuWarning={menuWarning} />
             <ExtrasNotasSection extraItems={extraItems} />

@@ -42,6 +42,16 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   );
   const [descontoMotivo, setDescontoMotivo] = useState(reserva.descontoMotivo ?? "");
 
+  // Acertos (tab "Acertos") aplicam write-through ao valorPago no backend -
+  // sincronizar o estado local para o total subir/descer em tempo real
+  // (e para o "Guardar" não sobrescrever o acerto com um valor obsoleto).
+  const handleAjusteAplicado = useCallback((delta: number) => {
+    setValorPago((prev) => Math.max(0, (Number(prev) || 0) + delta).toFixed(2));
+  }, []);
+  const handleTotalRedefinido = useCallback((novoTotal: number) => {
+    setValorPago(novoTotal.toFixed(2));
+  }, []);
+
   const sugeridoInicial = calcularSugeridoFesta(reserva, Number(descontoPercentagem) || 0);
   useEffect(() => {
     if (!reserva.valorPago && sugeridoInicial && sugeridoInicial.sugerido > 0) {
@@ -168,7 +178,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           <PagamentoEstadoRow pago={pago} onChange={setPago} />
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Valor Pago (€)</label>
+              <label className="block text-xs font-medium text-text-secondary mb-1">Valor a Pagar (€)</label>
               <InputField
                 type="number"
                 step={0.01}
@@ -229,6 +239,8 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
         <AjustesPagamentoSection
           reservaId={reserva.id}
           numCriancas={reserva.numCriancasConfirmadas ?? reserva.numCriancas}
+          onAjusteAplicado={handleAjusteAplicado}
+          onTotalRedefinido={handleTotalRedefinido}
         />
       ),
     },

@@ -12,6 +12,7 @@ import {
   useEliminarAjustePagamento,
 } from "@/hooks/use-ajustes-pagamento";
 import { useToast } from "@/hooks/use-toast";
+import type { AjustePagamento } from "@/lib/api/ajustes-pagamento";
 
 const fmtEuro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
 
@@ -38,9 +39,19 @@ interface AjustesPagamentoSectionProps {
   entradaLivreId?: string;
   /** Nº de crianças (confirmadas ?? previstas) - usado no preview do preço por criança */
   numCriancas?: number | null;
+  /** Notifica o pai do delta (±) aplicado write-through ao total pelo backend */
+  onAjusteAplicado?: (delta: number) => void;
+  /** Notifica o pai do novo total absoluto (redefinição de preço) */
+  onTotalRedefinido?: (novoTotal: number) => void;
 }
 
-function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: AjustesPagamentoSectionProps) {
+function AjustesPagamentoSection({
+  reservaId,
+  entradaLivreId,
+  numCriancas,
+  onAjusteAplicado,
+  onTotalRedefinido,
+}: AjustesPagamentoSectionProps) {
   const toast = useToast();
   const { data: ajustes, isLoading } = useAjustesPagamento({ reservaId, entradaLivreId });
   const criarAjuste = useCriarAjustePagamento();
@@ -87,6 +98,8 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
         reservaId,
         entradaLivreId,
       });
+      // O backend aplica write-through ao total - sincronizar o estado do pai
+      onAjusteAplicado?.(tipo === "ACRESCIMO" ? valorNum : -valorNum);
       setValor("");
       setMotivo("");
       setMetodo("NONE");
@@ -95,7 +108,7 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
     } catch (err) {
       toast.handleApiError(err, "Erro ao registar acerto.");
     }
-  }, [criarAjuste, tipo, valor, motivo, metodo, reservaId, entradaLivreId, toast]);
+  }, [criarAjuste, tipo, valor, motivo, metodo, reservaId, entradaLivreId, onAjusteAplicado, toast]);
 
   const handleRedefinir = useCallback(async () => {
     if (!redefMotivo.trim()) {
@@ -103,13 +116,14 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
       return;
     }
     const modo = redefModo as "TOTAL" | "POR_CRIANCA";
+    let criado: AjustePagamento;
     if (modo === "TOTAL") {
       const total = parseFloat(redefValor);
       if (!total || total <= 0) {
         toast.error("Indique o novo total (maior que zero).");
         return;
       }
-      await redefinirPreco.mutateAsync(
+      criado = await redefinirPreco.mutateAsync(
         { modo: "TOTAL", valor: total, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
         { onSuccess: () => toast.success("Preço redefinido.") }
       );
@@ -119,27 +133,34 @@ function AjustesPagamentoSection({ reservaId, entradaLivreId, numCriancas }: Aju
         toast.error("Indique o preço por criança (maior que zero).");
         return;
       }
-      await redefinirPreco.mutateAsync(
+      criado = await redefinirPreco.mutateAsync(
         { modo: "POR_CRIANCA", precoPorCabeca: porCabeca, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
         { onSuccess: () => toast.success("Preço redefinido.") }
       );
     }
+    // O ajuste REDEFINICAO devolve o novo total absoluto - sincronizar o pai
+    onTotalRedefinido?.(Number(criado.valor));
     setRedefValor("");
     setRedefPorCabeca("");
     setRedefMotivo("");
     setShowRedefinir(false);
-  }, [redefinirPreco, redefModo, redefValor, redefPorCabeca, redefMotivo, reservaId, entradaLivreId, toast]);
+  }, [redefinirPreco, redefModo, redefValor, redefPorCabeca, redefMotivo, reservaId, entradaLivreId, onTotalRedefinido, toast]);
 
   const handleRemove = useCallback(
     async (id: string) => {
+      // Delta inverso do acerto removido (o backend já reverteu na BD)
+      const alvo = (ajustes ?? []).find((a) => a.id === id);
       try {
         await eliminarAjuste.mutateAsync(id);
+        if (alvo) {
+          onAjusteAplicado?.(alvo.tipo === "ACRESCIMO" ? -Number(alvo.valor) : Number(alvo.valor));
+        }
         toast.success("Acerto removido e total revertido.");
       } catch (err) {
         toast.handleApiError(err, "Erro ao remover acerto.");
       }
     },
-    [eliminarAjuste, toast]
+    [ajustes, eliminarAjuste, onAjusteAplicado, toast]
   );
 
   // Preview do total em modo POR_CRIANCA

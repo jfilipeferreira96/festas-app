@@ -44,7 +44,7 @@ export default React.memo(function PagamentoCaucaoDescontoTab({
             <Select options={CAUCAO_OPTIONS} value={caucao} onChange={setCaucao} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Valor (€)</label>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Valor da Caução (€)</label>
             <InputField
               type="number"
               step={0.01}

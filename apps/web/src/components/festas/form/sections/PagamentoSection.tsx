@@ -74,7 +74,7 @@ export default function PagamentoSection({ reserva, onOpenPagamento }: Pagamento
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <FieldLabel>Valor Pago (€)</FieldLabel>
+              <FieldLabel>Valor a Pagar (€)</FieldLabel>
               <InputField
                 type="number"
                 step={0.01}
@@ -82,6 +82,9 @@ export default function PagamentoSection({ reserva, onOpenPagamento }: Pagamento
                 placeholder="0,00"
                 {...register("valorPago", { valueAsNumber: true })}
               />
+              <p className="text-[11px] text-text-muted mt-1">
+                Estimado: preço por criança × nº de crianças — editável.
+              </p>
             </div>
             <div>
               <FieldLabel>Método de Pagamento</FieldLabel>
@@ -105,18 +108,27 @@ export default function PagamentoSection({ reserva, onOpenPagamento }: Pagamento
               <Shield size={13} className="text-text-muted" /> Caução
             </span>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select
-                options={CAUCAO_OPTIONS}
-                value={watch("caucao") ?? "NAO_PAGA"}
-                onChange={(val) => setValue("caucao", val as FestaFormCaucao, { shouldDirty: true })}
-              />
-              <InputField
-                type="number"
-                step={0.01}
-                min={0}
-                placeholder="Valor caução (€)"
-                {...register("valorCaucao", { valueAsNumber: true })}
-              />
+              <div>
+                <FieldLabel>Estado</FieldLabel>
+                <Select
+                  options={CAUCAO_OPTIONS}
+                  value={watch("caucao") ?? "NAO_PAGA"}
+                  onChange={(val) => setValue("caucao", val as FestaFormCaucao, { shouldDirty: true })}
+                />
+              </div>
+              <div>
+                <FieldLabel>Valor da Caução (€)</FieldLabel>
+                <InputField
+                  type="number"
+                  step={0.01}
+                  min={0}
+                  placeholder="0,00"
+                  {...register("valorCaucao", { valueAsNumber: true })}
+                />
+                <p className="text-[11px] text-text-muted mt-1">
+                  Sugerida da configuração de preços — editável.
+                </p>
+              </div>
             </div>
           </div>
 

@@ -30,8 +30,22 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
   const [showSplit, setShowSplit] = useState(Boolean(entrada.metodoPagamento2));
   const [metodoPagamento2, setMetodoPagamento2] = useState(entrada.metodoPagamento2 ?? "NONE");
   const [valorPago2, setValorPago2] = useState(entrada.valorPago2 != null ? String(entrada.valorPago2) : "");
+  // Acertos aplicam write-through ao custoTotal(Final) no backend - o override
+  // mantém o total da modal sincronizado em tempo real
+  const [custoOverride, setCustoOverride] = useState<number | null>(null);
 
-  const custo = entrada.custoTotalFinal ?? entrada.custoTotal ?? 0;
+  const custoBase = entrada.custoTotalFinal ?? entrada.custoTotal ?? 0;
+  const custo = custoOverride ?? custoBase;
+
+  const handleAjusteAplicado = useCallback(
+    (delta: number) => {
+      setCustoOverride(Math.max(0, custoBase + delta));
+    },
+    [custoBase]
+  );
+  const handleTotalRedefinido = useCallback((novoTotal: number) => {
+    setCustoOverride(novoTotal);
+  }, []);
   const criancaNomes = entrada.criancas?.map((c) => c.nome).join(", ") || entrada.encarregadoNome || "-";
 
   const handleSave = useCallback(async () => {
@@ -99,6 +113,8 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
         <AjustesPagamentoSection
           entradaLivreId={entrada.id}
           numCriancas={Array.isArray(entrada.criancas) ? entrada.criancas.length : 0}
+          onAjusteAplicado={handleAjusteAplicado}
+          onTotalRedefinido={handleTotalRedefinido}
         />
       ),
     },
