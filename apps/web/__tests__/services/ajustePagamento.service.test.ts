@@ -14,7 +14,8 @@ describe("ajustePagamentoService", () => {
     await testPrisma.ajustePagamento.deleteMany();
     await testPrisma.reserva.update({
       where: { id: TEST_IDS.RESERVA_CONFIRMADA },
-      data: { valorPago: 50 },
+      // Split do seed: total acordado 290 = 50 (pag.1 MBWAY) + 240 (pag.2 MULTIBANCO)
+      data: { valorTotal: 290, valorPago: 50 },
     });
     await testPrisma.entradaLivre.update({
       where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
@@ -55,7 +56,7 @@ describe("ajustePagamentoService", () => {
     expect(Number(reserva.valorPago)).toBe(5);
   });
 
-  it("deve aplicar desconto ao valorPago da reserva", async () => {
+  it("deve aplicar desconto ao valorTotal da reserva (write-through no campo do total)", async () => {
     await ajustePagamentoService.create({
       tipo: "DESCONTO",
       valor: 10,
@@ -66,8 +67,9 @@ describe("ajustePagamentoService", () => {
     const reserva = await testPrisma.reserva.findUniqueOrThrow({
       where: { id: TEST_IDS.RESERVA_CONFIRMADA },
     });
-    // valorPago inicial era 50 → 50 - 10 = 40
-    expect(Number(reserva.valorPago)).toBe(40);
+    // valorTotal inicial era 290 → 290 - 10 = 280 (valorPago - recebido - fica intacto)
+    expect(Number(reserva.valorTotal)).toBe(280);
+    expect(Number(reserva.valorPago)).toBe(50);
   });
 
   it("deve recusar desconto que torna o total da reserva negativo", async () => {

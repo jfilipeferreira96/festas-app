@@ -149,6 +149,7 @@ describe("Relatório Service", () => {
           numCriancas: 8,
           estado: "CONCLUIDA",
           pago: true,
+          valorTotal: 150, // total acordado; 100 recebido no pag.1 + 50 no pag.2
           metodoPagamento: "DINHEIRO",
           valorPago: 100,
           metodoPagamento2: "MBWAY",

@@ -81,6 +81,30 @@ describe("Reserva Service", () => {
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
 
+    it("deve persistir o pagamento unificado (valorTotal + valorPago + split)", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "21:30",
+        duracaoMinutos: 90,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+        valorTotal: 150,
+        metodoPagamento: "DINHEIRO",
+        valorPago: 100,
+        metodoPagamento2: "MBWAY",
+        valorPago2: 50,
+      });
+
+      expect(Number(reserva.valorTotal)).toBe(150);
+      expect(Number(reserva.valorPago)).toBe(100);
+      expect(reserva.metodoPagamento).toBe("DINHEIRO");
+      expect(reserva.metodoPagamento2).toBe("MBWAY");
+      expect(Number(reserva.valorPago2)).toBe(50);
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
     it("should throw DATA_REQUIRED if missing", async () => {
       await expect(
         reservaService.create({

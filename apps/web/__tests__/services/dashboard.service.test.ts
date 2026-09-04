@@ -210,8 +210,9 @@ describe("Dashboard Service", () => {
           numCriancas: 10,
           estado: "CONCLUIDA",
           pago: true,
+          valorTotal: 120, // total acordado (editável no form)
           metodoPagamento: "DINHEIRO",
-          valorPago: 80,
+          valorPago: 80, // recebido no pag. 1
           metodoPagamento2: "MBWAY",
           valorPago2: 40,
           clienteId: TEST_IDS.CLIENTE_1,

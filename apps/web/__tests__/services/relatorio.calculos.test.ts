@@ -84,6 +84,7 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
           numCriancas: 10,
           estado: "CONCLUIDA",
           pago: true,
+          valorTotal: 100, // total acordado; 60 recebido no pag.1 + 40 no pag.2
           metodoPagamento: "DINHEIRO",
           valorPago: 60,
           metodoPagamento2: "MBWAY",

@@ -6,6 +6,19 @@ vi.mock("@festas/db", () => ({
   default: testPrisma,
 }));
 
+vi.mock("@festas/auth", () => ({
+  auth: {
+    api: {
+      signUpEmail: vi.fn(async ({ body }: { body: { email: string; password: string; name: string } }) => {
+        const user = await testPrisma.user.create({
+          data: { id: `test-user-${Date.now()}`, email: body.email, name: body.name },
+        });
+        return { user };
+      }),
+    },
+  },
+}));
+
 vi.mock("@/lib/logger", () => ({
   default: {
     info: vi.fn(),

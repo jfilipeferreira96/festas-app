@@ -131,7 +131,8 @@ describe("Extras - quantidade e cobrança por pessoa", () => {
     it("guard boloQuantidade: PAIS_TRAZEM limpa a quantidade", async () => {
       const reserva = await reservaService.create({
         data: futureStr,
-        horario: "17:00",
+       
+        horario: "20:30",
         duracaoMinutos: 120,
         localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,

@@ -818,6 +818,25 @@ describe("Entrada Livre Service", () => {
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
 
+    it("deve persistir valorPago (recebido no pagamento 1)", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Recebido Pag1",
+        encarregadoTelefone: "917777777",
+        duracaoMinutos: 60,
+        pago: false,
+        criancas: [{ nome: "Criança Sinal" }],
+        metodoPagamento: "DINHEIRO",
+        valorPago: 5,
+      });
+
+      expect(Number(entrada.valorPago)).toBe(5);
+      expect(entrada.metodoPagamento).toBe("DINHEIRO");
+      expect(entrada.pago).toBe(false);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
     it("deve criar entrada com várias crianças (multi-criança)", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Multi Crianças",

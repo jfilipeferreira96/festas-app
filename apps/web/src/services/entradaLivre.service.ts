@@ -242,7 +242,8 @@ export const entradaLivreService = {
       throw new Error("PAGAMENTO_OBRIGATORIO");
     }
 
-    const { criancas, duracaoMinutos, extrasIds, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
+
+    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
 
     // Tarifário global: preço por escalão (1h/2h + hora adicional) - aplica-se a todos os dias.
     const configPreco = await configuracaoPrecoService.getConfig();

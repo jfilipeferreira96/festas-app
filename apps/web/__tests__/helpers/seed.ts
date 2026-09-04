@@ -231,7 +231,9 @@ export async function seedTestData(): Promise<void> {
       // Meias (compra obrigatória)
       meiasQuantidade: 18,
       meiasPrecoUnit: 2,
-      // Split payment (caução MBWAY + resto multibanco) - já paga
+      // Split payment (MBWAY 50 + MULTIBANCO 240) - já paga
+      // valorTotal = total acordado; valorPago = recebido no pag. 1
+      valorTotal: 290,
       pago: true,
       metodoPagamento: "MBWAY",
       valorPago: 50,
