@@ -693,7 +693,7 @@ Script" da aplicação:
 | Comando | O que faz |
 |---|---|
 | \`npm run db:seed\` | Cria admin + permissões RBAC + config de cacifos (idempotente). |
-| \`npm run db:sync-schema\` | Aplica prisma/schema-diff.sql do bundle (idempotente). O deploy-festas.sh corre-o SEMPRE antes de reiniciar. |
+| \`npm run db:sync-schema\` | Aplica prisma/schema-diff.sql (diff incremental) e schema-full.sql (cria tabelas/colunas em falta) - idempotente. Corrido pelo deploy-festas.sh antes de reiniciar. |
 | \`npm run db:verify\` | Lista todas as tabelas e a contagem de linhas. |
 | \`npm run db:truncate\` | Apaga TODOS os dados (mantém as tabelas). Com \`--keep-auth\` preserva utilizadores. |
 | \`npm run db:reset\` | \`truncate\` + \`seed\` (limpa tudo e recria o admin). |
@@ -903,7 +903,9 @@ ok(`Tamanho do bundle (descomprimido): ${human(size)}`);
 
 const SCHEMA_SRC = join(ROOT, "packages", "db", "prisma", "schema.prisma");
 const DIFF_SQL = join(DEPLOY, "prisma", "schema-diff.sql");
+const FULL_SQL = join(DEPLOY, "prisma", "schema-full.sql");
 rmSync(DIFF_SQL, { force: true });
+rmSync(FULL_SQL, { force: true });
 
 function remoteProdUrlFromEnv() {
   const envProdPath = join(ROOT, "apps", "web", ".env.production");
@@ -918,7 +920,26 @@ function remoteProdUrlFromEnv() {
 }
 
 let schemaDiffOk = false;
+let schemaSyncFailed = false;
 if (DO_SCHEMA) {
+  // 4a0. DDL COMPLETO (OFFLINE - não precisa de BD nenhuma!) -----------------
+  // Permite ao servidor sincronizar a BD (tabelas/colunas em falta) via
+  // localhost MESMO sem o PC conseguir alcançar a BD remota. O sync-schema no
+  // servidor é idempotente: o que já existe é ignorado.
+  log("A gerar DDL completo do schema (schema-full.sql, offline)...");
+  const resFull = spawnSync(`npx prisma migrate diff --from-empty --to-schema-datamodel "${SCHEMA_SRC}" --script`, { cwd: ROOT, encoding: "utf8", shell: true });
+  const ddlFull = typeof resFull.stdout === "string" ? resFull.stdout : "";
+  if (resFull.status === 0 && ddlFull.includes("CREATE TABLE")) {
+    mkdirSync(join(DEPLOY, "prisma"), { recursive: true });
+    writeFileSync(FULL_SQL, ddlFull.endsWith("\n") ? ddlFull : ddlFull + "\n");
+    ok("schema-full.sql incluído no bundle (sync completo no servidor, idempotente).");
+  } else {
+    console.warn("⚠️  Não foi possível gerar schema-full.sql.");
+    if (resFull.stderr && String(resFull.stderr).trim()) {
+      console.warn(String(resFull.stderr).trim().split("\n").slice(-2).join("\n"));
+    }
+  }
+
   const remoteUrl = remoteProdUrlFromEnv();
   if (!remoteUrl) {
     console.warn("⚠️  apps/web/.env.production sem DATABASE_URL - bundle SEM schema-diff.sql.");
@@ -974,13 +995,12 @@ if (DO_SCHEMA) {
         "\n   servidor (node scripts/db.js sync-schema) antes de reiniciar a app.",
       );
     } else {
-      err(
-        "FALHA ao sincronizar o schema de produção.",
-        "   Possíveis causas:",
-        "   - IP não whitelistado → cPanel → Remote MySQL → adicionar o teu IP (ou salta com --no-schema)",
-        "   - Mudanças destrutivas (drop/rename de colunas) → rever manualmente: node scripts/remote-db.mjs push prod",
-        "   - Sem schema-diff.sql no bundle (BD remota inacessível) → o servidor também não consegue sincronizar.",
-      );
+      // NUNCA bloquear o deploy por falta de acesso à BD - o tarball é sempre criado.
+      console.warn("⚠️  Push do PC FALHOU e sem schema-diff.sql (BD remota inacessível do PC).");
+      console.warn("   O bundle será criado MESMO ASSIM - mas o schema NÃO foi sincronizado!");
+      console.warn('   Se a produção não tiver a última versão do schema: erros "Unknown column".');
+      console.warn("   Corrige depois com: npm run db:push:remote (requer IP whitelistado no cPanel).");
+      schemaSyncFailed = true;
     }
   }
 } else {
@@ -1057,6 +1077,10 @@ console.log(`   Pasta: ${relative(ROOT, DEPLOY)}/`);
 if (existsSync(DEPLOY_TARGZ)) console.log(`   TAR.GZ: ${relative(ROOT, DEPLOY_TARGZ)}  ← RECOMENDADO para cPanel`);
 if (existsSync(DEPLOY_ZIP)) console.log(`   ZIP:    ${relative(ROOT, DEPLOY_ZIP)}`);
 console.log("\n   Próximos passos (cPanel) - ver deploy/README-DEPLOY.md");
+if (schemaSyncFailed) {
+  console.warn("\n   ⚠️  ATENÇÃO: schema de produção NÃO foi sincronizado neste bundle!");
+  console.warn("       Quando o acesso à BD voltar: npm run db:push:remote");
+}
 console.log("──────────────────────────────────────────────────────────\n");
 
 // 7. TESTE LOCAL (opcional - --no-test para saltar) --------------------------

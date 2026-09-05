@@ -179,8 +179,9 @@ mkdir -p "$APP/apps/web/public/uploads"
 # já aplicadas são ignoradas). SEM diff = schema já sincronizado = no-op total
 # (não bloqueia o deploy nem depende do node estar no PATH).
 DIFF_SQL="$APP/prisma/schema-diff.sql"
-if [ ! -f "$DIFF_SQL" ] || [ ! -s "$DIFF_SQL" ]; then
-  ok "Sem schema-diff.sql no bundle - schema já sincronizado (nada a aplicar)."
+FULL_SQL="$APP/prisma/schema-full.sql"
+if { [ ! -f "$DIFF_SQL" ] || [ ! -s "$DIFF_SQL" ]; } && { [ ! -f "$FULL_SQL" ] || [ ! -s "$FULL_SQL" ]; }; then
+  ok "Sem schema-diff.sql/schema-full.sql no bundle - nada a aplicar."
 else
   # Localizar o binário node (o PATH do SSH do cPanel nem sempre o inclui).
   NODE_BIN="$(command -v node 2>/dev/null || true)"

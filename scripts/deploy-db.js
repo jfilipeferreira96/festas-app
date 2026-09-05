@@ -166,23 +166,21 @@ function splitSqlStatements(sql) {
 
 async function cmdSyncSchema() {
   showDb();
-  const diffPath = path.join(appRoot, "prisma", "schema-diff.sql");
-  if (!fs.existsSync(diffPath) || fs.statSync(diffPath).size === 0) {
-    console.log("ℹ️  Sem prisma/schema-diff.sql no bundle - nada a aplicar pelo servidor.");
+  const prismaDir = path.join(appRoot, "prisma");
+  const diffPath = path.join(prismaDir, "schema-diff.sql");
+  const fullPath = path.join(prismaDir, "schema-full.sql");
+
+  const hasDiff = fs.existsSync(diffPath) && fs.statSync(diffPath).size > 0;
+  const hasFull = fs.existsSync(fullPath) && fs.statSync(fullPath).size > 0;
+
+  if (!hasDiff && !hasFull) {
+    console.log("ℹ️  Sem prisma/schema-diff.sql nem schema-full.sql no bundle - nada a aplicar.");
     console.log("   (O schema é sincronizado no PC: npm run deploy → remote-db push prod.)");
     return;
   }
 
-  const sql = fs.readFileSync(diffPath, "utf8");
-  const statements = splitSqlStatements(sql);
-  if (statements.length === 0) {
-    console.log("✅ Diff vazio - a BD já está sincronizada com o schema.");
-    return;
-  }
-
-  console.warn("⚠️  SYNC DE SCHEMA: a aplicar " + statements.length + " instrução(ões)...\n");
-
-  // Ligação direta via driver mariadb (mesmo adapter do app, já no bundle).
+  // Ligação direta via driver mariadb (mesmo adapter do app, já no bundle) -
+  // a BD é LOCALHOST no servidor, não precisa de whitelist nenhuma.
   const mariadb = require("mariadb");
   const cfg = mariadbConfigFromUrl(process.env.DATABASE_URL);
   const conn = await mariadb.createConnection({
@@ -195,20 +193,64 @@ async function cmdSyncSchema() {
 
   let applied = 0;
   let skipped = 0;
+  const tryApply = async (st) => {
+    const label = st.replace(/\s+/g, " ").slice(0, 90);
+    try {
+      await conn.query(st);
+      applied++;
+      console.log("  ok  : " + label);
+    } catch (e) {
+      if (TOLERATED_ERRNOS.has(e.errno)) {
+        skipped++;
+        console.log("  skip: " + label + "  (já aplicado)");
+      } else {
+        console.error("  ERRO: " + label);
+        throw e;
+      }
+    }
+  };
+
   try {
-    for (const st of statements) {
-      const label = st.replace(/\s+/g, " ").slice(0, 90);
-      try {
-        await conn.query(st);
-        applied++;
-        console.log("  ok  : " + label);
-      } catch (e) {
-        if (TOLERATED_ERRNOS.has(e.errno)) {
-          skipped++;
-          console.log("  skip: " + label + "  (já aplicado)");
-        } else {
-          console.error("  ERRO: " + label);
-          throw e;
+    // 1) DIFF INCREMENTAL (gerado no PC quando este conseguiu ler a BD remota)
+    if (hasDiff) {
+      const statements = splitSqlStatements(fs.readFileSync(diffPath, "utf8"));
+      if (statements.length > 0) {
+        console.warn("⚠️  SYNC: a aplicar diff incremental (" + statements.length + " instrução(ões))...\n");
+        for (const st of statements) await tryApply(st);
+      } else {
+        console.log("✅ Diff incremental vazio - sem alterações pendentes.");
+      }
+    }
+
+    // 2) SCHEMA COMPLETO em modo ESPERTO: cria tabelas em falta e adiciona
+    //    colunas em falta a tabelas existentes (lendo information_schema).
+    //    Funciona SEMPRE - o schema-full.sql é gerado offline no PC.
+    if (hasFull) {
+      const ddl = splitSqlStatements(fs.readFileSync(fullPath, "utf8")).filter((s) => /^CREATE TABLE/i.test(s));
+      console.warn("\n⚠️  SYNC: a validar " + ddl.length + " tabelas do schema (modo completo)...\n");
+      for (const st of ddl) {
+        const m = /CREATE TABLE `?(\w+)`?/i.exec(st);
+        if (!m) continue;
+        const table = m[1];
+        const existsRows = await conn.query("SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?", [table]);
+        if (Number(existsRows[0].n) === 0) {
+          console.log("  + tabela nova: " + table);
+          await tryApply(st);
+          continue;
+        }
+        // Tabela existe → garantir colunas em falta
+        const body = st.slice(st.indexOf("(") + 1, st.lastIndexOf(")"));
+        const colDefs = body
+          .split(/\r?\n/)
+          .map((l) => l.trim().replace(/,$/, ""))
+          .filter((l) => /^`/.test(l)); // definições de coluna começam por `nome`
+        const colRows = await conn.query("SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?", [table]);
+        const existing = new Set(colRows.map((r) => String(r.column_name).toLowerCase()));
+        for (const def of colDefs) {
+          const colName = /^`([^`]+)`/.exec(def);
+          if (!colName || existing.has(colName[1].toLowerCase())) continue;
+          console.log("  + coluna nova em " + table + ": " + colName[1]);
+          await tryApply("ALTER TABLE `" + table + "` ADD COLUMN " + def);
         }
       }
     }
