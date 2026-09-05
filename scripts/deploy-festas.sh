@@ -183,24 +183,47 @@ FULL_SQL="$APP/prisma/schema-full.sql"
 if { [ ! -f "$DIFF_SQL" ] || [ ! -s "$DIFF_SQL" ]; } && { [ ! -f "$FULL_SQL" ] || [ ! -s "$FULL_SQL" ]; }; then
   ok "Sem schema-diff.sql/schema-full.sql no bundle - nada a aplicar."
 else
-  # Localizar o binário node (o PATH do SSH do cPanel nem sempre o inclui).
-  NODE_BIN="$(command -v node 2>/dev/null || true)"
-  if [ -z "$NODE_BIN" ]; then
-    for CAND in /opt/alt/alt-nodejs*/root/usr/bin/node "$HOME"/nodevenv/*/bin/node /usr/local/bin/node /usr/bin/node; do
+  # Localizar um binário node >= 14 (o driver mariadb exige >= 14).
+  # ORDEM: PATH → nodevenv da app (versão certa garantida) → alt-nodejs mais
+  # novo (ordenação por versão, NÃO alfabética - alt-nodejs10 vinha primeiro!)
+  # → caminhos standard.
+  NODE_BIN=""
+  if command -v node >/dev/null 2>&1; then
+    NODE_BIN="$(command -v node)"
+  else
+    for CAND in "$HOME"/nodevenv/*/bin/node "$HOME"/nodevenv/*/*/bin/node; do
       if [ -x "$CAND" ]; then NODE_BIN="$CAND"; break; fi
     done
   fi
-  if [ -n "$NODE_BIN" ]; then
-    say "A sincronizar schema da BD (sync-schema)..."
+  if [ -z "$NODE_BIN" ]; then
+    ALT_NEWEST="$(ls -1dv /opt/alt/alt-nodejs*/root/usr/bin/node 2>/dev/null | tail -1)"
+    [ -n "$ALT_NEWEST" ] && [ -x "$ALT_NEWEST" ] && NODE_BIN="$ALT_NEWEST"
+  fi
+  if [ -z "$NODE_BIN" ]; then
+    for CAND in /usr/local/bin/node /usr/bin/node; do
+      if [ -x "$CAND" ]; then NODE_BIN="$CAND"; break; fi
+    done
+  fi
+  # Rejeitar node < 14 (o sync precisa do driver mariadb)
+  if [ -n "$NODE_BIN" ] && ! "$NODE_BIN" -e 'process.exit(parseInt(process.versions.node, 10) >= 14 ? 0 : 1)' 2>/dev/null; then
+    warn "Node demasiado antigo em $NODE_BIN (mariadb exige >= 14) - a procurar outro..."
+    NODE_BIN=""
+  fi
+
+  if [ -z "$NODE_BIN" ]; then
+    # NUNCA deixar a produção em baixo por causa do sync: avisa e continua.
+    warn "Sem node >= 14 disponível - sync de schema NÃO executado (bundle TEM schema)."
+    warn "Aplica manualmente por uma destas formas:"
+    warn "  a) cPanel -> Setup Node.js App -> Run NPM Script -> db:sync-schema"
+    warn "  b) cd $APP && <node da app, v>=14> scripts/db.js sync-schema"
+    echo "[WARN] sem node >= 14 - sync-schema saltado" >> "$LOG"
+  else
+    say "A sincronizar schema da BD (sync-schema via $NODE_BIN)..."
     if "$NODE_BIN" "$APP/scripts/db.js" sync-schema; then
       ok "Schema sincronizado com o bundle."
     else
       fail "Falha no sync de schema - aplica manualmente: $NODE_BIN $APP/scripts/db.js sync-schema"
     fi
-  else
-    warn "Binário 'node' não encontrado - sync de schema NÃO executado (o bundle TEM diff!)."
-    warn "Aplica manualmente após ativar o Node.js: cd $APP && node scripts/db.js sync-schema"
-    echo "[WARN] node indisponível - sync-schema saltado" >> "$LOG"
   fi
 fi
 
