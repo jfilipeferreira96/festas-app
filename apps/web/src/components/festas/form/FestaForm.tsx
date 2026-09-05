@@ -22,6 +22,7 @@ import {
   buildFestaPayload,
   calcularEstimativaFesta,
   CORES_PREDEFINIDAS,
+  DATA_NASCIMENTO_DEFAULT,
   festaFormSchema,
   type FestaFormData,
   type FestaFormInitialValues,
@@ -244,7 +245,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
         aniversariantesArray.replace(
           filhos.map((filho) => ({
             nome: filho.nome,
-            dataNascimento: filho.dataNascimento ? filho.dataNascimento.split("T")[0] : "",
+            dataNascimento: filho.dataNascimento?.split("T")[0] || DATA_NASCIMENTO_DEFAULT,
           }))
         );
       }

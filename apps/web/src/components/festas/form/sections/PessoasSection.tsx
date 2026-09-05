@@ -7,7 +7,7 @@ import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import DatePicker from "@/components/form/date-picker";
 import { calcIdade, toISODate } from "@/lib/format";
-import type { FestaFormData } from "../festa-form.schema";
+import { DATA_NASCIMENTO_DEFAULT, type FestaFormData } from "../festa-form.schema";
 
 interface PessoasSectionProps {
   aniversariantes: UseFieldArrayReturn<FestaFormData, "aniversariantes", "id">;
@@ -35,13 +35,15 @@ export default function PessoasSection({
           </span>
           <button
             type="button"
-            onClick={() => aniversariantes.append({ nome: "", dataNascimento: "" })}
+            onClick={() => aniversariantes.append({ nome: "", dataNascimento: DATA_NASCIMENTO_DEFAULT })}
             className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
           >
             <Plus size={13} /> Adicionar
           </button>
         </div>
-        {aniversariantes.fields.map((field, index) => (
+        {aniversariantes.fields.map((field, index) => {
+          const dataNascimento = watch(`aniversariantes.${index}.dataNascimento`);
+          return (
           <div key={field.id} className="flex items-end gap-3">
             <div className="w-3/5">
               <InputField
@@ -55,22 +57,18 @@ export default function PessoasSection({
               <DatePicker
                 id={`aniv-data-${field.id}`}
                 placeholder="Data nascimento"
-                defaultDate={field.dataNascimento || undefined}
+                defaultDate={dataNascimento || DATA_NASCIMENTO_DEFAULT}
+                maxDate={hoje}
                 onChange={([date]) => {
                   if (date) {
-                    setValue(`aniversariantes.${index}.dataNascimento`, toISODate(date), { shouldValidate: true });
+                    setValue(`aniversariantes.${index}.dataNascimento`, toISODate(date), { shouldDirty: true });
                   }
                 }}
               />
-              {errors.aniversariantes?.[index]?.dataNascimento && (
-                <p className="mt-1 text-xs text-error-500">
-                  {errors.aniversariantes?.[index]?.dataNascimento?.message}
-                </p>
-              )}
             </div>
-            {field.dataNascimento ? (
+            {dataNascimento ? (
               <span className="text-sm font-bold text-brand-500 whitespace-nowrap py-3">
-                {calcIdade(field.dataNascimento, dataFesta || hoje)} anos
+                {calcIdade(dataNascimento, dataFesta || hoje)} anos
               </span>
             ) : null}
             {aniversariantes.fields.length > 1 && (
@@ -83,7 +81,8 @@ export default function PessoasSection({
               </button>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="space-y-2">

@@ -2,6 +2,10 @@ import { z } from "zod";
 import type { CreateReservaData, Reserva } from "@/lib/api/reservas";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import { calcIdade, isFimDeSemana, toISODate } from "@/lib/format";
+import { DATA_NASCIMENTO_DEFAULT } from "@/components/entradas-livres/form/entrada-livre-form.schema";
+
+/** Data de nascimento por omissão - mesma fonte do form de Entradas Livres. */
+export { DATA_NASCIMENTO_DEFAULT };
 
 export interface FestaFormInitialValues {
   data?: string;
@@ -112,9 +116,11 @@ export function buildFestaDefaults(
   const aniversariantes = reserva?.aniversariantes?.length
     ? reserva.aniversariantes.map((a) => ({
         nome: a.aniversariante.nome,
-        dataNascimento: a.aniversariante.dataNascimento ? a.aniversariante.dataNascimento.split("T")[0] : "",
+        dataNascimento: a.aniversariante.dataNascimento
+          ? a.aniversariante.dataNascimento.split("T")[0]
+          : DATA_NASCIMENTO_DEFAULT,
       }))
-    : [{ nome: "", dataNascimento: "" }];
+    : [{ nome: "", dataNascimento: DATA_NASCIMENTO_DEFAULT }];
 
   return {
     aniversariantes,
