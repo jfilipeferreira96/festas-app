@@ -757,7 +757,9 @@ mkdirSync(join(DEPLOY, "scripts"), { recursive: true });
     outfile: SEED_OUT,
     // mariadb + adapter EXTERNOS: o driver tem requires dinâmicos que partem se
     // bundlados; resolvem-se em runtime a partir de node_modules_deps.
-    external: ["@prisma/client", "@prisma/adapter-mariadb", "mariadb", "better-auth", "better-auth/adapters/prisma", "dotenv"],
+    // dotenv é BUNDLADO (pequeno, sem requires dinâmicos) - assim o seed não
+    // depende de o dotenv existir no node_modules_deps do servidor.
+    external: ["@prisma/client", "@prisma/adapter-mariadb", "mariadb", "better-auth", "better-auth/adapters/prisma"],
     banner: { js: "// seed minimo de producao (cPanel) - auto-gerado" },
     logLevel: "warning",
   });
@@ -828,7 +830,7 @@ if (rustEngines.length > 0) {
 // node_modules do workspace, que está ACIMA de deploy/) mas falha no cPanel
 // com "Cannot find module". Copiamos o pacote + as suas deps de produção
 // (resolvidas com o npm local, respeitando nested node_modules).
-const adapterDeps = ["mariadb", "@prisma/adapter-mariadb"];
+const adapterDeps = ["mariadb", "@prisma/adapter-mariadb", "better-auth"];
 {
   const copyProdClosure = (roots) => {
     const done = new Set();

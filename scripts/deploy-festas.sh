@@ -21,11 +21,12 @@
 #   ✔ MATA todos os processos next-server/Passenger da conta (TERM→KILL)
 #   ✔ extrai o tarball por cima da app
 #   ✔ restaura .env e uploads/ preservados
-#   ✔ SYNC DE SCHEMA: se o bundle trouxer prisma/schema-diff.sql, aplica-o de
-#     forma idempotente (scripts/db.js sync-schema) antes de reiniciar - procura
-#     o binário node em caminhos típicos do cPanel. Sem diff = passo no-op
-#     (não bloqueia o deploy nem depende do node).
 #   ✔ touch tmp/restart.txt (Passenger renasce limpo - só 1 processo)
+#
+#   SYNC DE SCHEMA: MANUAL e idempotente, FORA do deploy:
+#     cPanel -> Setup Node.js App -> Run NPM Script -> db:sync-schema
+#     (cria tabelas/colunas em falta a partir de prisma/schema-full.sql;
+#      nunca apaga dados; pode correr sempre que precisares)
 #   ✔ verifica: 1 processo, NLWP ≤ 15, HTTP 200/307
 #   ✖ em caso de falha → ROLLBACK automático (tarball anterior) se existir
 #
@@ -173,59 +174,10 @@ ok "Extração concluída."
 mkdir -p "$APP/apps/web/public/uploads"
 [ -d "$BACKUP/uploads" ] && cp -a "$BACKUP/uploads/." "$APP/apps/web/public/uploads/" 2>/dev/null && ok "uploads/ preservados."
 
-# ── 6b. SYNC DE SCHEMA (só se o bundle trouxer um diff) ─────────────────────
-# O bundle pode trazer prisma/schema-diff.sql (diff calculado no PC antes de
-# empacotar). scripts/db.js sync-schema aplica-o de forma IDEMPOTENTE (instruções
-# já aplicadas são ignoradas). SEM diff = schema já sincronizado = no-op total
-# (não bloqueia o deploy nem depende do node estar no PATH).
-DIFF_SQL="$APP/prisma/schema-diff.sql"
-FULL_SQL="$APP/prisma/schema-full.sql"
-if { [ ! -f "$DIFF_SQL" ] || [ ! -s "$DIFF_SQL" ]; } && { [ ! -f "$FULL_SQL" ] || [ ! -s "$FULL_SQL" ]; }; then
-  ok "Sem schema-diff.sql/schema-full.sql no bundle - nada a aplicar."
-else
-  # Localizar um binário node >= 14 (o driver mariadb exige >= 14).
-  # ORDEM: PATH → nodevenv da app (versão certa garantida) → alt-nodejs mais
-  # novo (ordenação por versão, NÃO alfabética - alt-nodejs10 vinha primeiro!)
-  # → caminhos standard.
-  NODE_BIN=""
-  if command -v node >/dev/null 2>&1; then
-    NODE_BIN="$(command -v node)"
-  else
-    for CAND in "$HOME"/nodevenv/*/bin/node "$HOME"/nodevenv/*/*/bin/node; do
-      if [ -x "$CAND" ]; then NODE_BIN="$CAND"; break; fi
-    done
-  fi
-  if [ -z "$NODE_BIN" ]; then
-    ALT_NEWEST="$(ls -1dv /opt/alt/alt-nodejs*/root/usr/bin/node 2>/dev/null | tail -1)"
-    [ -n "$ALT_NEWEST" ] && [ -x "$ALT_NEWEST" ] && NODE_BIN="$ALT_NEWEST"
-  fi
-  if [ -z "$NODE_BIN" ]; then
-    for CAND in /usr/local/bin/node /usr/bin/node; do
-      if [ -x "$CAND" ]; then NODE_BIN="$CAND"; break; fi
-    done
-  fi
-  # Rejeitar node < 14 (o sync precisa do driver mariadb)
-  if [ -n "$NODE_BIN" ] && ! "$NODE_BIN" -e 'process.exit(parseInt(process.versions.node, 10) >= 14 ? 0 : 1)' 2>/dev/null; then
-    warn "Node demasiado antigo em $NODE_BIN (mariadb exige >= 14) - a procurar outro..."
-    NODE_BIN=""
-  fi
-
-  if [ -z "$NODE_BIN" ]; then
-    # NUNCA deixar a produção em baixo por causa do sync: avisa e continua.
-    warn "Sem node >= 14 disponível - sync de schema NÃO executado (bundle TEM schema)."
-    warn "Aplica manualmente por uma destas formas:"
-    warn "  a) cPanel -> Setup Node.js App -> Run NPM Script -> db:sync-schema"
-    warn "  b) cd $APP && <node da app, v>=14> scripts/db.js sync-schema"
-    echo "[WARN] sem node >= 14 - sync-schema saltado" >> "$LOG"
-  else
-    say "A sincronizar schema da BD (sync-schema via $NODE_BIN)..."
-    if "$NODE_BIN" "$APP/scripts/db.js" sync-schema; then
-      ok "Schema sincronizado com o bundle."
-    else
-      fail "Falha no sync de schema - aplica manualmente: $NODE_BIN $APP/scripts/db.js sync-schema"
-    fi
-  fi
-fi
+# ── 6b. SCHEMA: o sync é MANUAL (idempotente) ───────────────────────────────
+# cPanel -> Setup Node.js App -> Run NPM Script -> db:sync-schema
+say "Nota: sync de schema é manual/idempotente - Run NPM Script -> db:sync-schema"
+echo "[info] sync de schema manual: npm run db:sync-schema" >> "$LOG"
 
 # ── 7. VALIDAR PRISMA WASM (o fix anti-threads) ────────────────────────────
 PRISMA_DIR="$APP/node_modules_deps/.prisma/client"
