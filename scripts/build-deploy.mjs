@@ -753,13 +753,15 @@ mkdirSync(join(DEPLOY, "scripts"), { recursive: true });
     bundle: true,
     platform: "node",
     format: "cjs",
-    target: "node20",
+    target: "node18",
     outfile: SEED_OUT,
     // mariadb + adapter EXTERNOS: o driver tem requires dinâmicos que partem se
     // bundlados; resolvem-se em runtime a partir de node_modules_deps.
     // dotenv é BUNDLADO (pequeno, sem requires dinâmicos) - assim o seed não
     // depende de o dotenv existir no node_modules_deps do servidor.
-    external: ["@prisma/client", "@prisma/adapter-mariadb", "mariadb", "better-auth", "better-auth/adapters/prisma"],
+    // better-auth BUNDLADO: o dist é ESM-only (index.mjs) e require() a partir
+    // de CJS falha no Node 18 do cPanel - o esbuild converte para CJS inline.
+    external: ["@prisma/client", "@prisma/adapter-mariadb", "mariadb"],
     banner: { js: "// seed minimo de producao (cPanel) - auto-gerado" },
     logLevel: "warning",
   });
