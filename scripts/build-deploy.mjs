@@ -16,6 +16,10 @@
  *        - .env    -> variáveis de PRODUÇÃO
  *        - README-DEPLOY.md -> instruções cPanel
  *   3. valida que a engine Prisma para Linux está presente no bundle.
+ *   3a. gera prisma/schema-diff.sql (diff: BD produção ↔ schema.prisma) para o
+ *       bundle E faz push do schema para a BD de produção (remote-db push prod;
+ *       saltar com --no-schema). O deploy-festas.sh aplica o diff no servidor
+ *       (node scripts/db.js sync-schema, idempotente) se o push do PC falhar.
  *   4. cria deploy.tar.gz com `tar` (formato Unix nativo - extração fiável no
  *      cPanel) E deploy.zip com `archiver` (alternativa, forward-slash).
  *
@@ -60,7 +64,7 @@
  * -----------------------------------------------------------------------------
  */
 
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync, createWriteStream } from "node:fs";
 import { createConnection } from "node:net";
 import { dirname, join, relative, resolve } from "node:path";
@@ -74,6 +78,9 @@ const args = new Set(process.argv.slice(2));
 const DO_BUILD = args.has("--build");
 const DO_ZIP = !args.has("--no-zip");
 const DO_TEST = !args.has("--no-test");
+// Sincronizar o schema com a BD de produção antes de empacotar (default: sim).
+// Saltar com --no-schema (ex.: build de teste sem acesso à BD remota).
+const DO_SCHEMA = !args.has("--no-schema");
 const TEST_PORT = 3999;
 
 const STANDALONE = join(ROOT, "apps", "web", ".next", "standalone");
@@ -458,6 +465,7 @@ writeFileSync(
       scripts: {
         start: "node app.js",
         "db:seed": "node scripts/db.js seed",
+        "db:sync-schema": "node scripts/db.js sync-schema",
         "db:truncate": "node scripts/db.js truncate",
         "db:reset": "node scripts/db.js reset",
         "db:verify": "node scripts/db.js verify",
@@ -685,6 +693,7 @@ Script" da aplicação:
 | Comando | O que faz |
 |---|---|
 | \`npm run db:seed\` | Cria admin + permissões RBAC + config de cacifos (idempotente). |
+| \`npm run db:sync-schema\` | Aplica prisma/schema-diff.sql do bundle (idempotente). O deploy-festas.sh corre-o SEMPRE antes de reiniciar. |
 | \`npm run db:verify\` | Lista todas as tabelas e a contagem de linhas. |
 | \`npm run db:truncate\` | Apaga TODOS os dados (mantém as tabelas). Com \`--keep-auth\` preserva utilizadores. |
 | \`npm run db:reset\` | \`truncate\` + \`seed\` (limpa tudo e recria o admin). |
@@ -707,8 +716,16 @@ tabelas já existem.
 ## Regenerar o bundle
 \`\`\`powershell
 # Na raiz do projeto, em Windows:
-node scripts/build-deploy.mjs --build   # regenera Prisma + build + bundle + zip
+node scripts/build-deploy.mjs --build   # regenera Prisma + build + schema produção + bundle
 \`\`\`
+
+> 🔄 O build sincroniza AUTOMATICAMENTE o schema com a BD de produção -
+> DUPLO MECANISMO: (1) push do PC (\`node scripts/remote-db.mjs push prod\`);
+> (2) o bundle inclui \`prisma/schema-diff.sql\` e o \`deploy-festas.sh\` aplica-o
+> no servidor (\`npm run db:sync-schema\`, idempotente) antes de reiniciar a app.
+> Sem isto, tabelas com colunas novas devolvem 500 ("Unknown column") em produção.
+> Para saltar ambos: \`--no-schema\`. O push do PC requer o IP whitelistado em
+> cPanel → Remote MySQL. Sincronização manual (sem build): \`node scripts/remote-db.mjs push prod\`.
 `;
 writeFileSync(join(DEPLOY, "README-DEPLOY.md"), README);
 ok("README-DEPLOY.md criado.");
@@ -751,6 +768,19 @@ ok("scripts/db.js (launcher de BD) copiado.");
 
 cpSync(join(__dirname, "diagnose.js"), join(DEPLOY, "scripts", "diagnose.js"));
 ok("scripts/diagnose.js (diagnóstico de deployment) copiado.");
+
+// deploy-festas.sh - script de deploy no servidor (Terminal do cPanel).
+// Vai na raiz do bundle com LF garantido: bash falha com CRLF ("$'\r': command not found").
+const deployShSource = join(__dirname, "deploy-festas.sh");
+if (existsSync(deployShSource)) {
+  const shContent = readFileSync(deployShSource, "utf8")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r\n/g, "\n");
+  writeFileSync(join(DEPLOY, "deploy-festas.sh"), shContent, { mode: 0o755 });
+  ok("deploy-festas.sh copiado para a raiz do bundle (LF garantido).");
+} else {
+  console.warn("⚠️  deploy-festas.sh não encontrado. Pulando...");
+}
 
 // 3. VALIDAR DRIVER ADAPTER (mariadb) + COPIAR CLIENT PRISMA ------------------
 // Com `engineType = "client"` no schema.prisma o Prisma compila as queries em
@@ -868,6 +898,94 @@ if (!adapterOk) {
 // 4. TAMANHO DO BUNDLE -------------------------------------------------------
 const size = dirSize(DEPLOY);
 ok(`Tamanho do bundle (descomprimido): ${human(size)}`);
+
+// 4a. GERAR SCHEMA-DIFF.SQL (fallback de sync no servidor) -------------------
+
+const SCHEMA_SRC = join(ROOT, "packages", "db", "prisma", "schema.prisma");
+const DIFF_SQL = join(DEPLOY, "prisma", "schema-diff.sql");
+rmSync(DIFF_SQL, { force: true });
+
+function remoteProdUrlFromEnv() {
+  const envProdPath = join(ROOT, "apps", "web", ".env.production");
+  if (!existsSync(envProdPath)) return null;
+  const m = readFileSync(envProdPath, "utf8").match(/^DATABASE_URL=(.+)$/m);
+  if (!m) return null;
+  const publicHost = process.env.REMOTE_DB_HOST || "185.32.188.42";
+  return m[1]
+    .trim()
+    .replace(/@[^:/]+:\d+/, `@${publicHost}:3306`)
+    .replace(/\/[A-Za-z0-9_]+$/, "/baselandia_prod");
+}
+
+let schemaDiffOk = false;
+if (DO_SCHEMA) {
+  const remoteUrl = remoteProdUrlFromEnv();
+  if (!remoteUrl) {
+    console.warn("⚠️  apps/web/.env.production sem DATABASE_URL - bundle SEM schema-diff.sql.");
+  } else {
+    log("A gerar diff de schema (BD remota de produção ↔ schema.prisma)...");
+    const tmpFrom = join(DEPLOY, ".from-datasource.prisma");
+    writeFileSync(tmpFrom, `datasource db {\n  provider = "mysql"\n  url      = env("SCHEMA_DIFF_URL")\n}\n`);
+    const res = spawnSync(`npx prisma migrate diff --from-schema-datasource "${tmpFrom}" --to-schema-datamodel "${SCHEMA_SRC}" --script`, {
+      cwd: ROOT,
+      encoding: "utf8",
+      shell: true,
+      env: { ...process.env, SCHEMA_DIFF_URL: remoteUrl },
+    });
+    rmSync(tmpFrom, { force: true });
+    const diffSql = typeof res.stdout === "string" ? res.stdout : "";
+    const hasStatements = diffSql.split(/\r?\n/).some((l) => l.trim().length > 0 && !l.trim().startsWith("--"));
+    if (res.status === 0 && hasStatements) {
+      mkdirSync(join(DEPLOY, "prisma"), { recursive: true });
+      writeFileSync(DIFF_SQL, diffSql.endsWith("\n") ? diffSql : diffSql + "\n");
+      schemaDiffOk = true;
+      ok("schema-diff.sql incluído no bundle (aplicado no servidor pelo deploy-festas.sh).");
+    } else if (res.status === 0) {
+      schemaDiffOk = true;
+      ok("BD de produção já sincronizada (diff vazio) - sem schema-diff.sql.");
+    } else {
+      console.warn("⚠️  Não foi possível gerar o diff de schema (BD remota inacessível do PC?).");
+      if (res.stderr && String(res.stderr).trim()) {
+        console.warn(String(res.stderr).trim().split("\n").slice(-2).join("\n"));
+      }
+    }
+  }
+} else {
+  log("Diff de schema saltado (--no-schema).");
+}
+
+// 4b. SINCRONIZAR SCHEMA DE PRODUÇÃO (push a partir do PC) -------------------
+// O bundle X exige o schema de X: se a BD de produção não estiver sincronizada,
+// qualquer findMany em tabelas com colunas novas devolve 500 ("Unknown column").
+// DUPLO MECANISMO "SEMPRE SYNC":
+//   1) Este push do PC (requer IP whitelistado em cPanel → Remote MySQL);
+//   2) Se falhar e existir schema-diff.sql (passo 4a), o deploy-festas.sh
+//      aplica-o no servidor (node scripts/db.js sync-schema) antes de arrancar.
+if (DO_SCHEMA) {
+  log("A sincronizar schema com a BD de PRODUÇÃO (remote-db push prod)...");
+  try {
+    execSync("node scripts/remote-db.mjs push prod", { cwd: ROOT, stdio: "inherit" });
+    ok("Schema de produção sincronizado (push do PC).");
+  } catch {
+    if (schemaDiffOk) {
+      console.warn(
+        "⚠️  Push do PC FALHOU (IP não whitelistado / mudanças destrutivas).",
+        "\n   O bundle inclui prisma/schema-diff.sql → o deploy-festas.sh aplica-o no",
+        "\n   servidor (node scripts/db.js sync-schema) antes de reiniciar a app.",
+      );
+    } else {
+      err(
+        "FALHA ao sincronizar o schema de produção.",
+        "   Possíveis causas:",
+        "   - IP não whitelistado → cPanel → Remote MySQL → adicionar o teu IP (ou salta com --no-schema)",
+        "   - Mudanças destrutivas (drop/rename de colunas) → rever manualmente: node scripts/remote-db.mjs push prod",
+        "   - Sem schema-diff.sql no bundle (BD remota inacessível) → o servidor também não consegue sincronizar.",
+      );
+    }
+  }
+} else {
+  log("Sincronização de schema saltada (--no-schema).");
+}
 
 // 5. EMPACOTAR (TAR.GZ + ZIP) ------------------------------------------------
 if (DO_ZIP) {

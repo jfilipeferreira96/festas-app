@@ -4,13 +4,17 @@
 //
 // Resolve módulos de node_modules_deps (compat. CloudLinux) via NODE_PATH,
 // carrega apps/web/.env e despacha:
-//   seed      → admin + RBAC + cacifos (idempotente)
-//   verify    → tabelas + contagem de linhas
-//   truncate  → apagar TODOS os dados (mantém tabelas) [--keep-auth preserva auth]
-//   reset     → truncate + seed (recria o admin)
+//   seed        → admin + RBAC + cacifos (idempotente)
+//   verify      → tabelas + contagem de linhas
+//   truncate    → apagar TODOS os dados (mantém tabelas) [--keep-auth preserva auth]
+//   reset       → truncate + seed (recria o admin)
+//   sync-schema → aplicar prisma/schema-diff.sql (gerado no PC pelo build-deploy)
+//                 de forma IDEMPOTENTE: instruções já aplicadas são ignoradas.
+//                 É o passo que garante o sync do schema em TODO o deploy.
 //
 // Uso (cPanel, via SSH ou "Run NPM Script"):
 //   node scripts/db.js seed
+//   node scripts/db.js sync-schema
 //   npm run db:verify
 //   npm run db:truncate --keep-auth
 // -----------------------------------------------------------------------------
@@ -139,10 +143,87 @@ async function cmdTruncate(keepAuth) {
   }
 }
 
+// ── sync-schema: aplicar prisma/schema-diff.sql (idempotente) ───────────────
+// O build-deploy.mjs gera o diff (estado real da BD remota ↔ schema.prisma)
+// ANTES de empacotar e inclui-o no bundle. Assim o schema fica sincronizado
+// MESMO quando o push a partir do PC falha (ex.: IP não whitelistado).
+//
+// MySQL errno tolerados ("já aplicado" → skip):
+//   1050 ER_TABLE_EXISTS_ERROR   1054 ER_BAD_FIELD_ERROR (drop já feito)
+//   1060 ER_DUP_FIELDNAME        1061 ER_DUP_KEYNAME
+//   1091 ER_CANT_DROP_FIELD_OR_KEY
+const TOLERATED_ERRNOS = new Set([1050, 1054, 1060, 1061, 1091]);
+
+function splitSqlStatements(sql) {
+  return sql
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*--/.test(line)) // remover comentários do migrate diff
+    .join("\n")
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+async function cmdSyncSchema() {
+  showDb();
+  const diffPath = path.join(appRoot, "prisma", "schema-diff.sql");
+  if (!fs.existsSync(diffPath) || fs.statSync(diffPath).size === 0) {
+    console.log("ℹ️  Sem prisma/schema-diff.sql no bundle - nada a aplicar pelo servidor.");
+    console.log("   (O schema é sincronizado no PC: npm run deploy → remote-db push prod.)");
+    return;
+  }
+
+  const sql = fs.readFileSync(diffPath, "utf8");
+  const statements = splitSqlStatements(sql);
+  if (statements.length === 0) {
+    console.log("✅ Diff vazio - a BD já está sincronizada com o schema.");
+    return;
+  }
+
+  console.warn("⚠️  SYNC DE SCHEMA: a aplicar " + statements.length + " instrução(ões)...\n");
+
+  // Ligação direta via driver mariadb (mesmo adapter do app, já no bundle).
+  const mariadb = require("mariadb");
+  const cfg = mariadbConfigFromUrl(process.env.DATABASE_URL);
+  const conn = await mariadb.createConnection({
+    host: cfg.host,
+    port: cfg.port,
+    user: cfg.user,
+    password: cfg.password,
+    database: cfg.database,
+  });
+
+  let applied = 0;
+  let skipped = 0;
+  try {
+    for (const st of statements) {
+      const label = st.replace(/\s+/g, " ").slice(0, 90);
+      try {
+        await conn.query(st);
+        applied++;
+        console.log("  ok  : " + label);
+      } catch (e) {
+        if (TOLERATED_ERRNOS.has(e.errno)) {
+          skipped++;
+          console.log("  skip: " + label + "  (já aplicado)");
+        } else {
+          console.error("  ERRO: " + label);
+          throw e;
+        }
+      }
+    }
+  } finally {
+    await conn.end();
+  }
+  console.log("\n✅ Schema sincronizado (" + applied + " aplicadas, " + skipped + " já existentes).");
+}
+
 (async () => {
   try {
     if (command === "seed") {
       await cmdSeed();
+    } else if (command === "sync-schema") {
+      await cmdSyncSchema();
     } else if (command === "verify") {
       await cmdVerify();
     } else if (command === "truncate") {
@@ -154,7 +235,7 @@ async function cmdTruncate(keepAuth) {
       await cmdSeed();
     } else {
       console.error("❌ Comando desconhecido: " + command);
-      console.error("   Disponíveis: seed | truncate [--keep-auth] | reset | verify");
+      console.error("   Disponíveis: seed | sync-schema | truncate [--keep-auth] | reset | verify");
       process.exit(1);
     }
   } catch (e) {

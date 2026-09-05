@@ -33,6 +33,16 @@ if (existsSync(ENV_FILE)) {
 //   prod  → DATABASE_URL        (ex.: baselandia_prod)
 //   test  → DATABASE_URL_TEST   (ex.: baselandia_test)
 // Done BEFORE spawning tsx so the chosen DATABASE_URL propagates to the seed.
+
+function describeUrl(url) {
+  try {
+    const u = new URL(url);
+    return `${u.hostname}:${u.port || 3306}/${u.pathname.replace(/^\//, "")}`;
+  } catch {
+    return "(url inválida)";
+  }
+}
+
 function resolveTarget() {
   const arg = process.argv.find((a) => a.startsWith("--target="));
   const target = (arg ? arg.split("=")[1] : process.env.DB_TARGET || "prod").toLowerCase();
@@ -42,9 +52,11 @@ function resolveTarget() {
       process.exit(1);
     }
     process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
-    console.log("🎯 BD alvo: test (DATABASE_URL_TEST)\n");
+    console.log(`🎯 BD alvo: test (DATABASE_URL_TEST) → ${describeUrl(process.env.DATABASE_URL)}\n`);
   } else {
-    console.log("🎯 BD alvo: prod (DATABASE_URL)\n");
+    console.log(`🎯 BD alvo: prod = variável DATABASE_URL → ${describeUrl(process.env.DATABASE_URL)}`);
+    console.log("   ⚠️  Isto é o que estiver no apps/web/.env (pode ser LOCAL!).");
+    console.log("   Para a BD remota de produção usa: node scripts/remote-db.mjs <cmd> prod\n");
   }
 }
 resolveTarget();

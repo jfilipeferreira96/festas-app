@@ -19,9 +19,11 @@
 #   ✔ snapshot de métricas antes (processos/threads) → logs/deploy.log
 #   ✔ backup de .env + uploads/ + tarball anterior (rotação de 3)
 #   ✔ MATA todos os processos next-server/Passenger da conta (TERM→KILL)
-#   ✔ limpa artefactos da versão anterior (.next, node_modules_deps, packages)
-#   ✔ extrai o tarball para uma app limpa (sem ficheiros órfãos)
+#   ✔ extrai o tarball por cima da app
 #   ✔ restaura .env e uploads/ preservados
+#   ✔ SYNC DE SCHEMA (SEMPRE): aplica prisma/schema-diff.sql do bundle de forma
+#     idempotente (scripts/db.js sync-schema) - garante que a BD acompanha o
+#     código mesmo quando o push a partir do PC falhou
 #   ✔ touch tmp/restart.txt (Passenger renasce limpo - só 1 processo)
 #   ✔ verifica: 1 processo, NLWP ≤ 15, HTTP 200/307
 #   ✖ em caso de falha → ROLLBACK automático (tarball anterior) se existir
@@ -148,11 +150,7 @@ done
 # ── 4. MATAR TUDO (o passo que o Restart do cPanel NÃO faz) ─────────────────
 kill_app
 
-# ── 4b. LIMPAR ARTEFACTOS DA VERSÃO ANTERIOR (o tar extrai por cima) ────────
-# Sem este passo, ficheiros do deploy anterior que não existam no novo bundle
-# ficam no disco: rotas/API apagadas continuam a responder (.next/server),
-# chunks JS/CSS antigos acumulam, pacotes órfãos em node_modules_deps.
-# .env e uploads/ NÃO se tocam (preservados no passo 3, restaurados no 6).
+# ── 4b. LIMPAR ARTEFACTOS DA VERSÃO ANTERIOR ────────────────────────────────
 say "A limpar artefactos da versão anterior (.next, node_modules_deps, packages, src)..."
 rm -rf "$APP/apps/web/.next" \
        "$APP/node_modules_deps" \
@@ -166,10 +164,24 @@ say "A extrair novo bundle para $APP ..."
 extract_to_app "$TARBALL"
 ok "Extração concluída."
 
+# sincronizar este script com a cópia do bundle (LF garantido, sem CRLF)
+[ -f "$APP/deploy-festas.sh" ] && cp -f "$APP/deploy-festas.sh" "$HOME/deploy-festas.sh" 2>/dev/null
+
 # ── 6. RESTAURAR .env + uploads PRESERVADOS ────────────────────────────────
 [ -f "$BACKUP/apps-web.env" ] && cp "$BACKUP/apps-web.env" "$APP/apps/web/.env" && ok ".env de produção preservado."
 mkdir -p "$APP/apps/web/public/uploads"
 [ -d "$BACKUP/uploads" ] && cp -a "$BACKUP/uploads/." "$APP/apps/web/public/uploads/" 2>/dev/null && ok "uploads/ preservados."
+
+# ── 6b. SYNC DE SCHEMA (SEMPRE - obriga a BD a acompanhar o bundle) ─────────
+# O bundle traz prisma/schema-diff.sql (diff calculado no PC antes de empacotar).
+# scripts/db.js sync-schema aplica-o de forma IDEMPOTENTE (instruções já
+# aplicadas são ignoradas). Se o push do PC já sincronizou, este passo é no-op.
+say "A sincronizar schema da BD (sync-schema)..."
+if node "$APP/scripts/db.js" sync-schema; then
+  ok "Schema sincronizado com o bundle."
+else
+  fail "Falha no sync de schema - aplica manualmente: node $APP/scripts/db.js sync-schema"
+fi
 
 # ── 7. VALIDAR PRISMA WASM (o fix anti-threads) ────────────────────────────
 PRISMA_DIR="$APP/node_modules_deps/.prisma/client"
