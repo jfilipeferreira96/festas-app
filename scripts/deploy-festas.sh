@@ -21,9 +21,10 @@
 #   ✔ MATA todos os processos next-server/Passenger da conta (TERM→KILL)
 #   ✔ extrai o tarball por cima da app
 #   ✔ restaura .env e uploads/ preservados
-#   ✔ SYNC DE SCHEMA (SEMPRE): aplica prisma/schema-diff.sql do bundle de forma
-#     idempotente (scripts/db.js sync-schema) - garante que a BD acompanha o
-#     código mesmo quando o push a partir do PC falhou
+#   ✔ SYNC DE SCHEMA: se o bundle trouxer prisma/schema-diff.sql, aplica-o de
+#     forma idempotente (scripts/db.js sync-schema) antes de reiniciar - procura
+#     o binário node em caminhos típicos do cPanel. Sem diff = passo no-op
+#     (não bloqueia o deploy nem depende do node).
 #   ✔ touch tmp/restart.txt (Passenger renasce limpo - só 1 processo)
 #   ✔ verifica: 1 processo, NLWP ≤ 15, HTTP 200/307
 #   ✖ em caso de falha → ROLLBACK automático (tarball anterior) se existir
@@ -172,15 +173,34 @@ ok "Extração concluída."
 mkdir -p "$APP/apps/web/public/uploads"
 [ -d "$BACKUP/uploads" ] && cp -a "$BACKUP/uploads/." "$APP/apps/web/public/uploads/" 2>/dev/null && ok "uploads/ preservados."
 
-# ── 6b. SYNC DE SCHEMA (SEMPRE - obriga a BD a acompanhar o bundle) ─────────
-# O bundle traz prisma/schema-diff.sql (diff calculado no PC antes de empacotar).
-# scripts/db.js sync-schema aplica-o de forma IDEMPOTENTE (instruções já
-# aplicadas são ignoradas). Se o push do PC já sincronizou, este passo é no-op.
-say "A sincronizar schema da BD (sync-schema)..."
-if node "$APP/scripts/db.js" sync-schema; then
-  ok "Schema sincronizado com o bundle."
+# ── 6b. SYNC DE SCHEMA (só se o bundle trouxer um diff) ─────────────────────
+# O bundle pode trazer prisma/schema-diff.sql (diff calculado no PC antes de
+# empacotar). scripts/db.js sync-schema aplica-o de forma IDEMPOTENTE (instruções
+# já aplicadas são ignoradas). SEM diff = schema já sincronizado = no-op total
+# (não bloqueia o deploy nem depende do node estar no PATH).
+DIFF_SQL="$APP/prisma/schema-diff.sql"
+if [ ! -f "$DIFF_SQL" ] || [ ! -s "$DIFF_SQL" ]; then
+  ok "Sem schema-diff.sql no bundle - schema já sincronizado (nada a aplicar)."
 else
-  fail "Falha no sync de schema - aplica manualmente: node $APP/scripts/db.js sync-schema"
+  # Localizar o binário node (o PATH do SSH do cPanel nem sempre o inclui).
+  NODE_BIN="$(command -v node 2>/dev/null || true)"
+  if [ -z "$NODE_BIN" ]; then
+    for CAND in /opt/alt/alt-nodejs*/root/usr/bin/node "$HOME"/nodevenv/*/bin/node /usr/local/bin/node /usr/bin/node; do
+      if [ -x "$CAND" ]; then NODE_BIN="$CAND"; break; fi
+    done
+  fi
+  if [ -n "$NODE_BIN" ]; then
+    say "A sincronizar schema da BD (sync-schema)..."
+    if "$NODE_BIN" "$APP/scripts/db.js" sync-schema; then
+      ok "Schema sincronizado com o bundle."
+    else
+      fail "Falha no sync de schema - aplica manualmente: $NODE_BIN $APP/scripts/db.js sync-schema"
+    fi
+  else
+    warn "Binário 'node' não encontrado - sync de schema NÃO executado (o bundle TEM diff!)."
+    warn "Aplica manualmente após ativar o Node.js: cd $APP && node scripts/db.js sync-schema"
+    echo "[WARN] node indisponível - sync-schema saltado" >> "$LOG"
+  fi
 fi
 
 # ── 7. VALIDAR PRISMA WASM (o fix anti-threads) ────────────────────────────
