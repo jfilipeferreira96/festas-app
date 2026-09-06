@@ -330,10 +330,18 @@ function TimerSection({ inicioEm, duracaoMinutos, now }: { inicioEm: string; dur
 // ── Detail Row ──────────────────────────────────────────────────
 function DetailRow({ label, value, icon, bold, accent }: { label: string; value: string; icon?: React.ReactNode; bold?: boolean; accent?: boolean }) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50">
-      {icon && <span className="text-text-muted">{icon}</span>}
-      <span className="text-xs font-medium text-text-muted w-28 shrink-0">{label}</span>
-      <span className={`text-sm ${bold ? "font-bold text-text-primary" : accent ? "font-medium text-accent-red-600" : "font-medium text-text-primary"}`}>
+    <div className="grid grid-cols-[1.25rem_8.5rem_1fr] items-baseline gap-x-2 px-3 py-2.5 rounded-lg bg-gray-50">
+      {/* Slot fixo do ícone: linhas sem ícone ficam alinhadas com as que têm */}
+      <span className="flex justify-center self-center text-text-muted">{icon}</span>
+      <span
+        className="text-xs font-medium text-text-muted whitespace-nowrap overflow-hidden text-ellipsis"
+        title={label}
+      >
+        {label}
+      </span>
+      <span
+        className={`text-sm min-w-0 break-words ${bold ? "font-bold text-text-primary" : accent ? "font-medium text-accent-red-600" : "font-medium text-text-primary"}`}
+      >
         {value}
       </span>
     </div>

@@ -636,10 +636,16 @@ function Section({ title, icon, children, action }: { title: string; icon: React
 // ── Detail Row ─────────────────────────────────────────────────────
 function DetailRow({ icon, label, value }: { icon?: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2">
-      {icon && <span className="text-text-muted shrink-0">{icon}</span>}
-      <span className="text-xs text-text-muted w-24 shrink-0">{label}:</span>
-      <span className="text-sm text-text-primary">{value}</span>
+    <div className="grid grid-cols-[1.25rem_7.5rem_1fr] items-baseline gap-x-2">
+      {/* Slot fixo do ícone: linhas sem ícone ficam alinhadas com as que têm */}
+      <span className="flex justify-center self-center text-text-muted">{icon}</span>
+      <span
+        className="text-xs text-text-muted whitespace-nowrap overflow-hidden text-ellipsis"
+        title={label}
+      >
+        {label}:
+      </span>
+      <span className="text-sm text-text-primary min-w-0 break-words">{value}</span>
     </div>
   );
 }
