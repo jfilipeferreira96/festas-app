@@ -239,16 +239,18 @@ export const cacifoService = {
   },
 
   /**
-   * Pré-reserva N cacifos para uma reserva, marcando como RESERVADO
-   * com criancas = "Por preencher". Não faz throw se faltarem cacifos.
+   * Pré-reserva N cacifos para uma reserva, marcando como RESERVADO.
+   * `nome` preenche o cacifo (ex.: nome do aniversariante); sem nome fica
+   * "Por preencher". Não faz throw se faltarem cacifos.
    */
-  async preReservarCacifos(reservaId: string, quantidade: number) {
+  async preReservarCacifos(reservaId: string, quantidade: number, nome?: string) {
     const livres = await prisma.cacifo.findMany({
       where: { estado: "LIVRE" },
       orderBy: { numero: "asc" },
       take: quantidade,
     });
 
+    const etiqueta = nome?.trim() || "Por preencher";
     const reservados = await Promise.all(
       livres.map((cacifo) =>
         prisma.cacifo.update({
@@ -256,7 +258,7 @@ export const cacifoService = {
           data: {
             estado: "RESERVADO",
             reservaId,
-            criancas: "Por preencher",
+            criancas: etiqueta,
           },
         })
       )

@@ -38,7 +38,13 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
   const previsaoCriancas = watch("previsaoCriancas");
   const { grouped, ungrouped } = useMemo(() => groupBySubcategoria(extraItems), [extraItems]);
 
-  const numPessoas = Math.max(numCriancasConfirmadas ?? previsaoCriancas ?? 1, 1);
+  // Inputs numéricos vazios chegam como NaN - tratar antes de multiplicar
+  const basePessoas = Number.isFinite(numCriancasConfirmadas)
+    ? (numCriancasConfirmadas as number)
+    : Number.isFinite(previsaoCriancas)
+      ? (previsaoCriancas as number)
+      : 1;
+  const numPessoas = Math.max(basePessoas, 1);
 
   const totalExtras = useMemo(
     () =>

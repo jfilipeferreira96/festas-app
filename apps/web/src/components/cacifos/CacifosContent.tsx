@@ -99,20 +99,29 @@ export default function CacifosContent() {
   const preview = useMemo(() => {
     const map = new Map<string, { id: string; nome: string; horario: string }>();
     if (!isFutura || !cacifos) return map;
-    // Pool = todos os cacifos (no dia futuro todos estarão livres; o estado
-    // atual é lógica de hoje e não deve limitar o planeamento).
-    const livres = [...cacifos]
+    // Pré-reservas reais (RESERVADO, criadas com a festa) já são renderizadas
+    // pelo estado verdadeiro da BD - o preview só planeia o que AINDA FALTA
+    // para festas sem cacifos suficientes (ex.: criadas antes da pré-reserva
+    // automática). Pool = apenas cacifos LIVRE, para nunca colidir com
+    // reservas reais de outras festas.
+    const livres = cacifos
+      .filter((c) => c.estado === "LIVRE")
       .sort((a, b) => a.numero - b.numero)
       .map((c) => c.id);
     const porHorario = [...festas].sort((a, b) => a.horario.localeCompare(b.horario));
     for (const festa of porHorario) {
       const alvo =
         festa.numCriancasConfirmadas || festa.numCriancas || festa.previsaoCriancas || 0;
+      const jaReservados = cacifos.filter(
+        (c) => c.reservaId === festa.id && c.estado !== "LIVRE"
+      ).length;
+      const faltam = alvo - jaReservados;
+      if (faltam <= 0) continue; // já totalmente pré-reservada - nada a planear
       const nome =
         festa.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") ||
         festa.cliente?.nome ||
         "Festa";
-      for (let i = 0; i < alvo; i++) {
+      for (let i = 0; i < faltam; i++) {
         const cacifoId = livres.shift();
         if (!cacifoId) break; // pool esgotado - capacidade do dia excedida
         map.set(cacifoId, { id: festa.id, nome, horario: festa.horario });
@@ -121,11 +130,17 @@ export default function CacifosContent() {
     return map;
   }, [isFutura, cacifos, festas]);
 
-  // Cacifos a renderizar na grelha (filtro por festa de datas futuras é cliente).
+  // Cacifos a renderizar na grelha (em datas futuras o filtro por festa inclui
+  // tanto as pré-reservas reais como o planeamento do preview).
   const cacifosVisiveis = useMemo(() => {
-    if (!isFutura || !cacifos) return cacifos ?? [];
-    if (!filtroFesta) return cacifos;
-    return cacifos.filter((c) => preview.get(c.id)?.id === filtroFesta);
+    if (!cacifos) return [];
+    if (isFutura) {
+      if (!filtroFesta) return cacifos;
+      return cacifos.filter(
+        (c) => c.reservaId === filtroFesta || preview.get(c.id)?.id === filtroFesta
+      );
+    }
+    return cacifos;
   }, [filtroFesta, isFutura, cacifos, preview]);
   const { data: contadores } = useCacifoContadores();
   const libertar = useLibertar();
@@ -532,16 +547,15 @@ export default function CacifosContent() {
       ) : cacifos && cacifos.length > 0 ? (
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2.5">
           {cacifosVisiveis.map((cacifo) => {
-            // Vista de planeamento: ignora o estado atual (lógica de hoje) -
-            // no dia futuro todos os cacifos estarão livres; mostra apenas o planeado.
-            const estado = isFutura ? "LIVRE" : cacifo.estado;
+            // Pré-reservas são materializadas na BD na criação da festa, logo o
+            // estado real vale tanto para hoje como para datas futuras.
+            const estado = cacifo.estado;
             const style = ESTADO_STYLES[estado] ?? {
               base: "bg-gray-50 border-gray-200 text-gray-500",
               hover: "hover:bg-gray-100 hover:shadow-md hover:scale-[1.04]",
               icon: "text-gray-400",
             };
             const porPreencher =
-              !isFutura &&
               estado === "RESERVADO" &&
               (!cacifo.criancas || !cacifo.criancas.trim() || cacifo.criancas === "Por preencher");
             // Preview "Planeado" - só existe em datas futuras.
@@ -586,23 +600,23 @@ export default function CacifosContent() {
                     Por preencher
                   </span>
                 )}
-                {!isFutura && estado === "OCUPADO" && cacifo.criancas && (
+                {estado === "OCUPADO" && cacifo.criancas && (
                   <span className="text-[11px] leading-tight text-center mt-0.5 max-w-[95%] truncate font-medium">
                     {cacifo.criancas}
                   </span>
                 )}
-                {!isFutura && cacifo.reserva && !porPreencher && (
+                {cacifo.reserva && !porPreencher && (
                   <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
                     {cacifo.reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || cacifo.reserva.cliente?.nome || ""}
                   </span>
                 )}
-                {!isFutura && !cacifo.reserva && estado === "OCUPADO" && (
+                {!cacifo.reserva && estado === "OCUPADO" && (
                   <span className="text-[10px] leading-tight text-center mt-0.5 max-w-[95%] truncate opacity-70">
                     Entrada Livre
                   </span>
                 )}
                 {/* Indicador Festa vs Entrada Livre */}
-                {!isFutura && estado === "OCUPADO" && (
+                {estado === "OCUPADO" && (
                   <span className={`absolute top-1 right-1 px-1 py-0.5 rounded text-[9px] font-bold leading-none ${
                     cacifo.reserva
                       ? "bg-accent-red-100 text-accent-red-600"

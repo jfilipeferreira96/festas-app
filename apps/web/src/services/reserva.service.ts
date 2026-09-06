@@ -515,6 +515,17 @@ export const reservaService = {
 
     await syncMenuFromExtra(created.id, data.menuId);
 
+    // ── Pré-reserva de cacifos: reserva automaticamente N cacifos para o dia
+    // da festa (N = confirmadas ?? previstas, igual ao top-up do iniciar()),
+    // etiquetados com o nome do aniversariante. A equipa de cacifos depois só
+    // preenche no dia.
+    const alvoCacifos =
+      created.numCriancasConfirmadas || created.numCriancas || created.previsaoCriancas || 0;
+    if (alvoCacifos > 0) {
+      const nomeCrianca = created.aniversariantes?.[0]?.aniversariante?.nome;
+      await cacifoService.preReservarCacifos(created.id, alvoCacifos, nomeCrianca);
+    }
+
     return created;
   },
 
@@ -677,6 +688,12 @@ export const reservaService = {
       throw new Error("INVALID_STATUS");
     }
 
+    // Cancelar liberta os cacifos pré-reservados/ocupados da festa - sem isto
+    // ficariam presos em RESERVADO (a FK não limpa o estado).
+    if (novoEstado === "CANCELADA") {
+      await cacifoService.libertarCacifosDaReserva(id);
+    }
+
     return prisma.reserva.update({
       where: { id },
       data: { estado: novoEstado as "RESERVA" | "CONFIRMADO" | "EM_CURSO" | "CONCLUIDA" | "CANCELADA" },
@@ -734,6 +751,10 @@ export const reservaService = {
     const reserva = await this.getById(id);
     if (!reserva) throw new Error("NOT_FOUND");
 
+    // Libertar cacifos ANTES de apagar: a FK (SetNull) só limpa o reservaId,
+    // o estado RESERVADO ficaria órfão para sempre.
+    await cacifoService.libertarCacifosDaReserva(id);
+
     await prisma.reservaAniversariante.deleteMany({ where: { reservaId: id } });
     await prisma.reservaExtra.deleteMany({ where: { reservaId: id } });
     await prisma.reservaMonitor.deleteMany({ where: { reservaId: id } });
@@ -787,7 +808,12 @@ export const reservaService = {
     const alvoCacifos =
       atualizada.numCriancasConfirmadas || atualizada.numCriancas || atualizada.previsaoCriancas || 0;
     if (alvoCacifos > 0 && atualizada.cacifos.length < alvoCacifos) {
-      await cacifoService.preReservarCacifos(id, alvoCacifos - atualizada.cacifos.length);
+      const nomeCrianca = atualizada.aniversariantes?.[0]?.aniversariante?.nome;
+      await cacifoService.preReservarCacifos(
+        id,
+        alvoCacifos - atualizada.cacifos.length,
+        nomeCrianca
+      );
     }
 
     return this.getById(id);
