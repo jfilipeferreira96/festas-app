@@ -32,6 +32,9 @@ const METODOS_PAGAMENTO = ["DINHEIRO", "MULTIBANCO", "MBWAY", "TRANSFERENCIA", "
 const TIPOS_BOLO = ["PAIS_TRAZEM", "A_DECIDIR", "NOSSO_1KG", "NOSSO_2KG", "BOLO_ARTISTICO"] as const;
 const CAUCOES = ["NAO_PAGA", "PAGA", "PAGA_NO_DIA"] as const;
 
+/** Número opcional tolerante: "" / NaN (valueAsNumber em input vazio) → undefined. */
+const numeroOpcional = (min = 0) => z.number().min(min).optional().catch(undefined);
+
 export const festaFormSchema = z.object({
   aniversariantes: z.array(aniversarianteSchema).min(1, "Indique pelo menos um aniversariante"),
   encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
@@ -50,9 +53,10 @@ export const festaFormSchema = z.object({
   menuId: z.string(),
   bolo: z.enum(TIPOS_BOLO).optional(),
   boloTema: z.string(),
-  boloQuantidade: z.number().min(0).optional(),
+  // Inputs numéricos vazios chegam como NaN (valueAsNumber) → normalizar para undefined
+  boloQuantidade: numeroOpcional(0),
   previsaoCriancas: z.number().min(1, "Mínimo 1 criança").max(100, "Máximo 100 crianças"),
-  numCriancasConfirmadas: z.number().min(0).optional(),
+  numCriancasConfirmadas: numeroOpcional(0),
   extrasIds: z.array(z.string()),
   extrasTexto: z.record(z.string(), z.string()),
   extrasQuantidades: z.record(z.string(), z.number()),
@@ -81,7 +85,7 @@ export const festaFormSchema = z.object({
     .optional(),
   pago: z.boolean().optional(),
   caucao: z.enum(CAUCOES).optional(),
-  valorCaucao: z.number().min(0).optional(),
+  valorCaucao: numeroOpcional(0),
 });
 
 export type FestaFormData = z.infer<typeof festaFormSchema>;

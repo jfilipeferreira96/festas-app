@@ -274,10 +274,32 @@ describe("Reserva Service", () => {
       expect(found).toBeNull();
     });
 
-    it("should throw CANNOT_DELETE_IN_PROGRESS for EM_CURSO reserva", async () => {
-      await expect(
-        reservaService.delete(TEST_IDS.RESERVA_EM_CURSO)
-      ).rejects.toThrow("CANNOT_DELETE_IN_PROGRESS");
+    it("should allow deleting a reserva even if EM_CURSO (com ledger em cascata)", async () => {
+      // Reserva própria para não afetar a do seed partilhado
+      const agora = new Date();
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          id: "test-delete-em-curso",
+          data: agora,
+          horario: "12:00",
+          duracaoMinutos: 90,
+          numCriancas: 5,
+          estado: "EM_CURSO",
+          inicioEm: agora,
+          fimPrevisto: new Date(agora.getTime() + 90 * 60_000),
+          valorTotal: 100,
+          pago: true,
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+          pagamentos: { create: [{ valor: 100, metodo: "DINHEIRO" }] },
+        },
+      });
+
+      await expect(reservaService.delete(reserva.id)).resolves.toBeDefined();
+
+      // Ledger removido em cascata
+      const ledger = await testPrisma.pagamento.findMany({ where: { reservaId: reserva.id } });
+      expect(ledger).toHaveLength(0);
     });
   });
 

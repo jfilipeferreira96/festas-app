@@ -5,6 +5,7 @@ import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCh
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
+import { useToast } from "@/hooks/use-toast";
 import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva, useToggleReservaExtra } from "@/hooks/use-reservas";
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
@@ -145,6 +146,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   // Slots do dia (para slots vazios) - só quando há dia único
   const { data: slotsDia } = useSlotsDia(diaUnico ?? "");
   // Definições estáticas de slots (para label do slot na coluna Data/Hora)
+  const toast = useToast();
   const { data: slotsHorario } = useSlotsHorario();
   const deleteReserva = useDeleteReserva();
   const updateStatus = useUpdateReservaStatus();
@@ -202,9 +204,15 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   }, []);
 
   const confirmDelete = useCallback(async () => {
-    await deleteReserva.mutateAsync(deleteModal.id);
-    setDeleteModal({ isOpen: false, id: "" });
-  }, [deleteReserva, deleteModal.id]);
+    try {
+      await deleteReserva.mutateAsync(deleteModal.id);
+      setDeleteModal({ isOpen: false, id: "" });
+      toast.success("Festa eliminada com sucesso.");
+    } catch (err) {
+      // Ex.: CANNOT_DELETE_IN_PROGRESS - mostra mensagem da API em toast
+      toast.handleApiError(err, "Erro ao eliminar a festa.");
+    }
+  }, [deleteReserva, deleteModal.id, toast]);
 
   const handleFormClose = useCallback(() => {
     setShowForm(false);

@@ -732,7 +732,7 @@ export const reservaService = {
 
   async delete(id: string) {
     const reserva = await this.getById(id);
-    if (reserva.estado === "EM_CURSO") throw new Error("CANNOT_DELETE_IN_PROGRESS");
+    if (!reserva) throw new Error("NOT_FOUND");
 
     await prisma.reservaAniversariante.deleteMany({ where: { reservaId: id } });
     await prisma.reservaExtra.deleteMany({ where: { reservaId: id } });
