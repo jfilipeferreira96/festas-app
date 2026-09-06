@@ -149,11 +149,13 @@ describe("Relatório Service", () => {
           numCriancas: 8,
           estado: "CONCLUIDA",
           pago: true,
-          valorTotal: 150, // total acordado; 100 recebido no pag.1 + 50 no pag.2
-          metodoPagamento: "DINHEIRO",
-          valorPago: 100,
-          metodoPagamento2: "MBWAY",
-          valorPago2: 50,
+          valorTotal: 150,
+          pagamentos: {
+            create: [
+              { valor: 100, metodo: "DINHEIRO" },
+              { valor: 50, metodo: "MBWAY" },
+            ],
+          },
           clienteId: "test-cliente-001",
           localId: "test-local-001",
         },
@@ -181,8 +183,7 @@ describe("Relatório Service", () => {
           numCriancas: 10,
           estado: "CONCLUIDA",
           pago: true,
-          metodoPagamento: "DINHEIRO",
-          valorPago: 100,
+          pagamentos: { create: [{ valor: 100, metodo: "DINHEIRO" }] },
           caucao: "PAGA",
           valorCaucao: 40,
           clienteId: "test-cliente-001",
@@ -214,8 +215,7 @@ describe("Relatório Service", () => {
           numCriancas: 10,
           estado: "CONCLUIDA",
           pago: true,
-          metodoPagamento: "MULTIBANCO",
-          valorPago: 100,
+          pagamentos: { create: [{ valor: 100, metodo: "MULTIBANCO" }] },
           custoExcesso: 15,
           pagoExcesso: true,
           clienteId: "test-cliente-001",
@@ -265,9 +265,9 @@ describe("Relatório Service", () => {
       expect(redefinicoes?.valorMultibanco).toBe(180);
     });
 
-    it("usa o método da reserva quando o ajuste não tem metodoPagamento", () => {
+    it("usa o método principal (1º pagamento) da reserva quando o ajuste não tem metodoPagamento", () => {
       const secao = relatorioService.calcularAjustes([
-        mkAjuste({ tipo: "ACRESCIMO", valor: 7, reserva: { metodoPagamento: "TRANSFERENCIA" } }),
+        mkAjuste({ tipo: "ACRESCIMO", valor: 7, reserva: { pagamentos: [{ metodo: "TRANSFERENCIA" }] } }),
       ]);
 
       const acrescimos = secao.linhas.find((l) => l.descricao === "Acréscimos cobrados");

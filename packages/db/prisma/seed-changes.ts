@@ -16,7 +16,6 @@
  * Correr: npm run db:seed:changes
  */
 
-import { PrismaClient } from "@prisma/client";
 import { config } from "dotenv";
 import { createPrismaClient } from "../src/mariadb-adapter";
 
@@ -42,20 +41,20 @@ async function main() {
   // ─── BaseCobranca: marcar extras por pessoa em BDs já semeadas ───
   await prisma.extra.updateMany({
     where: { id: { in: ["extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
-    data: { baseCobranca: "POR_PESSOA" },
-  });
+    data: { baseCobranca: "POR_PESSOA" }
+      });
 
   // ─── Dependências mínimas (upsert - funciona com ou sem seed-dev) ───
   await prisma.cliente.upsert({
     where: { id: "cliente-v9-001" },
     update: {},
-    create: { id: "cliente-v9-001", nome: "Cliente Demo V9", telefone: "900000000" },
-  });
+    create: { id: "cliente-v9-001", nome: "Cliente Demo V9", telefone: "900000000" }
+      });
   await prisma.local.upsert({
     where: { id: "local-v9-001" },
     update: {},
-    create: { id: "local-v9-001", nome: "Sala Demo V9" },
-  });
+    create: { id: "local-v9-001", nome: "Sala Demo V9" }
+      });
   await prisma.extra.upsert({
     where: { id: "extra-v9-lanche" },
     update: {},
@@ -64,14 +63,14 @@ async function main() {
       nome: "Pipocas Extra V9",
       precoUnitario: 2.5,
       categoria: "EXTRA",
-      subcategoria: "Extras ao lanche",
-    },
-  });
+      subcategoria: "Extras ao lanche"
+      }
+      });
   await prisma.extra.upsert({
     where: { id: "extra-v9-normal" },
     update: {},
-    create: { id: "extra-v9-normal", nome: "Palhaçada V9", precoUnitario: 40.0, categoria: "EXTRA" },
-  });
+    create: { id: "extra-v9-normal", nome: "Palhaçada V9", precoUnitario: 40.0, categoria: "EXTRA" }
+      });
 
   // ═══════════════════════════════════════════════════════════
   // 1) Festa EM_CURSO hoje NÃO PAGA
@@ -85,8 +84,8 @@ async function main() {
       inicioEm: v9aInicio,
       fimPrevisto: addMin(v9aInicio, 135),
       fimReal: null,
-      pago: false,
-    },
+      pago: false
+      },
     create: {
       id: "reserva-v9-001",
       data: hoje,
@@ -102,24 +101,22 @@ async function main() {
       observacoesLesoes: "Tiago tem braceira no braço esquerdo - evitar piscina de bolas.",
       notasCacifos: "Cacifos 20 e 21: alergia a glúten (separar bolo). Cacifo 22: meias em falta.",
       valorTotal: 0,
-      metodoPagamento: "DINHEIRO",
-      valorPago: 0,
       pago: false,
       clienteId: "cliente-v9-001",
-      localId: "local-v9-001",
-    },
-  });
+      localId: "local-v9-001"
+      }
+      });
   // Extras: um cumprido, outro não (demo da coluna com checks)
   await prisma.reservaExtra.upsert({
     where: { id: "rext-v9-001-1" },
     update: {},
-    create: { id: "rext-v9-001-1", reservaId: "reserva-v9-001", extraId: "extra-v9-normal", quantidade: 1, concluido: true },
-  });
+    create: { id: "rext-v9-001-1", reservaId: "reserva-v9-001", extraId: "extra-v9-normal", quantidade: 1, concluido: true }
+      });
   await prisma.reservaExtra.upsert({
     where: { id: "rext-v9-001-2" },
     update: {},
-    create: { id: "rext-v9-001-2", reservaId: "reserva-v9-001", extraId: "extra-v9-lanche", quantidade: 12, concluido: false },
-  });
+    create: { id: "rext-v9-001-2", reservaId: "reserva-v9-001", extraId: "extra-v9-lanche", quantidade: 12, concluido: false }
+      });
 
   // ═══════════════════════════════════════════════════════════
   // 2) Festa EM_CURSO hoje EXCEDIDA (já passou o fimPrevisto)
@@ -132,8 +129,8 @@ async function main() {
       estado: "EM_CURSO",
       inicioEm: v9bInicio,
       fimPrevisto: addMin(v9bInicio, 135),
-      fimReal: null,
-    },
+      fimReal: null
+      },
     create: {
       id: "reserva-v9-002",
       data: hoje,
@@ -148,18 +145,16 @@ async function main() {
       observacoesLesoes: "Sem lesões registadas.",
       notasCacifos: "Cacifos 30-32: saída apenas com os pais.",
       valorTotal: 150,
-      metodoPagamento: "MBWAY",
-      valorPago: 150,
       pago: true,
       clienteId: "cliente-v9-001",
-      localId: "local-v9-001",
-    },
-  });
+      localId: "local-v9-001"
+      }
+      });
   await prisma.reservaExtra.upsert({
     where: { id: "rext-v9-002-1" },
     update: {},
-    create: { id: "rext-v9-002-1", reservaId: "reserva-v9-002", extraId: "extra-v9-lanche", quantidade: 10, concluido: false },
-  });
+    create: { id: "rext-v9-002-1", reservaId: "reserva-v9-002", extraId: "extra-v9-lanche", quantidade: 10, concluido: false }
+      });
 
   // ═══════════════════════════════════════════════════════════
   // 3) Entrada ATIVA não paga, lanche por confirmar
@@ -182,9 +177,9 @@ async function main() {
       temLanche: true,
       estadoLanche: "NAO_INICIADO",
       criancas: [{ nome: "Duarte", idade: 6 }, { nome: "Vitória", idade: 4 }],
-      pago: false,
-    },
-  });
+      pago: false
+      }
+      });
 
   // ═══════════════════════════════════════════════════════════
   // 4) Entrada ATIVA paga, lanche JÁ confirmado (TERMINADO)
@@ -206,10 +201,9 @@ async function main() {
       temLanche: true,
       estadoLanche: "TERMINADO",
       criancas: [{ nome: "Salvador", idade: 5 }],
-      pago: true,
-      metodoPagamento: "MBWAY",
-    },
-  });
+      pago: true
+      }
+      });
 
   // ═══════════════════════════════════════════════════════════
   // 5) Entrada ATIVA excedida E não paga (duplo alerta)
@@ -231,16 +225,106 @@ async function main() {
       estado: "ATIVA",
       temLanche: false,
       criancas: [{ nome: "Álvaro", idade: 7 }, { nome: "Nuno", idade: 3 }],
-      pago: false,
+      pago: false
+      }
+      });
+
+  // ═══════════════════════════════════════════════════════════
+  // 6) LEDGER DE PAGAMENTOS - festas de HOJE com pagamentos para
+  //    testar a nova UI (lista, falta pagar, pago derivado).
+  // ═══════════════════════════════════════════════════════════
+
+  // 6a) Festa LIQUIDADA: 100€ DINHEIRO + 50€ MBWAY (total 150€)
+  const v10aInicio = addMin(now, -30);
+  await prisma.reserva.upsert({
+    where: { id: "reserva-v10-001" },
+    update: { pago: true },
+    create: {
+      id: "reserva-v10-001",
+      data: hoje,
+      horario: "15:00",
+      duracaoMinutos: 135,
+      numCriancas: 12,
+      estado: "CONFIRMADO",
+      inicioEm: v10aInicio,
+      fimPrevisto: addMin(v10aInicio, 135),
+      tema: "Bailarinas",
+      bolo: "NOSSO_1KG",
+      valorTotal: 150,
+      pago: true,
+      clienteId: "cliente-v9-001",
+      localId: "local-v9-001",
+      pagamentos: {
+        create: [
+          { valor: 100, metodo: "DINHEIRO" },
+          { valor: 50, metodo: "MBWAY" },
+        ],
+      },
     },
   });
 
-  console.log("✅ Seed de alterações (vídeos 4/5/6/9) aplicado:");
+  // 6b) Festa PARCIALMENTE paga: sinal 50€ MBWAY de 200€ (Falta pagar 150€)
+  const v10bInicio = addMin(now, 60);
+  await prisma.reserva.upsert({
+    where: { id: "reserva-v10-002" },
+    update: { pago: false },
+    create: {
+      id: "reserva-v10-002",
+      data: hoje,
+      horario: "18:00",
+      duracaoMinutos: 135,
+      numCriancas: 15,
+      estado: "CONFIRMADO",
+      inicioEm: v10bInicio,
+      fimPrevisto: addMin(v10bInicio, 135),
+      tema: "Super-heróis",
+      bolo: "PAIS_TRAZEM",
+      valorTotal: 200,
+      pago: false,
+      clienteId: "cliente-v9-001",
+      localId: "local-v9-001",
+      pagamentos: {
+        create: [{ valor: 50, metodo: "MBWAY", nota: "Sinal" }],
+      },
+    },
+  });
+
+  // 6c) Entrada livre HOJE liquidada com 2 métodos (12€ DINHEIRO + 8€ MBWAY)
+  const v10cInicio = addMin(now, -45);
+  await prisma.entradaLivre.upsert({
+    where: { id: "entrada-v10-001" },
+    update: { pago: true },
+    create: {
+      id: "entrada-v10-001",
+      encarregadoNome: "Inês Ledger",
+      encarregadoTelefone: "916000000",
+      duracaoMinutos: 60,
+      custoHora: 10.0,
+      custoTotal: 20.0,
+      inicioEm: v10cInicio,
+      fimPrevisto: addMin(v10cInicio, 60),
+      estado: "ATIVA",
+      temLanche: false,
+      criancas: [{ nome: "Alice", idade: 5 }],
+      pago: true,
+      pagamentos: {
+        create: [
+          { valor: 12, metodo: "DINHEIRO" },
+          { valor: 8, metodo: "MBWAY" },
+        ],
+      },
+    },
+  });
+
+  console.log("✅ Seed de alterações (vídeos 4/5/6/9 + ledger v10) aplicado:");
   console.log("   • reserva-v9-001  - festa EM_CURSO hoje NÃO PAGA (extras: 1 ✓ 1 ○)");
   console.log("   • reserva-v9-002  - festa EM_CURSO hoje EXCEDIDA (paga)");
   console.log("   • entrada-v9-001  - entrada ATIVA não paga, lanche por confirmar");
   console.log("   • entrada-v9-002  - entrada ATIVA paga, lanche TERMINADO");
   console.log("   • entrada-v9-003  - entrada ATIVA excedida e não paga");
+  console.log("   • reserva-v10-001 - festa HOJE LIQUIDADA (ledger: 100€ + 50€)");
+  console.log("   • reserva-v10-002 - festa HOJE com sinal 50€ (Falta pagar 150€)");
+  console.log("   • entrada-v10-001 - entrada HOJE liquidada (12€ + 8€)");
 }
 
 main()

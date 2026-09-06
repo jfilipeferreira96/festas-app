@@ -84,7 +84,7 @@ export function useCancelarEntradaLivre() {
 export function useAtualizarPagamentoEntradaLivre() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: string | null; metodoPagamento2?: string | null; valorPago2?: number | null } }) =>
+    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof entradaLivreApi.atualizarPagamento>[1] }) =>
       entradaLivreApi.atualizarPagamento(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entradas-livres"] });

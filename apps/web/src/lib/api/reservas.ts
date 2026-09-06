@@ -1,6 +1,6 @@
 import { api } from "./utils";
 import type { Reserva as ReservaBase, EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo } from "@saas/shared-types";
-import type { Local, Extra, Menu } from "@saas/shared-types";
+import type { Local, Extra, Menu, Pagamento, CriarPagamentoDTO } from "@saas/shared-types";
 
 // Re-export base types
 export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo };
@@ -18,6 +18,8 @@ export interface Reserva extends ReservaBase {
   monitores?: { id: string; monitor: { id: string; nome: string } }[];
   cacifos?: { id: string; numero: number; estado: string; notas?: string | null; criancas?: string | null }[];
   etapas?: { id: string; concluida: boolean; concluidaEm?: string | null; etapa: { id: string; nome: string; ordem: number } }[];
+  /** Ledger de pagamentos (fonte única do recebido). */
+  pagamentos: Pagamento[];
 }
 
 // Helper to get first aniversariante name from array
@@ -79,13 +81,10 @@ export interface CreateReservaData {
   outrosExtras?: string;
   // Pagamento (null = limpar o valor no registo; undefined = sem alterações)
   valorTotal?: number | null;
-  metodoPagamento?: MetodoPagamento | null;
-  metodoPagamento2?: MetodoPagamento | null;
-  valorPago?: number;
-  valorPago2?: number | null;
+  /** Ledger de pagamentos. Se presente, substitui o ledger existente (replace-all). */
+  pagamentos?: CriarPagamentoDTO[];
   meiasQuantidade?: number;
   pago?: boolean;
-  referenciaPagamento?: string;
   caucao?: string;
   valorCaucao?: number;
   descontoPercentagem?: number;
@@ -180,13 +179,10 @@ export const reservasApi = {
   atualizarPagamento: (id: string, data: {
     pago?: boolean;
     valorTotal?: number | null;
-    metodoPagamento?: MetodoPagamento | null;
-    valorPago?: number;
-    metodoPagamento2?: MetodoPagamento | null;
-    valorPago2?: number | null;
+    /** Ledger de pagamentos - substitui o ledger existente (replace-all). */
+    pagamentos?: CriarPagamentoDTO[];
     caucao?: string;
     valorCaucao?: number;
-    referenciaPagamento?: string;
     descontoPercentagem?: number;
     descontoMotivo?: string;
   }) =>

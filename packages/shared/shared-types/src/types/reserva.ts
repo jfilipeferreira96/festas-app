@@ -2,6 +2,8 @@
 // Reserva - Types for reservation/party management
 // ===================================
 
+import type { Pagamento } from "./pagamento";
+
 export type EstadoReserva = "RESERVA" | "CONFIRMADO" | "EM_CURSO" | "CONCLUIDA" | "CANCELADA";
 
 export type MetodoPagamento = "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO";
@@ -59,16 +61,12 @@ export interface Reserva {
   observacoesBrindes?: string;
   outrosExtras?: string;
 
-  // Pagamento
-  valorTotal?: number; // Total acordado (editável no form); fallback para leitura: valorPago
-  metodoPagamento?: MetodoPagamento;
-  valorPago?: number; // Valor recebido no pagamento 1
-  pago: boolean;
-  referenciaPagamento?: string;
+  // Ledger de pagamentos (fonte única do recebido; valorPago = soma)
+  pagamentos?: Pagamento[];
 
-  // Pagamento dividido (até 2 métodos - restante pode ser pago de outra forma)
-  metodoPagamento2?: MetodoPagamento;
-  valorPago2?: number;
+  // Pagamento (o RECEBIDO vive no ledger; `pago` é derivado da soma)
+  valorTotal?: number; // Total acordado (editável no form)
+  pago: boolean;
 
   // Caução
   caucao: EstadoCaucao;

@@ -65,12 +65,20 @@ export const festaFormSchema = z.object({
   observacoesLesoes: z.string(),
   observacoesBrindes: z.string(),
   outrosExtras: z.string(),
-  // Pagamento unificado: Total a pagar (editável) + Recebido nesta fase (pag. 1) + split (pag. 2)
+  // Pagamento (ledger): Total a pagar (editável) + lista de pagamentos realizados
   totalAPagar: z.number().min(0, "O total não pode ser negativo").optional(),
-  metodoPagamento: z.enum(METODOS_PAGAMENTO).optional(),
-  valorRecebido1: z.number().min(0).optional(),
-  metodoPagamento2: z.enum(METODOS_PAGAMENTO).optional(),
-  valorRecebido2: z.number().min(0).optional(),
+  pagamentos: z
+    .array(
+      z.object({
+        id: z.string(),
+        valor: z.number().min(0),
+        metodo: z.enum(METODOS_PAGAMENTO),
+        referencia: z.string().nullish(),
+        nota: z.string().nullish(),
+        createdAt: z.string(),
+      })
+    )
+    .optional(),
   pago: z.boolean().optional(),
   caucao: z.enum(CAUCOES).optional(),
   valorCaucao: z.number().min(0).optional(),
@@ -157,12 +165,15 @@ export function buildFestaDefaults(
     observacoesLesoes: reserva?.observacoesLesoes ?? "",
     observacoesBrindes: reserva?.observacoesBrindes ?? "",
     outrosExtras: reserva?.outrosExtras ?? "",
-    // Pagamento unificado: total acordado (valorTotal, fallback valorPago) + recebido pag.1
-    totalAPagar: reserva ? Number(reserva.valorTotal ?? reserva.valorPago ?? 0) || undefined : undefined,
-    metodoPagamento: undefined,
-    valorRecebido1: reserva?.valorPago ? Number(reserva.valorPago) : undefined,
-    metodoPagamento2: undefined,
-    valorRecebido2: reserva?.valorPago2 ? Number(reserva.valorPago2) : undefined,
+    // Pagamento (ledger): total acordado + pagamentos já registados
+    totalAPagar: reserva ? Number(reserva.valorTotal ?? 0) || undefined : undefined,
+    pagamentos: reserva?.pagamentos?.map((p) => ({
+      id: p.id,
+      valor: Number(p.valor),
+      metodo: p.metodo,
+      nota: p.nota ?? undefined,
+      createdAt: p.createdAt,
+    })),
     pago: reserva?.pago ?? false,
     caucao: (reserva?.caucao || undefined) as FestaFormData["caucao"],
     valorCaucao: reserva?.valorCaucao ? Number(reserva.valorCaucao) : undefined,
@@ -233,10 +244,7 @@ export function buildFestaPayload(
     observacoesBrindes: data.observacoesBrindes || undefined,
     outrosExtras: data.outrosExtras || undefined,
     valorTotal: opts.isEdit ? undefined : data.totalAPagar || undefined,
-    metodoPagamento: opts.isEdit ? undefined : data.metodoPagamento,
-    valorPago: opts.isEdit ? undefined : data.valorRecebido1 || undefined,
-    metodoPagamento2: opts.isEdit ? undefined : data.metodoPagamento2,
-    valorPago2: opts.isEdit ? undefined : data.valorRecebido2 || undefined,
+    pagamentos: opts.isEdit ? undefined : data.pagamentos,
     pago: opts.isEdit ? undefined : data.pago,
     caucao: opts.isEdit ? undefined : data.caucao,
     valorCaucao: opts.isEdit ? undefined : data.valorCaucao || undefined,

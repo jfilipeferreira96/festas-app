@@ -22,7 +22,6 @@
  * (The target DB is chosen by packages/db/scripts/db.js before this runs.)
  */
 
-import { PrismaClient } from "@prisma/client";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";

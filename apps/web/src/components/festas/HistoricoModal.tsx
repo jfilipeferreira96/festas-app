@@ -192,16 +192,22 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
               ) : (
                 <span className="text-accent-orange">Por pagar</span>
               )}
-              {reserva.valorPago != null && (
-                <span className="text-text-muted ml-1">
-                  · {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(reserva.valorPago)}
-                </span>
-              )}
-              {reserva.metodoPagamento && (
-                <span className="text-text-muted ml-1">
-                  · {metodoPagamentoLabel(reserva.metodoPagamento)}
-                </span>
-              )}
+              {(() => {
+                const soma = (reserva.pagamentos ?? []).reduce((s, p) => s + Number(p.valor), 0);
+                const metodos = (reserva.pagamentos ?? []).map((p) => metodoPagamentoLabel(p.metodo)).join(" + ");
+                return (
+                  <>
+                    {soma > 0 && (
+                      <span className="text-text-muted ml-1">
+                        · {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(soma)}
+                      </span>
+                    )}
+                    {metodos && (
+                      <span className="text-text-muted ml-1">· {metodos}</span>
+                    )}
+                  </>
+                );
+              })()}
             </span>
           </div>
           {(reserva.caucao === "PAGA" || reserva.caucao === "PAGA_NO_DIA") && (

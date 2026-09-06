@@ -1,21 +1,19 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
-import { CreditCard, Shield, CheckCircle2, ArrowUpDown } from "lucide-react";
+import React, { useState, useCallback } from "react";
+import { ArrowUpDown, CreditCard, Shield } from "lucide-react";
 import InputField from "@/components/form/input/InputField";
+import FieldLabel from "@/components/form/FieldLabel";
 import { useUpdatePagamento } from "@/hooks/use-reservas";
 import { useToast } from "@/hooks/use-toast";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import PagamentoModalShell, { type PagamentoTabConfig } from "@/components/shared/pagamento/PagamentoModalShell";
-import {
-  PagamentoEstadoRow,
-  PagamentoMetodoField,
-  PagamentoSplitSection,
-} from "@/components/shared/pagamento/PagamentoFields";
+import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
 import PagamentoCaucaoDescontoTab from "./PagamentoCaucaoDescontoTab";
 import PagamentoSugeridoBox, { calcularSugeridoFesta } from "./PagamentoSugeridoBox";
-import type { Reserva, MetodoPagamento } from "@/lib/api/reservas";
-import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
+import type { Reserva } from "@/lib/api/reservas";
+import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
+import { EPS, faltaPagar, totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
 
 const fmtEuro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
 
@@ -28,13 +26,20 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   const toast = useToast();
   const updatePagamento = useUpdatePagamento();
 
-  const [pago, setPago] = useState(reserva.pago);
-  const [metodoPagamento, setMetodoPagamento] = useState(reserva.metodoPagamento ?? "NONE");
-  const [valorPago, setValorPago] = useState<string>(reserva.valorPago ? String(reserva.valorPago) : "");
-  const [referenciaPagamento, setReferenciaPagamento] = useState(reserva.referenciaPagamento ?? "");
-  const [showSplit, setShowSplit] = useState(!!reserva.metodoPagamento2);
-  const [metodoPagamento2, setMetodoPagamento2] = useState(reserva.metodoPagamento2 ?? "NONE");
-  const [valorPago2, setValorPago2] = useState<string>(reserva.valorPago2 ? String(reserva.valorPago2) : "");
+  // Total a pagar (editável) - o valor acordado
+  const [valorTotal, setValorTotal] = useState<string>(
+    String(Number(reserva.valorTotal ?? 0) || "")
+  );
+  // Ledger de pagamentos (fonte única do recebido)
+  const [pagamentos, setPagamentos] = useState<PagamentoLedgerItem[]>(() =>
+    (reserva.pagamentos ?? []).map((p) => ({
+      id: p.id,
+      valor: Number(p.valor),
+      metodo: p.metodo,
+      nota: p.nota ?? null,
+      createdAt: p.createdAt,
+    }))
+  );
   const [caucao, setCaucao] = useState<string>(reserva.caucao ?? "NAO_PAGA");
   const [valorCaucao, setValorCaucao] = useState<string>(reserva.valorCaucao ? String(reserva.valorCaucao) : "");
   const [descontoPercentagem, setDescontoPercentagem] = useState<string>(
@@ -42,48 +47,34 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   );
   const [descontoMotivo, setDescontoMotivo] = useState(reserva.descontoMotivo ?? "");
 
-  // Acertos (tab "Acertos") aplicam write-through ao valorPago no backend -
-  // sincronizar o estado local para o total subir/descer em tempo real
-  // (e para o "Guardar" não sobrescrever o acerto com um valor obsoleto).
+  const totalDevido = Number(valorTotal) || 0;
+  const falta = faltaPagar(totalDevido, pagamentos);
+  const liquidado = falta <= EPS && totalDevido > 0;
+
+  // Acertos (tab "Acertos") aplicam write-through ao total devido no backend -
+  // sincronizar o estado local para a falta subir/descer em tempo real.
   const handleAjusteAplicado = useCallback((delta: number) => {
-    setValorPago((prev) => Math.max(0, (Number(prev) || 0) + delta).toFixed(2));
+    setValorTotal((prev) => Math.max(0, (Number(prev) || 0) + delta).toFixed(2));
   }, []);
   const handleTotalRedefinido = useCallback((novoTotal: number) => {
-    setValorPago(novoTotal.toFixed(2));
+    setValorTotal(novoTotal.toFixed(2));
   }, []);
 
-  const sugeridoInicial = calcularSugeridoFesta(reserva, Number(descontoPercentagem) || 0);
-  useEffect(() => {
-    if (!reserva.valorPago && sugeridoInicial && sugeridoInicial.sugerido > 0) {
-      setValorPago(sugeridoInicial.sugerido.toFixed(2));
-    }
-  }, [reserva.valorPago, sugeridoInicial]);
-
-  const total = Number(valorPago) || 0;
-  const caucaoValor = caucao === "PAGA" || caucao === "PAGA_NO_DIA" ? Number(valorCaucao) || 0 : 0;
-  const segundo = showSplit ? Number(valorPago2) || 0 : 0;
-  const emFalta = Math.max(total - caucaoValor - segundo, 0);
-
   const handleSave = useCallback(async () => {
-    const parseNum = (s: string) => (s === "" ? undefined : Number(s));
-    // "Não definido" deve LIMPAR o método guardado - null (não undefined),
-    // porque undefined = "sem alterações" no Prisma e deixaria o método antigo.
-    const parseMetodo = (s: string): MetodoPagamento | null =>
-      s === "NONE" || s === "" ? null : (s as MetodoPagamento);
-
     try {
       await updatePagamento.mutateAsync({
         id: reserva.id,
         data: {
-          pago,
-          metodoPagamento: parseMetodo(metodoPagamento),
-          valorPago: parseNum(valorPago),
-          referenciaPagamento: referenciaPagamento || undefined,
-          metodoPagamento2: showSplit ? parseMetodo(metodoPagamento2) : null,
-          valorPago2: showSplit ? parseNum(valorPago2) ?? null : null,
+          valorTotal: valorTotal === "" ? null : Number(valorTotal),
+          // Replace-all do ledger; o estado `pago` é derivado no backend
+          pagamentos: pagamentos.map((p) => ({
+            valor: p.valor,
+            metodo: p.metodo,
+            nota: p.nota ?? undefined,
+          })),
           caucao: caucao || undefined,
-          valorCaucao: parseNum(valorCaucao),
-          descontoPercentagem: parseNum(descontoPercentagem),
+          valorCaucao: valorCaucao === "" ? undefined : Number(valorCaucao),
+          descontoPercentagem: descontoPercentagem === "" ? undefined : Number(descontoPercentagem),
           descontoMotivo: descontoMotivo || undefined,
         },
       });
@@ -95,13 +86,8 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   }, [
     updatePagamento,
     reserva.id,
-    pago,
-    metodoPagamento,
-    valorPago,
-    referenciaPagamento,
-    showSplit,
-    metodoPagamento2,
-    valorPago2,
+    valorTotal,
+    pagamentos,
     caucao,
     valorCaucao,
     descontoPercentagem,
@@ -112,19 +98,22 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
 
   const anvNome = reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || reserva.cliente?.nome || "-";
   const metodoLabel =
-    metodoPagamento !== "NONE" ? METODO_PAGAMENTO_OPTIONS.find((o) => o.value === metodoPagamento)?.label : undefined;
+    pagamentos.length > 0
+      ? pagamentos.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
+      : undefined;
+
   const cacifoNotas = (reserva.cacifos ?? []).filter((c) => c.notas?.trim());
   const temAvisos = Boolean(reserva.notasCacifos || reserva.observacoesLesoes || cacifoNotas.length > 0);
 
   const heroDireita =
-    total > 0 ? (
-      emFalta > 0 ? (
+    totalDevido > 0 ? (
+      falta > 0 ? (
         <span className="text-sm font-bold text-accent-orange-700 shrink-0">
-          Falta liquidar {fmtEuro.format(emFalta)}
+          Falta liquidar {fmtEuro.format(falta)}
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 text-sm font-bold text-accent-green-700 shrink-0">
-          <CheckCircle2 size={15} /> Liquidado
+          Liquidado
         </span>
       )
     ) : undefined;
@@ -155,11 +144,16 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   if (sugeridoResumo && sugeridoResumo.custoMeias > 0) partesSugeridas.push(`+${fmtEuro.format(sugeridoResumo.custoMeias)} meias`);
 
   const resumo =
-    total > 0 ? (
+    totalDevido > 0 ? (
       <>
-        Total <span className="font-semibold text-text-secondary">{fmtEuro.format(total)}</span>
-        {caucaoValor > 0 && <> · −{fmtEuro.format(caucaoValor)} caução</>}
-        {segundo > 0 && <> · −{fmtEuro.format(segundo)} 2º pag.</>}
+        A pagar <span className="font-semibold text-text-secondary">{fmtEuro.format(totalDevido)}</span>
+        {" · "}Recebido <span className="font-semibold text-text-secondary">{fmtEuro.format(totalPago(pagamentos))}</span>
+        {" · "}
+        {liquidado ? (
+          <span className="text-accent-green-600 font-semibold">Liquidado</span>
+        ) : (
+          <span className="text-accent-orange-600 font-semibold">Falta {fmtEuro.format(falta)}</span>
+        )}
         {partesSugeridas.length > 0 && (
           <span className="text-text-muted"> · {partesSugeridas.join(" · ")} (sugerido)</span>
         )}
@@ -175,41 +169,36 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       icon: CreditCard,
       content: (
         <div className="space-y-4">
-          <PagamentoEstadoRow pago={pago} onChange={setPago} />
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-text-secondary mb-1">Valor a Pagar (€)</label>
-              <InputField
-                type="number"
-                step={0.01}
-                min={0}
-                value={valorPago}
-                onChange={(e) => setValorPago(e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <PagamentoMetodoField value={metodoPagamento} onChange={setMetodoPagamento} />
-          </div>
+          {/* Total a pagar (editável) */}
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Referência de Pagamento</label>
+            <FieldLabel required>Total a pagar (€)</FieldLabel>
             <InputField
-              value={referenciaPagamento}
-              onChange={(e) => setReferenciaPagamento(e.target.value)}
-              placeholder="Ex: ref. MBWAY, transferência..."
+              type="number"
+              step={0.01}
+              min={0}
+              value={valorTotal}
+              onChange={(e) => setValorTotal(e.target.value)}
+              placeholder="0,00"
             />
           </div>
-          <PagamentoSplitSection
-            show={showSplit}
-            onToggle={setShowSplit}
-            metodo2={metodoPagamento2}
-            setMetodo2={setMetodoPagamento2}
-            valor2={valorPago2}
-            setValor2={setValorPago2}
+
+          {/* Ledger de pagamentos: adicionar (método obrigatório) até completar; pago derivado */}
+          <PagamentosLedgerSection
+            totalDevido={totalDevido}
+            pagamentos={pagamentos}
+            onAdd={(p) =>
+              setPagamentos((prev) => [
+                ...prev,
+                { ...p, id: `pg-${Date.now()}-${prev.length}`, createdAt: new Date().toISOString() },
+              ])
+            }
+            onRemove={(id) => setPagamentos((prev) => prev.filter((p) => p.id !== id))}
           />
+
           <PagamentoSugeridoBox
             reserva={reserva}
             descontoPercentagem={Number(descontoPercentagem) || 0}
-            onUsarSugerido={(v) => setValorPago(v.toFixed(2))}
+            onUsarSugerido={(v) => setValorTotal(v.toFixed(2))}
           />
         </div>
       ),
@@ -252,7 +241,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       onClose={onClose}
       onSave={handleSave}
       isLoading={updatePagamento.isPending}
-      pago={pago}
+      pago={liquidado}
       metodoLabel={metodoLabel}
       heroDireita={heroDireita}
       avisos={avisos}

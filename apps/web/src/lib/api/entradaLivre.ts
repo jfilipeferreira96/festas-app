@@ -1,4 +1,5 @@
 import { api } from "./utils";
+import type { Pagamento, CriarPagamentoDTO } from "@saas/shared-types";
 
 export interface Crianca {
   nome: string;
@@ -33,13 +34,10 @@ export interface EntradaLivre {
   clienteId?: string;
   cliente?: { id: string; nome: string; email: string | null; telefone: string };
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
-  metodoPagamento?: string;
-  valorPago?: number; // Valor recebido no pagamento 1
+  /** Ledger de pagamentos (fonte única do recebido). */
+  pagamentos?: Pagamento[];
   pago: boolean;
   pagoExcesso: boolean;
-  // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string;
-  valorPago2?: number;
   // Meias
   meiasQuantidade?: number;
   meiasPrecoUnit?: number;
@@ -65,8 +63,6 @@ export interface CriarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos: number;
   custoTotal?: number;
-  metodoPagamento?: string | null;
-  valorPago?: number | null;
   pago?: boolean;
   cacifoId?: string | null;
   extrasIds?: string[];
@@ -79,9 +75,8 @@ export interface CriarEntradaLivreDTO {
   numAdultos?: number;
   // Lanche
   horaLanche?: string | null;
-  // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string | null;
-  valorPago2?: number | null;
+  /** Ledger de pagamentos. Se presente, substitui o ledger existente (replace-all). */
+  pagamentos?: CriarPagamentoDTO[];
   // Meias
   meiasQuantidade?: number;
 }
@@ -93,8 +88,6 @@ export interface AtualizarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos?: number;
   custoTotal?: number;
-  metodoPagamento?: string | null;
-  valorPago?: number | null;
   pago?: boolean;
   cacifoId?: string | null;
   horaLanche?: string | null;
@@ -106,9 +99,6 @@ export interface AtualizarEntradaLivreDTO {
   temLanche?: boolean;
   // Adultos
   numAdultos?: number;
-  // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string | null;
-  valorPago2?: number | null;
   // Meias
   meiasQuantidade?: number;
 }
@@ -143,7 +133,7 @@ export const entradaLivreApi = {
   cancelar: (id: string) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/cancelar`, { method: "PATCH" }),
 
-  atualizarPagamento: (id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: string | null; valorPago?: number | null; metodoPagamento2?: string | null; valorPago2?: number | null }) =>
+  atualizarPagamento: (id: string, data: { pagoExcesso?: boolean; pagamentos?: CriarPagamentoDTO[] | null }) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/pagamento`, {
       method: "PATCH",
       body: JSON.stringify(data),

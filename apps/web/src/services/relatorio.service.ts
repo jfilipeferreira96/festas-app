@@ -103,10 +103,8 @@ interface ReservaRelatorio {
   estado: string;
   pago: boolean;
   valorTotal?: unknown;
-  metodoPagamento: string | null;
-  valorPago: unknown;
-  metodoPagamento2: string | null;
-  valorPago2: unknown;
+  // Ledger de pagamentos (fonte única do recebido)
+  pagamentos: Array<{ valor: unknown; metodo: string }>;
   // Caução
   caucao: string;
   valorCaucao: unknown;
@@ -124,9 +122,8 @@ interface EntradaRelatorio {
   duracaoMinutos: number;
   custoTotal: unknown;
   custoTotalFinal: unknown;
-  metodoPagamento: string | null;
-  metodoPagamento2: string | null;
-  valorPago2: unknown;
+  // Ledger de pagamentos (fonte única do recebido)
+  pagamentos: Array<{ valor: unknown; metodo: string }>;
   pago: boolean;
   criancas: unknown;
   meiasQuantidade: number | null;
@@ -138,8 +135,8 @@ interface AjusteRelatorio {
   tipo: string;
   valor: unknown;
   metodoPagamento: string | null;
-  reserva: { metodoPagamento: string | null } | null;
-  entradaLivre: { metodoPagamento: string | null } | null;
+  reserva: { pagamentos: Array<{ metodo: string }> } | null;
+  entradaLivre: { pagamentos: Array<{ metodo: string }> } | null;
 }
 
 // ── Service ────────────────────────────────────────────────────
@@ -171,6 +168,7 @@ export const relatorioService = {
         include: {
           menu: true,
           extras: { include: { extra: true } },
+          pagamentos: { select: { valor: true, metodo: true } },
         },
       }),
       prisma.entradaLivre.findMany({
@@ -180,6 +178,7 @@ export const relatorioService = {
         },
         include: {
           extras: { include: { extra: true } },
+          pagamentos: { select: { valor: true, metodo: true } },
         },
       }),
       prisma.ajustePagamento.findMany({
@@ -187,8 +186,12 @@ export const relatorioService = {
           createdAt: { gte: dataInicio, lt: dataFimEnd },
         },
         include: {
-          reserva: { select: { metodoPagamento: true } },
-          entradaLivre: { select: { metodoPagamento: true } },
+          reserva: {
+            select: { pagamentos: { select: { metodo: true }, orderBy: { createdAt: "asc" }, take: 1 } },
+          },
+          entradaLivre: {
+            select: { pagamentos: { select: { metodo: true }, orderBy: { createdAt: "asc" }, take: 1 } },
+          },
         },
       }),
     ]);
@@ -239,14 +242,8 @@ export const relatorioService = {
       linha.quantidade += 1;
       linha.totalCriancas += r.numCriancas;
 
-      // Pagamento principal + dividido (até 2 métodos).
-      // Regra: total = valorTotal ?? valorPago; pag.1 = valorPago (registos novos)
-      // ou total - pag.2 (registos antigos, em que valorPago era o total).
-      const totalFesta = toNum(r.valorTotal ?? r.valorPago);
-      const recebido2 = Math.min(toNum(r.valorPago2), totalFesta);
-      const recebido1 = r.valorTotal != null ? toNum(r.valorPago) : totalFesta - recebido2;
-      somarPorMetodo(linha, r.metodoPagamento, recebido1);
-      somarPorMetodo(linha, r.metodoPagamento2, recebido2);
+      // Fonte única: ledger de pagamentos (N métodos)
+      for (const p of r.pagamentos) somarPorMetodo(linha, p.metodo, toNum(p.valor));
     }
 
     const linhas = Array.from(grupos.values()).sort((a, b) => b.quantidade - a.quantidade);
@@ -262,7 +259,7 @@ export const relatorioService = {
    * Secção 2: Entradas Livres
    * Agrupa por duração (1H, 2H, 3H).
    * Fonte única: custoTotalFinal (inclui excesso, extras e meias);
-   * o pagamento dividido é repartido (método 2 = valorPago2, método 1 = resto).
+   * os métodos vêm do ledger de pagamentos (N métodos por entrada).
    * Extras e lanches são listados como linhas informativas (já incluídos no custo).
    */
   calcularEntradasLivres(entradas: EntradaRelatorio[]): SecaoRelatorio {
@@ -274,23 +271,22 @@ export const relatorioService = {
     for (const e of entradas) {
       const duracao = e.duracaoMinutos;
       const numCriancas = Array.isArray(e.criancas) ? e.criancas.length : 0;
-      // custoTotalFinal inclui o excesso; fallback para custoTotal
-      const valor = toNum(e.custoTotalFinal ?? e.custoTotal);
-      const valorMetodo2 = Math.min(toNum(e.valorPago2), valor);
 
       // Classificar por duração
       const linha: LinhaRelatorio = duracao <= 60 ? l1H : duracao <= 120 ? l2H : l3H;
 
       linha.quantidade += 1;
       linha.totalCriancas += numCriancas;
-      somarPorMetodo(linha, e.metodoPagamento2, valorMetodo2);
-      somarPorMetodo(linha, e.metodoPagamento, valor - valorMetodo2);
+
+      // Fonte única: ledger de pagamentos (N métodos)
+      for (const p of e.pagamentos) somarPorMetodo(linha, p.metodo, toNum(p.valor));
 
       // Lanches/extras (informativo - já incluídos no custoTotalFinal)
+      const metodoLanches = e.pagamentos[0]?.metodo ?? null;
       for (const ex of e.extras) {
         const extraValor = toNum(ex.extra.precoUnitario) * ex.quantidade;
         lLanches.quantidade += ex.quantidade;
-        somarPorMetodo(lLanches, e.metodoPagamento, extraValor);
+        somarPorMetodo(lLanches, metodoLanches, extraValor);
       }
     }
 
@@ -307,10 +303,13 @@ export const relatorioService = {
   /**
    * Secção 3: Outros
    * Cauções e Excesso de Tempo (festas) somam ao total.
-   * Meias e Brindes são informativas - já incluídas na fonte única
-   * (valorPago das festas / custoTotalFinal das entradas).
+   * Meias e Brindes são informativas - já incluídas no custo total.
+   * Método de atribuição: 1º pagamento do ledger da entidade.
    */
   calcularOutros(reservas: ReservaRelatorio[], entradas: EntradaRelatorio[]): SecaoRelatorio {
+    // Método do 1º pagamento do ledger (null se não houver pagamentos)
+    const metodoPrincipal = (entidade: { pagamentos: Array<{ metodo: string }> }): string | null =>
+      entidade.pagamentos[0]?.metodo ?? null;
     const lCaucoes40 = criarLinhaVazia("Cauções 40€");
     const lCaucoesOutros = criarLinhaVazia("Cauções outros valores");
     const lExcesso = criarLinhaVazia("Excesso de Tempo");
@@ -318,15 +317,17 @@ export const relatorioService = {
     const lBrindes = criarLinhaVazia("Brindes");
 
     for (const r of reservas) {
+      const metodo = metodoPrincipal(r);
+
       // ── Cauções ──
       if (r.caucao !== "NAO_PAGA" && r.valorCaucao) {
         const valorCaucao = toNum(r.valorCaucao);
         if (valorCaucao === 40) {
           lCaucoes40.quantidade += 1;
-          somarPorMetodo(lCaucoes40, r.metodoPagamento, valorCaucao);
+          somarPorMetodo(lCaucoes40, metodo, valorCaucao);
         } else if (valorCaucao > 0) {
           lCaucoesOutros.quantidade += 1;
-          somarPorMetodo(lCaucoesOutros, r.metodoPagamento, valorCaucao);
+          somarPorMetodo(lCaucoesOutros, metodo, valorCaucao);
         }
       }
 
@@ -334,7 +335,7 @@ export const relatorioService = {
       const custoExcesso = toNum(r.custoExcesso);
       if (r.pagoExcesso && custoExcesso > 0) {
         lExcesso.quantidade += 1;
-        somarPorMetodo(lExcesso, r.metodoPagamento, custoExcesso);
+        somarPorMetodo(lExcesso, metodo, custoExcesso);
       }
 
       // ── Meias (festa) - informativa ──
@@ -342,7 +343,7 @@ export const relatorioService = {
       if (qtdMeias > 0) {
         const valorMeias = qtdMeias * toNum(r.meiasPrecoUnit);
         lMeias.quantidade += qtdMeias;
-        somarPorMetodo(lMeias, r.metodoPagamento, valorMeias);
+        somarPorMetodo(lMeias, metodo, valorMeias);
       }
 
       // ── Brindes (extras com subcategoria "Brindes") - informativa ──
@@ -351,18 +352,19 @@ export const relatorioService = {
           const valor = toNum(ex.extra.precoUnitario) * ex.quantidade;
           lBrindes.quantidade += ex.quantidade;
           lBrindes.totalCriancas += r.numCriancas;
-          somarPorMetodo(lBrindes, r.metodoPagamento, valor);
+          somarPorMetodo(lBrindes, metodo, valor);
         }
       }
     }
 
     // ── Meias (entradas livres) - informativa ──
     for (const e of entradas) {
+      const metodoEntrada = metodoPrincipal(e);
       const qtdMeias = e.meiasQuantidade ?? 0;
       if (qtdMeias > 0) {
         const valorMeias = qtdMeias * toNum(e.meiasPrecoUnit);
         lMeias.quantidade += qtdMeias;
-        somarPorMetodo(lMeias, e.metodoPagamento, valorMeias);
+        somarPorMetodo(lMeias, metodoEntrada, valorMeias);
       }
     }
 
@@ -394,8 +396,11 @@ export const relatorioService = {
     const lRedefinicoes = criarLinhaVazia("Redefinições de preço");
 
     for (const a of ajustes) {
-      // Método do acerto; se vazio, usa o método principal da entidade alvo
-      const metodo = a.metodoPagamento ?? a.reserva?.metodoPagamento ?? a.entradaLivre?.metodoPagamento;
+      // Método do acerto; se vazio, usa o método principal (1º pagamento) da entidade alvo
+      const metodo =
+        a.metodoPagamento ??
+        a.reserva?.pagamentos?.[0]?.metodo ??
+        a.entradaLivre?.pagamentos?.[0]?.metodo;
       const valor = Math.abs(toNum(a.valor));
 
       switch (a.tipo) {

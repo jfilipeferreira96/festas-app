@@ -1,9 +1,18 @@
 import prisma from "@festas/db";
-import type { TipoBolo } from "@saas/shared-types";
+import type { CriarPagamentoDTO, TipoBolo } from "@saas/shared-types";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 import { cacifoService } from "@/services/cacifo.service";
 import { menuService } from "@/services/menu.service";
+import {
+  normalizarPagamentos,
+  sincronizarPagamentosReserva,
+  somaPagamentos,
+  type PagamentoInput,
+} from "@/services/pagamento.service";
+
+/** Tolerância de cêntimos para comparação soma(pagamentos) >= total. */
+const EPS = 0.004;
 
 interface AniversarianteInput {
   nome: string;
@@ -43,18 +52,14 @@ interface CreateReservaData {
   outrosExtras?: string;
   // Pagamento
   valorTotal?: number;
-  metodoPagamento?: string;
-  valorPago?: number;
   pago?: boolean;
-  referenciaPagamento?: string;
   caucao?: string;
   valorCaucao?: number;
   descontoPercentagem?: number;
   descontoMotivo?: string;
   boloQuantidade?: number;
-  // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string;
-  valorPago2?: number;
+  // Ledger de pagamentos (fonte única do recebido)
+  pagamentos?: CriarPagamentoDTO[];
   // Meias (compra obrigatória)
   meiasQuantidade?: number;
   meiasPrecoUnit?: number;
@@ -99,17 +104,13 @@ interface UpdateReservaData {
   observacoesBrindes?: string;
   outrosExtras?: string;
   valorTotal?: number | null;
-  metodoPagamento?: string;
-  valorPago?: number;
   pago?: boolean;
-  referenciaPagamento?: string;
   caucao?: string;
   valorCaucao?: number;
   descontoPercentagem?: number;
   descontoMotivo?: string;
-  // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string;
-  valorPago2?: number;
+  // Ledger de pagamentos - substitui o ledger existente (replace-all)
+  pagamentos?: CriarPagamentoDTO[] | null;
   // Meias (compra obrigatória)
   meiasQuantidade?: number;
   meiasPrecoUnit?: number;
@@ -333,6 +334,7 @@ export const reservaService = {
         cacifos: true,
         menu: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
     if (!reserva) throw new Error("NOT_FOUND");
@@ -430,6 +432,10 @@ export const reservaService = {
       meiasPrecoUnit = Number((await configuracaoPrecoService.getConfig()).precoMeias);
     }
 
+    // ── Ledger de pagamentos (fonte única do recebido); [] = limpar ──
+    const listaPagamentos: PagamentoInput[] =
+      data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : [];
+
     const created = await prisma.reserva.create({
       data: {
         data: new Date(data.data),
@@ -457,12 +463,8 @@ export const reservaService = {
         observacoesBrindes: data.observacoesBrindes,
         outrosExtras: data.outrosExtras,
         valorTotal: data.valorTotal,
-        metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
-        metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
-        valorPago: data.valorPago,
-        valorPago2: data.valorPago2,
-        pago: data.pago ?? false,
-        referenciaPagamento: data.referenciaPagamento,
+        // Estado `pago` derivado do ledger (soma >= total acordado)
+        pago: data.pago ?? (data.valorTotal != null ? somaPagamentos(listaPagamentos) >= data.valorTotal - EPS : false),
         caucao: (data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA") ?? "NAO_PAGA",
         valorCaucao: data.valorCaucao,
         descontoPercentagem: data.descontoPercentagem,
@@ -488,6 +490,16 @@ export const reservaService = {
         aniversariantes: aniversarianteIds.length > 0
           ? { create: aniversarianteIds.map((aniversarianteId) => ({ aniversarianteId })) }
           : undefined,
+        pagamentos: listaPagamentos.length > 0
+          ? {
+              create: listaPagamentos.map((p) => ({
+                valor: p.valor,
+                metodo: p.metodo,
+                referencia: p.referencia ?? null,
+                nota: p.nota ?? null,
+              })),
+            }
+          : undefined,
       },
       include: {
         local: true,
@@ -497,6 +509,7 @@ export const reservaService = {
         extras: { include: { extra: true } },
         monitores: { include: { monitor: true } },
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -551,6 +564,13 @@ export const reservaService = {
       if (conflitosUpdate.length > 0) throw new Error("LOCAL_NOT_AVAILABLE");
     }
 
+    // ── Ledger de pagamentos (replace-all); undefined = sem alterações ──
+    const listaPagamentos: PagamentoInput[] | undefined =
+      data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : undefined;
+    if (listaPagamentos !== undefined) {
+      await prisma.pagamento.deleteMany({ where: { reservaId: id } });
+    }
+
     if (data.extrasIds) {
       await prisma.reservaExtra.deleteMany({ where: { reservaId: id } });
     }
@@ -594,12 +614,7 @@ export const reservaService = {
         observacoesBrindes: data.observacoesBrindes,
         outrosExtras: data.outrosExtras,
         valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
-        metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
-        metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
-        valorPago: data.valorPago,
-        valorPago2: data.valorPago2,
         pago: data.pago,
-        referenciaPagamento: data.referenciaPagamento,
         caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
         valorCaucao: data.valorCaucao,
         descontoPercentagem: data.descontoPercentagem,
@@ -624,6 +639,16 @@ export const reservaService = {
         aniversariantes: aniversarianteIds.length > 0
           ? { create: aniversarianteIds.map((aniversarianteId) => ({ aniversarianteId })) }
           : undefined,
+        pagamentos: listaPagamentos !== undefined && listaPagamentos.length > 0
+          ? {
+              create: listaPagamentos.map((p) => ({
+                valor: p.valor,
+                metodo: p.metodo,
+                referencia: p.referencia ?? null,
+                nota: p.nota ?? null,
+              })),
+            }
+          : undefined,
       },
       include: {
         local: true,
@@ -633,6 +658,7 @@ export const reservaService = {
         extras: { include: { extra: true } },
         monitores: { include: { monitor: true } },
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -658,37 +684,50 @@ export const reservaService = {
   },
 
   async atualizarPagamento(id: string, data: {
-    pago?: boolean;
     valorTotal?: number | null;
-    metodoPagamento?: string;
-    valorPago?: number;
-    metodoPagamento2?: string;
-    valorPago2?: number;
+    /** Ledger de pagamentos - substitui o ledger existente (replace-all). */
+    pagamentos?: CriarPagamentoDTO[] | null;
     caucao?: string;
     valorCaucao?: number;
-    referenciaPagamento?: string;
     descontoPercentagem?: number;
     descontoMotivo?: string;
   }) {
     const reserva = await this.getById(id);
     if (!reserva) throw new Error("NOT_FOUND");
 
-    return prisma.reserva.update({
-      where: { id },
-      data: {
-        pago: data.pago,
-        valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
-        metodoPagamento: data.metodoPagamento as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
-        valorPago: data.valorPago,
-        metodoPagamento2: data.metodoPagamento2 as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO" | undefined,
-        valorPago2: data.valorPago2,
-        caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
-        valorCaucao: data.valorCaucao,
-        referenciaPagamento: data.referenciaPagamento,
-        descontoPercentagem: data.descontoPercentagem,
-        descontoMotivo: data.descontoMotivo,
-      },
+    // ── Resolver o ledger: undefined = sem alterações de pagamento ──
+    const lista = data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : undefined;
+
+    if (lista === undefined) {
+      // Só campos auxiliares (total, caução, desconto)
+      return prisma.reserva.update({
+        where: { id },
+        data: {
+          valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
+          caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+          valorCaucao: data.valorCaucao,
+          descontoPercentagem: data.descontoPercentagem,
+          descontoMotivo: data.descontoMotivo,
+        },
+      });
+    }
+
+    // Replace-all do ledger; o estado `pago` é derivado (soma >= total)
+    await prisma.$transaction(async (tx) => {
+      await tx.reserva.update({
+        where: { id },
+        data: {
+          valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
+          caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+          valorCaucao: data.valorCaucao,
+          descontoPercentagem: data.descontoPercentagem,
+          descontoMotivo: data.descontoMotivo,
+        },
+      });
+      await sincronizarPagamentosReserva(tx, id, lista);
     });
+
+    return this.getById(id);
   },
 
   async delete(id: string) {
@@ -741,6 +780,7 @@ export const reservaService = {
         monitores: { include: { monitor: true } },
         cacifos: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -780,9 +820,9 @@ export const reservaService = {
     const custoMeias =
       (reserva.meiasQuantidade ?? 0) * Number(reserva.meiasPrecoUnit ?? 0);
 
-    // Total acordado (valorTotal) com fallback para valorPago (registos antigos)
+    // Total acordado (valorTotal) + excesso + meias
     const custoTotalFinal =
-      Number(reserva.valorTotal ?? reserva.valorPago ?? 0) + custoExcesso + custoMeias;
+      Number(reserva.valorTotal ?? 0) + custoExcesso + custoMeias;
 
     // Save cacifos snapshot before releasing
     const cacifos = await prisma.cacifo.findMany({
@@ -819,6 +859,7 @@ export const reservaService = {
         monitores: { include: { monitor: true } },
         cacifos: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
   },
@@ -864,6 +905,7 @@ export const reservaService = {
         cacifos: true,
         menu: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
       orderBy: { inicioEm: "asc" },
     });
@@ -887,6 +929,7 @@ export const reservaService = {
         monitores: { include: { monitor: true } },
         menu: true,
         etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
       orderBy: { fimReal: "desc" },
     });

@@ -1,6 +1,8 @@
 import { differenceInYears } from "date-fns";
 import prisma from "@festas/db";
 
+const round2 = (v: number) => Math.round(v * 100) / 100;
+
 /**
  * Serviço de Festas a Acabar - usado pela conta FESTAS_ACABAR.
  * Mostra as festas EM_CURSO, ordenadas por hora de saída (fimPrevisto).
@@ -85,6 +87,7 @@ export const festasAcabarService = {
         aniversariantes: { include: { aniversariante: true } },
         cacifos: true,
         extras: { include: { extra: true } },
+        pagamentos: { select: { valor: true } },
       },
       orderBy: { fimPrevisto: "asc" },
     });
@@ -119,7 +122,13 @@ export const festasAcabarService = {
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
         localNome: r.local?.nome ?? "-",
         pago: r.pago,
-        valorPago: r.valorTotal != null ? Number(r.valorTotal) : r.valorPago != null ? Number(r.valorPago) : null,
+        // Total acordado (fallback: soma do ledger)
+        valorPago:
+          r.valorTotal != null
+            ? Number(r.valorTotal)
+            : r.pagamentos.length > 0
+              ? round2(r.pagamentos.reduce((s, p) => s + Number(p.valor), 0))
+              : null,
         extras: r.extras.map((re) => ({
           id: re.id,
           nome: re.extra?.nome ?? "Extra",

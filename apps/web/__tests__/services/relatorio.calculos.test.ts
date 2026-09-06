@@ -18,7 +18,7 @@ vi.mock("@/lib/logger", () => ({
 import { relatorioService } from "@/services/relatorio.service";
 import type { LinhaRelatorio } from "@saas/shared-types";
 
-// Helpers para construir registos de teste de forma concisa
+// Helpers para construir registos de teste de forma concisa (ledger de pagamentos)
 function somaValores(linha: LinhaRelatorio): number {
   return (
     linha.valorNumerario +
@@ -30,45 +30,74 @@ function somaValores(linha: LinhaRelatorio): number {
   );
 }
 
+type PagamentoFixture = { valor: number; metodo: string };
+
+function reservaFixture(overrides: {
+  numCriancas: number;
+  pagamentos: PagamentoFixture[];
+  caucao?: string;
+  valorCaucao?: number | null;
+  custoExcesso?: number | null;
+  pagoExcesso?: boolean;
+  meiasQuantidade?: number | null;
+  meiasPrecoUnit?: number | null;
+  menu?: { nome: string } | null;
+  extras?: Array<{ quantidade: number; extra: { precoUnitario: number; subcategoria: string | null } }>;
+}) {
+  return {
+    numCriancas: overrides.numCriancas,
+    estado: "CONCLUIDA",
+    pago: true,
+    pagamentos: overrides.pagamentos,
+    caucao: overrides.caucao ?? "NAO_PAGA",
+    valorCaucao: overrides.valorCaucao ?? null,
+    custoExcesso: overrides.custoExcesso ?? null,
+    pagoExcesso: overrides.pagoExcesso ?? false,
+    meiasQuantidade: overrides.meiasQuantidade ?? null,
+    meiasPrecoUnit: overrides.meiasPrecoUnit ?? null,
+    menu: overrides.menu ?? null,
+    extras: overrides.extras ?? [],
+  };
+}
+
+function entradaFixture(overrides: {
+  duracaoMinutos: number;
+  custoTotal: number;
+  custoTotalFinal: number;
+  pagamentos: PagamentoFixture[];
+  criancas?: Array<{ nome?: string }>;
+  meiasQuantidade?: number | null;
+  meiasPrecoUnit?: number | null;
+  extras?: Array<{ quantidade: number; extra: { precoUnitario: number; subcategoria?: string } }>;
+}) {
+  return {
+    duracaoMinutos: overrides.duracaoMinutos,
+    custoTotal: overrides.custoTotal,
+    custoTotalFinal: overrides.custoTotalFinal,
+    pagamentos: overrides.pagamentos,
+    pago: true,
+    criancas: overrides.criancas ?? [{}],
+    meiasQuantidade: overrides.meiasQuantidade ?? null,
+    meiasPrecoUnit: overrides.meiasPrecoUnit ?? null,
+    extras: overrides.extras ?? [],
+  };
+}
+
 describe("Relatório - Cálculos puros (sem BD)", () => {
   // ── calcularFestas ───────────────────────────────────────────
   describe("calcularFestas()", () => {
     it("soma CARTÃO e OUTRO (não se perdem)", () => {
       const festas = relatorioService.calcularFestas([
-        {
+        reservaFixture({
           numCriancas: 10,
-          estado: "CONCLUIDA",
-          pago: true,
-          metodoPagamento: "CARTAO",
-          valorPago: 100,
-          metodoPagamento2: null,
-          valorPago2: null,
-          caucao: "NAO_PAGA",
-          valorCaucao: null,
-          custoExcesso: null,
-          pagoExcesso: false,
-          meiasQuantidade: null,
-          meiasPrecoUnit: null,
+          pagamentos: [{ valor: 100, metodo: "CARTAO" }],
           menu: { nome: "Menu Base" },
-          extras: [],
-        },
-        {
+        }),
+        reservaFixture({
           numCriancas: 8,
-          estado: "CONCLUIDA",
-          pago: true,
-          metodoPagamento: "OUTRO",
-          valorPago: 50,
-          metodoPagamento2: null,
-          valorPago2: null,
-          caucao: "NAO_PAGA",
-          valorCaucao: null,
-          custoExcesso: null,
-          pagoExcesso: false,
-          meiasQuantidade: null,
-          meiasPrecoUnit: null,
+          pagamentos: [{ valor: 50, metodo: "OUTRO" }],
           menu: { nome: "Menu Base" },
-          extras: [],
-        },
+        }),
       ]);
 
       const total = festas.total;
@@ -78,26 +107,16 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
       expect(somaValores(total)).toBe(150);
     });
 
-    it("soma pagamento dividido (método 1 + método 2)", () => {
+    it("soma pagamentos por método (ledger, N métodos)", () => {
       const festas = relatorioService.calcularFestas([
-        {
+        reservaFixture({
           numCriancas: 10,
-          estado: "CONCLUIDA",
-          pago: true,
-          valorTotal: 100, // total acordado; 60 recebido no pag.1 + 40 no pag.2
-          metodoPagamento: "DINHEIRO",
-          valorPago: 60,
-          metodoPagamento2: "MBWAY",
-          valorPago2: 40,
-          caucao: "NAO_PAGA",
-          valorCaucao: null,
-          custoExcesso: null,
-          pagoExcesso: false,
-          meiasQuantidade: null,
-          meiasPrecoUnit: null,
+          pagamentos: [
+            { valor: 60, metodo: "DINHEIRO" },
+            { valor: 40, metodo: "MBWAY" },
+          ],
           menu: { nome: "Menu Único" },
-          extras: [],
-        },
+        }),
       ]);
 
       expect(festas.total.valorNumerario).toBe(60);
@@ -107,24 +126,16 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
 
     it("agrupa por nome do menu", () => {
       const festas = relatorioService.calcularFestas([
-        {
-          numCriancas: 10, estado: "CONCLUIDA", pago: true,
-          metodoPagamento: "DINHEIRO", valorPago: 10,
-          metodoPagamento2: null, valorPago2: null,
-          caucao: "NAO_PAGA", valorCaucao: null,
-          custoExcesso: null, pagoExcesso: false,
-          meiasQuantidade: null, meiasPrecoUnit: null,
-          menu: { nome: "Menu A" }, extras: [],
-        },
-        {
-          numCriancas: 5, estado: "CONCLUIDA", pago: true,
-          metodoPagamento: "DINHEIRO", valorPago: 20,
-          metodoPagamento2: null, valorPago2: null,
-          caucao: "NAO_PAGA", valorCaucao: null,
-          custoExcesso: null, pagoExcesso: false,
-          meiasQuantidade: null, meiasPrecoUnit: null,
-          menu: { nome: "Menu B" }, extras: [],
-        },
+        reservaFixture({
+          numCriancas: 10,
+          pagamentos: [{ valor: 10, metodo: "DINHEIRO" }],
+          menu: { nome: "Menu A" },
+        }),
+        reservaFixture({
+          numCriancas: 5,
+          pagamentos: [{ valor: 20, metodo: "DINHEIRO" }],
+          menu: { nome: "Menu B" },
+        }),
       ]);
 
       expect(festas.linhas).toHaveLength(2);
@@ -135,43 +146,33 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
   describe("calcularEntradasLivres()", () => {
     it("usa custoTotalFinal (inclui excesso) em vez de custoTotal", () => {
       const entradas = relatorioService.calcularEntradasLivres([
-        {
+        entradaFixture({
           duracaoMinutos: 90,
           custoTotal: 10,
           custoTotalFinal: 15, // +5 de excesso
-          metodoPagamento: "MULTIBANCO",
-          metodoPagamento2: null,
-          valorPago2: null,
-          pago: true,
+          pagamentos: [{ valor: 15, metodo: "MULTIBANCO" }],
           criancas: [{ nome: "A" }],
-          meiasQuantidade: null,
-          meiasPrecoUnit: null,
-          extras: [],
-        },
+        }),
       ]);
 
       // Deve usar 15 (custoTotalFinal), não 10
       expect(entradas.total.valorMultibanco).toBe(15);
     });
 
-    it("reparte o split sem dupla contagem (método 2 = valorPago2, método 1 = resto)", () => {
+    it("reparte o split por método (ledger, sem dupla contagem)", () => {
       const entradas = relatorioService.calcularEntradasLivres([
-        {
+        entradaFixture({
           duracaoMinutos: 60,
           custoTotal: 20,
           custoTotalFinal: 20,
-          metodoPagamento: "DINHEIRO",
-          metodoPagamento2: "MBWAY",
-          valorPago2: 8,
-          pago: true,
-          criancas: [{ nome: "A" }],
-          meiasQuantidade: null,
-          meiasPrecoUnit: null,
-          extras: [],
-        },
+          pagamentos: [
+            { valor: 12, metodo: "DINHEIRO" },
+            { valor: 8, metodo: "MBWAY" },
+          ],
+        }),
       ]);
 
-      // Total 20: 8 no método 2 e apenas 12 no método 1 (não 20 + 8)
+      // Total 20: 8 em MBWAY e apenas 12 em DINHEIRO (não 20 + 8)
       expect(entradas.total.valorMbway).toBe(8);
       expect(entradas.total.valorNumerario).toBe(12);
       expect(somaValores(entradas.total)).toBe(20);
@@ -179,19 +180,13 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
 
     it("lista extras como linhas informativas (não somam ao total)", () => {
       const entradas = relatorioService.calcularEntradasLivres([
-        {
+        entradaFixture({
           duracaoMinutos: 60,
           custoTotal: 20,
           custoTotalFinal: 20,
-          metodoPagamento: "DINHEIRO",
-          metodoPagamento2: null,
-          valorPago2: null,
-          pago: true,
-          criancas: [{ nome: "A" }],
-          meiasQuantidade: null,
-          meiasPrecoUnit: null,
-          extras: [{ quantidade: 2, extra: { precoUnitario: 5 } }], // 10€ já no custoTotal
-        },
+          pagamentos: [{ valor: 20, metodo: "DINHEIRO" }],
+          extras: [{ quantidade: 2, extra: { precoUnitario: 5, subcategoria: "Lanches" } }], // 10€ já no custoTotal
+        }),
       ]);
 
       // O custoTotal (20) não inclui os extras por duplicado
@@ -206,21 +201,9 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
 
     it("classifica por duração (1H / 2H / 3H)", () => {
       const entradas = relatorioService.calcularEntradasLivres([
-        {
-          duracaoMinutos: 60, custoTotal: 6, custoTotalFinal: 6,
-          metodoPagamento: "DINHEIRO", metodoPagamento2: null, valorPago2: null,
-          pago: true, criancas: [{}], meiasQuantidade: null, meiasPrecoUnit: null, extras: [],
-        },
-        {
-          duracaoMinutos: 120, custoTotal: 10, custoTotalFinal: 10,
-          metodoPagamento: "DINHEIRO", metodoPagamento2: null, valorPago2: null,
-          pago: true, criancas: [{}], meiasQuantidade: null, meiasPrecoUnit: null, extras: [],
-        },
-        {
-          duracaoMinutos: 180, custoTotal: 15, custoTotalFinal: 15,
-          metodoPagamento: "DINHEIRO", metodoPagamento2: null, valorPago2: null,
-          pago: true, criancas: [{}], meiasQuantidade: null, meiasPrecoUnit: null, extras: [],
-        },
+        entradaFixture({ duracaoMinutos: 60, custoTotal: 6, custoTotalFinal: 6, pagamentos: [{ valor: 6, metodo: "DINHEIRO" }] }),
+        entradaFixture({ duracaoMinutos: 120, custoTotal: 10, custoTotalFinal: 10, pagamentos: [{ valor: 10, metodo: "DINHEIRO" }] }),
+        entradaFixture({ duracaoMinutos: 180, custoTotal: 15, custoTotalFinal: 15, pagamentos: [{ valor: 15, metodo: "DINHEIRO" }] }),
       ]);
 
       expect(entradas.linhas.map((l) => l.descricao)).toEqual(
@@ -235,24 +218,22 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
     it("lista meias (reservas + entradas) como informativas - não somam ao total", () => {
       const outros = relatorioService.calcularOutros(
         [
-          {
-            numCriancas: 10, estado: "CONCLUIDA", pago: true,
-            metodoPagamento: "DINHEIRO", valorPago: 0, metodoPagamento2: null, valorPago2: null,
-            caucao: "NAO_PAGA", valorCaucao: null,
-            custoExcesso: null, pagoExcesso: false,
-            meiasQuantidade: 10, meiasPrecoUnit: 2, // 20€
-            menu: null,
-            extras: [],
-          },
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
+            meiasQuantidade: 10,
+            meiasPrecoUnit: 2, // 20€
+          }),
         ],
         [
-          {
-            duracaoMinutos: 60, custoTotal: 6, custoTotalFinal: 6,
-            metodoPagamento: "DINHEIRO", metodoPagamento2: null, valorPago2: null,
-            pago: true, criancas: [{}],
-            meiasQuantidade: 5, meiasPrecoUnit: 2, // 10€
-            extras: [],
-          },
+          entradaFixture({
+            duracaoMinutos: 60,
+            custoTotal: 6,
+            custoTotalFinal: 6,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
+            meiasQuantidade: 5,
+            meiasPrecoUnit: 2, // 10€
+          }),
         ],
       );
 
@@ -270,24 +251,18 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
     it("contabiliza excesso de tempo das festas (só se pago)", () => {
       const outros = relatorioService.calcularOutros(
         [
-          {
-            numCriancas: 10, estado: "CONCLUIDA", pago: true,
-            metodoPagamento: "DINHEIRO", valorPago: 0, metodoPagamento2: null, valorPago2: null,
-            caucao: "NAO_PAGA", valorCaucao: null,
-            custoExcesso: 5, pagoExcesso: true, // 5€ pago
-            meiasQuantidade: null, meiasPrecoUnit: null,
-            menu: null,
-            extras: [],
-          },
-          {
-            numCriancas: 10, estado: "CONCLUIDA", pago: true,
-            metodoPagamento: "DINHEIRO", valorPago: 0, metodoPagamento2: null, valorPago2: null,
-            caucao: "NAO_PAGA", valorCaucao: null,
-            custoExcesso: 5, pagoExcesso: false, // NÃO pago → não conta
-            meiasQuantidade: null, meiasPrecoUnit: null,
-            menu: null,
-            extras: [],
-          },
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
+            custoExcesso: 5,
+            pagoExcesso: true, // 5€ pago
+          }),
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
+            custoExcesso: 5,
+            pagoExcesso: false, // NÃO pago → não conta
+          }),
         ],
         [],
       );
@@ -301,22 +276,18 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
     it("contabiliza cauções (40€ vs outros valores)", () => {
       const outros = relatorioService.calcularOutros(
         [
-          {
-            numCriancas: 10, estado: "CONCLUIDA", pago: true,
-            metodoPagamento: "DINHEIRO", valorPago: 0, metodoPagamento2: null, valorPago2: null,
-            caucao: "PAGA", valorCaucao: 40,
-            custoExcesso: null, pagoExcesso: false,
-            meiasQuantidade: null, meiasPrecoUnit: null,
-            menu: null, extras: [],
-          },
-          {
-            numCriancas: 10, estado: "CONCLUIDA", pago: true,
-            metodoPagamento: "DINHEIRO", valorPago: 0, metodoPagamento2: null, valorPago2: null,
-            caucao: "PAGA_NO_DIA", valorCaucao: 50,
-            custoExcesso: null, pagoExcesso: false,
-            meiasQuantidade: null, meiasPrecoUnit: null,
-            menu: null, extras: [],
-          },
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
+            caucao: "PAGA",
+            valorCaucao: 40,
+          }),
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
+            caucao: "PAGA_NO_DIA",
+            valorCaucao: 50,
+          }),
         ],
         [],
       );
@@ -330,17 +301,19 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
     it("total da secção soma só cauções e excesso (brindes ficam informativos)", () => {
       const outros = relatorioService.calcularOutros(
         [
-          {
-            numCriancas: 10, estado: "CONCLUIDA", pago: true,
-            metodoPagamento: "CARTAO", valorPago: 0, metodoPagamento2: null, valorPago2: null,
-            caucao: "PAGA", valorCaucao: 40,
-            custoExcesso: 5, pagoExcesso: true,
-            meiasQuantidade: 4, meiasPrecoUnit: 2, // 8€
-            menu: null,
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "CARTAO" }],
+            caucao: "PAGA",
+            valorCaucao: 40,
+            custoExcesso: 5,
+            pagoExcesso: true,
+            meiasQuantidade: 4,
+            meiasPrecoUnit: 2, // 8€
             extras: [
-              { quantidade: 2, extra: { precoUnitario: 5, subcategoria: "Brindes" } }, // 10€
+              { quantidade: 2, extra: { precoUnitario: 5, subcategoria: "Brindes" as string | null } }, // 10€
             ],
-          },
+          }),
         ],
         [],
       );

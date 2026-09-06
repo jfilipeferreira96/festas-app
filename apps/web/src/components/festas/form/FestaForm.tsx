@@ -13,7 +13,7 @@ import { useSlotsHorario, useSlotsDia } from "@/hooks/use-slots-horario";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import PagamentoModal from "@/components/festas/PagamentoModal";
-import { scrollToFirstFormError } from "@/components/form/form-utils";
+import { mensagensDeErro, scrollToFirstFormError } from "@/components/form/form-utils";
 import { addMinutosToTime, isFimDeSemana } from "@/lib/format";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva } from "@/lib/api/reservas";
@@ -69,8 +69,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const previsaoCriancas = watch("previsaoCriancas");
   const aniversariantes = watch("aniversariantes");
   const watchedTotalAPagar = watch("totalAPagar");
-  const watchedRecebido1 = watch("valorRecebido1");
-  const watchedRecebido2 = watch("valorRecebido2");
+  const watchedPagamentos = watch("pagamentos");
 
   const extraItems = useMemo(
     () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo && e.subcategoria !== "Bolos"),
@@ -113,7 +112,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const [showClienteSearch, setShowClienteSearch] = useState(false);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [menuWarning, setMenuWarning] = useState("");
-  const [recebidoEdited, setRecebidoEdited] = useState(false);
 
   useEffect(() => {
     if (!slotsHorario) return;
@@ -175,25 +173,18 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   );
 
   useEffect(() => {
-    if (reserva && (reserva.valorTotal != null || (reserva.valorPago && reserva.valorPago > 0))) return;
+    if (reserva && reserva.valorTotal != null) return;
     if (!watchedData || !configPreco) return;
     if (estimativaFesta.estimativa > 0) {
       setValue("totalAPagar", estimativaFesta.estimativa, { shouldDirty: true });
     }
   }, [watchedData, configPreco, reserva, estimativaFesta, setValue]);
 
-  // Recebido no pag. 1 segue o total até edição manual
-  useEffect(() => {
-    if (recebidoEdited || reserva) return;
-    if (watchedTotalAPagar != null && watchedTotalAPagar > 0) {
-      setValue("valorRecebido1", watchedTotalAPagar, { shouldDirty: true });
-    }
-  }, [watchedTotalAPagar, recebidoEdited, reserva, setValue]);
-
-  const faltaPagamento = useMemo(
-    () => Math.max((watchedTotalAPagar ?? 0) - (watchedRecebido1 ?? 0) - (watchedRecebido2 ?? 0), 0),
-    [watchedTotalAPagar, watchedRecebido1, watchedRecebido2]
-  );
+  // Falta pagar derivada do ledger (total − soma dos pagamentos)
+  const faltaPagamento = useMemo(() => {
+    const soma = (watchedPagamentos ?? []).reduce((acc, p) => acc + (Number(p?.valor) || 0), 0);
+    return Math.max((watchedTotalAPagar ?? 0) - soma, 0);
+  }, [watchedTotalAPagar, watchedPagamentos]);
 
   useEffect(() => {
     if (!watchedData || menuExtras.length === 0 || reserva) return;
@@ -275,7 +266,19 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     [isEdit, reserva, menuExtras.length, updateReserva, createReserva, toast, onClose]
   );
 
-  const onInvalid = useCallback(() => scrollToFirstFormError(), []);
+  // Falha de validação JAMAIS silenciosa: scroll + toast com as mensagens
+  const onInvalid = useCallback(
+    (errors: Record<string, unknown>) => {
+      scrollToFirstFormError();
+      const mensagens = mensagensDeErro(errors);
+      toast.error(
+        mensagens.length > 0
+          ? `Não foi possível guardar: ${mensagens.slice(0, 3).join(" · ")}${mensagens.length > 3 ? "…" : ""}`
+          : "Não foi possível guardar. Verifique os campos destacados."
+      );
+    },
+    [toast]
+  );
   const isLoading = isSubmitting || createReserva.isPending || updateReserva.isPending;
 
   return (
@@ -305,7 +308,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               reserva={reserva}
               onOpenPagamento={() => setShowPagamentoModal(true)}
               estimativa={estimativaFesta}
-              onRecebidoEditado={() => setRecebidoEdited(true)}
             />
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end shrink-0">

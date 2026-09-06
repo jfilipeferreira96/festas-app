@@ -6,11 +6,12 @@ import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
-import { METODO_PAGAMENTO_OPTIONS, metodoPagamentoLabel } from "@/lib/metodo-pagamento";
+import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/components/shared/PagamentoCard";
-import { PagamentoRegistoSection } from "@/components/shared/pagamento/PagamentoRegistoSection";
-import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData, type EntradaLivreMetodoPagamento } from "../entrada-livre-form.schema";
+import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
+import { totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
+import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-livre-form.schema";
 
 interface CustoComponentes {
   totalPessoas: number;
@@ -26,7 +27,6 @@ interface PagamentoEntradaSectionProps {
   custoCalculado: number;
   precoMeias: number;
   onOpenPagamento: () => void;
-  onCustoEditado: () => void;
 }
 
 export default function PagamentoEntradaSection({
@@ -35,18 +35,19 @@ export default function PagamentoEntradaSection({
   custoCalculado,
   precoMeias,
   onOpenPagamento,
-  onCustoEditado,
 }: PagamentoEntradaSectionProps) {
   const isEdit = !!entrada;
-  const { setValue, watch, formState: { errors } } = useFormContext<EntradaLivreFormData>();
+  const { setValue, watch } = useFormContext<EntradaLivreFormData>();
   const [registarPagamento, setRegistarPagamento] = useState(false);
-  const [showSplit, setShowSplit] = useState(false);
 
   const duracao = watch("duracaoMinutos");
   const meias = watch("meiasQuantidade") ?? 0;
   const duracaoLabel = DURACAO_ENTRADA_OPTIONS.find((o) => o.value === String(duracao))?.label ?? `${duracao}min`;
 
   const setMeias = (quantidade: number) => setValue("meiasQuantidade", Math.max(0, quantidade), { shouldDirty: true });
+
+  const pagamentosForm = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
+  const custo = watch("custoTotal") ?? custoCalculado;
 
   return (
     <PagamentoCard acao={isEdit && entrada ? <BotaoGerirPagamento onClick={onOpenPagamento} /> : undefined}>
@@ -60,9 +61,10 @@ export default function PagamentoEntradaSection({
             },
             {
               label: "Método",
-              value: `${metodoPagamentoLabel(entrada.metodoPagamento, "Não definido")}${
-                entrada.metodoPagamento2 ? ` + ${metodoPagamentoLabel(entrada.metodoPagamento2, "")}` : ""
-              }`,
+              value:
+                (entrada.pagamentos?.length ?? 0) > 0
+                  ? entrada.pagamentos!.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
+                  : "Não definido",
             },
             { label: "Meias", value: `${meias} ${meias === 1 ? "par" : "pares"}` },
           ]}
@@ -75,43 +77,52 @@ export default function PagamentoEntradaSection({
             label="Registar pagamento na entrada (opcional)"
           />
           {registarPagamento && (
-            <PagamentoRegistoSection
-              totalValor={watch("custoTotal")}
-              onTotalChange={(v) => {
-                onCustoEditado();
-                setValue("custoTotal", v, { shouldDirty: true });
-              }}
-              totalCalculado={custoCalculado}
-              erroTotal={errors.custoTotal?.message}
-              recebido1={watch("valorRecebido1")}
-              onRecebido1Change={(v) => {
-                onCustoEditado();
-                setValue("valorRecebido1", v, { shouldDirty: true });
-              }}
-              metodo1={watch("metodoPagamento")}
-              onMetodo1Change={(v) =>
-                setValue("metodoPagamento", v as EntradaLivreMetodoPagamento | undefined, { shouldDirty: true })
-              }
-              split={showSplit}
-              onSplitToggle={(checked) => {
-                setShowSplit(checked);
-                if (!checked) {
-                  setValue("metodoPagamento2", undefined, { shouldDirty: true });
-                  setValue("valorRecebido2", 0, { shouldDirty: true });
+            <>
+              {/* Custo total (editável, pré-preenchido com o cálculo) */}
+              <div>
+                <FieldLabel required>Total a pagar (€)</FieldLabel>
+                <div className="flex items-center gap-2">
+                  <InputField
+                    type="number"
+                    step={0.01}
+                    min={0}
+                    placeholder="0,00"
+                    autoComplete="off"
+                    value={watch("custoTotal") != null ? String(watch("custoTotal")) : ""}
+                    onChange={(e) =>
+                      setValue("custoTotal", e.target.value === "" ? undefined : Number(e.target.value), {
+                        shouldDirty: true,
+                      })
+                    }
+                  />
+                  <span className="text-xs text-text-muted whitespace-nowrap">≈ {formatEuro(custoCalculado)}</span>
+                </div>
+                <p className="text-[11px] text-text-muted mt-1">
+                  Pré-preenchido com o cálculo — editável (valor final acordado).
+                </p>
+              </div>
+
+              {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
+              <PagamentosLedgerSection
+                totalDevido={custo}
+                pagamentos={pagamentosForm}
+                onAdd={(p) =>
+                  setValue(
+                    "pagamentos",
+                    [
+                      ...pagamentosForm,
+                      { ...p, id: `pg-${Date.now()}-${pagamentosForm.length}`, createdAt: new Date().toISOString() },
+                    ] as PagamentoLedgerItem[],
+                    { shouldDirty: true },
+                  )
                 }
-              }}
-              metodo2={watch("metodoPagamento2")}
-              onMetodo2Change={(v) =>
-                setValue("metodoPagamento2", v as EntradaLivreMetodoPagamento | undefined, { shouldDirty: true })
-              }
-              valor2={watch("valorRecebido2") ?? 0}
-              onValor2Change={(v) => setValue("valorRecebido2", v, { shouldDirty: true })}
-              falta={Math.max((watch("custoTotal") ?? custoCalculado) - (watch("valorRecebido1") ?? 0) - (watch("valorRecebido2") ?? 0), 0)}
-              pago={watch("pago") ?? false}
-              onPagoChange={(checked) => setValue("pago", checked, { shouldDirty: true })}
-              metodoOptions={METODO_PAGAMENTO_OPTIONS}
-              breakdown={<BreakdownEntrada custoComponentes={custoComponentes} custoFinal={watch("custoTotal") ?? custoCalculado} precoMeias={precoMeias} meias={meias} duracaoLabel={duracaoLabel} />}
-            />
+                onRemove={(id) =>
+                  setValue("pagamentos", pagamentosForm.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
+                    shouldDirty: true,
+                  })
+                }
+              />
+            </>
           )}
         </div>
       )}
@@ -143,10 +154,10 @@ export default function PagamentoEntradaSection({
         </div>
       </div>
 
-      {!isEdit && !registarPagamento && (
+      {(!isEdit || !registarPagamento) && (
         <BreakdownEntrada
           custoComponentes={custoComponentes}
-          custoFinal={custoCalculado}
+          custoFinal={custo}
           precoMeias={precoMeias}
           meias={meias}
           duracaoLabel={duracaoLabel}

@@ -60,7 +60,7 @@ export default function HistoricoFestasModal({
           <div className="space-y-2">
             {festas.map((festa) => {
               const dataFesta = new Date(festa.data);
-              const valor = Number(festa.valorPago ?? 0);
+              const valor = (festa.pagamentos ?? []).reduce((s, p) => s + Number(p.valor), 0);
               return (
                 <div
                   key={festa.id}

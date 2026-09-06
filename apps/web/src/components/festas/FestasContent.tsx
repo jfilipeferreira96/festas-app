@@ -1,6 +1,6 @@
 "use client";
 
-import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
+import { resumoLedger } from "@/lib/pagamento-ledger";
 
 import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
@@ -143,7 +143,7 @@ export default function FestasContent() {
           inicioEm={confirmFinalizar.inicioEm}
           fimPrevisto={confirmFinalizar.fimPrevisto}
           duracaoMinutos={confirmFinalizar.duracaoMinutos}
-          custoBase={Number(confirmFinalizar.valorPago ?? 0)}
+          custoBase={Number(confirmFinalizar.valorTotal ?? 0)}
           notas={{
             cacifos: confirmFinalizar.notasCacifos,
             lesoes: confirmFinalizar.observacoesLesoes,
@@ -639,16 +639,21 @@ function FestaCard({
             ) : (
               <span className="text-accent-orange">Por pagar</span>
             )}
-            {festa.valorPago != null && (
-              <span className="text-text-muted ml-1">
-                · {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(festa.valorPago)}
-              </span>
-            )}
-            {festa.metodoPagamento && (
-              <span className="text-text-muted ml-1">
-                · {metodoPagamentoLabel(festa.metodoPagamento)}
-              </span>
-            )}
+            {(() => {
+              const { totalPago, temPagamentos, metodos } = resumoLedger(festa.pagamentos);
+              return (
+                <>
+                  {temPagamentos && (
+                    <span className="text-text-muted ml-1">
+                      · {new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(totalPago)}
+                    </span>
+                  )}
+                  {temPagamentos && (
+                    <span className="text-text-muted ml-1">· {metodos}</span>
+                  )}
+                </>
+              );
+            })()}
           </span>
         </button>
 

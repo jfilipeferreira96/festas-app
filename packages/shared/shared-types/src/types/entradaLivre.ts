@@ -2,6 +2,8 @@
 // Entrada Livre - Types
 // ===================================
 
+import type { CriarPagamentoDTO, Pagamento } from "./pagamento";
+
 export interface CriancaInput {
   nome: string;
   idade?: number;
@@ -23,8 +25,8 @@ export interface EntradaLivre {
   fimReal?: string;
   excessoMinutos: number;
   estado: "ATIVA" | "CONCLUIDA" | "CANCELADA";
-  metodoPagamento?: string;
-  valorPago?: number; // Valor recebido no pagamento 1
+  // Ledger de pagamentos (fonte única do recebido)
+  pagamentos?: Pagamento[];
   pago: boolean;
   pagoExcesso: boolean;
   // Pagamento dividido (até 2 métodos)
@@ -75,9 +77,8 @@ export interface CriarEntradaLivreDTO {
   temLanche?: boolean;
   // Adultos (encarregados que acompanham e pagam)
   numAdultos?: number;
-  // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: string;
-  valorPago2?: number;
+  // Ledger de pagamentos (fonte única do recebido)
+  pagamentos?: CriarPagamentoDTO[];
   // Meias
   meiasQuantidade?: number;
 }

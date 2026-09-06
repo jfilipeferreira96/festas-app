@@ -232,13 +232,15 @@ export async function seedTestData(): Promise<void> {
       meiasQuantidade: 18,
       meiasPrecoUnit: 2,
       // Split payment (MBWAY 50 + MULTIBANCO 240) - já paga
-      // valorTotal = total acordado; valorPago = recebido no pag. 1
+      // valorTotal = total acordado; o recebido vive no ledger (Pagamento[])
       valorTotal: 290,
       pago: true,
-      metodoPagamento: "MBWAY",
-      valorPago: 50,
-      metodoPagamento2: "MULTIBANCO",
-      valorPago2: 240,
+      pagamentos: {
+        create: [
+          { valor: 50, metodo: "MBWAY" },
+          { valor: 240, metodo: "MULTIBANCO" },
+        ],
+      },
     },
   });
   // Link aniversariante via pivot
@@ -423,7 +425,7 @@ export async function seedTestData(): Promise<void> {
       temLanche: false,
       numAdultos: 0,
       pago: true,
-      metodoPagamento: "MBWAY",
+      pagamentos: { create: [{ valor: 15, metodo: "MBWAY" }] },
       criancas: [{ nome: "João", idade: 6 }, { nome: "Maria", idade: 5 }],
     },
   });
@@ -459,7 +461,7 @@ export async function seedTestData(): Promise<void> {
       custoTotalFinal: 17.0,
       pago: true,
       pagoExcesso: true,
-      metodoPagamento: "MULTIBANCO",
+      pagamentos: { create: [{ valor: 17, metodo: "MULTIBANCO" }] },
       criancas: [{ nome: "Pedro", idade: 7 }],
     },
   });

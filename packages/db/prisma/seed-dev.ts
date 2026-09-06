@@ -19,9 +19,6 @@
  * - Marketing: segmento + newsletter + campanha
  */
 
-import { FESTA_COLOR_VALUES } from "@saas/shared-defaults";
-import { PrismaClient } from "@prisma/client";
-
 // Type assertion helper for MetodoPagamento enum values
 const MP = (s: string) => s as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO";
 import { betterAuth } from "better-auth";
@@ -43,13 +40,13 @@ const seedAuth = betterAuth({
   emailAndPassword: { 
     enabled: true,
     // Desativado envio de emails em ambiente de testes/seeds
-    // sendResetPassword: async () => {},
+    // sendResetPassword: async () => {}
   },
   emailVerification: {
     // Desativado envio de emails em ambiente de testes/seeds
     sendVerificationEmail: async () => {},
-    sendOnSignUp: false,
-  },
+    sendOnSignUp: false
+  }
 });
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -84,9 +81,6 @@ function addMin(d: Date, min: number): Date {
   const r = new Date(d);
   r.setMinutes(r.getMinutes() + min);
   return r;
-}
-function toTimeStr(d: Date): string {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 // Portuguese children's names pool
@@ -136,12 +130,12 @@ async function main() {
 
   for (const user of users) {
     const result = await seedAuth.api.signUpEmail({
-      body: { name: user.name, email: user.email, password: user.password },
+      body: { name: user.name, email: user.email, password: user.password }
     });
     if (!result?.user) throw new Error(`Failed to create user ${user.email}`);
     await prisma.user.update({
       where: { id: result.user.id },
-      data: { emailVerified: true, funcao: user.funcao, activo: true },
+      data: { emailVerified: true, funcao: user.funcao, activo: true }
     });
     console.log(`  ✓ ${user.email} / ${user.password}`);
   }
@@ -208,7 +202,7 @@ async function seedExtras() {
   // Cobrança por pessoa (idempotente - upsert acima tem update: {})
   await prisma.extra.updateMany({
     where: { id: { in: ["extra-006", "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
-    data: { baseCobranca: "POR_PESSOA" },
+    data: { baseCobranca: "POR_PESSOA" }
   });
 
   // Novos extras/menus BasyLandy → associados a todos os locais
@@ -240,7 +234,7 @@ async function seedExtras() {
   for (const el of extraLocals) {
     await prisma.extraLocal.upsert({
       where: { extraId_localId: { extraId: el.extraId, localId: el.localId } },
-      update: {}, create: el,
+      update: {}, create: el
     });
   }
   console.log("  ✓ 31 extras (7 EXTRA + 4 MENU + 3 Menu BasyLandy + 9 Extras ao lanche + 5 Extras à diversão + 3 Bolos) with local associations\n");
@@ -261,7 +255,7 @@ async function seedMonitores() {
     await prisma.monitor.upsert({
       where: { id: mon.id },
       update: { valorHora: mon.valorHora },
-      create: mon,
+      create: mon
     });
   }
   console.log("  ✓ 6 monitores (com valor/hora)\n");
@@ -273,13 +267,13 @@ async function seedCacifos() {
   await prisma.configuracaoCacifo.upsert({
     where: { id: "config-cacifo-001" },
     update: { totalCacifos: 40 },
-    create: { id: "config-cacifo-001", totalCacifos: 40 },
+    create: { id: "config-cacifo-001", totalCacifos: 40 }
   });
   for (let i = 1; i <= 40; i++) {
     await prisma.cacifo.upsert({
       where: { numero: i },
       update: { estado: "LIVRE", reservaId: null, criancas: null, notas: null },
-      create: { numero: i, estado: "LIVRE", configuracaoId: "config-cacifo-001" },
+      create: { numero: i, estado: "LIVRE", configuracaoId: "config-cacifo-001" }
     });
   }
   console.log("  ✓ 40 cacifos (all LIVRE)\n");
@@ -313,13 +307,13 @@ async function seedConfiguracaoPreco() {
         precoLancheEntrada: 4.5,
         valorHoraMonitorDefault: 8,
         duracaoDefaultFestaMin: 135,
-        duracaoExcessoBlocoMin: 30,
-      },
+        duracaoExcessoBlocoMin: 30
+      }
     });
   } else {
     await prisma.configuracaoPreco.update({
       where: { id: existing.id },
-      data: { minimosCriancasPorAniversariante: minimos },
+      data: { minimosCriancasPorAniversariante: minimos }
     });
   }
 
@@ -352,8 +346,8 @@ async function seedExcecoesCalendario() {
           nome,
           afectaPreco: true,
           bloqueiaReserva: false,
-          recorrenciaAnual: true,
-        },
+          recorrenciaAnual: true
+        }
       });
     }
   }
@@ -370,8 +364,8 @@ async function seedExcecoesCalendario() {
       nome: "Manutenção (demo)",
       afectaPreco: false,
       bloqueiaReserva: true,
-      recorrenciaAnual: false,
-    },
+      recorrenciaAnual: false
+    }
   });
 
   console.log(`  ✓ ${feriadosFixos.length} feriados × 2 anos + 1 dia bloqueado (demo)\n`);
@@ -390,7 +384,7 @@ async function seedSalasLanche() {
     await prisma.salaLanche.upsert({
       where: { id: s.id },
       update: { nome: s.nome, activo: s.activo },
-      create: s,
+      create: s
     });
   }
 
@@ -407,7 +401,7 @@ async function seedSlotsHorario() {
     AZUL: "#0095C8",
     VERDE: "#5CBE4A",
     AMARELO: "#FCE12D",
-    ROSA: "#E54796",
+    ROSA: "#E54796"
   } as const;
 
   const slots = [
@@ -419,7 +413,7 @@ async function seedSlotsHorario() {
 
   for (const s of slots) {
     const existing = await prisma.slotHorario.findFirst({
-      where: { horaInicio: s.horaInicio },
+      where: { horaInicio: s.horaInicio }
     });
     if (existing) {
       // Actualizar defaults caso já exista
@@ -430,8 +424,8 @@ async function seedSlotsHorario() {
           ordem: s.ordem,
           corDefault: s.corDefault,
           horaLancheDefault: s.horaLancheDefault,
-          salaLancheId: s.salaLancheId,
-        },
+          salaLancheId: s.salaLancheId
+        }
       });
     } else {
       await prisma.slotHorario.create({ data: s });
@@ -545,8 +539,8 @@ async function seedReservas() {
           estado: "OCUPADO",
           reservaId,
           criancas: names[i] ?? `Criança ${i + 1}`,
-          notas: notasPorCacifo[i] ?? null,
-        },
+          notas: notasPorCacifo[i] ?? null
+        }
       });
     }
   }
@@ -564,8 +558,8 @@ async function seedReservas() {
           reservaId,
           etapaId: etapaIds[i]!,
           concluida,
-          concluidaEm: concluida ? addMin(baseTime, i * 20) : null,
-        },
+          concluidaEm: concluida ? addMin(baseTime, i * 20) : null
+        }
       });
     }
   }
@@ -601,10 +595,10 @@ async function seedReservas() {
         tema: c.tema, cor: c.cor, bolo: c.boloTipo, boloTema: c.bolo,
         observacoesGerais: c.obs,
         observacoesBrindes: c.brindes,
-        valorTotal: c.dur * 1.4, metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
+        valorTotal: c.dur * 1.4, pago: true,
         caucao: "PAGA",
-        clienteId: c.cli, localId: c.local,
-      },
+        clienteId: c.cli, localId: c.local
+      }
     });
     await prisma.reservaAniversariante.upsert({ where: { id: `ra-${c.id}` }, update: {}, create: { id: `ra-${c.id}`, reservaId: c.id, aniversarianteId: c.aniv } });
     for (const [i, mId] of c.mons.entries()) {
@@ -643,10 +637,10 @@ async function seedReservas() {
         inicioEm: start, fimPrevisto: fim, fimReal,
         tema: c.tema, cor: c.cor, bolo: "BOLO_ARTISTICO", boloTema: c.bolo,
         observacoesGerais: c.obs,
-        valorTotal: c.dur * 1.4, metodoPagamento: "MULTIBANCO", valorPago: c.dur * 1.4, pago: true,
+        valorTotal: c.dur * 1.4, pago: true,
         caucao: "PAGA",
-        clienteId: c.cli, localId: c.local,
-      },
+        clienteId: c.cli, localId: c.local
+      }
     });
     await prisma.reservaAniversariante.upsert({ where: { id: `ra-${id}` }, update: {}, create: { id: `ra-${id}`, reservaId: id, aniversarianteId: c.aniv } });
     for (const [i, mId] of c.mons.entries()) {
@@ -685,10 +679,10 @@ async function seedReservas() {
         inicioEm: start, fimPrevisto: fim, fimReal,
         tema: c.tema, cor: c.cor, bolo: "BOLO_ARTISTICO", boloTema: c.bolo,
         observacoesGerais: c.obs,
-        valorTotal: c.dur * 1.2, metodoPagamento: "DINHEIRO", valorPago: c.dur * 1.2, pago: true,
+        valorTotal: c.dur * 1.2, pago: true,
         caucao: "PAGA_NO_DIA",
-        clienteId: c.cli, localId: c.local,
-      },
+        clienteId: c.cli, localId: c.local
+      }
     });
     await prisma.reservaAniversariante.upsert({ where: { id: `ra-${id}` }, update: {}, create: { id: `ra-${id}`, reservaId: id, aniversarianteId: c.aniv } });
     for (const [i, mId] of c.mons.entries()) {
@@ -717,7 +711,7 @@ async function seedReservas() {
       bolo: "NOSSO_1KG", boloTema: "Bolo de cenoura com decoração de fadas",
       observacoesGerais: "Leonor quer tudo lilás e brilhante.",
       observacoesBrindes: "Varinhas de condão para todos.",
-      valorTotal: 145.00, metodoPagamento: "CARTAO", valorPago: 145.00, pago: true,
+      valorTotal: 145.00, pago: true,
       caucao: "PAGA",
       cacifosHistorico: [
         { numero: 21, estado: "OCUPADO", criancas: "Leonor, Diana" },
@@ -725,8 +719,8 @@ async function seedReservas() {
         { numero: 23, estado: "OCUPADO", criancas: "Mariana, Teresa" },
         { numero: 24, estado: "OCUPADO", criancas: "Inês, Madalena, Joana" },
       ],
-      clienteId: "cliente-006", localId: "local-002",
-    },
+      clienteId: "cliente-006", localId: "local-002"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-today-3" }, update: {}, create: { id: "ra-today-3", reservaId: "reserva-today-3", aniversarianteId: "aniv-007" } });
   await prisma.reservaMonitor.upsert({ where: { id: "rm-today-3a" }, update: {}, create: { id: "rm-today-3a", reservaId: "reserva-today-3", monitorId: "monitor-005" } });
@@ -745,7 +739,7 @@ async function seedReservas() {
       estado: "EM_CURSO", inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso, fimReal: null,
       horario: "14:00", duracaoMinutos: 135,
       notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde - confirmar com os pais no pagamento e na saída.",
-      observacoesLesoes: "Marta tem gesso no braço direito - evitar escalada e trampolins.",
+      observacoesLesoes: "Marta tem gesso no braço direito - evitar escalada e trampolins."
     },
     create: {
       id: "reserva-001",
@@ -759,12 +753,12 @@ async function seedReservas() {
       observacoesBrindes: "Sacos com pulseiras e adesivos.",
       observacoesLesoes: "Marta tem gesso no braço direito - evitar escalada e trampolins.",
       outrosExtras: "Palhaçada ao início (15 min)",
-      valorTotal: 175.00, metodoPagamento: "MBWAY", valorPago: 175.00, pago: true,
+      valorTotal: 175.00, pago: true,
       caucao: "PAGA",
       notas: "Marta faz 8 anos. Decoração cor-de-rosa.",
       notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde - confirmar com os pais no pagamento e na saída.",
-      clienteId: "cliente-001", localId: "local-001",
-    },
+      clienteId: "cliente-001", localId: "local-001"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-001" }, update: {}, create: { id: "ra-001", reservaId: "reserva-001", aniversarianteId: "aniv-001" } });
   await prisma.reservaMonitor.upsert({ where: { id: "rm-001a" }, update: {}, create: { id: "rm-001a", reservaId: "reserva-001", monitorId: "monitor-001" } });
@@ -809,11 +803,11 @@ async function seedReservas() {
       observacoesLesoes: "Laura é alérgica a amendoim.",
       observacoesBrindes: "Mini-unicórnios de pelúcia para todos.",
       notasCacifos: "Cacifos 16 e 23 com alertas - verificar meias em falta no pagamento.",
-      valorTotal: 150.00, metodoPagamento: "DINHEIRO", valorPago: 100.00, pago: false,
+      valorTotal: 150.00, pago: false,
       caucao: "PAGA_NO_DIA",
       notas: "Beatriz quer decoração de unicórnios.",
-      clienteId: "cliente-002", localId: "local-002",
-    },
+      clienteId: "cliente-002", localId: "local-002"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-002" }, update: {}, create: { id: "ra-002", reservaId: "reserva-002", aniversarianteId: "aniv-003" } });
   await prisma.menu.upsert({ where: { id: "menu-002" }, update: {}, create: { id: "menu-002", nome: "Menu Unicórnio", preco: 10.00, notas: "Pipocas, sumo, sandes, bolo arco-íris", reservaId: "reserva-002" } });
@@ -844,11 +838,11 @@ async function seedReservas() {
       bolo: "A_DECIDIR", boloTema: "Bolo em formato de bola de futebol",
       observacoesGerais: "Francisco é alérgico a frutos secos.",
       observacoesBrindes: "Chinelos de futebol para os meninos.",
-      valorTotal: 120.00, metodoPagamento: "MULTIBANCO", valorPago: 0, pago: false,
+      valorTotal: 120.00, pago: false,
       caucao: "NAO_PAGA",
       notas: "Francisco é alérgico a frutos secos.",
-      clienteId: "cliente-003", localId: "local-002",
-    },
+      clienteId: "cliente-003", localId: "local-002"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-003" }, update: {}, create: { id: "ra-003", reservaId: "reserva-003", aniversarianteId: "aniv-004" } });
   await prisma.menu.upsert({ where: { id: "menu-003" }, update: {}, create: { id: "menu-003", nome: "Menu Básico", preco: 5.00, notas: "Sumo, pipocas, bolo", reservaId: "reserva-003" } });
@@ -871,10 +865,10 @@ async function seedReservas() {
       bolo: "BOLO_ARTISTICO", boloTema: "Bolo com logo dos Vingadores",
       observacoesGerais: "Decoração temática super-heróis.",
       observacoesBrindes: "Capas de super-herói para as crianças.",
-      valorTotal: 200.00, metodoPagamento: "MBWAY", valorPago: 200.00, pago: true,
+      valorTotal: 200.00, pago: true,
       caucao: "PAGA",
-      clienteId: "cliente-002", localId: "local-001",
-    },
+      clienteId: "cliente-002", localId: "local-001"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-f1" }, update: {}, create: { id: "ra-f1", reservaId: "reserva-future-001", aniversarianteId: "aniv-003" } });
   await prisma.menu.upsert({ where: { id: "menu-f1" }, update: {}, create: { id: "menu-f1", nome: "Menu Super", preco: 12.00, notas: "Pizza, nuggets, sumo, pipocas, bolo", reservaId: "reserva-future-001" } });
@@ -898,10 +892,10 @@ async function seedReservas() {
       bolo: "A_DECIDIR", boloTema: "Bolo com animais da selva",
       observacoesGerais: "Matilde quer tema safari com animais de pelúcia.",
       observacoesBrindes: "Binóculos de brincar.",
-      valorTotal: 120.00, metodoPagamento: "DINHEIRO", valorPago: 50.00, pago: false,
+      valorTotal: 120.00, pago: false,
       caucao: "NAO_PAGA",
-      clienteId: "cliente-004", localId: "local-002",
-    },
+      clienteId: "cliente-004", localId: "local-002"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-f2" }, update: {}, create: { id: "ra-f2", reservaId: "reserva-future-002", aniversarianteId: "aniv-005" } });
   await prisma.menu.upsert({ where: { id: "menu-f2" }, update: {}, create: { id: "menu-f2", nome: "Menu Safari", preco: 7.50, notas: "Croissants, sumo, bolo safari", reservaId: "reserva-future-002" } });
@@ -921,10 +915,10 @@ async function seedReservas() {
       tema: "Sereia", cor: "#00A68A",
       bolo: "A_DECIDIR", boloTema: "Bolo oceano com sereia",
       observacoesGerais: "Mariana adora o mar e sereias.",
-      valorTotal: 130.00, metodoPagamento: "CARTAO", valorPago: 0, pago: false,
+      valorTotal: 130.00, pago: false,
       caucao: "NAO_PAGA",
-      clienteId: "cliente-008", localId: "local-003",
-    },
+      clienteId: "cliente-008", localId: "local-003"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-f3" }, update: {}, create: { id: "ra-f3", reservaId: "reserva-future-003", aniversarianteId: "aniv-009" } });
   await prisma.menu.upsert({ where: { id: "menu-f3" }, update: {}, create: { id: "menu-f3", nome: "Menu Pequeno", preco: 6.00, notas: "Sumo e bolo", reservaId: "reserva-future-003" } });
@@ -945,10 +939,10 @@ async function seedReservas() {
       bolo: "NOSSO_1KG", boloTema: "Bolo oceano com sereia",
       observacoesGerais: "Mariana adora o mar e sereias.",
       observacoesBrindes: "Conchas e estrelas-do-mar de brincar.",
-      valorTotal: 120.00, metodoPagamento: "CARTAO", valorPago: 120.00, pago: true,
+      valorTotal: 120.00, pago: true,
       caucao: "PAGA",
-      clienteId: "cliente-008", localId: "local-003",
-    },
+      clienteId: "cliente-008", localId: "local-003"
+    }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-tmr-2" }, update: {}, create: { id: "ra-tmr-2", reservaId: "reserva-tmr-2", aniversarianteId: "aniv-009" } });
   await prisma.menu.upsert({ where: { id: "menu-tmr-2" }, update: {}, create: { id: "menu-tmr-2", nome: "Menu Sereia", preco: 8.00, notas: "Sumo, sandes, bolo oceano", reservaId: "reserva-tmr-2" } });
@@ -956,7 +950,7 @@ async function seedReservas() {
 
   // ─── Preencher horaLanche (45 min após início) + valorCaucao + observacoesBrindesPais ───
   const todasReservas = await prisma.reserva.findMany({
-    select: { id: true, horario: true, observacoesBrindes: true, caucao: true },
+    select: { id: true, horario: true, observacoesBrindes: true, caucao: true }
   });
   for (const r of todasReservas) {
     let horaLanche: string | null = null;
@@ -978,30 +972,60 @@ async function seedReservas() {
         valorCaucao: r.caucao === "NAO_PAGA" ? 0 : 40,
         observacoesBrindesPais: r.observacoesBrindes
           ? "Sacos-lembrança para os pais com foto da festa."
-          : "Oferecer café e fatia de bolo aos pais durante a festa.",
-      },
+          : "Oferecer café e fatia de bolo aos pais durante a festa."
+      }
     });
   }
 
+  // ── Ledger de pagamentos: cria pagamentos realistas (split 70/30) ──
   const reservasParaSplit = await prisma.reserva.findMany({
-    where: { pago: true, metodoPagamento: { not: null } },
+    where: { pago: true, valorTotal: { gt: 0 } },
     take: 3,
     orderBy: { data: "desc" },
+    include: { pagamentos: { select: { id: true } } },
   });
+  const metodos2 = [MP("DINHEIRO"), MP("MBWAY"), MP("TRANSFERENCIA")];
   for (const [i, r] of reservasParaSplit.entries()) {
-    const metodos2 = [MP("DINHEIRO"), MP("MBWAY"), MP("TRANSFERENCIA")];
-    const valorOriginal = Number(r.valorPago ?? 0);
-    const valor2 = Math.round(valorOriginal * 0.3 * 100) / 100; // 30% no 2º método
-    const valor1 = Math.round((valorOriginal - valor2) * 100) / 100;
-    await prisma.reserva.update({
-      where: { id: r.id },
-      data: {
-        valorTotal: valorOriginal,
-        valorPago: valor1,
-        metodoPagamento2: metodos2[i],
-        valorPago2: valor2,
-        referenciaPagamento: i === 0 ? `REF-${r.id.slice(-6).toUpperCase()}` : null,
-      },
+    if (r.pagamentos.length > 0) continue; // já tem ledger
+    const total = Number(r.valorTotal ?? 0);
+    if (total <= 0) continue;
+    const valor2 = Math.round(total * 0.3 * 100) / 100; // 30% no 2º método
+    const valor1 = Math.round((total - valor2) * 100) / 100;
+    await prisma.pagamento.createMany({
+      data: [
+        { valor: valor1, metodo: (metodos2[i % metodos2.length] ?? "DINHEIRO"), reservaId: r.id },
+        { valor: valor2, metodo: (MP("MBWAY") ?? "MBWAY") as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENCIA" | "CARTAO" | "OUTRO", reservaId: r.id },
+      ],
+    });
+  }
+
+  // Festas POR PAGAR: sinal de 30% (MBWAY) - mostra "Falta pagar" no balcão
+  const reservasPorPagar = await prisma.reserva.findMany({
+    where: { pago: false, valorTotal: { gt: 0 } },
+    take: 4,
+    orderBy: { data: "desc" },
+    include: { pagamentos: { select: { id: true } } },
+  });
+  for (const r of reservasPorPagar) {
+    if (r.pagamentos.length > 0) continue;
+    const sinal = Math.round(Number(r.valorTotal) * 0.3 * 100) / 100;
+    if (sinal <= 0) continue;
+    await prisma.pagamento.create({
+      data: { valor: sinal, metodo: MP("MBWAY"), nota: "Sinal", reservaId: r.id },
+    });
+  }
+
+  // Entradas livres pagas: 1 pagamento = custoTotalFinal ?? custoTotal
+  const entradasPagasLedger = await prisma.entradaLivre.findMany({
+    where: { pago: true },
+    include: { pagamentos: { select: { id: true } } },
+  });
+  for (const e of entradasPagasLedger) {
+    if (e.pagamentos.length > 0) continue;
+    const total = Number(e.custoTotalFinal ?? e.custoTotal ?? 0);
+    if (total <= 0) continue;
+    await prisma.pagamento.create({
+      data: { valor: total, metodo: MP("MBWAY"), entradaLivreId: e.id },
     });
   }
 
@@ -1010,15 +1034,15 @@ async function seedReservas() {
     where: { pago: true },
     take: 2,
     skip: 3, // Diferentes das do split
-    orderBy: { data: "desc" },
+    orderBy: { data: "desc" }
   });
   for (const [i, r] of reservasParaDesconto.entries()) {
     await prisma.reserva.update({
       where: { id: r.id },
       data: {
         descontoPercentagem: i === 0 ? 10 : 5,
-        descontoMotivo: i === 0 ? "Cliente habitual" : "Promoção de temporada",
-      },
+        descontoMotivo: i === 0 ? "Cliente habitual" : "Promoção de temporada"
+      }
     });
   }
 
@@ -1026,7 +1050,7 @@ async function seedReservas() {
   const reservasParaMeias = await prisma.reserva.findMany({
     where: { estado: { in: ["CONCLUIDA", "EM_CURSO", "CONFIRMADO"] } },
     take: 4,
-    orderBy: { data: "desc" },
+    orderBy: { data: "desc" }
   });
   for (const r of reservasParaMeias) {
     const qtd = Math.max(2, Math.floor((r.numCriancas ?? 5) / 2));
@@ -1034,23 +1058,23 @@ async function seedReservas() {
       where: { id: r.id },
       data: {
         meiasQuantidade: qtd,
-        meiasPrecoUnit: 2.5,
-      },
+        meiasPrecoUnit: 2.5
+      }
     });
   }
 
   // Meias em 2 entradas livres ativas
   const entradasParaMeias = await prisma.entradaLivre.findMany({
     where: { estado: "ATIVA" },
-    take: 2,
+    take: 2
   });
   for (const e of entradasParaMeias) {
     await prisma.entradaLivre.update({
       where: { id: e.id },
       data: {
         meiasQuantidade: 2,
-        meiasPrecoUnit: 2.5,
-      },
+        meiasPrecoUnit: 2.5
+      }
     });
   }
 
@@ -1077,9 +1101,8 @@ async function seedReservas() {
       tipo: "ACRESCIMO", valor: 15.00,
       motivo: "6 pares de meias compradas no parque (6 × 2,50€)",
       reservaId: "reserva-001",
-      metodoPagamento: "DINHEIRO",
-      criadoPorId: adminUser?.id ?? null,
-    },
+      criadoPorId: adminUser?.id ?? null
+    }
   });
   await prisma.reserva.update({ where: { id: "reserva-001" }, data: { valorTotal: { increment: 15 } } });
 
@@ -1092,8 +1115,8 @@ async function seedReservas() {
       tipo: "DESCONTO", valor: 10.00,
       motivo: "Cliente habitual - desconto de cortesia",
       reservaId: "reserva-today-3",
-      criadoPorId: adminUser?.id ?? null,
-    },
+      criadoPorId: adminUser?.id ?? null
+    }
   });
   await prisma.reserva.update({ where: { id: "reserva-today-3" }, data: { valorTotal: { decrement: 10 } } });
 
@@ -1107,8 +1130,8 @@ async function seedReservas() {
       modo: "POR_CRIANCA", precoPorCabeca: 12.00,
       motivo: "Preço combinado de 12€ por criança (22 crianças)",
       reservaId: "reserva-002",
-      criadoPorId: adminUser?.id ?? null,
-    },
+      criadoPorId: adminUser?.id ?? null
+    }
   });
   await prisma.reserva.update({ where: { id: "reserva-002" }, data: { valorTotal: 264.00 } });
 
@@ -1128,7 +1151,7 @@ async function seedMarketing() {
   await prisma.segmento.upsert({
     where: { id: "segmento-001" },
     update: {},
-    create: { id: "segmento-001", nome: "Famílias com festas realizadas", descricao: "Clientes que já realizaram festas" },
+    create: { id: "segmento-001", nome: "Famílias com festas realizadas", descricao: "Clientes que já realizaram festas" }
   });
 
   const contactos = [
@@ -1145,7 +1168,7 @@ async function seedMarketing() {
     await prisma.contactoSegmento.upsert({
       where: { contactoId_segmentoId: { contactoId: c.id, segmentoId: "segmento-001" } },
       update: {},
-      create: { contactoId: c.id, segmentoId: "segmento-001" },
+      create: { contactoId: c.id, segmentoId: "segmento-001" }
     });
   }
 
@@ -1158,8 +1181,8 @@ async function seedMarketing() {
       estado: "RASCUNHO",
       assunto: "🎂 Festas de Verão - Promoção 20%!",
       mensagem: "Olá!\n\nEste verão, as festas dos seus filhos têm desconto! Reserve até 30 de junho e garanta 20% de desconto.\n\nCom carinho,\nEquipa Festas",
-      segmentoId: "segmento-001",
-    },
+      segmentoId: "segmento-001"
+    }
   });
 
   console.log("  ✓ 1 segmento, 6 contactos, 1 campanha\n");
@@ -1190,10 +1213,8 @@ async function seedEntradasLivres() {
       temLanche: false,
       numAdultos: 0,
       pago: true,
-      valorPago: 15.0,
-      metodoPagamento: "MBWAY",
-      criancas: [{ nome: "Miguel", idade: 6 }, { nome: "Sofia", idade: 4 }],
-    },
+      criancas: [{ nome: "Miguel", idade: 6 }, { nome: "Sofia", idade: 4 }]
+    }
   });
 
   // ─── Entrada ATIVA (hoje, às 10:30) com cacifo ─────────────────────
@@ -1216,13 +1237,13 @@ async function seedEntradasLivres() {
       numAdultos: 1,
       cacifoId: cacifo31?.id,
       pago: false,
-      criancas: [{ nome: "Beatriz", idade: 5 }],
-    },
+      criancas: [{ nome: "Beatriz", idade: 5 }]
+    }
   });
   if (cacifo31) {
     await prisma.cacifo.update({
       where: { id: cacifo31.id },
-      data: { estado: "OCUPADO", criancas: "Beatriz" },
+      data: { estado: "OCUPADO", criancas: "Beatriz" }
     });
   }
 
@@ -1250,11 +1271,9 @@ async function seedEntradasLivres() {
       custoExcesso: 6.0,
       custoTotalFinal: 26.0,
       pago: true,
-      valorPago: 26.0,
       pagoExcesso: true,
-      metodoPagamento: "MULTIBANCO",
-      criancas: [{ nome: "Tomás", idade: 7 }, { nome: "João", idade: 5 }],
-    },
+      criancas: [{ nome: "Tomás", idade: 7 }, { nome: "João", idade: 5 }]
+    }
   });
 
   // ─── Entrada CANCELADA (hoje, cancelada rapidamente) ────────────────
@@ -1276,8 +1295,8 @@ async function seedEntradasLivres() {
       temLanche: false,
       numAdultos: 0,
       observacoes: "Cancelado por emergência familiar",
-      criancas: [{ nome: "Leonor", idade: 6 }],
-    },
+      criancas: [{ nome: "Leonor", idade: 6 }]
+    }
   });
 
   // ─── MAIS ATIVAS (hoje) - 5 entradas em vários estados ──────────
@@ -1308,10 +1327,8 @@ async function seedEntradasLivres() {
         temLanche: a.lanche,
         numAdultos: a.adultos,
         pago: a.pago,
-        valorPago: a.pago ? Math.round(((a.custo / 60) * a.dur) * 100) / 100 : 0,
-        metodoPagamento: a.met,
-        criancas: a.criancas,
-      },
+        criancas: a.criancas
+      }
     });
   }
 
@@ -1334,10 +1351,8 @@ async function seedEntradasLivres() {
       temLanche: true,
       numAdultos: 1,
       pago: true,
-      valorPago: 20.0,
-      metodoPagamento: "MBWAY",
-      criancas: [{ nome: "Tomás", idade: 5 }, { nome: "Madalena", idade: 3 }],
-    },
+      criancas: [{ nome: "Tomás", idade: 5 }, { nome: "Madalena", idade: 3 }]
+    }
   });
 
   // 4) ACRESCIMO nesta entrada livre com lanche (2 × 4,50€) - write-through
@@ -1350,13 +1365,12 @@ async function seedEntradasLivres() {
       tipo: "ACRESCIMO", valor: 9.00,
       motivo: "Lanche para 2 crianças (2 × 4,50€)",
       entradaLivreId: "entrada-livre-ativa-lanche-001",
-      metodoPagamento: "MBWAY",
-      criadoPorId: adminUserAjuste?.id ?? null,
-    },
+      criadoPorId: adminUserAjuste?.id ?? null
+    }
   });
   await prisma.entradaLivre.update({
     where: { id: "entrada-livre-ativa-lanche-001" },
-    data: { custoTotalFinal: 29.00 },
+    data: { custoTotalFinal: 29.00 }
   });
 
   // ─── CONCLUIDAS esta semana (-1 a -5 dias) - 7 entradas ──────────
@@ -1397,11 +1411,9 @@ async function seedEntradasLivres() {
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
         pago: true,
-        valorPago: custoTotal + custoExcesso,
         pagoExcesso: c.excesso > 0,
-        metodoPagamento: c.met,
-        criancas: c.criancas,
-      },
+        criancas: c.criancas
+      }
     });
   }
 
@@ -1441,11 +1453,9 @@ async function seedEntradasLivres() {
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
         pago: true,
-        valorPago: custoTotal + custoExcesso,
         pagoExcesso: c.excesso > 0,
-        metodoPagamento: c.met,
-        criancas: c.criancas,
-      },
+        criancas: c.criancas
+      }
     });
   }
 
@@ -1476,8 +1486,8 @@ async function seedEntradasLivres() {
         temLanche: c.lanche,
         numAdultos: c.adultos,
         observacoes: c.obs,
-        criancas: c.criancas,
-      },
+        criancas: c.criancas
+      }
     });
   }
 
@@ -1515,11 +1525,9 @@ async function seedEntradasLivres() {
         custoExcesso: c.excesso > 0 ? custoExcesso : null,
         custoTotalFinal: custoTotal + custoExcesso,
         pago: true,
-        valorPago: custoTotal + custoExcesso,
         pagoExcesso: c.excesso > 0,
-        metodoPagamento: c.met,
-        criancas: c.criancas,
-      },
+        criancas: c.criancas
+      }
     });
   }
 
@@ -1527,7 +1535,7 @@ async function seedEntradasLivres() {
   // Garante que todos os encarregados entram na base de contactos (marketing).
   const semCliente = await prisma.entradaLivre.findMany({
     where: { clienteId: null },
-    select: { id: true, encarregadoNome: true, encarregadoTelefone: true, encarregadoEmail: true },
+    select: { id: true, encarregadoNome: true, encarregadoTelefone: true, encarregadoEmail: true }
   });
 
   for (const el of semCliente) {
@@ -1549,8 +1557,8 @@ async function seedEntradasLivres() {
         data: {
           nome: el.encarregadoNome,
           telefone: el.encarregadoTelefone,
-          email: el.encarregadoEmail || null,
-        },
+          email: el.encarregadoEmail || null
+        }
       });
       clienteId = novo.id;
     }
@@ -1558,7 +1566,7 @@ async function seedEntradasLivres() {
     if (clienteId) {
       await prisma.entradaLivre.update({
         where: { id: el.id },
-        data: { clienteId },
+        data: { clienteId }
       });
     }
   }
@@ -1626,8 +1634,8 @@ async function seedAlocacoesMonitores() {
         horaFim: a.horaFim,
         monitorId: a.monitorId,
         localId: a.localId,
-        observacoes: a.observacoes ?? null,
-      },
+        observacoes: a.observacoes ?? null
+      }
     });
     criadas++;
   }

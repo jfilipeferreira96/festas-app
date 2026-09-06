@@ -11,7 +11,7 @@ import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import EntradaLivrePagamentoModal from "@/components/entradas-livres/EntradaLivrePagamentoModal";
-import { scrollToFirstFormError } from "@/components/form/form-utils";
+import { mensagensDeErro, scrollToFirstFormError } from "@/components/form/form-utils";
 import { calcularCustoExtras } from "@/lib/extras-custo";
 import type { Cliente } from "@/lib/api/clientes";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
@@ -111,7 +111,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const custoCalculado = custoComponentes.total;
 
-  const [custoEdited, setCustoEdited] = useState(false);
+  // Custo editado = valor atual difere do calculado (deixa de auto-sincronizar)
+  const watchedCustoTotal = watch("custoTotal");
+  const custoEdited = watchedCustoTotal != null && Math.abs(watchedCustoTotal - Number(custoCalculado.toFixed(2))) > 0.004;
   useEffect(() => {
     if (custoEdited) return;
     if (custoCalculado > 0) setValue("custoTotal", Number(custoCalculado.toFixed(2)));
@@ -172,7 +174,19 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     [isEdit, entrada, atualizar, criar, toast, onClose]
   );
 
-  const onInvalid = useCallback(() => scrollToFirstFormError(), []);
+  // Falha de validação JAMAIS silenciosa: scroll + toast com as mensagens
+  const onInvalid = useCallback(
+    (errors: Record<string, unknown>) => {
+      scrollToFirstFormError();
+      const mensagens = mensagensDeErro(errors);
+      toast.error(
+        mensagens.length > 0
+          ? `Não foi possível guardar: ${mensagens.slice(0, 3).join(" · ")}${mensagens.length > 3 ? "…" : ""}`
+          : "Não foi possível guardar. Verifique os campos destacados."
+      );
+    },
+    [toast]
+  );
   const isLoading = isSubmitting || criar.isPending || atualizar.isPending;
 
   return (
@@ -198,7 +212,6 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               custoCalculado={custoCalculado}
               precoMeias={Number(configPreco?.precoMeias ?? 1.5)}
               onOpenPagamento={() => setShowPagamentoModal(true)}
-              onCustoEditado={() => setCustoEdited(true)}
             />
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end shrink-0">

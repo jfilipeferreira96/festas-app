@@ -20,7 +20,7 @@ import { differenceInYears } from "date-fns";
 import { BOLO_LABELS } from "@/lib/constants/bolo";
 import { imprimirListaConvidados } from "@/utils/print-lista";
 import PagamentoModal from "./PagamentoModal";
-import { METODO_PAGAMENTO_LABELS } from "@/lib/metodo-pagamento";
+import { resumoLedger } from "@/lib/pagamento-ledger";
 
 // ── Constants ──────────────────────────────────────────────────────
 const ESTADO_LABELS: Record<string, string> = {
@@ -298,7 +298,7 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
           type="button"
           onClick={onEditPagamento}
           className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md text-brand-700 hover:bg-brand-50 transition-colors normal-case tracking-normal"
-        >g
+        >
           <Pencil size={11} />
           Editar
         </button>
@@ -312,15 +312,19 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
               : <span className="text-accent-orange-500 font-medium">Por pagar</span>
             }
           />
-          {reserva.metodoPagamento && (
-            <DetailRow icon={<CreditCard size={13} />} label="Método" value={METODO_PAGAMENTO_LABELS[reserva.metodoPagamento] ?? reserva.metodoPagamento} />
-          )}
-          {reserva.valorPago != null && (
-            <DetailRow icon={<CreditCard size={13} />} label="Valor Pago" value={new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(reserva.valorPago)} />
-          )}
-          {reserva.referenciaPagamento && (
-            <DetailRow icon={<Hash size={13} />} label="Referência" value={reserva.referenciaPagamento} />
-          )}
+          {(() => {
+            const { totalPago, temPagamentos, metodos } = resumoLedger(reserva.pagamentos);
+            return (
+              <>
+                {temPagamentos && (
+                  <DetailRow icon={<CreditCard size={13} />} label="Método" value={metodos} />
+                )}
+                {temPagamentos && (
+                  <DetailRow icon={<CreditCard size={13} />} label="Valor Pago" value={new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(totalPago)} />
+                )}
+              </>
+            );
+          })()}
         </div>
       </Section>
       )}
@@ -345,15 +349,15 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
           {reserva.valorCaucao != null && (
             <DetailRow icon={<Shield size={13} />} label="Valor" value={new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(reserva.valorCaucao)} />
           )}
-          {/* Falta liquidar = Total − Caução paga − 2º pagamento */}
+          {/* Falta liquidar = Caução paga (a devolver ao cliente no final) */}
           {(() => {
-            const total = Number(reserva.valorPago) || 0;
+            const total = Number(reserva.valorTotal) || 0;
+            const liquidado = reserva.pago;
             const caucaoPaga = (reserva.caucao === "PAGA" || reserva.caucao === "PAGA_NO_DIA")
               ? Number(reserva.valorCaucao) || 0
               : 0;
-            const segundo = Number(reserva.valorPago2) || 0;
-            const emFalta = Math.max(total - caucaoPaga - segundo, 0);
-            if (total <= 0 || caucaoPaga <= 0) return null;
+            if (total <= 0 || caucaoPaga <= 0 || !liquidado) return null;
+            const emFalta = caucaoPaga;
             const fmt = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
             return (
               <div className="pt-2 mt-1 border-t border-border bg-accent-orange-50 -mx-3 px-3 py-2 rounded-lg">

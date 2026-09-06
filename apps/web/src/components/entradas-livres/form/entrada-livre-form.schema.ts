@@ -29,12 +29,20 @@ export const entradaLivreFormSchema = z.object({
   encarregadoTelefone: z.string().min(9, "Contacto inválido"),
   encarregadoEmail: z.string().email("Email inválido").optional().or(z.literal("")),
   duracaoMinutos: z.number().min(60, "Duração mínima é 1 hora"),
-  // Pagamento unificado: Total a pagar (editável) + Recebido nesta fase (pag. 1) + split (pag. 2)
+  // Pagamento (ledger): custo total (editável) + lista de pagamentos realizados
   custoTotal: z.number().min(0, "O custo não pode ser negativo").optional(),
-  metodoPagamento: z.enum(METODOS_PAGAMENTO).optional(),
-  valorRecebido1: z.number().min(0).optional(),
-  metodoPagamento2: z.enum(METODOS_PAGAMENTO).optional(),
-  valorRecebido2: z.number().min(0).optional(),
+  pagamentos: z
+    .array(
+      z.object({
+        id: z.string(),
+        valor: z.number().min(0),
+        metodo: z.enum(METODOS_PAGAMENTO),
+        referencia: z.string().nullish(),
+        nota: z.string().nullish(),
+        createdAt: z.string(),
+      })
+    )
+    .optional(),
   pago: z.boolean().optional(),
   cacifoId: z.string(),
   observacoes: z.string(),
@@ -70,10 +78,13 @@ export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefin
     encarregadoEmail: entrada?.encarregadoEmail ?? "",
     duracaoMinutos: entrada?.duracaoMinutos ?? 60,
     custoTotal: entrada?.custoTotal,
-    metodoPagamento: undefined,
-    valorRecebido1: entrada?.valorPago != null ? Number(entrada.valorPago) : undefined,
-    metodoPagamento2: undefined,
-    valorRecebido2: entrada?.valorPago2 != null ? Number(entrada.valorPago2) : 0,
+    pagamentos: entrada?.pagamentos?.map((p) => ({
+      id: p.id,
+      valor: Number(p.valor),
+      metodo: p.metodo,
+      nota: p.nota ?? undefined,
+      createdAt: p.createdAt,
+    })),
     pago: entrada?.pago,
     cacifoId: entrada?.cacifoId ?? "",
     observacoes: entrada?.observacoes ?? "",
@@ -106,9 +117,14 @@ export function buildEntradaPayload(
     encarregadoEmail: data.encarregadoEmail || undefined,
     duracaoMinutos: data.duracaoMinutos,
     custoTotal: data.custoTotal,
-    metodoPagamento: opts.isEdit ? undefined : data.metodoPagamento,
-    valorPago: opts.isEdit ? undefined : data.valorRecebido1 || undefined,
-    pago: opts.isEdit ? undefined : (data.pago ?? false),
+    pagamentos: opts.isEdit ? undefined : data.pagamentos,
+    // Criação exige estado explícito (PAGAMENTO_OBRIGATORIO): deriva do ledger
+    pago: opts.isEdit
+      ? undefined
+      : (data.pago ??
+        (data.custoTotal != null
+          ? (data.pagamentos ?? []).reduce((s, p) => s + p.valor, 0) >= data.custoTotal - 0.004
+          : false)),
     cacifoId: data.cacifoId || null,
     extrasIds: data.extrasIds,
     extrasQuantidades: Object.fromEntries(
@@ -119,8 +135,6 @@ export function buildEntradaPayload(
     temLanche: data.temLanche,
     horaLanche: data.horaLanche || (opts.isEdit ? null : undefined),
     numAdultos: data.numAdultos,
-    metodoPagamento2: opts.isEdit ? undefined : data.metodoPagamento2,
-    valorPago2: opts.isEdit ? undefined : data.valorRecebido2 || undefined,
     meiasQuantidade: data.meiasQuantidade || undefined,
   };
 }

@@ -119,7 +119,7 @@ describe("Dashboard Service", () => {
           fimPrevisto: fim,
           estado: "CONCLUIDA",
           pago: true,
-          metodoPagamento: "DINHEIRO",
+          pagamentos: { create: [{ valor: 15, metodo: "DINHEIRO" }] },
           criancas: [{ nome: "X" }],
         },
       });
@@ -133,7 +133,7 @@ describe("Dashboard Service", () => {
       }
     });
 
-    it("NÃO soma meias à parte (fonte única: valorPago já as inclui)", async () => {
+    it("NÃO soma meias à parte (fonte única: os pagamentos já as incluem)", async () => {
       const hoje = new Date();
       const antes = (await dashboardService.getReceitasHoje()).DINHEIRO ?? 0;
       const reserva = await testPrisma.reserva.create({
@@ -144,8 +144,7 @@ describe("Dashboard Service", () => {
           numCriancas: 10,
           estado: "CONCLUIDA",
           pago: true,
-          metodoPagamento: "DINHEIRO",
-          valorPago: 100,
+          pagamentos: { create: [{ valor: 100, metodo: "DINHEIRO" }] },
           meiasQuantidade: 10,
           meiasPrecoUnit: 2, // 20€ de meias - NÃO se soma à parte
           clienteId: TEST_IDS.CLIENTE_1,
@@ -155,14 +154,14 @@ describe("Dashboard Service", () => {
 
       try {
         const receitas = await dashboardService.getReceitasHoje();
-        // Fonte única: só valorPago (100€). As meias não duplicam a receita.
+        // Fonte única: só os pagamentos (100€). As meias não duplicam a receita.
         expect((receitas.DINHEIRO ?? 0) - antes).toBe(100);
       } finally {
         await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
       }
     });
 
-    it("reparte o split das entradas sem dupla contagem (método 2 = valorPago2, método 1 = resto)", async () => {
+    it("reparte o split das entradas por método (ledger, sem dupla contagem)", async () => {
       const hoje = new Date();
       const antesDinheiro = (await dashboardService.getReceitasHoje()).DINHEIRO ?? 0;
       const antesMbway = (await dashboardService.getReceitasHoje()).MBWAY ?? 0;
@@ -183,16 +182,19 @@ describe("Dashboard Service", () => {
           fimPrevisto: fim,
           estado: "CONCLUIDA",
           pago: true,
-          metodoPagamento: "DINHEIRO",
-          metodoPagamento2: "MBWAY",
-          valorPago2: 8,
+          pagamentos: {
+            create: [
+              { valor: 12, metodo: "DINHEIRO" },
+              { valor: 8, metodo: "MBWAY" },
+            ],
+          },
           criancas: [{ nome: "Y" }],
         },
       });
 
       try {
         const receitas = await dashboardService.getReceitasHoje();
-        // Total 20€: 8€ no método 2 (MBWAY) e apenas 12€ no método 1 (sem somar o total inteiro)
+        // Total 20€: 8€ em MBWAY e 12€ em DINHEIRO
         expect((receitas.MBWAY ?? 0) - antesMbway).toBe(8);
         expect((receitas.DINHEIRO ?? 0) - antesDinheiro).toBe(12);
       } finally {
@@ -210,11 +212,13 @@ describe("Dashboard Service", () => {
           numCriancas: 10,
           estado: "CONCLUIDA",
           pago: true,
-          valorTotal: 120, // total acordado (editável no form)
-          metodoPagamento: "DINHEIRO",
-          valorPago: 80, // recebido no pag. 1
-          metodoPagamento2: "MBWAY",
-          valorPago2: 40,
+          valorTotal: 120,
+          pagamentos: {
+            create: [
+              { valor: 80, metodo: "DINHEIRO" },
+              { valor: 40, metodo: "MBWAY" },
+            ],
+          },
           clienteId: TEST_IDS.CLIENTE_1,
           localId: TEST_IDS.LOCAL_1,
         },
@@ -240,8 +244,7 @@ describe("Dashboard Service", () => {
           numCriancas: 5,
           estado: "CONFIRMADO",
           pago: false,
-          metodoPagamento: "DINHEIRO",
-          valorPago: 999, // não deve contar
+          pagamentos: { create: [{ valor: 999, metodo: "DINHEIRO" }] }, // não deve contar
           clienteId: TEST_IDS.CLIENTE_1,
           localId: TEST_IDS.LOCAL_1,
         },

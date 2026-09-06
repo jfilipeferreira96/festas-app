@@ -14,8 +14,8 @@ describe("ajustePagamentoService", () => {
     await testPrisma.ajustePagamento.deleteMany();
     await testPrisma.reserva.update({
       where: { id: TEST_IDS.RESERVA_CONFIRMADA },
-      // Split do seed: total acordado 290 = 50 (pag.1 MBWAY) + 240 (pag.2 MULTIBANCO)
-      data: { valorTotal: 290, valorPago: 50 },
+      // Split do seed: total acordado 290 = 50 (MBWAY) + 240 (MULTIBANCO)
+      data: { valorTotal: 290 },
     });
     await testPrisma.entradaLivre.update({
       where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
@@ -52,8 +52,8 @@ describe("ajustePagamentoService", () => {
     const reserva = await testPrisma.reserva.findUniqueOrThrow({
       where: { id: TEST_IDS.RESERVA_EM_CURSO },
     });
-    // valorPago inicial era null (0) → 0 + 5 = 5
-    expect(Number(reserva.valorPago)).toBe(5);
+    // valorTotal inicial era 0 → 0 + 5 = 5
+    expect(Number(reserva.valorTotal)).toBe(5);
   });
 
   it("deve aplicar desconto ao valorTotal da reserva (write-through no campo do total)", async () => {
@@ -67,9 +67,8 @@ describe("ajustePagamentoService", () => {
     const reserva = await testPrisma.reserva.findUniqueOrThrow({
       where: { id: TEST_IDS.RESERVA_CONFIRMADA },
     });
-    // valorTotal inicial era 290 → 290 - 10 = 280 (valorPago - recebido - fica intacto)
+    // valorTotal inicial era 290 → 290 - 10 = 280
     expect(Number(reserva.valorTotal)).toBe(280);
-    expect(Number(reserva.valorPago)).toBe(50);
   });
 
   it("deve recusar desconto que torna o total da reserva negativo", async () => {
@@ -202,14 +201,14 @@ describe("ajustePagamentoService", () => {
     const antes = await testPrisma.reserva.findUniqueOrThrow({
       where: { id: TEST_IDS.RESERVA_EM_CURSO },
     });
-    expect(Number(antes.valorPago)).toBe(12.5); // 5 + 7.5
+    expect(Number(antes.valorTotal)).toBe(12.5); // 5 + 7.5
 
     await ajustePagamentoService.remove(ajuste.id);
 
     const depois = await testPrisma.reserva.findUniqueOrThrow({
       where: { id: TEST_IDS.RESERVA_EM_CURSO },
     });
-    expect(Number(depois.valorPago)).toBe(5);
+    expect(Number(depois.valorTotal)).toBe(5);
 
     const eliminado = await testPrisma.ajustePagamento.findUnique({
       where: { id: ajuste.id },
@@ -264,7 +263,7 @@ describe("ajustePagamentoService", () => {
     const reserva = await testPrisma.reserva.findUniqueOrThrow({
       where: { id: TEST_IDS.RESERVA_PENDENTE },
     });
-    expect(Number(reserva.valorPago)).toBe(180);
+    expect(Number(reserva.valorTotal)).toBe(180);
   });
 
   it("deve redefinir por criança usando confirmadas ?? previstas (modo POR_CRIANCA)", async () => {
@@ -289,7 +288,7 @@ describe("ajustePagamentoService", () => {
     const reserva = await testPrisma.reserva.findUniqueOrThrow({
       where: { id: TEST_IDS.RESERVA_PENDENTE },
     });
-    expect(Number(reserva.valorPago)).toBe(180);
+    expect(Number(reserva.valorTotal)).toBe(180);
   });
 
   it("deve redefinir entrada livre por criança (nº de crianças do array)", async () => {

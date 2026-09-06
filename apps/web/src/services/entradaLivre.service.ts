@@ -1,8 +1,14 @@
 import prisma from "@festas/db";
 import { Prisma } from "@prisma/client";
 import type { MetodoPagamento } from "@prisma/client";
+import type { CriarPagamentoDTO } from "@saas/shared-types";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { cacifoService } from "@/services/cacifo.service";
+import {
+  normalizarPagamentos,
+  sincronizarPagamentosEntradaLivre,
+  type PagamentoInput,
+} from "@/services/pagamento.service";
 
 interface CriancaInput {
   nome: string;
@@ -17,7 +23,6 @@ interface CriarEntradaLivreDTO {
   encarregadoEmail?: string;
   duracaoMinutos: number;
   custoTotal?: number;
-  metodoPagamento?: MetodoPagamento;
   pago?: boolean;
   cacifoId?: string;
   extrasIds?: string[];
@@ -29,10 +34,8 @@ interface CriarEntradaLivreDTO {
   horaLanche?: string;
   // Adultos (encarregados que acompanham e pagam)
   numAdultos?: number;
-  valorPago?: number; // Valor recebido no pagamento 1
-  // Pagamento dividido (até 2 métodos)
-  metodoPagamento2?: MetodoPagamento;
-  valorPago2?: number;
+  // Ledger de pagamentos (fonte única do recebido)
+  pagamentos?: CriarPagamentoDTO[];
   // Meias (compra obrigatória)
   meiasQuantidade?: number;
   meiasPrecoUnit?: number;
@@ -178,6 +181,7 @@ export const entradaLivreService = {
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
       orderBy: { inicioEm: "desc" },
     });
@@ -187,7 +191,6 @@ export const entradaLivreService = {
       ...e,
       custoHora: Number(e.custoHora),
       custoTotal: Number(e.custoTotal),
-      valorPago: e.valorPago != null ? Number(e.valorPago) : null,
       custoExcesso: e.custoExcesso ? Number(e.custoExcesso) : null,
       custoTotalFinal: e.custoTotalFinal ? Number(e.custoTotalFinal) : null,
     }));
@@ -219,6 +222,7 @@ export const entradaLivreService = {
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
     if (!entrada) throw new Error("NOT_FOUND");
@@ -228,7 +232,6 @@ export const entradaLivreService = {
       ...entrada,
       custoHora: Number(entrada.custoHora),
       custoTotal: Number(entrada.custoTotal),
-      valorPago: entrada.valorPago != null ? Number(entrada.valorPago) : null,
       custoExcesso: entrada.custoExcesso ? Number(entrada.custoExcesso) : null,
       custoTotalFinal: entrada.custoTotalFinal ? Number(entrada.custoTotalFinal) : null,
     };
@@ -243,7 +246,11 @@ export const entradaLivreService = {
     }
 
 
-    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, ...rest } = data;
+    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, pagamentos: pagamentosInput, ...rest } = data;
+
+    // ── Ledger de pagamentos (fonte única do recebido); [] = sem pagamentos ──
+    const listaPagamentos: PagamentoInput[] =
+      pagamentosInput !== undefined ? normalizarPagamentos(pagamentosInput) ?? [] : [];
 
     // Tarifário global: preço por escalão (1h/2h + hora adicional) - aplica-se a todos os dias.
     const configPreco = await configuracaoPrecoService.getConfig();
@@ -299,6 +306,16 @@ export const entradaLivreService = {
         cacifoId: cacifoId || null,
         clienteId,
         ...rest,
+        pagamentos: listaPagamentos.length > 0
+          ? {
+              create: listaPagamentos.map((p) => ({
+                valor: p.valor,
+                metodo: p.metodo,
+                referencia: p.referencia ?? null,
+                nota: p.nota ?? null,
+              })),
+            }
+          : undefined,
       },
       include: {
         cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
@@ -306,6 +323,7 @@ export const entradaLivreService = {
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -381,6 +399,7 @@ export const entradaLivreService = {
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -397,7 +416,6 @@ export const entradaLivreService = {
       ...updated,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
-      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
       custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
     };
@@ -418,6 +436,7 @@ export const entradaLivreService = {
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -434,46 +453,40 @@ export const entradaLivreService = {
       ...updated,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
-      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
       custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
     };
   },
 
   // ── Atualizar pagamento ─────────────────────────
-  async atualizarPagamento(id: string, data: { pago?: boolean; pagoExcesso?: boolean; metodoPagamento?: MetodoPagamento | null; valorPago?: number | null; metodoPagamento2?: MetodoPagamento | null; valorPago2?: number | null }) {
+  async atualizarPagamento(id: string, data: { pagoExcesso?: boolean; pagamentos?: CriarPagamentoDTO[] | null }) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
 
-    // Não é possível marcar como paga sem indicar o método de pagamento.
-    // O método pode vir no próprio payload OU já estar guardado na entrada.
-    // `null` limpa explicitamente o método (Prisma: null = limpar, undefined = manter).
-    const metodoFinal = data.metodoPagamento === null ? null : (data.metodoPagamento ?? entrada.metodoPagamento);
-    if (data.pago === true && !metodoFinal) {
-      throw new Error("METODO_PAGAMENTO_REQUIRED");
+    // ── Ledger de pagamentos (replace-all); undefined = sem alterações ──
+    const lista = data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : undefined;
+
+    if (lista !== undefined) {
+      // O estado `pago` é derivado (soma >= custoTotalFinal ?? custoTotal)
+      const auxiliares: { pagoExcesso?: boolean } = {};
+      if (data.pagoExcesso !== undefined) auxiliares.pagoExcesso = data.pagoExcesso;
+      await prisma.$transaction(async (tx) => {
+        if (Object.keys(auxiliares).length > 0) {
+          await tx.entradaLivre.update({ where: { id }, data: auxiliares });
+        }
+        await sincronizarPagamentosEntradaLivre(tx, id, lista);
+      });
+      return this.getById(id);
     }
 
-    const updated = await prisma.entradaLivre.update({
-      where: { id },
-      data,
-      include: {
-        cacifo: { select: { id: true, numero: true, nome: true, estado: true } },
-        cliente: { select: { id: true, nome: true, email: true, telefone: true } },
-        extras: {
-          include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
-        },
-      },
-    });
+    if (data.pagoExcesso !== undefined) {
+      await prisma.entradaLivre.update({
+        where: { id },
+        data: { pagoExcesso: data.pagoExcesso },
+      });
+    }
 
-    // Convert Decimal fields to numbers
-    return {
-      ...updated,
-      custoHora: Number(updated.custoHora),
-      custoTotal: Number(updated.custoTotal),
-      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
-      custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
-      custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
-    };
+    return this.getById(id);
   },
 
   // ── Atualizar entrada ───────────────────────────
@@ -486,8 +499,6 @@ export const entradaLivreService = {
       encarregadoEmail?: string;
       duracaoMinutos?: number;
       custoTotal?: number;
-      valorPago?: number; // Valor recebido no pagamento 1
-      metodoPagamento?: MetodoPagamento;
       pago?: boolean;
       cacifoId?: string | null;
       extrasIds?: string[];
@@ -498,9 +509,6 @@ export const entradaLivreService = {
       temLanche?: boolean;
       // Adultos
       numAdultos?: number;
-      // Pagamento dividido (até 2 métodos)
-      metodoPagamento2?: MetodoPagamento;
-      valorPago2?: number;
       // Meias (compra obrigatória)
       meiasQuantidade?: number;
       meiasPrecoUnit?: number;
@@ -642,6 +650,7 @@ export const entradaLivreService = {
         extras: {
           include: { extra: { select: { id: true, nome: true, precoUnitario: true, baseCobranca: true } } },
         },
+        pagamentos: { orderBy: { createdAt: "asc" } },
       },
     });
 
@@ -650,7 +659,6 @@ export const entradaLivreService = {
       ...updated,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
-      valorPago: updated.valorPago != null ? Number(updated.valorPago) : null,
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
       custoTotalFinal: updated.custoTotalFinal ? Number(updated.custoTotalFinal) : null,
     };

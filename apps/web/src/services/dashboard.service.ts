@@ -124,10 +124,8 @@ export const dashboardService = {
         },
         select: {
           valorTotal: true,
-          metodoPagamento: true,
-          valorPago: true,
-          metodoPagamento2: true,
-          valorPago2: true,
+          // Ledger de pagamentos (fonte única do recebido)
+          pagamentos: { select: { valor: true, metodo: true } },
           // Excesso de tempo (se já pago)
           custoExcesso: true,
           pagoExcesso: true,
@@ -140,11 +138,10 @@ export const dashboardService = {
           pago: true,
         },
         select: {
-          metodoPagamento: true,
           custoTotal: true,
           custoTotalFinal: true,
-          metodoPagamento2: true,
-          valorPago2: true,
+          // Ledger de pagamentos (fonte única do recebido)
+          pagamentos: { select: { valor: true, metodo: true } },
         },
       }),
     ]);
@@ -158,24 +155,14 @@ export const dashboardService = {
     };
 
     for (const r of reservasHoje) {
-      // Pagamento principal + dividido.
-      // Regra: total = valorTotal ?? valorPago; pag.1 = valorPago (registos novos)
-      // ou total - pag.2 (registos antigos, em que valorPago era o total).
-      const totalFesta = Number(r.valorTotal ?? r.valorPago ?? 0);
-      const recebido2 = Math.min(Number(r.valorPago2 ?? 0), totalFesta);
-      const recebido1 = r.valorTotal != null ? Number(r.valorPago ?? 0) : totalFesta - recebido2;
-      somar(r.metodoPagamento, recebido1);
-      somar(r.metodoPagamento2, recebido2);
-      // Excesso de tempo (só se foi pago)
-      if (r.pagoExcesso) somar(r.metodoPagamento, r.custoExcesso);
+      // Fonte única: ledger de pagamentos (N métodos)
+      for (const p of r.pagamentos) somar(p.metodo, Number(p.valor));
+      // Excesso de tempo (só se foi pago) - método do 1º pagamento
+      if (r.pagoExcesso) somar(r.pagamentos[0]?.metodo, r.custoExcesso);
     }
     for (const e of entradasHoje) {
-      // Fonte única: custoTotalFinal inclui o excesso; fallback para custoTotal
-      const valor = Number(e.custoTotalFinal ?? e.custoTotal ?? 0);
-      // Pagamento dividido: método 2 = valorPago2, método 1 = resto
-      const valorMetodo2 = Math.min(Number(e.valorPago2 ?? 0), valor);
-      somar(e.metodoPagamento2, valorMetodo2);
-      somar(e.metodoPagamento, valor - valorMetodo2);
+      // Fonte única: ledger de pagamentos
+      for (const p of e.pagamentos) somar(p.metodo, Number(p.valor));
     }
 
     return receitas;

@@ -234,14 +234,10 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
                     label="Pagamento"
                     value={entrada.pago ? "Pago" : "Por pagar"}
                   />
-                  {entrada.metodoPagamento && (
+                  {(entrada.pagamentos?.length ?? 0) > 0 && (
                     <DetailRow
-                      label={entrada.metodoPagamento2 ? "Métodos" : "Método"}
-                      value={
-                        entrada.metodoPagamento2
-                          ? `${metodoPagamentoLabel(entrada.metodoPagamento)} + ${metodoPagamentoLabel(entrada.metodoPagamento2)}`
-                          : metodoPagamentoLabel(entrada.metodoPagamento)
-                      }
+                      label={entrada.pagamentos!.length > 1 ? "Métodos" : "Método"}
+                      value={entrada.pagamentos!.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")}
                     />
                   )}
                   {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (

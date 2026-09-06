@@ -9,7 +9,7 @@ import ConcluirResumoModal from "@/components/shared/ConcluirResumoModal";
 import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserva, useFinalizarReserva, useToggleReservaExtra } from "@/hooks/use-reservas";
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./form/FestaForm";
-import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
+import { resumoLedger } from "@/lib/pagamento-ledger";
 import FestaDetailModal from "./FestaDetailModal";
 import PagamentoModal from "./PagamentoModal";
 import HistoricoModal from "./HistoricoModal";
@@ -569,8 +569,9 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             key: "pagamento",
             label: "Pagamento",
             render: (_v, r) => {
-              const valor = r.valorPago != null
-                ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(r.valorPago)
+              const { totalPago, temPagamentos, metodos } = resumoLedger(r.pagamentos);
+              const valor = temPagamentos
+                ? new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(totalPago)
                 : null;
               return (
                 <button
@@ -584,11 +585,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                   {valor && (
                     <span className="text-xs text-text-muted">{valor}</span>
                   )}
-                  {r.metodoPagamento && (
-                    <span className="text-xs text-text-muted">
-                      {metodoPagamentoLabel(r.metodoPagamento)}
-                      {r.metodoPagamento2 ? ` + ${metodoPagamentoLabel(r.metodoPagamento2)}` : ""}
-                    </span>
+                  {temPagamentos && (
+                    <span className="text-xs text-text-muted">{metodos}</span>
                   )}
                 </button>
               );
@@ -825,7 +823,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
           inicioEm={finalizarModal.inicioEm}
           fimPrevisto={finalizarModal.fimPrevisto}
           duracaoMinutos={finalizarModal.duracaoMinutos}
-          custoBase={Number(finalizarModal.valorPago ?? 0)}
+          custoBase={Number(finalizarModal.valorTotal ?? 0)}
         />
       )}
 

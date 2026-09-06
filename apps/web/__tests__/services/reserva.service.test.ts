@@ -81,7 +81,7 @@ describe("Reserva Service", () => {
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
 
-    it("deve persistir o pagamento unificado (valorTotal + valorPago + split)", async () => {
+    it("deve persistir o pagamento unificado (valorTotal + ledger de pagamentos)", async () => {
       const reserva = await reservaService.create({
         data: tomorrowStr,
         horario: "21:30",
@@ -90,17 +90,18 @@ describe("Reserva Service", () => {
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
         valorTotal: 150,
-        metodoPagamento: "DINHEIRO",
-        valorPago: 100,
-        metodoPagamento2: "MBWAY",
-        valorPago2: 50,
+        pagamentos: [
+          { valor: 100, metodo: "DINHEIRO" },
+          { valor: 50, metodo: "MBWAY" },
+        ],
       });
 
       expect(Number(reserva.valorTotal)).toBe(150);
-      expect(Number(reserva.valorPago)).toBe(100);
-      expect(reserva.metodoPagamento).toBe("DINHEIRO");
-      expect(reserva.metodoPagamento2).toBe("MBWAY");
-      expect(Number(reserva.valorPago2)).toBe(50);
+      // Ledger: 2 entradas, soma = 150; pago derivado (soma >= total)
+      expect(reserva.pagamentos).toHaveLength(2);
+      const soma = reserva.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
+      expect(soma).toBe(150);
+      expect(reserva.pago).toBe(true);
 
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
@@ -406,7 +407,7 @@ describe("Reserva Service", () => {
           estado: "EM_CURSO",
           inicioEm: inicio,
           fimPrevisto,
-          valorPago: 100,
+          valorTotal: 100,
           pago: true,
           localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
@@ -439,7 +440,7 @@ describe("Reserva Service", () => {
           estado: "EM_CURSO",
           inicioEm: inicio,
           fimPrevisto,
-          valorPago: 100,
+          valorTotal: 100,
           pago: true,
           localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
@@ -470,7 +471,7 @@ describe("Reserva Service", () => {
           estado: "EM_CURSO",
           inicioEm: inicio,
           fimPrevisto,
-          valorPago: 100,
+          valorTotal: 100,
           pago: true,
           localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
@@ -858,8 +859,8 @@ describe("Reserva Service", () => {
     });
   });
 
-  describe("create() - meias e split payment", () => {
-    it("deve aplicar meiasQuantidade e metodoPagamento2 na criação", async () => {
+  describe("create() - meias e ledger de pagamentos", () => {
+    it("deve aplicar meiasQuantidade e pagamentos (ledger) na criação", async () => {
       const futuro = new Date();
       futuro.setDate(futuro.getDate() + 60);
       const futuroStr = futuro.toISOString().split("T")[0]!;
@@ -872,15 +873,16 @@ describe("Reserva Service", () => {
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 12,
         meiasQuantidade: 12,
-        metodoPagamento: "DINHEIRO",
-        valorPago: 180,
-        metodoPagamento2: "MBWAY",
-        valorPago2: 20,
+        pagamentos: [
+          { valor: 180, metodo: "DINHEIRO" },
+          { valor: 20, metodo: "MBWAY" },
+        ],
       });
 
       expect(reserva.meiasQuantidade).toBe(12);
-      expect(reserva.metodoPagamento2).toBe("MBWAY");
-      expect(Number(reserva.valorPago2)).toBe(20);
+      expect(reserva.pagamentos).toHaveLength(2);
+      expect(Number(reserva.pagamentos[1].valor)).toBe(20);
+      expect(reserva.pagamentos[1].metodo).toBe("MBWAY");
       // precoCriancaAplicado deve ter sido calculado automaticamente
       expect(reserva.precoCriancaAplicado).toBeDefined();
       expect(reserva.minimoCriancas).toBeDefined();

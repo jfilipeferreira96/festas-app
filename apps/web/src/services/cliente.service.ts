@@ -85,7 +85,10 @@ export const clienteService = {
         reservas: {
           where: { estado: { not: "CANCELADA" } },
           orderBy: { data: "desc" },
-          include: { local: true },
+          include: {
+            local: true,
+            pagamentos: { select: { valor: true, metodo: true } },
+          },
         },
       },
     });

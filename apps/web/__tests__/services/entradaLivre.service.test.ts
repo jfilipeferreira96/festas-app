@@ -654,7 +654,7 @@ describe("Entrada Livre Service", () => {
 
   // ── atualizarPagamento ───────────────────────────────────────
   describe("atualizarPagamento()", () => {
-    it("should mark pago as true", async () => {
+    it("should mark pago as true (derivado do ledger)", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Pagamento",
         encarregadoTelefone: "999999999",
@@ -664,12 +664,12 @@ describe("Entrada Livre Service", () => {
       });
 
       const atualizada = await entradaLivreService.atualizarPagamento(entrada.id, {
-        pago: true,
-        metodoPagamento: "MBWAY",
+        pagamentos: [{ valor: 6, metodo: "MBWAY" }], // custo 6€ → liquidada
       });
 
       expect(atualizada.pago).toBe(true);
-      expect(atualizada.metodoPagamento).toBe("MBWAY");
+      expect(atualizada.pagamentos).toHaveLength(1);
+      expect(atualizada.pagamentos![0].metodo).toBe("MBWAY");
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
@@ -796,8 +796,8 @@ describe("Entrada Livre Service", () => {
   });
 
   // ── v2: meias e split payment ──────────────────────────────────
-  describe("create() - meias e pagamento dividido", () => {
-    it("deve criar entrada com meiasQuantidade e metodoPagamento2", async () => {
+  describe("create() - meias e ledger de pagamentos", () => {
+    it("deve criar entrada com meiasQuantidade e pagamentos (ledger)", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Meias Split",
         encarregadoTelefone: "915555555",
@@ -805,32 +805,34 @@ describe("Entrada Livre Service", () => {
         pago: true,
         criancas: [{ nome: "Criança 1" }, { nome: "Criança 2" }, { nome: "Criança 3" }],
         meiasQuantidade: 3,
-        metodoPagamento: "DINHEIRO",
-        metodoPagamento2: "MBWAY",
-        valorPago2: 10,
+        pagamentos: [
+          { valor: 10, metodo: "DINHEIRO" },
+          { valor: 10, metodo: "MBWAY" },
+        ],
       });
 
       expect(entrada.meiasQuantidade).toBe(3);
-      expect(entrada.metodoPagamento2).toBe("MBWAY");
-      expect(Number(entrada.valorPago2)).toBe(10);
+      expect(entrada.pagamentos).toHaveLength(2);
+      expect(entrada.pagamentos![1].metodo).toBe("MBWAY");
+      expect(Number(entrada.pagamentos![1].valor)).toBe(10);
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
 
-    it("deve persistir valorPago (recebido no pagamento 1)", async () => {
+    it("deve persistir pagamento parcial (sinal de 5€, pago=false)", async () => {
       const entrada = await entradaLivreService.create({
         encarregadoNome: "Teste Recebido Pag1",
         encarregadoTelefone: "917777777",
         duracaoMinutos: 60,
         pago: false,
         criancas: [{ nome: "Criança Sinal" }],
-        metodoPagamento: "DINHEIRO",
-        valorPago: 5,
+        pagamentos: [{ valor: 5, metodo: "DINHEIRO" }],
       });
 
-      expect(Number(entrada.valorPago)).toBe(5);
-      expect(entrada.metodoPagamento).toBe("DINHEIRO");
+      expect(entrada.pagamentos).toHaveLength(1);
+      expect(Number(entrada.pagamentos![0].valor)).toBe(5);
+      expect(entrada.pagamentos![0].metodo).toBe("DINHEIRO");
       expect(entrada.pago).toBe(false);
 
       // Cleanup

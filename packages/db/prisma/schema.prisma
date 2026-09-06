@@ -36,6 +36,7 @@ model User {
   auditLogs     AuditLog[]
   notasRapidas  NotaRapida[]
   ajustesPagamento AjustePagamento[]
+  pagamentosRegistados Pagamento[] @relation("PagamentoCriadoPor")
 
   @@map("user")
 }
@@ -426,15 +427,10 @@ model Reserva {
   horaLanche           String?       // HH:MM - hora planeada do lanche
 
   // Pagamento
-  valorTotal          Decimal?          @db.Decimal(10, 2)  // Total acordado (editável no form); fallback p/ leitura: valorPago
-  metodoPagamento     MetodoPagamento?
-  valorPago           Decimal?          @db.Decimal(10, 2)  // Valor recebido no pagamento 1
+  // valorTotal = total acordado (editável); o RECEBIDO vive no ledger (Pagamento[])
+  // e o estado `pago` é derivado: soma(pagamentos) >= valorTotal.
+  valorTotal          Decimal?          @db.Decimal(10, 2)
   pago                Boolean           @default(false)
-  referenciaPagamento String?
-
-  // Pagamento dividido (até 2 métodos - o restante pode ser pago de outra forma)
-  metodoPagamento2    MetodoPagamento?
-  valorPago2          Decimal?          @db.Decimal(10, 2)
 
   // Caução
   caucao              EstadoCaucao      @default(NAO_PAGA)
@@ -457,6 +453,9 @@ model Reserva {
   // ── Preço por criança (cálculo aplicado) ──
   precoCriancaAplicado Decimal?         @db.Decimal(10, 2)
   minimoCriancas       Int?
+
+  // ── Ledger de pagamentos (fonte única do recebido; valorPago = soma) ──
+  pagamentos        Pagamento[]
 
   // ── Relações ──────────────────────────
   clienteId       String
@@ -793,14 +792,9 @@ model EntradaLivre {
   estado          EstadoEntradaLivre  @default(ATIVA)
 
   // ── Pagamento ───────────────────────
-  metodoPagamento MetodoPagamento?
-  valorPago       Decimal?           @db.Decimal(10, 2)  // Valor recebido no pagamento 1
+  // O RECEBIDO vive no ledger (Pagamento[]); `pago` é derivado da soma.
   pago            Boolean             @default(false)
   pagoExcesso     Boolean             @default(false)
-
-  // ── Pagamento dividido (até 2 métodos) ──
-  metodoPagamento2 MetodoPagamento?
-  valorPago2       Decimal?           @db.Decimal(10, 2)
 
   // ── Meias (compra obrigatória no parque) ──
   meiasQuantidade Int?
@@ -825,6 +819,9 @@ model EntradaLivre {
   // ── Extras (opcional) ───────────────
   extras          EntradaLivreExtra[]
   ajustes         AjustePagamento[]
+
+  // ── Ledger de pagamentos (fonte única do recebido; valorPago = soma) ──
+  pagamentos      Pagamento[]
 
   @@index([estado])
   @@index([inicioEm])
@@ -915,5 +912,37 @@ model SalaLanche {
   reservas  Reserva[]
 
   @@map("sala_lanche")
+}
+
+// ============================================
+// PAGAMENTOS (ledger - fonte única do recebido)
+// ============================================
+// Em vez de campos fixos de 1º/2º pagamento, cada pagamento é uma entrada
+// no ledger (valor + método + data). O estado "pago" é derivado:
+// soma(pagamentos) >= total devido. AjustesPagamento continuam a editar o
+// TOTAL devido (acréscimo/desconto), nunca o recebido.
+
+model Pagamento {
+  id          String          @id @default(cuid())
+  createdAt   DateTime        @default(now())
+  valor       Decimal         @db.Decimal(10, 2)
+  metodo      MetodoPagamento
+  referencia  String?
+  nota        String?
+
+  // ── Alvo do pagamento (exatamente um dos dois) ──
+  reservaId      String?
+  reserva        Reserva?      @relation(fields: [reservaId], references: [id], onDelete: Cascade)
+
+  entradaLivreId String?
+  entradaLivre   EntradaLivre? @relation(fields: [entradaLivreId], references: [id], onDelete: Cascade)
+
+  // ── Autor ──
+  criadoPorId String?
+  criadoPor   User?         @relation("PagamentoCriadoPor", fields: [criadoPorId], references: [id])
+
+  @@index([reservaId])
+  @@index([entradaLivreId])
+  @@map("pagamento")
 }
 
