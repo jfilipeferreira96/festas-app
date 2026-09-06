@@ -41,8 +41,8 @@ export default function PagamentoModalShell({
   const tabAtiva = tabs.find((t) => t.id === tabId) ?? tabs[0];
 
   return (
-    <Modal isOpen onClose={onClose} size="lg" title={titulo}>
-      <div className="p-5 flex flex-col max-h-[70vh]">
+    <Modal isOpen onClose={onClose} size="xl" title={titulo}>
+      <div className="p-5 flex flex-col max-h-[85vh]">
         <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface">
           <div className="flex items-center gap-2.5 min-w-0">
             {pago ? (
