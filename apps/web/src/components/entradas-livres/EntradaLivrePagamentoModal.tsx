@@ -43,7 +43,9 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
 
   const handleAjusteAplicado = useCallback(
     (delta: number) => {
-      setCustoOverride(Math.max(0, custoBase + delta));
+      setCustoOverride((prev) =>
+        Math.max(0, Math.round(((prev ?? custoBase) + delta) * 100) / 100)
+      );
     },
     [custoBase]
   );
