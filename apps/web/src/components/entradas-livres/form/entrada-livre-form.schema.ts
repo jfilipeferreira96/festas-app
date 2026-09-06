@@ -23,11 +23,22 @@ const criancaSchema = z.object({
   querLanche: z.boolean(),
 });
 
+// Encarregados adicionais (mesma estrutura do form de Festas)
+const encarregadoAdicionalSchema = z.object({
+  nome: z.string(),
+  contacto: z.string(),
+  email: z.string(),
+  codigoPostal: z.string(),
+});
+
 export const entradaLivreFormSchema = z.object({
   criancas: z.array(criancaSchema).min(1, "Indique pelo menos uma criança"),
   encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
   encarregadoTelefone: z.string().min(9, "Contacto inválido"),
   encarregadoEmail: z.string().email("Email inválido").optional().or(z.literal("")),
+  encarregadoCodigoPostal: z.string(),
+  adicionarCliente: z.boolean(),
+  encarregadosAdicionais: z.array(encarregadoAdicionalSchema),
   duracaoMinutos: z.number().min(60, "Duração mínima é 1 hora"),
   // Pagamento (ledger): custo total (editável) + lista de pagamentos realizados
   custoTotal: z.number().min(0, "O custo não pode ser negativo").optional(),
@@ -76,6 +87,9 @@ export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefin
     encarregadoNome: entrada?.encarregadoNome ?? "",
     encarregadoTelefone: entrada?.encarregadoTelefone ?? "",
     encarregadoEmail: entrada?.encarregadoEmail ?? "",
+    encarregadoCodigoPostal: "",
+    adicionarCliente: true,
+    encarregadosAdicionais: [],
     duracaoMinutos: entrada?.duracaoMinutos ?? 60,
     custoTotal: entrada?.custoTotal,
     pagamentos: entrada?.pagamentos?.map((p) => ({
@@ -105,6 +119,15 @@ export function buildEntradaPayload(
   opts: { isEdit: boolean }
 ): CriarEntradaLivreDTO {
   const hoje = toISODate(new Date());
+  // Encarregados adicionais: mesma lógica do form de Festas - vão para as
+  // observações em texto ("Encarregado 2: Nome · contacto · email · CP").
+  const adicionaisTexto = data.encarregadosAdicionais
+    .filter((e) => e.nome.trim())
+    .map((e, i) => {
+      const partes = [`Encarregado ${i + 2}: ${e.nome}`, e.contacto, e.email, e.codigoPostal].filter(Boolean);
+      return partes.join(" · ");
+    })
+    .join("\n");
   return {
     criancas: data.criancas.map((c) => ({
       nome: c.nome.trim(),
@@ -115,6 +138,7 @@ export function buildEntradaPayload(
     encarregadoNome: data.encarregadoNome,
     encarregadoTelefone: data.encarregadoTelefone,
     encarregadoEmail: data.encarregadoEmail || undefined,
+    encarregadoCodigoPostal: data.encarregadoCodigoPostal || undefined,
     duracaoMinutos: data.duracaoMinutos,
     custoTotal: data.custoTotal,
     pagamentos: opts.isEdit ? undefined : data.pagamentos,
@@ -130,7 +154,7 @@ export function buildEntradaPayload(
     extrasQuantidades: Object.fromEntries(
       data.extrasIds.map((id) => [id, data.extrasQuantidades[id] ?? 1])
     ),
-    observacoes: data.observacoes || undefined,
+    observacoes: [data.observacoes, adicionaisTexto].filter(Boolean).join("\n\n") || undefined,
     observacoesLesoes: data.observacoesLesoes || undefined,
     temLanche: data.temLanche,
     horaLanche: data.horaLanche || (opts.isEdit ? null : undefined),

@@ -21,6 +21,7 @@ interface CriarEntradaLivreDTO {
   encarregadoNome: string;
   encarregadoTelefone: string;
   encarregadoEmail?: string;
+  encarregadoCodigoPostal?: string;
   duracaoMinutos: number;
   custoTotal?: number;
   pago?: boolean;
@@ -46,7 +47,8 @@ interface CriarEntradaLivreDTO {
 async function findOrCreateCliente(
   nome: string,
   telefone: string,
-  email?: string
+  email?: string,
+  codigoPostal?: string
 ): Promise<string> {
   // 1. Procurar por email (se fornecido) - email é @unique
   if (email && email.trim()) {
@@ -62,6 +64,7 @@ async function findOrCreateCliente(
       nome,
       telefone,
       email: email && email.trim() ? email.trim() : null,
+      codigoPostal: codigoPostal && codigoPostal.trim() ? codigoPostal.trim() : null,
     },
   });
   return novo.id;
@@ -246,7 +249,8 @@ export const entradaLivreService = {
     }
 
 
-    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, pagamentos: pagamentosInput, ...rest } = data;
+    // encarregadoCodigoPostal é extraído antes do ...rest (não é coluna da entrada)
+    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, pagamentos: pagamentosInput, encarregadoCodigoPostal, ...rest } = data;
 
     // ── Ledger de pagamentos (fonte única do recebido); [] = sem pagamentos ──
     const listaPagamentos: PagamentoInput[] =
@@ -291,7 +295,8 @@ export const entradaLivreService = {
     const clienteId = await findOrCreateCliente(
       data.encarregadoNome,
       data.encarregadoTelefone,
-      data.encarregadoEmail
+      data.encarregadoEmail,
+      encarregadoCodigoPostal
     );
 
     // Criar entrada
@@ -497,6 +502,7 @@ export const entradaLivreService = {
       encarregadoNome?: string;
       encarregadoTelefone?: string;
       encarregadoEmail?: string;
+      encarregadoCodigoPostal?: string;
       duracaoMinutos?: number;
       custoTotal?: number;
       pago?: boolean;
@@ -529,6 +535,7 @@ export const entradaLivreService = {
       extrasIds,
       extrasQuantidades,
       custoTotal: custoTotalInput,
+      encarregadoCodigoPostal,
       ...rest
     } = data;
 

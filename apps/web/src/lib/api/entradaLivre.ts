@@ -61,6 +61,7 @@ export interface CriarEntradaLivreDTO {
   encarregadoNome: string;
   encarregadoTelefone: string;
   encarregadoEmail?: string;
+  encarregadoCodigoPostal?: string;
   duracaoMinutos: number;
   custoTotal?: number;
   pago?: boolean;
@@ -86,6 +87,7 @@ export interface AtualizarEntradaLivreDTO {
   encarregadoNome?: string;
   encarregadoTelefone?: string;
   encarregadoEmail?: string;
+  encarregadoCodigoPostal?: string;
   duracaoMinutos?: number;
   custoTotal?: number;
   pago?: boolean;

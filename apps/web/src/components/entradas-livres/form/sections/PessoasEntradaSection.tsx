@@ -11,12 +11,14 @@ import { DATA_NASCIMENTO_DEFAULT, type EntradaLivreFormData } from "../entrada-l
 
 interface PessoasEntradaSectionProps {
   criancas: UseFieldArrayReturn<EntradaLivreFormData, "criancas", "id">;
+  adicionais: UseFieldArrayReturn<EntradaLivreFormData, "encarregadosAdicionais", "id">;
   temLanche: boolean;
   onOpenSearchCliente: () => void;
 }
 
 export default function PessoasEntradaSection({
   criancas,
+  adicionais,
   temLanche,
   onOpenSearchCliente,
 }: PessoasEntradaSectionProps) {
@@ -102,18 +104,27 @@ export default function PessoasEntradaSection({
             <User size={14} className="text-brand-500" /> Encarregado de Educação
             <span className="text-error-500">*</span>
           </span>
-          <button
-            type="button"
-            onClick={onOpenSearchCliente}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
-          >
-            <Search size={13} /> Pesquisar Cliente
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenSearchCliente}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+            >
+              <Search size={13} /> Pesquisar Cliente
+            </button>
+            <button
+              type="button"
+              onClick={() => adicionais.append({ nome: "", contacto: "", email: "", codigoPostal: "" })}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs text-brand-500 hover:bg-brand-50 rounded-lg transition-colors"
+            >
+              <Plus size={13} /> Adicionar encarregado
+            </button>
+          </div>
         </div>
         <div className="flex gap-4">
           <div className="flex-1">
             <InputField
-              autoComplete="off"
+              autoComplete="nope"
               {...register("encarregadoNome")}
               placeholder="Nome do responsável"
               error={!!errors.encarregadoNome}
@@ -142,7 +153,49 @@ export default function PessoasEntradaSection({
               hint={errors.encarregadoEmail?.message}
             />
           </div>
+          <div className="w-40">
+            <InputField {...register("encarregadoCodigoPostal")} placeholder="Código Postal" />
+          </div>
+          <div className="flex items-center shrink-0 pb-0.5">
+            <Checkbox
+              label="Adicionar aos clientes"
+              checked={watch("adicionarCliente")}
+              onChange={(checked) => setValue("adicionarCliente", checked, { shouldDirty: true })}
+            />
+          </div>
         </div>
+        {adicionais.fields.map((field, index) => (
+          <div key={field.id} className="p-3 rounded-lg bg-surface border border-border">
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-100 text-primary-600 text-xs font-bold">
+                {index + 2}
+              </div>
+              <span className="text-xs font-semibold text-text-primary">Encarregado {index + 2}</span>
+              <button
+                type="button"
+                onClick={() => adicionais.remove(index)}
+                className="ml-auto p-1 text-text-muted hover:text-accent-red transition-colors"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+            <InputField
+              {...register(`encarregadosAdicionais.${index}.nome`)}
+              placeholder="Nome do encarregado"
+            />
+            <div className="flex gap-3 mt-2">
+              <div className="flex-1">
+                <InputField type="tel" {...register(`encarregadosAdicionais.${index}.contacto`)} placeholder="Telefone" />
+              </div>
+              <div className="flex-1">
+                <InputField type="email" {...register(`encarregadosAdicionais.${index}.email`)} placeholder="Email" />
+              </div>
+              <div className="w-40">
+                <InputField {...register(`encarregadosAdicionais.${index}.codigoPostal`)} placeholder="Código Postal" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

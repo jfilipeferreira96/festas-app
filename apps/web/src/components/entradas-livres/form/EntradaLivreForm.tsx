@@ -55,6 +55,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   });
   const { control, handleSubmit, watch, setValue, formState: { isSubmitting } } = methods;
   const criancasArray = useFieldArray({ control, name: "criancas" });
+  const adicionaisArray = useFieldArray({ control, name: "encarregadosAdicionais" });
 
   const duracaoMinutos = watch("duracaoMinutos");
   const temLanche = watch("temLanche") ?? false;
@@ -111,13 +112,15 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const custoCalculado = custoComponentes.total;
 
-  // Custo editado = valor atual difere do calculado (deixa de auto-sincronizar)
-  const watchedCustoTotal = watch("custoTotal");
-  const custoEdited = watchedCustoTotal != null && Math.abs(watchedCustoTotal - Number(custoCalculado.toFixed(2))) > 0.004;
+  // Total pré-preenchido com o cálculo (igual ao form de Festas): qualquer
+  // alteração nos componentes (crianças, lanche, meias, extras, duração)
+  // atualiza o total. Sem gate por comparação de valores - o valor auto-
+  // preenchido ficava stale e a comparação bloqueava o sync para sempre
+  // (bug: total preso no custo do tempo enquanto o cálculo subia).
   useEffect(() => {
-    if (custoEdited) return;
+    if (entrada) return; // edição: o total guardado é o valor acordado
     if (custoCalculado > 0) setValue("custoTotal", Number(custoCalculado.toFixed(2)));
-  }, [custoCalculado, setValue, custoEdited]);
+  }, [custoCalculado, setValue, entrada]);
 
   const cacifoAtual = entrada?.cacifo;
   const cacifoOptions = useMemo(() => {
@@ -143,6 +146,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       setValue("encarregadoNome", cliente.nome, { shouldDirty: true });
       setValue("encarregadoTelefone", cliente.telefone, { shouldDirty: true });
       if (cliente.email) setValue("encarregadoEmail", cliente.email, { shouldDirty: true });
+      if (cliente.codigoPostal) setValue("encarregadoCodigoPostal", cliente.codigoPostal, { shouldDirty: true });
+      setValue("adicionarCliente", false, { shouldDirty: true });
       if (filhos.length > 0) {
         criancasArray.replace(
           filhos.map((filho) => ({
@@ -196,6 +201,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
           <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-6">
             <PessoasEntradaSection
               criancas={criancasArray}
+              adicionais={adicionaisArray}
               temLanche={temLanche}
               onOpenSearchCliente={() => setShowClienteSearch(true)}
             />

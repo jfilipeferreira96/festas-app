@@ -150,7 +150,7 @@ export default function PagamentoEntradaSection({
               +
             </button>
           </div>
-          <p className="text-xs text-text-muted">Cobradas automaticamente na conclusão</p>
+          <p className="text-xs text-text-muted">Incluídas no total a pagar</p>
         </div>
       </div>
 
