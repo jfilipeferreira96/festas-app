@@ -11,6 +11,7 @@ import EntradaLivreForm from "./form/EntradaLivreForm";
 import EntradaLivreDetailModal from "./EntradaLivreDetailModal";
 import EntradaLivrePagamentoModal from "./EntradaLivrePagamentoModal";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
+import { useToast } from "@/hooks/use-toast";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
@@ -84,6 +85,7 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
   }, [entradas]);
 
   const eliminar = useEliminarEntradaLivre();
+  const toast = useToast();
   const concluir = useConcluirEntradaLivre();
   const cancelar = useCancelarEntradaLivre();
   const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
@@ -106,9 +108,16 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
   }, []);
 
   const handleDelete = useCallback(async () => {
-    await eliminar.mutateAsync(deleteModal.id);
-    setDeleteModal({ isOpen: false, id: "" });
-  }, [eliminar, deleteModal.id]);
+    try {
+      await eliminar.mutateAsync(deleteModal.id);
+      setDeleteModal({ isOpen: false, id: "" });
+    } catch (err) {
+      // Defesa extra: o botão já está oculto para entradas ATIVAS (o serviço
+      // recusa CANNOT_DELETE_ACTIVE). Mostra mensagem amigável, sem overlay.
+      toast.handleApiError(err, "Não foi possível eliminar a entrada.");
+      setDeleteModal({ isOpen: false, id: "" });
+    }
+  }, [eliminar, deleteModal.id, toast]);
 
   const handleConcluir = useCallback(
     async (custoExcesso?: number) => {
@@ -369,15 +378,17 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
                 </button>
               </Tooltip>
             )}
-            {/* Delete */}
-            <Tooltip content="Eliminar" position="top" theme="dark">
-              <button
-                onClick={() => setDeleteModal({ isOpen: true, id: r.id })}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
-              >
-                <Trash2 size={15} />
-              </button>
-            </Tooltip>
+            {/* Delete - indisponível para entradas em curso (concluir/cancelar primeiro) */}
+            {r.estado !== "ATIVA" && (
+              <Tooltip content="Eliminar" position="top" theme="dark">
+                <button
+                  onClick={() => setDeleteModal({ isOpen: true, id: r.id })}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-text-muted hover:text-accent-red transition-colors"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </Tooltip>
+            )}
           </div>
         )}}
         emptyState={{
