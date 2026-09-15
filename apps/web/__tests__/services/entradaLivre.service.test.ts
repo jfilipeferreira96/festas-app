@@ -709,6 +709,114 @@ describe("Entrada Livre Service", () => {
     });
   });
 
+  // ── atualizar - prorrogação: recálculo de custo e estado pago ──
+  describe("atualizar() - prorrogação (recálculo de custo e pago)", () => {
+    it("deve recalcular custoTotal, fimPrevisto e re-derivar pago na prorrogação (sem custoTotal no payload)", async () => {
+      // Cenário real do balcão: 1h paga (6€, valor acordado na criação);
+      // pais pedem +1h → escalão 2h (10€) → o acerto fecha com +4€.
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Prorroga Sem Payload",
+        encarregadoTelefone: "918000001",
+        duracaoMinutos: 60,
+        custoTotal: 6,
+        pago: true,
+        criancas: [{ nome: "Criança Prorroga" }],
+        pagamentos: [{ valor: 6, metodo: "DINHEIRO" }],
+      });
+      expect(entrada.pago).toBe(true);
+
+      const prorrogada = await entradaLivreService.atualizar(entrada.id, {
+        duracaoMinutos: 120,
+      });
+
+      expect(Number(prorrogada.custoTotal)).toBe(10); // escalão 2h
+      expect(new Date(prorrogada.fimPrevisto).getTime()).toBe(
+        new Date(entrada.inicioEm).getTime() + 120 * 60 * 1000
+      );
+      expect(prorrogada.pago).toBe(false); // 6€ pagos < 10€ devidos
+
+      // Acerto no balcão fecha o total
+      const acertada = await entradaLivreService.atualizarPagamento(entrada.id, {
+        pagamentos: [
+          { valor: 6, metodo: "DINHEIRO" },
+          { valor: 4, metodo: "DINHEIRO" },
+        ],
+      });
+      expect(acertada.pago).toBe(true);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("deve aceitar custoTotal fornecido na prorrogação e re-derivar pago (valor sincronizado pelo form)", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Prorroga Com Payload",
+        encarregadoTelefone: "918000002",
+        duracaoMinutos: 60,
+        custoTotal: 6,
+        pago: true,
+        criancas: [{ nome: "Criança Manual" }],
+        pagamentos: [{ valor: 6, metodo: "DINHEIRO" }],
+      });
+
+      const prorrogada = await entradaLivreService.atualizar(entrada.id, {
+        duracaoMinutos: 120,
+        custoTotal: 12,
+      });
+
+      expect(Number(prorrogada.custoTotal)).toBe(12);
+      expect(prorrogada.pago).toBe(false); // re-derivado: 6€ pagos < 12€ devidos
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("deve preservar custoTotal e pago quando só mudam observações", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Só Observações",
+        encarregadoTelefone: "918000003",
+        duracaoMinutos: 60,
+        custoTotal: 6,
+        pago: true,
+        criancas: [{ nome: "Criança Notas" }],
+        pagamentos: [{ valor: 6, metodo: "DINHEIRO" }],
+      });
+
+      const atualizada = await entradaLivreService.atualizar(entrada.id, {
+        observacoes: "Sem alterações de preço",
+      });
+
+      expect(Number(atualizada.custoTotal)).toBe(6);
+      expect(atualizada.pago).toBe(true);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("deve dar precedência a um pago explícito no payload sobre a derivação", async () => {
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Pago Explícito",
+        encarregadoTelefone: "918000004",
+        duracaoMinutos: 60,
+        custoTotal: 6,
+        pago: true,
+        criancas: [{ nome: "Criança Explícita" }],
+        pagamentos: [{ valor: 6, metodo: "DINHEIRO" }],
+      });
+
+      const prorrogada = await entradaLivreService.atualizar(entrada.id, {
+        duracaoMinutos: 120,
+        pago: true, // explícito prevalece (6€ pagos < 10€ devidos)
+      });
+
+      expect(Number(prorrogada.custoTotal)).toBe(10);
+      expect(prorrogada.pago).toBe(true);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+  });
+
   // ── contadores ───────────────────────────────────────────────
   describe("getContadores()", () => {
     it("should return counters", async () => {

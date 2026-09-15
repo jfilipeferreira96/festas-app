@@ -224,7 +224,7 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
                   {/* Custo final (guardado - pode ter override manual) */}
                   <DetailRow icon={<CreditCard size={12} />} label="Custo Final" value={formatCurrency(entrada.custoTotal)} bold />
                   {breakdown && Math.abs(breakdown.subtotal - Number(entrada.custoTotal)) > 0.01 && (
-                    <p className="text-[10px] text-text-muted px-3">⚠ Valor ajustado manualmente</p>
+                    <p className="text-[10px] text-text-muted px-3">⚠ Total com ajuste manual (difere do subtotal calculado)</p>
                   )}
                   {entrada.custoExcesso != null && entrada.custoExcesso > 0 && (
                     <DetailRow label="Custo Excesso" value={formatCurrency(entrada.custoExcesso)} accent />

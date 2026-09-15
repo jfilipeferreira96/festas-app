@@ -4,6 +4,7 @@
 // Usado pela conta LANCHE para saber o que preparar e registar alergias.
 
 import type { Menu } from "./menu";
+import type { TipoBolo } from "./reserva";
 
 export type EstadoLanche = "NAO_INICIADO" | "A_DECORRER" | "TERMINADO";
 
@@ -22,6 +23,9 @@ export interface LancheFesta {
   numConfirmados?: number;
   idadeAniversariante?: number;
   menu?: Menu;
+  bolo?: TipoBolo;
+  boloTema?: string;
+  boloQuantidade?: number;
   notasLanche?: string;
   notasLancheReserva?: string; // notas do lanche vindas da Reserva (escritas na marcação)
   notasCacifos?: string;       // notas de cacifos vindas da Reserva

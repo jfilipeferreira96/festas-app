@@ -53,7 +53,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     resolver: zodResolver(entradaLivreFormSchema),
     defaultValues,
   });
-  const { control, handleSubmit, watch, setValue, formState: { isSubmitting } } = methods;
+  const { control, handleSubmit, watch, setValue, formState: { isSubmitting, dirtyFields } } = methods;
   const criancasArray = useFieldArray({ control, name: "criancas" });
   const adicionaisArray = useFieldArray({ control, name: "encarregadosAdicionais" });
 
@@ -117,10 +117,23 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   // atualiza o total. Sem gate por comparação de valores - o valor auto-
   // preenchido ficava stale e a comparação bloqueava o sync para sempre
   // (bug: total preso no custo do tempo enquanto o cálculo subia).
+  // Em edição, o total guardado é o valor acordado e mantém-se enquanto a
+  // composição não mudar; ao mudar (ex: +1 hora pedida no balcão), segue o
+  // recálculo do tarifário - salvo se o total foi escrito à mão.
+  const composicaoMudou = Boolean(
+    dirtyFields.duracaoMinutos ||
+      dirtyFields.temLanche ||
+      dirtyFields.numAdultos ||
+      dirtyFields.meiasQuantidade ||
+      dirtyFields.criancas ||
+      dirtyFields.extrasIds ||
+      dirtyFields.extrasQuantidades
+  );
   useEffect(() => {
-    if (entrada) return; // edição: o total guardado é o valor acordado
+    if (dirtyFields.custoTotal) return; // total escrito à mão - respeitar
+    if (entrada && !composicaoMudou) return; // edição sem alterações: manter acordado
     if (custoCalculado > 0) setValue("custoTotal", Number(custoCalculado.toFixed(2)));
-  }, [custoCalculado, setValue, entrada]);
+  }, [custoCalculado, setValue, entrada, composicaoMudou, dirtyFields.custoTotal]);
 
   const cacifoAtual = entrada?.cacifo;
   const cacifoOptions = useMemo(() => {

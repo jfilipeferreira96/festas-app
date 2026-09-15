@@ -54,6 +54,10 @@ describe("Lanche Service", () => {
         where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
         data: { temLanche: true },
       });
+      await testPrisma.reserva.update({
+        where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+        data: { bolo: "NOSSO_2KG", boloTema: "Dinossauros", boloQuantidade: 1 },
+      });
 
       try {
         const lanches = await lancheService.getLanchesDoDia();
@@ -65,11 +69,21 @@ describe("Lanche Service", () => {
         expect(festas.some((f) => f.reservaId === TEST_IDS.RESERVA_EM_CURSO)).toBe(false);
         expect(entradas.some((e) => e.entradaLivreId === TEST_IDS.ENTRADA_LIVRE_1)).toBe(true);
 
+        // Campos do bolo chegam à vista Lanche (cozinha precisa de saber o bolo da casa)
+        const festaConfirmada = festas.find((f) => f.reservaId === TEST_IDS.RESERVA_CONFIRMADA);
+        expect(festaConfirmada?.bolo).toBe("NOSSO_2KG");
+        expect(festaConfirmada?.boloTema).toBe("Dinossauros");
+        expect(festaConfirmada?.boloQuantidade).toBe(1);
+
         for (const f of festas) {
           expect(f.reservaId).toBeDefined();
           expect(typeof f.nomeFesta).toBe("string");
         }
       } finally {
+        await testPrisma.reserva.update({
+          where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+          data: { bolo: null, boloTema: null, boloQuantidade: null },
+        });
         await testPrisma.menu.deleteMany({ where: { reservaId: TEST_IDS.RESERVA_CONFIRMADA } });
         await testPrisma.entradaLivre.update({
           where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
@@ -131,6 +145,25 @@ describe("Lanche Service", () => {
       const lanche = await lancheService.getLancheByReservaId(TEST_IDS.RESERVA_CONFIRMADA);
       expect(lanche.reservaId).toBe(TEST_IDS.RESERVA_CONFIRMADA);
       expect(lanche.tipo).toBe("FESTA");
+    });
+
+    it("deve retornar os campos do bolo da reserva", async () => {
+      await testPrisma.reserva.update({
+        where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+        data: { bolo: "BOLO_ARTISTICO", boloTema: "Unicórnios", boloQuantidade: 2 },
+      });
+
+      try {
+        const lanche = await lancheService.getLancheByReservaId(TEST_IDS.RESERVA_CONFIRMADA);
+        expect(lanche.bolo).toBe("BOLO_ARTISTICO");
+        expect(lanche.boloTema).toBe("Unicórnios");
+        expect(lanche.boloQuantidade).toBe(2);
+      } finally {
+        await testPrisma.reserva.update({
+          where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+          data: { bolo: null, boloTema: null, boloQuantidade: null },
+        });
+      }
     });
 
     it("deve lançar NOT_FOUND para reserva inexistente", async () => {

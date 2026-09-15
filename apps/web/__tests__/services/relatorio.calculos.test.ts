@@ -37,6 +37,7 @@ function reservaFixture(overrides: {
   pagamentos: PagamentoFixture[];
   caucao?: string;
   valorCaucao?: number | null;
+  metodoCaucao?: string | null;
   custoExcesso?: number | null;
   pagoExcesso?: boolean;
   meiasQuantidade?: number | null;
@@ -51,6 +52,7 @@ function reservaFixture(overrides: {
     pagamentos: overrides.pagamentos,
     caucao: overrides.caucao ?? "NAO_PAGA",
     valorCaucao: overrides.valorCaucao ?? null,
+    metodoCaucao: overrides.metodoCaucao ?? null,
     custoExcesso: overrides.custoExcesso ?? null,
     pagoExcesso: overrides.pagoExcesso ?? false,
     meiasQuantidade: overrides.meiasQuantidade ?? null,
@@ -296,6 +298,35 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
       const lOutros = outros.linhas.find((l) => l.descricao === "Cauções outros valores");
       expect(l40!.valorNumerario).toBe(40);
       expect(lOutros!.valorNumerario).toBe(50);
+    });
+
+    it("caução usa metodoCaucao explícito; sem ele, cai no 1º pagamento do ledger", () => {
+      const outros = relatorioService.calcularOutros(
+        [
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }], // 1º pagamento ≠ método da caução
+            caucao: "PAGA",
+            valorCaucao: 40,
+            metodoCaucao: "MBWAY", // método explícito da caução
+          }),
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "MULTIBANCO" }],
+            caucao: "PAGA_NO_DIA",
+            valorCaucao: 50,
+            // sem metodoCaucao → fallback: 1º pagamento (MULTIBANCO)
+          }),
+        ],
+        [],
+      );
+
+      const l40 = outros.linhas.find((l) => l.descricao === "Cauções 40€");
+      expect(l40!.valorMbway).toBe(40);
+      expect(l40!.valorNumerario).toBe(0);
+
+      const lOutros = outros.linhas.find((l) => l.descricao === "Cauções outros valores");
+      expect(lOutros!.valorMultibanco).toBe(50);
     });
 
     it("total da secção soma só cauções e excesso (brindes ficam informativos)", () => {

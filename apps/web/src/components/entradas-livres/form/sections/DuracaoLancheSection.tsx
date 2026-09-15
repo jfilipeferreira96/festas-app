@@ -38,7 +38,7 @@ export default function DuracaoLancheSection({
             options={DURACAO_ENTRADA_OPTIONS}
             placeholder="Seleccionar"
             value={String(duracao)}
-            onChange={(val) => setValue("duracaoMinutos", Number(val), { shouldValidate: true })}
+            onChange={(val) => setValue("duracaoMinutos", Number(val), { shouldValidate: true, shouldDirty: true })}
             error={!!errors.duracaoMinutos}
           />
           {errors.duracaoMinutos && (

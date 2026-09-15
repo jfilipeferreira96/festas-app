@@ -524,6 +524,7 @@ export const entradaLivreService = {
       where: { id },
       include: {
         extras: { include: { extra: { select: { id: true, precoUnitario: true, baseCobranca: true } } } },
+        pagamentos: { select: { valor: true } },
       },
     });
     if (!entrada) throw new Error("NOT_FOUND");
@@ -647,6 +648,14 @@ export const entradaLivreService = {
     if (cacifoId !== undefined) updateData.cacifoId = cacifoId || null;
     if (novoCustoTotal !== undefined) updateData.custoTotal = novoCustoTotal;
     if (novoFimPrevisto !== undefined) updateData.fimPrevisto = novoFimPrevisto;
+    // O estado `pago` é derivado do ledger (soma >= total devido) e tem de
+    // acompanhar qualquer alteração do custo (ex: prorrogação pedida no balcão).
+    // Um `pago` explícito no payload prevalece sobre a derivação.
+    if (novoCustoTotal !== undefined && data.pago === undefined) {
+      const totalPago = entrada.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
+      const totalDevido = Number(entrada.custoTotalFinal ?? novoCustoTotal);
+      updateData.pago = totalDevido > 0 ? totalPago >= totalDevido - 0.004 : false;
+    }
 
     const updated = await prisma.entradaLivre.update({
       where: { id },

@@ -26,6 +26,7 @@ import {
   useAtualizarEstadoLancheEntrada,
 } from "@/hooks/use-lanche";
 import type { LancheDoDia, LancheFesta, LancheEntradaLivre } from "@saas/shared-types";
+import { BOLO_LABELS_SHORT } from "@/lib/constants/bolo";
 
 function todayISO(): string {
   return new Date().toISOString().split("T")[0];
@@ -249,6 +250,23 @@ export default function LancheContent() {
       render: (_v, f) => (
         <span className="text-xs text-text-secondary">{f.menu?.nome ?? "-"}</span>
       ),
+    },
+    {
+      key: "bolo",
+      label: "Bolo",
+      render: (_v, f) => {
+        if (!f.bolo) return <span className="text-sm text-text-muted">-</span>;
+        return (
+          <div className="text-xs">
+            <p className="inline-flex items-center gap-1 font-medium text-text-primary">
+              <Cake size={12} className="text-brand-500" />
+              {BOLO_LABELS_SHORT[f.bolo] ?? f.bolo}
+              {f.boloQuantidade != null && f.boloQuantidade > 1 && <span>×{f.boloQuantidade}</span>}
+            </p>
+            {f.boloTema && <p className="text-text-muted">{f.boloTema}</p>}
+          </div>
+        );
+      },
     },
     {
       key: "extrasLancheNomes",

@@ -56,6 +56,16 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
             { label: "Método", value: metodos },
           ]}
         />
+
+        {estimativa &&
+          estimativa.estimativa > 0 &&
+          Math.abs(estimativa.estimativa - Number(reserva.valorTotal ?? 0)) > 0.01 && (
+            <p className="text-[11px] text-accent-orange-600 mt-2">
+              Preço do tarifário para a composição atual: ≈{formatEuro(estimativa.estimativa)} (
+              {estimativa.criancasFaturadas} crianças × {formatEuro(estimativa.precoCrianca)}) — difere do total
+              acordado. Ajuste em "Gerir pagamento" para ficar com registo de auditoria.
+            </p>
+          )}
       </PagamentoCard>
     );
   }
