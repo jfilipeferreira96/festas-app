@@ -32,7 +32,8 @@ export async function wipeDatabase(prisma: WipePrismaClient): Promise<void> {
   console.log("🧹 Wiping existing data...");
 
   const tableRows = (await prisma.$queryRawUnsafe(
-    `SELECT TABLE_NAME, AUTO_INCREMENT FROM information_schema.TABLES
+    `SELECT CAST(TABLE_NAME AS CHAR) AS TABLE_NAME, CAST(AUTO_INCREMENT AS CHAR) AS AUTO_INCREMENT
+     FROM information_schema.TABLES
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE';`,
   )) as RawRow[];
 
@@ -48,7 +49,7 @@ export async function wipeDatabase(prisma: WipePrismaClient): Promise<void> {
 
   // FKs: (filho → pai). O filho tem de ser esvaziado antes do pai.
   const fkRows = (await prisma.$queryRawUnsafe(
-    `SELECT TABLE_NAME AS child, REFERENCED_TABLE_NAME AS parent
+    `SELECT CAST(TABLE_NAME AS CHAR) AS child, CAST(REFERENCED_TABLE_NAME AS CHAR) AS parent
      FROM information_schema.KEY_COLUMN_USAGE
      WHERE TABLE_SCHEMA = DATABASE() AND REFERENCED_TABLE_NAME IS NOT NULL;`,
   )) as RawRow[];

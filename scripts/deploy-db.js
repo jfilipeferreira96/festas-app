@@ -122,7 +122,7 @@ async function cmdTruncate(keepAuth) {
 
   const prisma = getPrisma();
   try {
-    const rows = await prisma.$queryRawUnsafe("SELECT table_name AS t FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'");
+    const rows = await prisma.$queryRawUnsafe("SELECT CAST(table_name AS CHAR) AS t FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'");
     const names = rows.map((r) => r.t).filter((n) => !keepAuth || !AUTH_TABLES.includes(String(n).toLowerCase()));
 
     // Tudo numa transacção interactiva → mesma ligação → FK_CHECKS persiste.
