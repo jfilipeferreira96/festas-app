@@ -4,6 +4,7 @@ import React from "react";
 import { Shield, Percent } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
+import { METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
 
 const CAUCAO_OPTIONS = [
   { value: "NAO_PAGA", label: "Não paga" },
@@ -16,6 +17,8 @@ interface PagamentoCaucaoDescontoTabProps {
   setCaucao: (v: string) => void;
   valorCaucao: string;
   setValorCaucao: (v: string) => void;
+  metodoCaucao: string;
+  setMetodoCaucao: (v: string) => void;
   descontoPercentagem: string;
   setDescontoPercentagem: (v: string) => void;
   descontoMotivo: string;
@@ -27,6 +30,8 @@ export default React.memo(function PagamentoCaucaoDescontoTab({
   setCaucao,
   valorCaucao,
   setValorCaucao,
+  metodoCaucao,
+  setMetodoCaucao,
   descontoPercentagem,
   setDescontoPercentagem,
   descontoMotivo,
@@ -38,7 +43,7 @@ export default React.memo(function PagamentoCaucaoDescontoTab({
         <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5 mb-2">
           <Shield size={14} className="text-text-muted" /> Caução
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">Estado</label>
             <Select options={CAUCAO_OPTIONS} value={caucao} onChange={setCaucao} />
@@ -53,6 +58,10 @@ export default React.memo(function PagamentoCaucaoDescontoTab({
               onChange={(e) => setValorCaucao(e.target.value)}
               placeholder="0,00"
             />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">Método de pagamento</label>
+            <Select options={METODO_PAGAMENTO_OPTIONS} value={metodoCaucao} onChange={setMetodoCaucao} />
           </div>
         </div>
       </div>

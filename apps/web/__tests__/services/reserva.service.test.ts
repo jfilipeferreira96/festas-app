@@ -1219,4 +1219,74 @@ describe("Reserva Service", () => {
       );
     });
   });
+
+  describe("atualizarPagamento()", () => {
+    it("deve persistir caucao + metodoCaucao (caminho sem ledger)", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "08:00",
+        duracaoMinutos: 90,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      try {
+        const atualizada = await reservaService.atualizarPagamento(reserva.id, {
+          caucao: "PAGA",
+          valorCaucao: 40,
+          metodoCaucao: "MBWAY",
+        });
+
+        expect(atualizada.caucao).toBe("PAGA");
+        expect(Number(atualizada.valorCaucao)).toBe(40);
+        expect(atualizada.metodoCaucao).toBe("MBWAY");
+
+        const naDb = await testPrisma.reserva.findUnique({
+          where: { id: reserva.id },
+          select: { caucao: true, valorCaucao: true, metodoCaucao: true },
+        });
+        expect(naDb?.metodoCaucao).toBe("MBWAY");
+      } finally {
+        await testPrisma.pagamento.deleteMany({ where: { reservaId: reserva.id } });
+        await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
+        await testPrisma.reserva.delete({ where: { id: reserva.id } });
+      }
+    });
+
+    it("deve persistir metodoCaucao no caminho com ledger (replace-all)", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "08:30",
+        duracaoMinutos: 90,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      try {
+        const atualizada = await reservaService.atualizarPagamento(reserva.id, {
+          valorTotal: 150,
+          pagamentos: [{ valor: 150, metodo: "MULTIBANCO" }],
+          caucao: "PAGA_NO_DIA",
+          valorCaucao: 40,
+          metodoCaucao: "DINHEIRO",
+        });
+
+        expect(atualizada.pago).toBe(true);
+        expect(atualizada.caucao).toBe("PAGA_NO_DIA");
+        expect(atualizada.metodoCaucao).toBe("DINHEIRO");
+      } finally {
+        await testPrisma.pagamento.deleteMany({ where: { reservaId: reserva.id } });
+        await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
+        await testPrisma.reserva.delete({ where: { id: reserva.id } });
+      }
+    });
+
+    it("deve lançar NOT_FOUND para reserva inexistente", async () => {
+      await expect(
+        reservaService.atualizarPagamento("inexistente-xxx", { metodoCaucao: "MBWAY" })
+      ).rejects.toThrow("NOT_FOUND");
+    });
+  });
 });

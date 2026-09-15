@@ -108,6 +108,7 @@ interface ReservaRelatorio {
   // Caução
   caucao: string;
   valorCaucao: unknown;
+  metodoCaucao?: string | null;
   // Excesso
   custoExcesso: unknown;
   pagoExcesso: boolean;
@@ -319,15 +320,16 @@ export const relatorioService = {
     for (const r of reservas) {
       const metodo = metodoPrincipal(r);
 
-      // ── Cauções ──
+      // ── Cauções ── (método explícito da caução tem prioridade; fallback: 1º pagamento)
       if (r.caucao !== "NAO_PAGA" && r.valorCaucao) {
         const valorCaucao = toNum(r.valorCaucao);
+        const metodoCaucao = r.metodoCaucao ?? metodo;
         if (valorCaucao === 40) {
           lCaucoes40.quantidade += 1;
-          somarPorMetodo(lCaucoes40, metodo, valorCaucao);
+          somarPorMetodo(lCaucoes40, metodoCaucao, valorCaucao);
         } else if (valorCaucao > 0) {
           lCaucoesOutros.quantidade += 1;
-          somarPorMetodo(lCaucoesOutros, metodo, valorCaucao);
+          somarPorMetodo(lCaucoesOutros, metodoCaucao, valorCaucao);
         }
       }
 

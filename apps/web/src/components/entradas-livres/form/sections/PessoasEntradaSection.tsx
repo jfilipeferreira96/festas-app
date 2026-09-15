@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { Plus, Search, Trash2, User, Users } from "lucide-react";
+import { AlertTriangle, Plus, Search, Trash2, User, Users } from "lucide-react";
 import { useFormContext, type UseFieldArrayReturn } from "react-hook-form";
 import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import DatePicker from "@/components/form/date-picker";
 import { calcIdade, toISODate } from "@/lib/format";
+import { IDADE_MAX_CRIANCA, IDADE_MIN_CRIANCA, idadeForaIntervalo } from "@/lib/constantes";
 import { DATA_NASCIMENTO_DEFAULT, type EntradaLivreFormData } from "../entrada-livre-form.schema";
 
 interface PessoasEntradaSectionProps {
@@ -43,55 +44,70 @@ export default function PessoasEntradaSection({
         </div>
         {criancas.fields.map((field, index) => {
           const dataNascimento = watch(`criancas.${index}.dataNascimento`);
+          const idade = dataNascimento ? calcIdade(dataNascimento, hoje) : null;
+          const idadeAlerta = idade !== null && idadeForaIntervalo(idade);
           return (
-            <div key={field.id} className="flex items-end gap-3">
-              <div className="w-3/5">
-                <InputField
-                  {...register(`criancas.${index}.nome`)}
-                  placeholder={`Nome da criança ${index + 1}`}
-                  error={!!errors.criancas?.[index]?.nome}
-                  hint={errors.criancas?.[index]?.nome?.message}
-                />
-              </div>
-              <div className="w-2/5">
-                <DatePicker
-                  id={`crianca-data-${field.id}`}
-                  placeholder="Data nascimento"
-                  defaultDate={dataNascimento || DATA_NASCIMENTO_DEFAULT}
-                  maxDate={hoje}
-                  onChange={([date]) => {
-                    if (date) {
-                      setValue(`criancas.${index}.dataNascimento`, toISODate(date), { shouldDirty: true });
-                    }
-                  }}
-                />
-              </div>
-              {dataNascimento ? (
-                <span className="text-sm font-bold text-brand-500 whitespace-nowrap py-3">
-                  {calcIdade(dataNascimento, hoje)} anos
-                </span>
-              ) : null}
-              {temLanche && (
-                <div className="pb-3">
-                  <Checkbox
-                    checked={watch(`criancas.${index}.querLanche`)}
-                    onChange={() =>
-                      setValue(`criancas.${index}.querLanche`, !watch(`criancas.${index}.querLanche`), {
-                        shouldDirty: true,
-                      })
-                    }
-                    label="Lanche"
+            <div key={field.id}>
+              <div className="flex items-end gap-3">
+                <div className="w-3/5">
+                  <InputField
+                    {...register(`criancas.${index}.nome`)}
+                    placeholder={`Nome da criança ${index + 1}`}
+                    error={!!errors.criancas?.[index]?.nome}
+                    hint={errors.criancas?.[index]?.nome?.message}
                   />
                 </div>
-              )}
-              {criancas.fields.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => criancas.remove(index)}
-                  className="p-2 mb-2 text-text-muted hover:text-accent-red transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="w-2/5">
+                  <DatePicker
+                    id={`crianca-data-${field.id}`}
+                    placeholder="Data nascimento"
+                    defaultDate={dataNascimento || DATA_NASCIMENTO_DEFAULT}
+                    maxDate={hoje}
+                    onChange={([date]) => {
+                      if (date) {
+                        setValue(`criancas.${index}.dataNascimento`, toISODate(date), { shouldDirty: true });
+                      }
+                    }}
+                  />
+                </div>
+                {idade !== null ? (
+                  <span
+                    className={`text-sm font-bold whitespace-nowrap py-3 flex items-center gap-1 ${
+                      idadeAlerta ? "text-accent-red" : "text-brand-500"
+                    }`}
+                  >
+                    {idade} anos
+                    {idadeAlerta && <AlertTriangle size={13} />}
+                  </span>
+                ) : null}
+                {temLanche && (
+                  <div className="pb-3">
+                    <Checkbox
+                      checked={watch(`criancas.${index}.querLanche`)}
+                      onChange={() =>
+                        setValue(`criancas.${index}.querLanche`, !watch(`criancas.${index}.querLanche`), {
+                          shouldDirty: true,
+                        })
+                      }
+                      label="Lanche"
+                    />
+                  </div>
+                )}
+                {criancas.fields.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => criancas.remove(index)}
+                    className="p-2 mb-2 text-text-muted hover:text-accent-red transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+              {idadeAlerta && (
+                <p className="text-[11px] font-medium text-accent-orange-700 mt-1">
+                  Atenção: idade fora do intervalo permitido ({IDADE_MIN_CRIANCA}-{IDADE_MAX_CRIANCA} anos) — confirma
+                  a data de nascimento. Podes gravar mesmo assim.
+                </p>
               )}
             </div>
           );

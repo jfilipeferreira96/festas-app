@@ -86,6 +86,7 @@ export const festaFormSchema = z.object({
   pago: z.boolean().optional(),
   caucao: z.enum(CAUCOES).optional(),
   valorCaucao: numeroOpcional(0),
+  metodoCaucao: z.string().optional(),
 });
 
 export type FestaFormData = z.infer<typeof festaFormSchema>;
@@ -181,6 +182,7 @@ export function buildFestaDefaults(
     pago: reserva?.pago ?? false,
     caucao: (reserva?.caucao || undefined) as FestaFormData["caucao"],
     valorCaucao: reserva?.valorCaucao ? Number(reserva.valorCaucao) : undefined,
+    metodoCaucao: reserva?.metodoCaucao ?? undefined,
   };
 }
 
@@ -252,6 +254,7 @@ export function buildFestaPayload(
     pago: opts.isEdit ? undefined : data.pago,
     caucao: opts.isEdit ? undefined : data.caucao,
     valorCaucao: opts.isEdit ? undefined : data.valorCaucao || undefined,
+    metodoCaucao: opts.isEdit ? undefined : data.metodoCaucao || undefined,
   };
 }
 

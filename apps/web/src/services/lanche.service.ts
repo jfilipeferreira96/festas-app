@@ -23,8 +23,9 @@ function calcularIdade(dataNascimento: Date | null, dataFesta: Date): number | u
 export const lancheService = {
   /**
    * Lista todos os lanches a preparar hoje:
-   * - Festas (reservas CONFIRMADO / EM_CURSO) com o seu menu
-   * - Entradas livres ATIVA
+   * - Festas (reservas CONFIRMADO / EM_CURSO) que TÊM menu/lanche associado
+   * - Entradas livres ATIVA com temLanche = true
+   * Festas/entradas sem lanche não aparecem na página do LANCHE.
    */
   async getLanchesDoDia(data?: Date): Promise<LancheDoDia[]> {
     const dia = data ?? new Date();
@@ -37,6 +38,7 @@ export const lancheService = {
         where: {
           data: { gte: inicio, lt: fim },
           estado: { in: ["CONFIRMADO", "EM_CURSO"] },
+          menu: { isNot: null },
         },
         include: {
           local: true,
@@ -52,6 +54,7 @@ export const lancheService = {
         where: {
           estado: "ATIVA",
           inicioEm: { gte: inicio, lt: fim },
+          temLanche: true,
         },
         include: { extras: { include: { extra: true } } },
         orderBy: { inicioEm: "asc" },

@@ -21,7 +21,10 @@
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
-import type { PoolConfig } from "mariadb";
+
+/** Config do pool na versão de `mariadb` resolvida pelo @prisma/adapter-mariadb
+ *  (evita conflito estrutural com a versão duplicada em node_modules/mariadb). */
+type AdapterPoolConfig = ConstructorParameters<typeof PrismaMariaDb>[0];
 
 /** Níveis de log aceites pelo PrismaClient. */
 export type PrismaLogLevel = "info" | "query" | "warn" | "error";
@@ -36,7 +39,7 @@ export interface CreatePrismaClientOptions {
 }
 
 /** Config do pool mariadb construída a partir de uma mysql:// URL. */
-export function buildMariaDbConfig(url: string, options: CreatePrismaClientOptions = {}): PoolConfig {
+export function buildMariaDbConfig(url: string, options: CreatePrismaClientOptions = {}): AdapterPoolConfig {
   const u = new URL(url);
 
   // O build-deploy garante ?connection_limit=5&pool_timeout=10 na .env de

@@ -8,7 +8,7 @@ import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
-import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
+import { metodoPagamentoLabel, METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
 import type { Reserva } from "@/lib/api/reservas";
 import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/components/shared/PagamentoCard";
 import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
@@ -35,6 +35,7 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
     const caucaoLabel = CAUCAO_OPTIONS.find((o) => o.value === reserva.caucao)?.label ?? "Não paga";
     const caucaoValor =
       reserva.valorCaucao && Number(reserva.valorCaucao) > 0 ? ` (${formatEuro(Number(reserva.valorCaucao))})` : "";
+    const caucaoMetodo = reserva.metodoCaucao ? ` · ${metodoPagamentoLabel(reserva.metodoCaucao)}` : "";
     const pagamentos = reserva.pagamentos ?? [];
     const metodos =
       pagamentos.length > 0
@@ -45,6 +46,7 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
       <PagamentoCard acao={<BotaoGerirPagamento onClick={onOpenPagamento} />}>
         <PagamentoResumo
           items={[
+            { label: "Caução", value: `${caucaoLabel}${caucaoValor}${caucaoMetodo}` },
             { label: "Estado", value: reserva.pago ? "Pago" : "Por pagar", tone: reserva.pago ? "verde" : "laranja" },
             { label: "Total", value: formatEuro(Number(reserva.valorTotal ?? 0)) },
             {
@@ -52,7 +54,6 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
               value: pagamentos.length > 0 ? formatEuro(totalPago(pagamentos)) : "-",
             },
             { label: "Método", value: metodos },
-            { label: "Caução", value: `${caucaoLabel}${caucaoValor}` },
           ]}
         />
       </PagamentoCard>
@@ -124,7 +125,7 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
             <span className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
               <Shield size={13} className="text-text-muted" /> Caução
             </span>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <FieldLabel>Estado</FieldLabel>
                 <Select
@@ -150,6 +151,14 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
                 <p className="text-[11px] text-text-muted mt-1">
                   Sugerida da configuração de preços — editável.
                 </p>
+              </div>
+              <div>
+                <FieldLabel>Método de pagamento</FieldLabel>
+                <Select
+                  options={METODO_PAGAMENTO_OPTIONS}
+                  value={watch("metodoCaucao") ?? "NONE"}
+                  onChange={(val) => setValue("metodoCaucao", val, { shouldDirty: true })}
+                />
               </div>
             </div>
           </div>

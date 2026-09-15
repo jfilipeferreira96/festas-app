@@ -42,6 +42,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   );
   const [caucao, setCaucao] = useState<string>(reserva.caucao ?? "NAO_PAGA");
   const [valorCaucao, setValorCaucao] = useState<string>(reserva.valorCaucao ? String(reserva.valorCaucao) : "");
+  const [metodoCaucao, setMetodoCaucao] = useState<string>(reserva.metodoCaucao ?? "NONE");
   const [descontoPercentagem, setDescontoPercentagem] = useState<string>(
     reserva.descontoPercentagem ? String(reserva.descontoPercentagem) : ""
   );
@@ -74,6 +75,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           })),
           caucao: caucao || undefined,
           valorCaucao: valorCaucao === "" ? undefined : Number(valorCaucao),
+          metodoCaucao: metodoCaucao === "NONE" ? undefined : metodoCaucao || undefined,
           descontoPercentagem: descontoPercentagem === "" ? undefined : Number(descontoPercentagem),
           descontoMotivo: descontoMotivo || undefined,
         },
@@ -90,6 +92,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     pagamentos,
     caucao,
     valorCaucao,
+    metodoCaucao,
     descontoPercentagem,
     descontoMotivo,
     toast,
@@ -162,7 +165,27 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       <span className="text-text-muted">{partesSugeridas.join(" · ")} (sugerido)</span>
     ) : undefined;
 
+  // Caução em primeiro: os pais pagam a caução à partida e o restante no dia
   const tabs: PagamentoTabConfig[] = [
+    {
+      id: "caucao",
+      label: "Caução & Desconto",
+      icon: Shield,
+      content: (
+        <PagamentoCaucaoDescontoTab
+          caucao={caucao}
+          setCaucao={setCaucao}
+          valorCaucao={valorCaucao}
+          setValorCaucao={setValorCaucao}
+          metodoCaucao={metodoCaucao}
+          setMetodoCaucao={setMetodoCaucao}
+          descontoPercentagem={descontoPercentagem}
+          setDescontoPercentagem={setDescontoPercentagem}
+          descontoMotivo={descontoMotivo}
+          setDescontoMotivo={setDescontoMotivo}
+        />
+      ),
+    },
     {
       id: "pagamento",
       label: "Pagamento",
@@ -201,23 +224,6 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
             onUsarSugerido={(v) => setValorTotal(v.toFixed(2))}
           />
         </div>
-      ),
-    },
-    {
-      id: "caucao",
-      label: "Caução & Desconto",
-      icon: Shield,
-      content: (
-        <PagamentoCaucaoDescontoTab
-          caucao={caucao}
-          setCaucao={setCaucao}
-          valorCaucao={valorCaucao}
-          setValorCaucao={setValorCaucao}
-          descontoPercentagem={descontoPercentagem}
-          setDescontoPercentagem={setDescontoPercentagem}
-          descontoMotivo={descontoMotivo}
-          setDescontoMotivo={setDescontoMotivo}
-        />
       ),
     },
     {

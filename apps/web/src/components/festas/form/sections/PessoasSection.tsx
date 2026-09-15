@@ -2,11 +2,12 @@
 
 import { useMemo } from "react";
 import { useFormContext, type UseFieldArrayReturn } from "react-hook-form";
-import { Cake, Plus, Search, Trash2, User } from "lucide-react";
+import { AlertTriangle, Cake, Plus, Search, Trash2, User } from "lucide-react";
 import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import DatePicker from "@/components/form/date-picker";
 import { calcIdade, toISODate } from "@/lib/format";
+import { IDADE_MAX_CRIANCA, IDADE_MIN_CRIANCA, idadeForaIntervalo } from "@/lib/constantes";
 import { DATA_NASCIMENTO_DEFAULT, type FestaFormData } from "../festa-form.schema";
 
 interface PessoasSectionProps {
@@ -43,8 +44,11 @@ export default function PessoasSection({
         </div>
         {aniversariantes.fields.map((field, index) => {
           const dataNascimento = watch(`aniversariantes.${index}.dataNascimento`);
+          const idade = dataNascimento ? calcIdade(dataNascimento, dataFesta || hoje) : null;
+          const idadeAlerta = idade !== null && idadeForaIntervalo(idade);
           return (
-          <div key={field.id} className="flex items-end gap-3">
+          <div key={field.id}>
+          <div className="flex items-end gap-3">
             <div className="w-3/5">
               <InputField
                 {...register(`aniversariantes.${index}.nome`)}
@@ -66,9 +70,14 @@ export default function PessoasSection({
                 }}
               />
             </div>
-            {dataNascimento ? (
-              <span className="text-sm font-bold text-brand-500 whitespace-nowrap py-3">
-                {calcIdade(dataNascimento, dataFesta || hoje)} anos
+            {idade !== null ? (
+              <span
+                className={`text-sm font-bold whitespace-nowrap py-3 flex items-center gap-1 ${
+                  idadeAlerta ? "text-accent-red" : "text-brand-500"
+                }`}
+              >
+                {idade} anos
+                {idadeAlerta && <AlertTriangle size={13} />}
               </span>
             ) : null}
             {aniversariantes.fields.length > 1 && (
@@ -80,6 +89,13 @@ export default function PessoasSection({
                 <Trash2 size={14} />
               </button>
             )}
+          </div>
+          {idadeAlerta && (
+            <p className="text-[11px] font-medium text-accent-orange-700 mt-1">
+              Atenção: idade fora do intervalo permitido ({IDADE_MIN_CRIANCA}-{IDADE_MAX_CRIANCA} anos) — confirma a
+              data de nascimento. Podes gravar mesmo assim.
+            </p>
+          )}
           </div>
           );
         })}

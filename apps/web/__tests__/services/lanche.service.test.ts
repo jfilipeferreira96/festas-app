@@ -32,19 +32,49 @@ describe("Lanche Service", () => {
   });
 
   describe("getLanchesDoDia()", () => {
-    it("deve incluir festas de hoje (CONFIRMADO / EM_CURSO)", async () => {
+    it("NÃO deve incluir festas sem menu/lanche associado", async () => {
       const lanches = await lancheService.getLanchesDoDia();
       const festas = lanches.filter((l) => l.tipo === "FESTA");
-      // Pelo menos as 2 reservas seeded (confirmada + em curso) com data = hoje
-      expect(festas.length).toBeGreaterThanOrEqual(1);
+      // Reservas seeded (hoje, CONFIRMADO/EM_CURSO) não têm menu → fora da página lanche
+      expect(festas.some((f) => f.reservaId === TEST_IDS.RESERVA_CONFIRMADA)).toBe(false);
+      expect(festas.some((f) => f.reservaId === TEST_IDS.RESERVA_EM_CURSO)).toBe(false);
     });
 
-    it("cada lanche FESTA deve ter reservaId e nomeFesta", async () => {
+    it("NÃO deve incluir entradas livres com temLanche = false", async () => {
       const lanches = await lancheService.getLanchesDoDia();
-      const festas = lanches.filter((l) => l.tipo === "FESTA");
-      for (const f of festas) {
-        expect(f.reservaId).toBeDefined();
-        expect(typeof f.nomeFesta).toBe("string");
+      const entradas = lanches.filter((l) => l.tipo === "ENTRADA_LIVRE");
+      expect(entradas.some((e) => e.entradaLivreId === TEST_IDS.ENTRADA_LIVRE_1)).toBe(false);
+    });
+
+    it("deve incluir festas de hoje com menu e entradas ATIVA com temLanche", async () => {
+      await testPrisma.menu.create({
+        data: { reservaId: TEST_IDS.RESERVA_CONFIRMADA, nome: "Menu Teste", preco: 3.5 },
+      });
+      await testPrisma.entradaLivre.update({
+        where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
+        data: { temLanche: true },
+      });
+
+      try {
+        const lanches = await lancheService.getLanchesDoDia();
+        const festas = lanches.filter((l) => l.tipo === "FESTA");
+        const entradas = lanches.filter((l) => l.tipo === "ENTRADA_LIVRE");
+
+        expect(festas.some((f) => f.reservaId === TEST_IDS.RESERVA_CONFIRMADA)).toBe(true);
+        // EM_CURSO continua sem menu → continua fora
+        expect(festas.some((f) => f.reservaId === TEST_IDS.RESERVA_EM_CURSO)).toBe(false);
+        expect(entradas.some((e) => e.entradaLivreId === TEST_IDS.ENTRADA_LIVRE_1)).toBe(true);
+
+        for (const f of festas) {
+          expect(f.reservaId).toBeDefined();
+          expect(typeof f.nomeFesta).toBe("string");
+        }
+      } finally {
+        await testPrisma.menu.deleteMany({ where: { reservaId: TEST_IDS.RESERVA_CONFIRMADA } });
+        await testPrisma.entradaLivre.update({
+          where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
+          data: { temLanche: false },
+        });
       }
     });
 
@@ -171,6 +201,27 @@ describe("Lanche Service", () => {
     it("deve lançar NOT_FOUND para reserva inexistente", async () => {
       await expect(
         lancheService.atualizarEstadoLanche("inexistente-xxx", "TERMINADO")
+      ).rejects.toThrow("NOT_FOUND");
+    });
+  });
+
+  describe("atualizarEstadoLancheEntrada()", () => {
+    it("deve actualizar o estadoLanche da entrada livre para TERMINADO", async () => {
+      await lancheService.atualizarEstadoLancheEntrada(TEST_IDS.ENTRADA_LIVRE_1, "TERMINADO");
+
+      const entrada = await testPrisma.entradaLivre.findUnique({
+        where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
+        select: { estadoLanche: true },
+      });
+      expect(entrada?.estadoLanche).toBe("TERMINADO");
+
+      // Reset para não contaminar outros testes
+      await lancheService.atualizarEstadoLancheEntrada(TEST_IDS.ENTRADA_LIVRE_1, "NAO_INICIADO");
+    });
+
+    it("deve lançar NOT_FOUND para entrada inexistente", async () => {
+      await expect(
+        lancheService.atualizarEstadoLancheEntrada("inexistente-xxx", "TERMINADO")
       ).rejects.toThrow("NOT_FOUND");
     });
   });

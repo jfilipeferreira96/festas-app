@@ -86,6 +86,16 @@ export default function LancheContent() {
     [now]
   );
 
+  /** Linha verde quando o lanche está TERMINADO; vermelho a piscar quando atrasado. */
+  const lancheRowClassName = useCallback(
+    (hora: string | null | undefined, estado: string | undefined) => {
+      if (estado === "TERMINADO") return "bg-accent-green-50 hover:bg-accent-green-100/60";
+      if (lancheAtrasado(hora, estado)) return "animate-alerta-piscar";
+      return "";
+    },
+    [lancheAtrasado]
+  );
+
   // Stable handler for DatePicker - avoids flatpickr re-init on every render.
   const handleDataChange = useCallback((selectedDates: Date[]) => {
     if (selectedDates.length > 0) {
@@ -482,9 +492,7 @@ export default function LancheContent() {
             columns={festasColumns}
             itemLabel="festas"
             loading={isLoading}
-            rowClassName={(f) =>
-              lancheAtrasado(f.horaLanche ?? f.horario, f.estadoLanche) ? "animate-alerta-piscar" : ""
-            }
+            rowClassName={(f) => lancheRowClassName(f.horaLanche ?? f.horario, f.estadoLanche)}
             defaultSort={{ key: "horaLanche", direction: "asc" }}
             searchable
             searchPlaceholder="Pesquisar por aniversariante..."
@@ -543,12 +551,10 @@ export default function LancheContent() {
             itemLabel="entradas livres"
             defaultSort={{ key: "horaLanche", direction: "asc" }}
             rowClassName={(e) =>
-              lancheAtrasado(
+              lancheRowClassName(
                 e.horaLanche ?? (e.inicioEm ? format(parseISO(e.inicioEm), "HH:mm") : null),
                 e.estadoLanche
               )
-                ? "animate-alerta-piscar"
-                : ""
             }
             searchable
             searchPlaceholder="Pesquisar por encarregado..."
