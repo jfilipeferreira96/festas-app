@@ -101,6 +101,7 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
             extra={item}
             quantidade={extrasQuantidades[item.id] ?? 1}
             numPessoas={numPessoas}
+            ocultarPessoas={item.baseCobranca === "POR_PESSOA"}
             onChange={(qtd) => setQuantidade(item.id, qtd)}
           />
         )}
@@ -129,8 +130,8 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
           )}
           {extrasIds.length > 0 && totalExtras > 0 && (
             <p className="text-xs text-text-secondary">
-              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> — soma ao custo final
-              {numCriancasConfirmadas ? ` (${numPessoas} crianças confirmadas)` : ""}
+              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> — estimativa; os extras por
+              pessoa são cobrados no dia conforme o nº de crianças presentes
             </p>
           )}
         </div>

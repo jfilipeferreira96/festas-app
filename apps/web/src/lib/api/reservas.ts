@@ -87,6 +87,7 @@ export interface CreateReservaData {
   pago?: boolean;
   caucao?: string;
   valorCaucao?: number;
+  metodoCaucao?: string;
   descontoPercentagem?: number;
   descontoMotivo?: string;
 }
@@ -183,6 +184,7 @@ export const reservasApi = {
     pagamentos?: CriarPagamentoDTO[];
     caucao?: string;
     valorCaucao?: number;
+    metodoCaucao?: string;
     descontoPercentagem?: number;
     descontoMotivo?: string;
   }) =>

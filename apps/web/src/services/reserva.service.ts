@@ -1,5 +1,5 @@
 import prisma from "@festas/db";
-import type { CriarPagamentoDTO, TipoBolo } from "@saas/shared-types";
+import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo } from "@saas/shared-types";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 import { cacifoService } from "@/services/cacifo.service";
@@ -55,6 +55,7 @@ interface CreateReservaData {
   pago?: boolean;
   caucao?: string;
   valorCaucao?: number;
+  metodoCaucao?: string;
   descontoPercentagem?: number;
   descontoMotivo?: string;
   boloQuantidade?: number;
@@ -107,6 +108,7 @@ interface UpdateReservaData {
   pago?: boolean;
   caucao?: string;
   valorCaucao?: number;
+  metodoCaucao?: string;
   descontoPercentagem?: number;
   descontoMotivo?: string;
   // Ledger de pagamentos - substitui o ledger existente (replace-all)
@@ -467,6 +469,7 @@ export const reservaService = {
         pago: data.pago ?? (data.valorTotal != null ? somaPagamentos(listaPagamentos) >= data.valorTotal - EPS : false),
         caucao: (data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA") ?? "NAO_PAGA",
         valorCaucao: data.valorCaucao,
+        metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
         descontoPercentagem: data.descontoPercentagem,
         descontoMotivo: data.descontoMotivo,
         meiasQuantidade: data.meiasQuantidade,
@@ -628,6 +631,7 @@ export const reservaService = {
         pago: data.pago,
         caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
         valorCaucao: data.valorCaucao,
+        metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
         descontoPercentagem: data.descontoPercentagem,
         descontoMotivo: data.descontoMotivo,
         meiasQuantidade: data.meiasQuantidade,
@@ -706,6 +710,7 @@ export const reservaService = {
     pagamentos?: CriarPagamentoDTO[] | null;
     caucao?: string;
     valorCaucao?: number;
+    metodoCaucao?: string;
     descontoPercentagem?: number;
     descontoMotivo?: string;
   }) {
@@ -723,6 +728,7 @@ export const reservaService = {
           valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
           caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
           valorCaucao: data.valorCaucao,
+          metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
           descontoPercentagem: data.descontoPercentagem,
           descontoMotivo: data.descontoMotivo,
         },
@@ -737,6 +743,7 @@ export const reservaService = {
           valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
           caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
           valorCaucao: data.valorCaucao,
+          metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
           descontoPercentagem: data.descontoPercentagem,
           descontoMotivo: data.descontoMotivo,
         },

@@ -435,6 +435,7 @@ model Reserva {
   // Caução
   caucao              EstadoCaucao      @default(NAO_PAGA)
   valorCaucao         Decimal?          @db.Decimal(10, 2)
+  metodoCaucao        MetodoPagamento?
 
   // Excesso (preenchido quando estado passa a CONCLUIDA)
   excessoMinutos      Int?              @default(0)

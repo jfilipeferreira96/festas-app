@@ -8,6 +8,7 @@ interface ExtrasQuantidadeStepperProps {
   extra: Extra;
   quantidade: number;
   numPessoas: number;
+  ocultarPessoas?: boolean;
   onChange: (qtd: number) => void;
 }
 
@@ -15,6 +16,7 @@ export default function ExtrasQuantidadeStepper({
   extra,
   quantidade,
   numPessoas,
+  ocultarPessoas = false,
   onChange,
 }: ExtrasQuantidadeStepperProps) {
   const porPessoa = extra.baseCobranca === "POR_PESSOA";
@@ -47,7 +49,9 @@ export default function ExtrasQuantidadeStepper({
       )}
       <span className="text-text-muted">
         {porPessoa
-          ? `${formatEuro(Number(extra.precoUnitario))} × ${qtdEfetiva} ${qtdEfetiva === 1 ? "pessoa" : "pessoas"}`
+          ? ocultarPessoas
+            ? `${formatEuro(Number(extra.precoUnitario))} / criança — cobrado no dia`
+            : `${formatEuro(Number(extra.precoUnitario))} × ${qtdEfetiva} ${qtdEfetiva === 1 ? "pessoa" : "pessoas"}`
           : `${formatEuro(Number(extra.precoUnitario))} × ${quantidade}`}
       </span>
       <span className="font-semibold text-text-primary tabular-nums">{formatEuro(subtotal)}</span>

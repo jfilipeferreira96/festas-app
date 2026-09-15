@@ -71,6 +71,7 @@ export interface Reserva {
   // Caução
   caucao: EstadoCaucao;
   valorCaucao?: number;
+  metodoCaucao?: MetodoPagamento;
 
   // Desconto
   descontoPercentagem?: number;
@@ -168,6 +169,7 @@ export interface CriarReservaDTO {
   // Caução
   caucao?: EstadoCaucao;
   valorCaucao?: number;
+  metodoCaucao?: MetodoPagamento;
 
   // Desconto
   descontoPercentagem?: number;
