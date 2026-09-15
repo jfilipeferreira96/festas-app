@@ -1029,7 +1029,7 @@ describe("Reserva Service", () => {
       await testPrisma.cacifo.updateMany({ where: {}, data: { estado: "LIVRE", reservaId: null, criancas: null, notas: null } });
     });
 
-    it("DEVE pré-reservar N cacifos ao criar reserva (etiquetados com o aniversariante)", async () => {
+    it("DEVE pré-reservar N cacifos ao criar reserva (sem nome - por preencher)", async () => {
       const reserva = await reservaService.create({
         data: tomorrowStr,
         horario: "17:00",
@@ -1039,13 +1039,13 @@ describe("Reserva Service", () => {
         numCriancas: 5,
       });
 
-      // Criar a festa pré-reserva imediatamente 5 cacifos RESERVADO com o nome
+      // Criar a festa pré-reserva imediatamente 5 cacifos RESERVADO com nome vazio
       const cacifos = await testPrisma.cacifo.findMany({
         where: { reservaId: reserva.id },
       });
       expect(cacifos.length).toBe(5);
       expect(cacifos.every((c) => c.estado === "RESERVADO")).toBe(true);
-      expect(cacifos.every((c) => c.criancas === TEST_ANIVERSARIANTE.nome)).toBe(true);
+      expect(cacifos.every((c) => c.criancas === null)).toBe(true);
 
       // Cleanup
       await testPrisma.cacifo.updateMany({

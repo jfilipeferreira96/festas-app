@@ -50,7 +50,7 @@ export const cacifosApi = {
       body: JSON.stringify({ reservaId, ...dados }),
     }),
 
-  actualizar: (id: string, dados: { notas?: string; criancas?: string }) =>
+  actualizar: (id: string, dados: { notas?: string; criancas?: string | null }) =>
     api<Cacifo>(`/api/cacifos/${id}`, {
       method: "PATCH",
       body: JSON.stringify(dados),

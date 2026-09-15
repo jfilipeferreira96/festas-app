@@ -10,7 +10,7 @@ import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/components/shared/PagamentoCard";
 import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
-import { totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
+import { totalPago, faltaPagar, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
 import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-livre-form.schema";
 
 interface CustoComponentes {
@@ -49,6 +49,18 @@ export default function PagamentoEntradaSection({
   const pagamentosForm = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
   const custo = watch("custoTotal") ?? custoCalculado;
 
+  // Resumo em edição: estado do acerto visível sem abrir "Gerir pagamento".
+  const pagamentosEntrada: PagamentoLedgerItem[] = (entrada?.pagamentos ?? []).map((p) => ({
+    id: p.id,
+    valor: Number(p.valor),
+    metodo: p.metodo as PagamentoLedgerItem["metodo"],
+    nota: p.nota ?? null,
+    createdAt: p.createdAt,
+  }));
+  const devido = Number(entrada?.custoTotalFinal ?? entrada?.custoTotal ?? 0);
+  const recebido = totalPago(pagamentosEntrada);
+  const falta = faltaPagar(devido, pagamentosEntrada);
+
   return (
     <PagamentoCard acao={isEdit && entrada ? <BotaoGerirPagamento onClick={onOpenPagamento} /> : undefined}>
       {isEdit && entrada ? (
@@ -57,13 +69,15 @@ export default function PagamentoEntradaSection({
             { label: "Estado", value: entrada.pago ? "Pago" : "Por pagar", tone: entrada.pago ? "verde" : "laranja" },
             {
               label: "Valor total",
-              value: formatEuro(Number(entrada.custoTotalFinal ?? entrada.custoTotal ?? 0)),
+              value: formatEuro(devido),
             },
+            { label: "Valor pago", value: formatEuro(recebido) },
+            ...(falta > 0 ? [{ label: "Falta", value: formatEuro(falta), tone: "laranja" as const }] : []),
             {
               label: "Método",
               value:
-                (entrada.pagamentos?.length ?? 0) > 0
-                  ? entrada.pagamentos!.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
+                pagamentosEntrada.length > 0
+                  ? pagamentosEntrada.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
                   : "Não definido",
             },
             { label: "Meias", value: `${meias} ${meias === 1 ? "par" : "pares"}` },

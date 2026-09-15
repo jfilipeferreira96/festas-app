@@ -438,7 +438,7 @@ function CacifoRow({
     if (trimmed === (cacifo.criancas ?? "")) return;
     actualizar.mutate({
       id: cacifo.id,
-      criancas: trimmed || "Por preencher",
+      criancas: trimmed || null,
     });
   }, [nome, cacifo.criancas, cacifo.id, actualizar]);
 

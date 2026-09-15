@@ -127,7 +127,7 @@ export const cacifoService = {
     });
   },
 
-  async actualizarCacifo(id: string, dados: { notas?: string; criancas?: string }) {
+  async actualizarCacifo(id: string, dados: { notas?: string; criancas?: string | null }) {
     await this.getById(id);
 
     return prisma.cacifo.update({
@@ -240,17 +240,17 @@ export const cacifoService = {
 
   /**
    * Pré-reserva N cacifos para uma reserva, marcando como RESERVADO.
-   * `nome` preenche o cacifo (ex.: nome do aniversariante); sem nome fica
-   * "Por preencher". Não faz throw se faltarem cacifos.
+   * `criancas` fica null ("Por preencher" é só label de UI) - a equipa de
+   * cacifos preenche o nome real no dia, sem ter de apagar placeholders.
+   * Não faz throw se faltarem cacifos.
    */
-  async preReservarCacifos(reservaId: string, quantidade: number, nome?: string) {
+  async preReservarCacifos(reservaId: string, quantidade: number) {
     const livres = await prisma.cacifo.findMany({
       where: { estado: "LIVRE" },
       orderBy: { numero: "asc" },
       take: quantidade,
     });
 
-    const etiqueta = nome?.trim() || "Por preencher";
     const reservados = await Promise.all(
       livres.map((cacifo) =>
         prisma.cacifo.update({
@@ -258,7 +258,7 @@ export const cacifoService = {
           data: {
             estado: "RESERVADO",
             reservaId,
-            criancas: etiqueta,
+            criancas: null,
           },
         })
       )
@@ -293,7 +293,7 @@ export const cacifoService = {
       data: {
         estado: "RESERVADO",
         reservaId,
-        criancas: "Por preencher",
+        criancas: null,
       },
     });
   },

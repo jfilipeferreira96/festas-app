@@ -288,7 +288,7 @@ describe("Cacifo Service", () => {
 
   // ── preReservarCacifos ────────────────────────────────────────
   describe("preReservarCacifos()", () => {
-    it("deve reservar N cacifos LIVRE → RESERVADO com 'Por preencher'", async () => {
+    it("deve reservar N cacifos LIVRE → RESERVADO com criancas null (por preencher)", async () => {
       const result = await cacifoService.preReservarCacifos(TEST_IDS.RESERVA_CONFIRMADA, 3);
 
       expect(result.reservados.length).toBe(3);
@@ -297,7 +297,7 @@ describe("Cacifo Service", () => {
       for (const cacifo of result.reservados) {
         expect(cacifo.estado).toBe("RESERVADO");
         expect(cacifo.reservaId).toBe(TEST_IDS.RESERVA_CONFIRMADA);
-        expect(cacifo.criancas).toBe("Por preencher");
+        expect(cacifo.criancas).toBeNull();
       }
 
       // Cleanup
@@ -325,7 +325,7 @@ describe("Cacifo Service", () => {
 
       expect(cacifo.estado).toBe("RESERVADO");
       expect(cacifo.reservaId).toBe(TEST_IDS.RESERVA_CONFIRMADA);
-      expect(cacifo.criancas).toBe("Por preencher");
+      expect(cacifo.criancas).toBeNull();
 
       // Cleanup
       await cacifoService.libertar(cacifo.id);
@@ -339,7 +339,7 @@ describe("Cacifo Service", () => {
 
       expect(cacifo.id).toBe(cacifoAlvo.id);
       expect(cacifo.estado).toBe("RESERVADO");
-      expect(cacifo.criancas).toBe("Por preencher");
+      expect(cacifo.criancas).toBeNull();
 
       // Cleanup
       await cacifoService.libertar(cacifo.id);

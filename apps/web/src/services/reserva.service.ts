@@ -521,13 +521,11 @@ export const reservaService = {
 
     // ── Pré-reserva de cacifos: reserva automaticamente N cacifos para o dia
     // da festa (N = confirmadas ?? previstas, igual ao top-up do iniciar()),
-    // etiquetados com o nome do aniversariante. A equipa de cacifos depois só
-    // preenche no dia.
+    // com nome por preencher. A equipa de cacifos depois só preenche no dia.
     const alvoCacifos =
       created.numCriancasConfirmadas || created.numCriancas || created.previsaoCriancas || 0;
     if (alvoCacifos > 0) {
-      const nomeCrianca = created.aniversariantes?.[0]?.aniversariante?.nome;
-      await cacifoService.preReservarCacifos(created.id, alvoCacifos, nomeCrianca);
+      await cacifoService.preReservarCacifos(created.id, alvoCacifos);
     }
 
     return created;
@@ -839,12 +837,7 @@ export const reservaService = {
     const alvoCacifos =
       atualizada.numCriancasConfirmadas || atualizada.numCriancas || atualizada.previsaoCriancas || 0;
     if (alvoCacifos > 0 && atualizada.cacifos.length < alvoCacifos) {
-      const nomeCrianca = atualizada.aniversariantes?.[0]?.aniversariante?.nome;
-      await cacifoService.preReservarCacifos(
-        id,
-        alvoCacifos - atualizada.cacifos.length,
-        nomeCrianca
-      );
+      await cacifoService.preReservarCacifos(id, alvoCacifos - atualizada.cacifos.length);
     }
 
     return this.getById(id);

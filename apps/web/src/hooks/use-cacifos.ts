@@ -71,7 +71,7 @@ export function useAtribuirCacifos() {
 export function useActualizarCacifo() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, notas, criancas }: { id: string; notas?: string; criancas?: string }) =>
+    mutationFn: ({ id, notas, criancas }: { id: string; notas?: string; criancas?: string | null }) =>
       cacifosApi.actualizar(id, { notas, criancas }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cacifos"] });

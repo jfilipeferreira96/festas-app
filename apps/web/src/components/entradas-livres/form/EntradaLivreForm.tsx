@@ -5,7 +5,7 @@ import { FormProvider, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui";
 import { useToast } from "@/hooks/use-toast";
-import { useCriarEntradaLivre, useAtualizarEntradaLivre } from "@/hooks/use-entrada-livre";
+import { useCriarEntradaLivre, useAtualizarEntradaLivre, useEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useCacifos } from "@/hooks/use-cacifos";
 import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
@@ -154,6 +154,14 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const [showClienteSearch, setShowClienteSearch] = useState(false);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
 
+  // O modal de pagamento usa dados frescos da BD: a prop `entrada` pode estar
+  // stale (ex.: custo prorrogado no próprio form) e mostraria falta/liquidado
+  // errados - o utilizador deixava de pagar a diferença por ver "Liquidado".
+  const { data: entradaFresca } = useEntradaLivre(
+    showPagamentoModal && entrada ? entrada.id : ""
+  );
+  const entradaParaPagamento = entradaFresca ?? entrada;
+
   const handleClienteSelected = useCallback(
     (cliente: Cliente, filhos: ClienteFilho[]) => {
       setValue("encarregadoNome", cliente.nome, { shouldDirty: true });
@@ -250,8 +258,11 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         onSelect={handleClienteSelected}
       />
 
-      {showPagamentoModal && entrada && (
-        <EntradaLivrePagamentoModal entrada={entrada} onClose={() => setShowPagamentoModal(false)} />
+      {showPagamentoModal && entradaParaPagamento && (
+        <EntradaLivrePagamentoModal
+          entrada={entradaParaPagamento}
+          onClose={() => setShowPagamentoModal(false)}
+        />
       )}
     </div>
   );
