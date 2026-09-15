@@ -1,5 +1,6 @@
 import prisma from "@festas/db";
 import type { MetodoPagamento } from "@prisma/client";
+import { rederivarPagoEntradaLivre, rederivarPagoReserva } from "@/services/pagamento.service";
 
 interface SessionUser {
   id: string;
@@ -59,33 +60,46 @@ export const ajustePagamentoService = {
 
     const delta = data.tipo === "ACRESCIMO" ? data.valor : -data.valor;
 
-    if (data.reservaId) {
-      const reserva = await prisma.reserva.findUnique({ where: { id: data.reservaId } });
+    const reservaId = data.reservaId;
+    const entradaLivreId = data.entradaLivreId;
+
+    if (reservaId) {
+      const reserva = await prisma.reserva.findUnique({ where: { id: reservaId } });
       if (!reserva) throw new Error("NOT_FOUND");
-      // Write-through no total acordado
+      // Write-through no total acordado + re-derivação do estado `pago`
+      // (o devido mudou; o recebido/ledger não)
       const atual = Number(reserva.valorTotal ?? 0);
       const novo = Math.round((atual + delta) * 100) / 100;
       if (novo < 0) throw new Error("VALOR_INVALIDO");
-      await prisma.reserva.update({
-        where: { id: data.reservaId },
-        data: { valorTotal: novo },
+      await prisma.$transaction(async (tx) => {
+        await tx.reserva.update({
+          where: { id: reservaId },
+          data: { valorTotal: novo },
+        });
+        await rederivarPagoReserva(tx, reservaId);
       });
-    } else if (data.entradaLivreId) {
-      const entrada = await prisma.entradaLivre.findUnique({ where: { id: data.entradaLivreId } });
+    } else if (entradaLivreId) {
+      const entrada = await prisma.entradaLivre.findUnique({ where: { id: entradaLivreId } });
       if (!entrada) throw new Error("NOT_FOUND");
       if (entrada.custoTotalFinal != null) {
         const novo = Math.round((Number(entrada.custoTotalFinal) + delta) * 100) / 100;
         if (novo < 0) throw new Error("VALOR_INVALIDO");
-        await prisma.entradaLivre.update({
-          where: { id: data.entradaLivreId },
-          data: { custoTotalFinal: novo },
+        await prisma.$transaction(async (tx) => {
+          await tx.entradaLivre.update({
+            where: { id: entradaLivreId },
+            data: { custoTotalFinal: novo },
+          });
+          await rederivarPagoEntradaLivre(tx, entradaLivreId);
         });
       } else {
         const novo = Math.round((Number(entrada.custoTotal) + delta) * 100) / 100;
         if (novo < 0) throw new Error("VALOR_INVALIDO");
-        await prisma.entradaLivre.update({
-          where: { id: data.entradaLivreId },
-          data: { custoTotal: novo },
+        await prisma.$transaction(async (tx) => {
+          await tx.entradaLivre.update({
+            where: { id: entradaLivreId },
+            data: { custoTotal: novo },
+          });
+          await rederivarPagoEntradaLivre(tx, entradaLivreId);
         });
       }
     }
@@ -130,8 +144,11 @@ export const ajustePagamentoService = {
       precoPorCabeca = data.precoPorCabeca;
     }
 
-    if (data.reservaId) {
-      const reserva = await prisma.reserva.findUnique({ where: { id: data.reservaId } });
+    const reservaId = data.reservaId;
+    const entradaLivreId = data.entradaLivreId;
+
+    if (reservaId) {
+      const reserva = await prisma.reserva.findUnique({ where: { id: reservaId } });
       if (!reserva) throw new Error("NOT_FOUND");
 
       if (data.modo === "POR_CRIANCA") {
@@ -140,12 +157,15 @@ export const ajustePagamentoService = {
         novoTotal = Math.round(precoPorCabeca! * criancas * 100) / 100;
       }
 
-      await prisma.reserva.update({
-        where: { id: data.reservaId },
-        data: { valorTotal: novoTotal },
+      await prisma.$transaction(async (tx) => {
+        await tx.reserva.update({
+          where: { id: reservaId },
+          data: { valorTotal: novoTotal },
+        });
+        await rederivarPagoReserva(tx, reservaId);
       });
-    } else if (data.entradaLivreId) {
-      const entrada = await prisma.entradaLivre.findUnique({ where: { id: data.entradaLivreId } });
+    } else if (entradaLivreId) {
+      const entrada = await prisma.entradaLivre.findUnique({ where: { id: entradaLivreId } });
       if (!entrada) throw new Error("NOT_FOUND");
 
       if (data.modo === "POR_CRIANCA") {
@@ -155,9 +175,12 @@ export const ajustePagamentoService = {
       }
 
       const campo = entrada.custoTotalFinal != null ? "custoTotalFinal" : "custoTotal";
-      await prisma.entradaLivre.update({
-        where: { id: data.entradaLivreId },
-        data: { [campo]: novoTotal },
+      await prisma.$transaction(async (tx) => {
+        await tx.entradaLivre.update({
+          where: { id: entradaLivreId },
+          data: { [campo]: novoTotal },
+        });
+        await rederivarPagoEntradaLivre(tx, entradaLivreId);
       });
     }
 
@@ -183,30 +206,42 @@ export const ajustePagamentoService = {
 
     const delta = ajuste.tipo === "ACRESCIMO" ? -Number(ajuste.valor) : Number(ajuste.valor);
 
-    if (ajuste.reservaId) {
-      const reserva = await prisma.reserva.findUnique({ where: { id: ajuste.reservaId } });
+    const reservaId = ajuste.reservaId;
+    const entradaLivreId = ajuste.entradaLivreId;
+
+    if (reservaId) {
+      const reserva = await prisma.reserva.findUnique({ where: { id: reservaId } });
       if (reserva) {
-        // Reverter no total acordado
+        // Reverter no total acordado + re-derivação do estado `pago`
         const novo = Math.max(0, Math.round((Number(reserva.valorTotal ?? 0) + delta) * 100) / 100);
-        await prisma.reserva.update({
-          where: { id: ajuste.reservaId },
-          data: { valorTotal: novo },
+        await prisma.$transaction(async (tx) => {
+          await tx.reserva.update({
+            where: { id: reservaId },
+            data: { valorTotal: novo },
+          });
+          await rederivarPagoReserva(tx, reservaId);
         });
       }
-    } else if (ajuste.entradaLivreId) {
-      const entrada = await prisma.entradaLivre.findUnique({ where: { id: ajuste.entradaLivreId } });
+    } else if (entradaLivreId) {
+      const entrada = await prisma.entradaLivre.findUnique({ where: { id: entradaLivreId } });
       if (entrada) {
         if (entrada.custoTotalFinal != null) {
           const novo = Math.max(0, Math.round((Number(entrada.custoTotalFinal) + delta) * 100) / 100);
-          await prisma.entradaLivre.update({
-            where: { id: ajuste.entradaLivreId },
-            data: { custoTotalFinal: novo },
+          await prisma.$transaction(async (tx) => {
+            await tx.entradaLivre.update({
+              where: { id: entradaLivreId },
+              data: { custoTotalFinal: novo },
+            });
+            await rederivarPagoEntradaLivre(tx, entradaLivreId);
           });
         } else {
           const novo = Math.max(0, Math.round((Number(entrada.custoTotal) + delta) * 100) / 100);
-          await prisma.entradaLivre.update({
-            where: { id: ajuste.entradaLivreId },
-            data: { custoTotal: novo },
+          await prisma.$transaction(async (tx) => {
+            await tx.entradaLivre.update({
+              where: { id: entradaLivreId },
+              data: { custoTotal: novo },
+            });
+            await rederivarPagoEntradaLivre(tx, entradaLivreId);
           });
         }
       }

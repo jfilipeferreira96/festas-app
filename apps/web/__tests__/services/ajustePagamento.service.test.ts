@@ -433,4 +433,90 @@ describe("ajustePagamentoService", () => {
     expect(comAutor!.criadoPor).toBeDefined();
     expect(comAutor!.criadoPor!.id).toBe(TEST_IDS.USER_ADMIN);
   });
+
+  // ── Re-derivação do estado `pago` após write-through dos acertos ──
+  it("acréscimo que faz o devido passar o recebido deve re-derivar pago=false", async () => {
+    // Ledger da CONFIRMADA: 290 (50 MBWAY + 240 MULTIBANCO)
+    await testPrisma.reserva.update({
+      where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+      data: { valorTotal: 280, pago: true },
+    });
+
+    await ajustePagamentoService.create({
+      tipo: "ACRESCIMO",
+      valor: 20,
+      motivo: "Crianças extra confirmadas no dia",
+      reservaId: TEST_IDS.RESERVA_CONFIRMADA,
+    });
+
+    const reserva = await testPrisma.reserva.findUniqueOrThrow({
+      where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+      select: { valorTotal: true, pago: true },
+    });
+    // 280 + 20 = 300 > 290 recebidos → deixa de estar paga
+    expect(Number(reserva.valorTotal)).toBe(300);
+    expect(reserva.pago).toBe(false);
+  });
+
+  it("desconto que cobre a falta deve re-derivar pago=true", async () => {
+    await ajustePagamentoService.create({
+      tipo: "DESCONTO",
+      valor: 20,
+      motivo: "Retificação do acréscimo anterior",
+      reservaId: TEST_IDS.RESERVA_CONFIRMADA,
+    });
+
+    const reserva = await testPrisma.reserva.findUniqueOrThrow({
+      where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+      select: { valorTotal: true, pago: true },
+    });
+    // 300 - 20 = 280 <= 290 recebidos → volta a estar paga
+    expect(Number(reserva.valorTotal)).toBe(280);
+    expect(reserva.pago).toBe(true);
+  });
+
+  it("REDEFINICAO para cima do recebido deve re-derivar pago=false", async () => {
+    await testPrisma.reserva.update({
+      where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+      data: { valorTotal: 280, pago: true },
+    });
+
+    await ajustePagamentoService.redefinirPreco({
+      modo: "TOTAL",
+      valor: 320,
+      motivo: "Reforço do orçamento acordado",
+      reservaId: TEST_IDS.RESERVA_CONFIRMADA,
+    });
+
+    const reserva = await testPrisma.reserva.findUniqueOrThrow({
+      where: { id: TEST_IDS.RESERVA_CONFIRMADA },
+      select: { valorTotal: true, pago: true },
+    });
+    expect(Number(reserva.valorTotal)).toBe(320);
+    expect(reserva.pago).toBe(false);
+  });
+
+  it("acerto na entrada re-deriva pago contra custoTotalFinal ?? custoTotal", async () => {
+    // Último teste do ficheiro: estado controlado explicitamente
+    // (custoTotalFinal alto garante pago=false independentemente do ledger)
+    await testPrisma.entradaLivre.update({
+      where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
+      data: { custoTotal: 15, custoTotalFinal: 60, pago: true },
+    });
+
+    await ajustePagamentoService.create({
+      tipo: "DESCONTO",
+      valor: 5,
+      motivo: "Bónus gestor",
+      entradaLivreId: TEST_IDS.ENTRADA_LIVRE_1,
+    });
+
+    const entrada = await testPrisma.entradaLivre.findUniqueOrThrow({
+      where: { id: TEST_IDS.ENTRADA_LIVRE_1 },
+      select: { custoTotalFinal: true, pago: true },
+    });
+    // Write-through no campo "final" (60 - 5 = 55) → não paga
+    expect(Number(entrada.custoTotalFinal)).toBe(55);
+    expect(entrada.pago).toBe(false);
+  });
 });

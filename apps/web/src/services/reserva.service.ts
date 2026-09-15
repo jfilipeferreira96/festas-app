@@ -7,6 +7,7 @@ import { menuService } from "@/services/menu.service";
 import {
   normalizarPagamentos,
   sincronizarPagamentosReserva,
+  rederivarPagoReserva,
   somaPagamentos,
   type PagamentoInput,
 } from "@/services/pagamento.service";
@@ -677,6 +678,12 @@ export const reservaService = {
       },
     });
 
+    // Hardening: se o total acordado mudou sem ledger no pedido, o estado
+    // `pago` tem de ser re-derivado (mesma classe de bug fechada nos acertos)
+    if (data.valorTotal !== undefined && data.pago === undefined) {
+      await rederivarPagoReserva(prisma, id);
+    }
+
     if (data.menuId !== undefined) {
       await syncMenuFromExtra(id, data.menuId);
     }
@@ -721,18 +728,35 @@ export const reservaService = {
     const lista = data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : undefined;
 
     if (lista === undefined) {
-      // Só campos auxiliares (total, caução, desconto)
-      return prisma.reserva.update({
-        where: { id },
-        data: {
-          valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
-          caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
-          valorCaucao: data.valorCaucao,
-          metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
-          descontoPercentagem: data.descontoPercentagem,
-          descontoMotivo: data.descontoMotivo,
-        },
+      // Só campos auxiliares (total, caução, desconto).
+      // Se o total acordado mudou, re-derivar `pago` (o recebido não mudou).
+      if (data.valorTotal === undefined) {
+        return prisma.reserva.update({
+          where: { id },
+          data: {
+            caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+            valorCaucao: data.valorCaucao,
+            metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
+            descontoPercentagem: data.descontoPercentagem,
+            descontoMotivo: data.descontoMotivo,
+          },
+        });
+      }
+      await prisma.$transaction(async (tx) => {
+        await tx.reserva.update({
+          where: { id },
+          data: {
+            valorTotal: data.valorTotal,
+            caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+            valorCaucao: data.valorCaucao,
+            metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
+            descontoPercentagem: data.descontoPercentagem,
+            descontoMotivo: data.descontoMotivo,
+          },
+        });
+        await rederivarPagoReserva(tx, id);
       });
+      return this.getById(id);
     }
 
     // Replace-all do ledger; o estado `pago` é derivado (soma >= total)
@@ -875,25 +899,52 @@ export const reservaService = {
     // Release all cacifos (preservando histórico de ocupação)
     await cacifoService.libertarCacifosDaReserva(id);
 
-    return prisma.reserva.update({
-      where: { id },
-      data: {
-        estado: "CONCLUIDA",
-        fimReal,
-        cacifosHistorico,
-        excessoMinutos,
-        custoExcesso,
-        custoTotalFinal,
-      },
-      include: {
-        local: true,
-        cliente: true,
-        aniversariantes: { include: { aniversariante: true } },
-        monitores: { include: { monitor: true } },
-        cacifos: true,
-        etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        pagamentos: { orderBy: { createdAt: "asc" } },
-      },
+    let metodoExcesso: MetodoPagamento = "DINHEIRO";
+    if (custoExcesso > 0) {
+      const primeiro = await prisma.pagamento.findFirst({
+        where: { reservaId: id },
+        orderBy: { createdAt: "asc" },
+        select: { metodo: true },
+      });
+      if (primeiro) metodoExcesso = primeiro.metodo;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      if (custoExcesso > 0) {
+        await tx.pagamento.create({
+          data: {
+            valor: Math.round(custoExcesso * 100) / 100,
+            metodo: metodoExcesso,
+            nota: "Excesso de tempo",
+            reservaId: id,
+          },
+        });
+      }
+      const atualizada = await tx.reserva.update({
+        where: { id },
+        data: {
+          estado: "CONCLUIDA",
+          fimReal,
+          cacifosHistorico,
+          excessoMinutos,
+          custoExcesso,
+          custoTotalFinal,
+        },
+        include: {
+          local: true,
+          cliente: true,
+          aniversariantes: { include: { aniversariante: true } },
+          monitores: { include: { monitor: true } },
+          cacifos: true,
+          etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
+          pagamentos: { orderBy: { createdAt: "asc" } },
+        },
+      });
+      if (custoExcesso > 0) {
+        // O recebido mudou → re-derivar o estado `pago`
+        await rederivarPagoReserva(tx, id);
+      }
+      return atualizada;
     });
   },
 

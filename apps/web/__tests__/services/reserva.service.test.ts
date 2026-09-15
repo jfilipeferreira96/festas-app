@@ -507,6 +507,55 @@ describe("Reserva Service", () => {
 
       await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
     });
+
+    it("deve registar o excesso cobrado no ledger e re-derivar pago", async () => {
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 90 * 60 * 1000);
+      const fimPrevisto = new Date(inicio.getTime() + 60 * 60 * 1000);
+
+      const reserva = await testPrisma.reserva.create({
+        data: {
+          data: new Date(),
+          horario: "08:00",
+          duracaoMinutos: 60,
+          numCriancas: 5,
+          estado: "EM_CURSO",
+          inicioEm: inicio,
+          fimPrevisto,
+          valorTotal: 100,
+          pago: true,
+          localId: TEST_IDS.LOCAL_1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+      await testPrisma.pagamento.create({
+        data: { valor: 100, metodo: "MULTIBANCO", reservaId: reserva.id },
+      });
+
+      const finalized = await reservaService.finalizar(reserva.id, { custoExcessoManual: 15 });
+
+      // O excesso entra no ledger (nota identificativa) com o método do 1º pagamento
+      const pagamentos = await testPrisma.pagamento.findMany({
+        where: { reservaId: reserva.id },
+        orderBy: { createdAt: "asc" },
+      });
+      expect(pagamentos).toHaveLength(2);
+      const pagamentoExcesso = pagamentos.find((p) => p.nota === "Excesso de tempo");
+      expect(pagamentoExcesso).toBeDefined();
+      expect(Number(pagamentoExcesso!.valor)).toBe(15);
+      expect(pagamentoExcesso!.metodo).toBe("MULTIBANCO");
+
+      // 100 + 15 = 115 >= 100 → continua paga
+      const apos = await testPrisma.reserva.findUniqueOrThrow({
+        where: { id: reserva.id },
+        select: { pago: true, custoTotalFinal: true },
+      });
+      expect(apos.pago).toBe(true);
+      expect(Number(apos.custoTotalFinal)).toBe(115);
+
+      await testPrisma.pagamento.deleteMany({ where: { reservaId: reserva.id } }).catch(() => {});
+      await testPrisma.reserva.delete({ where: { id: reserva.id } }).catch(() => {});
+    });
   });
 
   // ── alocarMonitor / removerMonitor ────────────────────────────
@@ -1287,6 +1336,46 @@ describe("Reserva Service", () => {
       await expect(
         reservaService.atualizarPagamento("inexistente-xxx", { metodoCaucao: "MBWAY" })
       ).rejects.toThrow("NOT_FOUND");
+    });
+
+    it("re-deriva pago quando só o valorTotal muda (sem ledger no pedido)", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "07:00",
+        duracaoMinutos: 90,
+        localId: TEST_IDS.LOCAL_1,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+
+      try {
+        // Paga na íntegra: 100 recebidos = 100 devido
+        await testPrisma.pagamento.create({
+          data: { valor: 100, metodo: "DINHEIRO", reservaId: reserva.id },
+        });
+        await testPrisma.reserva.update({
+          where: { id: reserva.id },
+          data: { valorTotal: 100, pago: true },
+        });
+
+        // Acerto para cima sem ledger no pedido → deixa de estar paga
+        const aposAcrescimo = await reservaService.atualizarPagamento(reserva.id, {
+          valorTotal: 150,
+        });
+        expect(Number(aposAcrescimo.valorTotal)).toBe(150);
+        expect(aposAcrescimo.pago).toBe(false);
+
+        // Acerto para baixo cobrindo a falta → volta a estar paga
+        const aposDesconto = await reservaService.atualizarPagamento(reserva.id, {
+          valorTotal: 90,
+        });
+        expect(Number(aposDesconto.valorTotal)).toBe(90);
+        expect(aposDesconto.pago).toBe(true);
+      } finally {
+        await testPrisma.pagamento.deleteMany({ where: { reservaId: reserva.id } });
+        await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
+        await testPrisma.reserva.delete({ where: { id: reserva.id } });
+      }
     });
   });
 });

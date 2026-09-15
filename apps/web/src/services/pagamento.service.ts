@@ -10,6 +10,8 @@ import type { MetodoPagamento, Prisma } from "@prisma/client";
  *
  * Os AjustesPagamento (acertos) continuam a editar o TOTAL devido
  * (valorTotal/custoTotalFinal), nunca o recebido - não mexem no ledger.
+ * Como o total devido muda, cada write-through de acerto RE-DERIVA o
+ * estado `pago` (rederivarPagoReserva / rederivarPagoEntradaLivre).
  */
 
 const EPS = 0.004;
@@ -141,6 +143,37 @@ export async function sincronizarPagamentosEntradaLivre(
   return totalPago;
 }
 
+export async function rederivarPagoReserva(tx: TX, reservaId: string): Promise<boolean> {
+  const [reserva, soma] = await Promise.all([
+    tx.reserva.findUnique({ where: { id: reservaId }, select: { valorTotal: true } }),
+    tx.pagamento.aggregate({ where: { reservaId }, _sum: { valor: true } }),
+  ]);
+  if (!reserva) return false;
+  const totalDevido = Number(reserva.valorTotal ?? 0);
+  const pago = totalDevido > 0 ? round2(Number(soma._sum.valor ?? 0)) >= totalDevido - EPS : false;
+  await tx.reserva.update({ where: { id: reservaId }, data: { pago } });
+  return pago;
+}
+
+/**
+ * Re-deriva o estado `pago` de uma entrada livre a partir do ledger
+ * persistido contra custoTotalFinal ?? custoTotal.
+ */
+export async function rederivarPagoEntradaLivre(tx: TX, entradaLivreId: string): Promise<boolean> {
+  const [entrada, soma] = await Promise.all([
+    tx.entradaLivre.findUnique({
+      where: { id: entradaLivreId },
+      select: { custoTotal: true, custoTotalFinal: true },
+    }),
+    tx.pagamento.aggregate({ where: { entradaLivreId }, _sum: { valor: true } }),
+  ]);
+  if (!entrada) return false;
+  const totalDevido = Number(entrada.custoTotalFinal ?? entrada.custoTotal ?? 0);
+  const pago = totalDevido > 0 ? round2(Number(soma._sum.valor ?? 0)) >= totalDevido - EPS : false;
+  await tx.entradaLivre.update({ where: { id: entradaLivreId }, data: { pago } });
+  return pago;
+}
+
 /** Total recebido a partir do ledger (aceita Decimal serializado). */
 export function somaPagamentos(pagamentos: Array<{ valor: unknown }>): number {
   return round2(pagamentos.reduce((s, p) => s + Number(p.valor ?? 0), 0));
@@ -150,5 +183,7 @@ export const pagamentoService = {
   normalizarPagamentos,
   sincronizarPagamentosReserva,
   sincronizarPagamentosEntradaLivre,
+  rederivarPagoReserva,
+  rederivarPagoEntradaLivre,
   somaPagamentos,
 };
