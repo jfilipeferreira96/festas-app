@@ -75,27 +75,27 @@ const SlotsPorPreencher: React.FC<SlotsPorPreencherProps> = React.memo(
             {vazios.length}
           </span>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2">
           {vazios.map((slot) => (
             <button
               key={slot.slotId}
               type="button"
               onClick={() => handlePreencher(slot)}
-              className="group flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/50 transition-all duration-200 text-left"
+              className="group flex items-center gap-2 px-2 py-1.5 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 hover:border-brand-300 hover:bg-brand-50/50 transition-all duration-200 text-left w-full min-w-0"
             >
               <FestaColorDot
                 color={corParaSlot(slot)}
                 className="w-4 h-4"
               />
-              <div>
-                <p className="text-sm font-semibold text-text-primary">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-text-primary whitespace-nowrap">
                   {slot.horaInicio}–{addMinutosToTime(slot.horaInicio, slot.duracaoMin)}
                 </p>
-                <p className="text-xs text-text-muted">
+                <p className="text-xs text-text-muted whitespace-nowrap">
                   {slotLabel(slot.horaInicio)} · Slot vazio
                 </p>
               </div>
-              <span className="flex items-center gap-1 text-xs font-medium text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Plus size={13} />
                 Preencher
               </span>
