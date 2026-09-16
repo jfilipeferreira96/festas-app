@@ -130,6 +130,12 @@ export default function FestasContent() {
       />
       </div>
 
+      <p className="mt-4 text-xs text-text-muted">
+        Alertas: a piscar a laranja, festa nos últimos 15 min de tempo restante ·
+        &laquo;Ultrapassou&raquo;, tempo excedido · &laquo;Lanche atrasado&raquo;, hora do lanche
+        passou sem iniciar.
+      </p>
+
       {/* Concluir Resumo Modal */}
       {confirmFinalizar && (
         <ConcluirResumoModal

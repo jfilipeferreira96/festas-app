@@ -369,6 +369,11 @@ export default function FestasAcabarContent() {
       {/* ── Entradas livres ativas ── */}
       <EntradasAcabarSection entradas={entradas} now={now} />
 
+      <p className="mt-4 text-xs text-text-muted">
+        Alertas do balcão: linhas a vermelho, festas/entradas por pagar ou com tempo
+        excedido · no ecrã TV, o cartão brilha quando faltam 5 min para a saída.
+      </p>
+
       {/* Modal de edição */}
       {editing && (
         <Modal isOpen={!!editing} onClose={() => setEditing(null)}>

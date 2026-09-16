@@ -597,6 +597,11 @@ export default function LancheContent() {
         </div>
       )}
 
+      <p className="mt-4 text-xs text-text-muted">
+        Alertas: linha a piscar, hora do lanche passou e ainda não iniciado ·
+        linha verde, lanche terminado.
+      </p>
+
       {/* Modal de edição de notas + lesões */}
       {editingFesta && (
         <Modal isOpen={!!editingFesta} onClose={() => setEditingFesta(null)}>
