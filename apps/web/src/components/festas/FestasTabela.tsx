@@ -778,6 +778,10 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         }}
       />
 
+      <p className="mt-3 text-xs text-text-muted">
+        Alertas: linha a piscar, festa nos últimos 15 min de tempo restante.
+      </p>
+
       {/* Form Modal */}
       {showForm && (
         <Modal isOpen={showForm} onClose={handleFormClose} size="2xl">
