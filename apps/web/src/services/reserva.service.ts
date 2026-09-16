@@ -403,6 +403,11 @@ export const reservaService = {
     const bloqueado = await excecaoCalendarioService.isBloqueado(new Date(data.data));
     if (bloqueado) throw new Error("DAY_BLOCKED");
 
+    // Capacidade: um slot (horário exacto) só pode ter uma festa activa.
+    // Corre ANTES de criar clientes/aniversariantes para não deixar órfãos
+    // quando o pedido é rejeitado.
+    await verificarSlotOcupado({ data: data.data, horario: data.horario });
+
     let clienteId = data.clienteId;
 
     // Process aniversariantes if provided
@@ -440,10 +445,6 @@ export const reservaService = {
     const local = await prisma.local.findUnique({ where: { id: data.localId } });
     if (!local) throw new Error("LOCAL_NOT_FOUND");
     if (!local.activo) throw new Error("LOCAL_INACTIVE");
-
-    // Capacidade: um slot (horário exacto) só pode ter uma festa activa.
-    // Sobreposições de horários diferentes são permitidas (grelha desfasada).
-    await verificarSlotOcupado({ data: data.data, horario: data.horario });
 
     // ── Cálculo de preço por criança (com mínimos por aniversariante) ──
     const numAniversariantes = aniversarianteIds.length;

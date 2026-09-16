@@ -743,7 +743,7 @@ model SlotHorario {
   activo            Boolean  @default(true)
   ordem             Int      @default(0)
   // ── Defaults aplicados ao criar uma festa neste slot ──
-  corDefault        String?  // Cor sugerida para a festa (ex: "#0095C8")
+  corDefault        String?  // Cor sugerida para a festa (paleta FESTA_COLORS em @saas/shared-defaults)
   horaLancheDefault String?  // HH:MM - hora sugerida do lanche
   salaLancheId      String?  // FK opcional para SalaLanche
   createdAt         DateTime @default(now())

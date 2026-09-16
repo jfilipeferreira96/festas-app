@@ -24,6 +24,7 @@ const MP = (s: string) => s as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFEREN
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
+import { FESTA_COLORS } from "@saas/shared-defaults";
 import { getSeedUsers } from "./seed-roles";
 import { createPrismaClient } from "../src/mariadb-adapter";
 import { wipeDatabase } from "../src/wipe-database";
@@ -391,22 +392,42 @@ async function seedSalasLanche() {
   console.log(`  ✓ ${salas.length} salas de lanche\n`);
 }
 
+// ─── Cores de pulseira — FONTE ÚNICA: FESTA_COLORS (@saas/shared-defaults) ───
+// Nomes do plano diário → nomes da paleta (Turquesa = "Verde-água", Roxa = "Roxo").
+// NÃO usar hex literais aqui: qualquer alteração de cor é feita em
+// packages/shared/shared-defaults/src/defaults/festa-colors.ts
+const corDaPaleta = (nome: string): string => {
+  const c = FESTA_COLORS.find((x) => x.name === nome);
+  if (!c) throw new Error(`Cor "${nome}" não existe em FESTA_COLORS (@saas/shared-defaults)`);
+  return c.value;
+};
+const COR = {
+  AZUL: corDaPaleta("Azul"),
+  VERDE: corDaPaleta("Verde"),
+  AMARELA: corDaPaleta("Amarelo"),
+  LARANJA: corDaPaleta("Laranja"),
+  ROSA: corDaPaleta("Rosa"),
+  TURQUESA: corDaPaleta("Verde-água"),
+  ROXA: corDaPaleta("Roxo"),
+  CINZENTA: corDaPaleta("Cinzento"),
+} as const;
+
 const GRELHA_SLOTS = [
-  { horaInicio: "09:15", horaLanche: "10:45", salaLancheId: "sala-lanche-1", cor: "#0095C8" }, // 1  Azul
-  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: "#5CBE4A" }, // 2  Verde
-  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: "#FCE12D" }, // 3  Amarela
-  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: "#F59253" }, // 4  Laranja
-  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: "#E54796" }, // 5  Rosa
-  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: "#00A68A" }, // 6  Turquesa
-  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: "#993B98" }, // 7  Roxa
-  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: "#0095C8" }, // 8  Azul
-  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: "#5CBE4A" }, // 9  Verde
-  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: "#FCE12D" }, // 10 Amarela
-  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: "#F59253" }, // 11 Laranja
-  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: "#E54796" }, // 12 Rosa
-  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: "#00A68A" }, // 13 Turquesa
-  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: "#993B98" }, // 14 Roxa
-  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: "#0095C8" }, // 15 Azul
+  { horaInicio: "09:15", horaLanche: "10:45", salaLancheId: "sala-lanche-1", cor: COR.AZUL }, // 1  Azul
+  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE }, // 2  Verde
+  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA }, // 3  Amarela
+  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: COR.LARANJA }, // 4  Laranja
+  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: COR.ROSA }, // 5  Rosa
+  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA }, // 6  Turquesa
+  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: COR.ROXA }, // 7  Roxa
+  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: COR.AZUL }, // 8  Azul
+  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: COR.VERDE }, // 9  Verde
+  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: COR.AMARELA }, // 10 Amarela
+  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: COR.LARANJA }, // 11 Laranja
+  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: COR.ROSA }, // 12 Rosa
+  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.TURQUESA }, // 13 Turquesa
+  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: COR.ROXA }, // 14 Roxa
+  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: COR.AZUL }, // 15 Azul
 ] as const;
 
 function slotDaGrelha(horario: string | null | undefined) {
@@ -593,13 +614,13 @@ async function seedReservas() {
   // ═══════════════════════════════════════════════════════════
   const ontemStr = toDateStr(daysAgo(1));
   const ontemConfigs = [
-    { id: "reserva-ontem-1", hora: "09:15", min: 15, dur: 135, n: 15, p: 18, tema: "Dinossauros", cor: "#00A68A", local: "local-001", cli: "cliente-001", aniv: "aniv-002", mons: ["monitor-001", "monitor-002"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de chocolate com decoração de dinossauros", obs: "Tomás adora T-Rex. Decoração verde e castanho.", brindes: "Sacos com mini-dinossauros para todos.", menuNome: "Menu Dinossauro", menuPreco: 9.50 },
-    { id: "reserva-ontem-2", hora: "14:00", min: 0, dur: 135, n: 12, p: 14, tema: "Princesa", cor: "#E54796", local: "local-002", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-003"], boloTipo: "NOSSO_1KG" as const, bolo: "Bolo de morango com coroa de princesa", obs: "Matilde quer tudo cor-de-rosa.", brindes: "Coroas de princesa para as meninas.", menuNome: "Menu Princesa", menuPreco: 10.00 },
-    { id: "reserva-ontem-3", hora: "16:45", min: 45, dur: 135, n: 18, p: 20, tema: "Piratas", cor: "#8A8E91", local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001", "monitor-004"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de baunilha com navio pirata", obs: "Duarte adora piratas! Decoração com mapas do tesouro.", brindes: "Tapas de olho de pirata e bússolas.", menuNome: "Menu Pirata", menuPreco: 8.00 },
-    { id: "reserva-ontem-4", hora: "17:45", min: 45, dur: 135, n: 10, p: 12, tema: "Fada", cor: "#993B98", local: "local-003", cli: "cliente-006", aniv: "aniv-007", mons: ["monitor-005", "monitor-006"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de cenoura com decoração de fadas", obs: "Leonor quer tudo lilás e brilhante.", brindes: "Varinhas de condão para todos.", menuNome: "Menu Fada", menuPreco: 11.00 },
-    { id: "reserva-ontem-5", hora: "14:15", min: 15, dur: 135, n: 20, p: 22, tema: "Robôs", cor: "#0095C8", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-003"], boloTipo: "NOSSO_2KG" as const, bolo: "Bolo de chocolate com decoração robô", obs: "Rodrigo gosta de tecnologia e robôs.", brindes: "Mini-robôs de brincar.", menuNome: "Menu Robô", menuPreco: 9.00 },
+    { id: "reserva-ontem-1", hora: "09:15", min: 15, dur: 135, n: 15, p: 18, tema: "Dinossauros", cor: COR.TURQUESA, local: "local-001", cli: "cliente-001", aniv: "aniv-002", mons: ["monitor-001", "monitor-002"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de chocolate com decoração de dinossauros", obs: "Tomás adora T-Rex. Decoração verde e castanho.", brindes: "Sacos com mini-dinossauros para todos.", menuNome: "Menu Dinossauro", menuPreco: 9.50 },
+    { id: "reserva-ontem-2", hora: "14:00", min: 0, dur: 135, n: 12, p: 14, tema: "Princesa", cor: COR.ROSA, local: "local-002", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-003"], boloTipo: "NOSSO_1KG" as const, bolo: "Bolo de morango com coroa de princesa", obs: "Matilde quer tudo cor-de-rosa.", brindes: "Coroas de princesa para as meninas.", menuNome: "Menu Princesa", menuPreco: 10.00 },
+    { id: "reserva-ontem-3", hora: "16:45", min: 45, dur: 135, n: 18, p: 20, tema: "Piratas", cor: COR.CINZENTA, local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001", "monitor-004"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de baunilha com navio pirata", obs: "Duarte adora piratas! Decoração com mapas do tesouro.", brindes: "Tapas de olho de pirata e bússolas.", menuNome: "Menu Pirata", menuPreco: 8.00 },
+    { id: "reserva-ontem-4", hora: "17:45", min: 45, dur: 135, n: 10, p: 12, tema: "Fada", cor: COR.ROXA, local: "local-003", cli: "cliente-006", aniv: "aniv-007", mons: ["monitor-005", "monitor-006"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo de cenoura com decoração de fadas", obs: "Leonor quer tudo lilás e brilhante.", brindes: "Varinhas de condão para todos.", menuNome: "Menu Fada", menuPreco: 11.00 },
+    { id: "reserva-ontem-5", hora: "14:15", min: 15, dur: 135, n: 20, p: 22, tema: "Robôs", cor: COR.AZUL, local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-001", "monitor-003"], boloTipo: "NOSSO_2KG" as const, bolo: "Bolo de chocolate com decoração robô", obs: "Rodrigo gosta de tecnologia e robôs.", brindes: "Mini-robôs de brincar.", menuNome: "Menu Robô", menuPreco: 9.00 },
     // ─── Horário CUSTOM (não corresponde a nenhum slot → festasSemSlot) ──
-    { id: "reserva-ontem-6", hora: "12:30", min: 30, dur: 90, n: 8, p: 10, tema: "Safari", cor: "#F59253", local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-006"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo com animais da selva", obs: "Afonso quer tema safari com animais de pelúcia.", brindes: "Binóculos de brincar.", menuNome: "Menu Safari", menuPreco: 7.50 },
+    { id: "reserva-ontem-6", hora: "12:30", min: 30, dur: 90, n: 8, p: 10, tema: "Safari", cor: COR.LARANJA, local: "local-002", cli: "cliente-008", aniv: "aniv-010", mons: ["monitor-006"], boloTipo: "BOLO_ARTISTICO" as const, bolo: "Bolo com animais da selva", obs: "Afonso quer tema safari com animais de pelúcia.", brindes: "Binóculos de brincar.", menuNome: "Menu Safari", menuPreco: 7.50 },
   ];
 
   for (const c of ontemConfigs) {
@@ -636,11 +657,11 @@ async function seedReservas() {
   // CONCLUIDA esta semana (-2 a -5 dias) - 5 reservas (todas em slots)
   // ═══════════════════════════════════════════════════════════
   const concluidasSemanaConfigs = [
-    { dias: 2, hora: "09:30", min: 30, dur: 135, n: 14, p: 16, tema: "Safari", cor: "#00A68A", local: "local-001", cli: "cliente-002", aniv: "aniv-003", mons: ["monitor-001"], bolo: "Bolo selva", obs: "Animais de pelúcia.", menuNome: "Menu Safari", menuPreco: 8.50 },
-    { dias: 3, hora: "16:45", min: 45, dur: 135, n: 10, p: 12, tema: "Circo", cor: "#F59253", local: "local-002", cli: "cliente-006", aniv: "aniv-007", mons: ["monitor-005", "monitor-006"], bolo: "Bolo circo", obs: "Palhaçada.", menuNome: "Menu Circo", menuPreco: 9.00 },
-    { dias: 4, hora: "14:45", min: 45, dur: 135, n: 20, p: 22, tema: "Harry Potter", cor: "#8A8E91", local: "local-001", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-002", "monitor-003"], bolo: "Bolo Hogwarts", obs: "Magia.", menuNome: "Menu Potter", menuPreco: 11.00 },
-    { dias: 5, hora: "17:15", min: 15, dur: 135, n: 12, p: 14, tema: "Cars", cor: "#F59253", local: "local-003", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-004"], bolo: "Bolo Cars", obs: "Corridas.", menuNome: "Menu Cars", menuPreco: 7.50 },
-    { dias: 5, hora: "10:30", min: 30, dur: 135, n: 8, p: 10, tema: "Peppa Pig", cor: "#E54796", local: "local-002", cli: "cliente-001", aniv: "aniv-002", mons: ["monitor-006"], bolo: "Bolo Peppa", obs: "Crianças pequenas.", menuNome: "Menu Peppa", menuPreco: 6.00 },
+    { dias: 2, hora: "09:30", min: 30, dur: 135, n: 14, p: 16, tema: "Safari", cor: COR.TURQUESA, local: "local-001", cli: "cliente-002", aniv: "aniv-003", mons: ["monitor-001"], bolo: "Bolo selva", obs: "Animais de pelúcia.", menuNome: "Menu Safari", menuPreco: 8.50 },
+    { dias: 3, hora: "16:45", min: 45, dur: 135, n: 10, p: 12, tema: "Circo", cor: COR.LARANJA, local: "local-002", cli: "cliente-006", aniv: "aniv-007", mons: ["monitor-005", "monitor-006"], bolo: "Bolo circo", obs: "Palhaçada.", menuNome: "Menu Circo", menuPreco: 9.00 },
+    { dias: 4, hora: "14:45", min: 45, dur: 135, n: 20, p: 22, tema: "Harry Potter", cor: COR.CINZENTA, local: "local-001", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-002", "monitor-003"], bolo: "Bolo Hogwarts", obs: "Magia.", menuNome: "Menu Potter", menuPreco: 11.00 },
+    { dias: 5, hora: "17:15", min: 15, dur: 135, n: 12, p: 14, tema: "Cars", cor: COR.LARANJA, local: "local-003", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-004"], bolo: "Bolo Cars", obs: "Corridas.", menuNome: "Menu Cars", menuPreco: 7.50 },
+    { dias: 5, hora: "10:30", min: 30, dur: 135, n: 8, p: 10, tema: "Peppa Pig", cor: COR.ROSA, local: "local-002", cli: "cliente-001", aniv: "aniv-002", mons: ["monitor-006"], bolo: "Bolo Peppa", obs: "Crianças pequenas.", menuNome: "Menu Peppa", menuPreco: 6.00 },
   ];
 
   for (const [idx, c] of concluidasSemanaConfigs.entries()) {
@@ -678,11 +699,11 @@ async function seedReservas() {
   // CONCLUIDA semana passada (-7 a -11 dias) - 5 reservas (todas em slots)
   // ═══════════════════════════════════════════════════════════
   const concluidasPasConfigs = [
-    { dias: 8, hora: "09:15", min: 15, dur: 135, n: 16, p: 18, tema: "Piratas", cor: "#8A8E91", local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001"], bolo: "Bolo pirata", obs: "Caça ao tesouro.", menuNome: "Menu Pirata", menuPreco: 9.00 },
-    { dias: 9, hora: "14:15", min: 15, dur: 135, n: 12, p: 14, tema: "Princesa", cor: "#E54796", local: "local-002", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-002", "monitor-006"], bolo: "Bolo princesa", obs: "Cor-de-rosa.", menuNome: "Menu Princesa", menuPreco: 10.00 },
-    { dias: 10, hora: "16:45", min: 45, dur: 135, n: 22, p: 25, tema: "Marvel", cor: "#F59253", local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-003", "monitor-004"], bolo: "Bolo Vingadores", obs: "Super-heróis.", menuNome: "Menu Marvel", menuPreco: 11.00 },
-    { dias: 11, hora: "17:45", min: 45, dur: 135, n: 10, p: 12, tema: "Sereia", cor: "#00A68A", local: "local-003", cli: "cliente-008", aniv: "aniv-009", mons: ["monitor-005"], bolo: "Bolo sereia", obs: "Decoração oceânica.", menuNome: "Menu Sereia", menuPreco: 8.00 },
-    { dias: 7, hora: "14:45", min: 45, dur: 135, n: 6, p: 8, tema: "Teletubbies", cor: "#993B98", local: "local-002", cli: "cliente-001", aniv: "aniv-001", mons: ["monitor-006"], bolo: "Bolo teletubbies", obs: "Bebés.", menuNome: "Menu Bebé", menuPreco: 5.00 },
+    { dias: 8, hora: "09:15", min: 15, dur: 135, n: 16, p: 18, tema: "Piratas", cor: COR.CINZENTA, local: "local-001", cli: "cliente-005", aniv: "aniv-006", mons: ["monitor-001"], bolo: "Bolo pirata", obs: "Caça ao tesouro.", menuNome: "Menu Pirata", menuPreco: 9.00 },
+    { dias: 9, hora: "14:15", min: 15, dur: 135, n: 12, p: 14, tema: "Princesa", cor: COR.ROSA, local: "local-002", cli: "cliente-004", aniv: "aniv-005", mons: ["monitor-002", "monitor-006"], bolo: "Bolo princesa", obs: "Cor-de-rosa.", menuNome: "Menu Princesa", menuPreco: 10.00 },
+    { dias: 10, hora: "16:45", min: 45, dur: 135, n: 22, p: 25, tema: "Marvel", cor: COR.LARANJA, local: "local-001", cli: "cliente-007", aniv: "aniv-008", mons: ["monitor-003", "monitor-004"], bolo: "Bolo Vingadores", obs: "Super-heróis.", menuNome: "Menu Marvel", menuPreco: 11.00 },
+    { dias: 11, hora: "17:45", min: 45, dur: 135, n: 10, p: 12, tema: "Sereia", cor: COR.TURQUESA, local: "local-003", cli: "cliente-008", aniv: "aniv-009", mons: ["monitor-005"], bolo: "Bolo sereia", obs: "Decoração oceânica.", menuNome: "Menu Sereia", menuPreco: 8.00 },
+    { dias: 7, hora: "14:45", min: 45, dur: 135, n: 6, p: 8, tema: "Teletubbies", cor: COR.ROXA, local: "local-002", cli: "cliente-001", aniv: "aniv-001", mons: ["monitor-006"], bolo: "Bolo teletubbies", obs: "Bebés.", menuNome: "Menu Bebé", menuPreco: 5.00 },
   ];
 
   for (const [idx, c] of concluidasPasConfigs.entries()) {
@@ -730,7 +751,7 @@ async function seedReservas() {
       horario: "09:15", duracaoMinutos: 135, numCriancas: 12, previsaoCriancas: 14,
       estado: "CONCLUIDA",
       inicioEm: tConcStart, fimPrevisto: addMin(tConcStart, 135), fimReal: addMin(tConcStart, 130),
-      tema: "Fada", cor: "#993B98",
+      tema: "Fada", cor: COR.ROXA,
       bolo: "NOSSO_1KG", boloTema: "Bolo de cenoura com decoração de fadas",
       observacoesGerais: "Leonor quer tudo lilás e brilhante.",
       observacoesBrindes: "Varinhas de condão para todos.",
@@ -770,7 +791,7 @@ async function seedReservas() {
       horario: "14:00", duracaoMinutos: 135, numCriancas: 18, previsaoCriancas: 20,
       estado: "EM_CURSO",
       inicioEm: tEmCurso, fimPrevisto: fimPrevEmCurso,
-      tema: "Princesa", cor: "#E54796",
+      tema: "Princesa", cor: COR.ROSA,
       bolo: "NOSSO_2KG", boloTema: "Bolo de chocolate com coroa dourada",
       observacoesGerais: "Marta faz 8 anos. Gosta de cor-de-rosa. Sem restrições alimentares.",
       observacoesBrindes: "Sacos com pulseiras e adesivos.",
@@ -820,7 +841,7 @@ async function seedReservas() {
       data: new Date(todayStr),
       horario: "16:45", duracaoMinutos: 135, numCriancas: 22, previsaoCriancas: 25,
       estado: "CONFIRMADO",
-      tema: "Unicórnios", cor: "#E54796",
+      tema: "Unicórnios", cor: COR.ROSA,
       bolo: "BOLO_ARTISTICO", boloTema: "Bolo arco-íris com unicórnio no topo",
       observacoesGerais: "Beatriz quer decoração de unicórnios. Muito glitter!",
       observacoesLesoes: "Laura é alérgica a amendoim.",
@@ -857,7 +878,7 @@ async function seedReservas() {
       data: new Date(tomorrowStr),
       horario: "14:00", duracaoMinutos: 135, numCriancas: 12, previsaoCriancas: 15,
       estado: "RESERVA",
-      tema: "Futebol", cor: "#5CBE4A",
+      tema: "Futebol", cor: COR.VERDE,
       bolo: "A_DECIDIR", boloTema: "Bolo em formato de bola de futebol",
       observacoesGerais: "Francisco é alérgico a frutos secos.",
       observacoesBrindes: "Chinelos de futebol para os meninos.",
@@ -884,7 +905,7 @@ async function seedReservas() {
       data: new Date(future3Str),
       horario: "09:45", duracaoMinutos: 135, numCriancas: 16, previsaoCriancas: 18,
       estado: "CONFIRMADO",
-      tema: "Super-Heróis", cor: "#993B98",
+      tema: "Super-Heróis", cor: COR.ROXA,
       bolo: "BOLO_ARTISTICO", boloTema: "Bolo com logo dos Vingadores",
       observacoesGerais: "Decoração temática super-heróis.",
       observacoesBrindes: "Capas de super-herói para as crianças.",
@@ -911,7 +932,7 @@ async function seedReservas() {
       data: new Date(future5Str),
       horario: "12:30", duracaoMinutos: 90, numCriancas: 10, previsaoCriancas: 12,
       estado: "RESERVA",
-      tema: "Safari", cor: "#F59253",
+      tema: "Safari", cor: COR.LARANJA,
       bolo: "A_DECIDIR", boloTema: "Bolo com animais da selva",
       observacoesGerais: "Matilde quer tema safari com animais de pelúcia.",
       observacoesBrindes: "Binóculos de brincar.",
@@ -935,7 +956,7 @@ async function seedReservas() {
       data: new Date(future7Str),
       horario: "17:45", duracaoMinutos: 135, numCriancas: 10, previsaoCriancas: 12,
       estado: "RESERVA",
-      tema: "Sereia", cor: "#00A68A",
+      tema: "Sereia", cor: COR.TURQUESA,
       bolo: "A_DECIDIR", boloTema: "Bolo oceano com sereia",
       observacoesGerais: "Mariana adora o mar e sereias.",
       valorTotal: 130.00, pago: false,
@@ -958,7 +979,7 @@ async function seedReservas() {
       data: new Date(tomorrowStr),
       horario: "09:30", duracaoMinutos: 135, numCriancas: 10, previsaoCriancas: 12,
       estado: "CONFIRMADO",
-      tema: "Sereia", cor: "#00A68A",
+      tema: "Sereia", cor: COR.TURQUESA,
       bolo: "NOSSO_1KG", boloTema: "Bolo oceano com sereia",
       observacoesGerais: "Mariana adora o mar e sereias.",
       observacoesBrindes: "Conchas e estrelas-do-mar de brincar.",

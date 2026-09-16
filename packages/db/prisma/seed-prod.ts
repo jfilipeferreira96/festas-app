@@ -25,6 +25,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
+import { FESTA_COLORS } from "@saas/shared-defaults";
 import { getSeedUsers } from "./seed-roles";
 import { createPrismaClient } from "../src/mariadb-adapter";
 import { wipeDatabase } from "../src/wipe-database";
@@ -296,24 +297,45 @@ async function seedSalasLanche() {
   console.log(`  ✓ ${salas.length} salas de lanche\n`);
 }
 
-// ─── Grelha diária BaseLandia (plano diário de aniversários) ────
+// ─── Cores de pulseira — FONTE ÚNICA: FESTA_COLORS (@saas/shared-defaults) ───
+// Nomes do plano diário → nomes da paleta (Turquesa = "Verde-água", Roxa = "Roxo").
+// NÃO usar hex literais aqui: qualquer alteração de cor é feita em
+// packages/shared/shared-defaults/src/defaults/festa-colors.ts
+const corDaPaleta = (nome: string): string => {
+  const c = FESTA_COLORS.find((x) => x.name === nome);
+  if (!c) throw new Error(`Cor "${nome}" não existe em FESTA_COLORS (@saas/shared-defaults)`);
+  return c.value;
+};
+const COR = {
+  AZUL: corDaPaleta("Azul"),
+  VERDE: corDaPaleta("Verde"),
+  AMARELA: corDaPaleta("Amarelo"),
+  LARANJA: corDaPaleta("Laranja"),
+  ROSA: corDaPaleta("Rosa"),
+  TURQUESA: corDaPaleta("Verde-água"),
+  ROXA: corDaPaleta("Roxo"),
+  CINZENTA: corDaPaleta("Cinzento"),
+} as const;
 
+// ─── Grelha diária BaseLandia (plano diário de aniversários) ────
+// 15 slots/dia (6 manhã + 9 tarde), festas de 2h15m, lanche = entrada+1h30
+// em salas alternadas, cores em rotação de 7 (sem coexistência no parque).
 const GRELHA_SLOTS = [
-  { horaInicio: "09:15", horaLanche: "10:45", salaLancheId: "sala-lanche-1", cor: "#0095C8" }, // 1  Azul
-  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: "#5CBE4A" }, // 2  Verde
-  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: "#FCE12D" }, // 3  Amarela
-  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: "#F59253" }, // 4  Laranja
-  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: "#E54796" }, // 5  Rosa
-  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: "#00A68A" }, // 6  Turquesa
-  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: "#993B98" }, // 7  Roxa
-  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: "#0095C8" }, // 8  Azul
-  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: "#5CBE4A" }, // 9  Verde
-  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: "#FCE12D" }, // 10 Amarela
-  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: "#F59253" }, // 11 Laranja
-  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: "#E54796" }, // 12 Rosa
-  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: "#00A68A" }, // 13 Turquesa
-  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: "#993B98" }, // 14 Roxa
-  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: "#0095C8" }, // 15 Azul
+  { horaInicio: "09:15", horaLanche: "10:45", salaLancheId: "sala-lanche-1", cor: COR.AZUL }, // 1  Azul
+  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE }, // 2  Verde
+  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA }, // 3  Amarela
+  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: COR.LARANJA }, // 4  Laranja
+  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: COR.ROSA }, // 5  Rosa
+  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA }, // 6  Turquesa
+  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: COR.ROXA }, // 7  Roxa
+  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: COR.AZUL }, // 8  Azul
+  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: COR.VERDE }, // 9  Verde
+  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: COR.AMARELA }, // 10 Amarela
+  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: COR.LARANJA }, // 11 Laranja
+  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: COR.ROSA }, // 12 Rosa
+  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.TURQUESA }, // 13 Turquesa
+  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: COR.ROXA }, // 14 Roxa
+  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: COR.AZUL }, // 15 Azul
 ] as const;
 
 // ─── Slots Horários (grelha diária 15 slots, 2h15m + defaults cor/lanche/sala) ──
