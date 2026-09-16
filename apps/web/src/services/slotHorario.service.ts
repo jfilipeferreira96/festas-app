@@ -20,6 +20,8 @@ export interface SlotDiaFesta {
   numCriancas: number;
   estado: string;
   localNome: string | null;
+  horario: string;
+  duracaoMinutos: number;
 }
 
 export interface SlotDiaItem {
@@ -36,10 +38,9 @@ export interface SlotDiaItem {
   salaLancheNome?: string | null;
 }
 
-export interface FestaSemSlotItem extends SlotDiaFesta {
-  horario: string;
-  duracaoMinutos: number;
-}
+// Festa com horário custom: herdada de SlotDiaFesta (horario/duracaoMinutos
+// já fazem parte da base).
+export interface FestaSemSlotItem extends SlotDiaFesta {}
 
 export interface SlotsDiaResult {
   data: string;
@@ -159,6 +160,8 @@ export const slotHorarioService = {
               numCriancas: festa.numCriancas ?? 0,
               estado: festa.estado,
               localNome: festa.local?.nome ?? null,
+              horario: festa.horario,
+              duracaoMinutos: festa.duracaoMinutos,
             }
           : null,
       };
@@ -181,7 +184,6 @@ export const slotHorarioService = {
         horario: f.horario,
         duracaoMinutos: f.duracaoMinutos,
       }));
-
     return {
       data,
       slots: slotsComFestas,

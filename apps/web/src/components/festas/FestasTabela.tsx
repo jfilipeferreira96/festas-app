@@ -11,6 +11,7 @@ import { useReservas, useDeleteReserva, useUpdateReservaStatus, useIniciarReserv
 import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./form/FestaForm";
 import { resumoLedger } from "@/lib/pagamento-ledger";
+import type { FestaComIntervalo } from "@/lib/cores";
 import FestaDetailModal from "./FestaDetailModal";
 import PagamentoModal from "./PagamentoModal";
 import HistoricoModal from "./HistoricoModal";
@@ -145,6 +146,19 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const now = useNow(30_000);
   // Slots do dia (para slots vazios) - só quando há dia único
   const { data: slotsDia } = useSlotsDia(diaUnico ?? "");
+  // Festas activas do dia (conflito temporal de pulseiras nos slots vazios)
+  const festasDoDia = useMemo<FestaComIntervalo[]>(() => {
+    const dosSlots = (slotsDia?.slots ?? [])
+      .map((s) => s.festa)
+      .filter((f): f is NonNullable<typeof f> => !!f)
+      .map((f) => ({ cor: f.cor, horario: f.horario, duracaoMinutos: f.duracaoMinutos }));
+    const semSlot = (slotsDia?.festasSemSlot ?? []).map((f) => ({
+      cor: f.cor,
+      horario: f.horario,
+      duracaoMinutos: f.duracaoMinutos,
+    }));
+    return [...dosSlots, ...semSlot].filter((f) => f.cor);
+  }, [slotsDia]);
   // Definições estáticas de slots (para label do slot na coluna Data/Hora)
   const toast = useToast();
   const { data: slotsHorario } = useSlotsHorario();
@@ -331,7 +345,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         <SlotsPorPreencher
           data={diaUnico}
           slots={slotsDia.slots}
-          coresUsadas={slotsDia.coresUsadas}
+          festasDoDia={festasDoDia}
           onPreencher={handlePreencherSlot}
         />
       )}

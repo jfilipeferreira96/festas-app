@@ -296,47 +296,68 @@ async function seedSalasLanche() {
   console.log(`  ✓ ${salas.length} salas de lanche\n`);
 }
 
-// ─── Slots Horários (festa default 2h15m + defaults de cor/lanche) ──
+// ─── Grelha diária BaseLandia (plano diário de aniversários) ────
+
+const GRELHA_SLOTS = [
+  { horaInicio: "09:15", horaLanche: "10:45", salaLancheId: "sala-lanche-1", cor: "#0095C8" }, // 1  Azul
+  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: "#5CBE4A" }, // 2  Verde
+  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: "#FCE12D" }, // 3  Amarela
+  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: "#F59253" }, // 4  Laranja
+  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: "#E54796" }, // 5  Rosa
+  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: "#00A68A" }, // 6  Turquesa
+  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: "#993B98" }, // 7  Roxa
+  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: "#0095C8" }, // 8  Azul
+  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: "#5CBE4A" }, // 9  Verde
+  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: "#FCE12D" }, // 10 Amarela
+  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: "#F59253" }, // 11 Laranja
+  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: "#E54796" }, // 12 Rosa
+  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: "#00A68A" }, // 13 Turquesa
+  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: "#993B98" }, // 14 Roxa
+  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: "#0095C8" }, // 15 Azul
+] as const;
+
+// ─── Slots Horários (grelha diária 15 slots, 2h15m + defaults cor/lanche/sala) ──
 async function seedSlotsHorario() {
   console.log("  Creating time slots...");
 
-  // Defaults: cada slot tem cor/hora-ler lanche/sala de lanche sugeridos.
-  // Cores alinhadas com a paleta FESTA_COLORS (@saas/shared-defaults).
-  const COR = {
-    AZUL: "#0095C8",
-    VERDE: "#5CBE4A",
-    AMARELO: "#FCE12D",
-    ROSA: "#E54796",
-  } as const;
-
-  const slots = [
-    { horaInicio: "10:00", duracaoMin: 135, ordem: 1, corDefault: COR.AZUL,    horaLancheDefault: "11:00", salaLancheId: "sala-lanche-1" },
-    { horaInicio: "14:00", duracaoMin: 135, ordem: 2, corDefault: COR.VERDE,   horaLancheDefault: "15:00", salaLancheId: "sala-lanche-2" },
-    { horaInicio: "16:30", duracaoMin: 135, ordem: 3, corDefault: COR.AMARELO, horaLancheDefault: "17:30", salaLancheId: "sala-lanche-1" },
-    { horaInicio: "18:30", duracaoMin: 135, ordem: 4, corDefault: COR.ROSA,    horaLancheDefault: "19:30", salaLancheId: "sala-lanche-2" },
-  ];
-
-  for (const s of slots) {
+  for (const [i, s] of GRELHA_SLOTS.entries()) {
+    const data = {
+      horaInicio: s.horaInicio,
+      duracaoMin: 135,
+      ordem: i + 1,
+      corDefault: s.cor,
+      horaLancheDefault: s.horaLanche,
+      salaLancheId: s.salaLancheId,
+    };
     const existing = await prisma.slotHorario.findFirst({
       where: { horaInicio: s.horaInicio },
     });
     if (existing) {
       await prisma.slotHorario.update({
         where: { id: existing.id },
-        data: {
-          duracaoMin: s.duracaoMin,
-          ordem: s.ordem,
-          corDefault: s.corDefault,
-          horaLancheDefault: s.horaLancheDefault,
-          salaLancheId: s.salaLancheId,
-        },
+        data: { ...data, activo: true },
       });
     } else {
-      await prisma.slotHorario.create({ data: s });
+      await prisma.slotHorario.create({ data });
     }
   }
 
-  console.log(`  ✓ ${slots.length} slots horários (2h15m + defaults cor/lanche)\n`);
+  // Slots antigos fora da grelha (ex.: 10:00/16:30/18:30) → inactivos.
+  // Não apagar: reservas históricas podem apontar a essas horas.
+  const horasGrelha = GRELHA_SLOTS.map((s) => s.horaInicio);
+  const foraDaGrelha = await prisma.slotHorario.findMany({
+    where: { horaInicio: { notIn: [...horasGrelha] }, activo: true },
+  });
+  for (const s of foraDaGrelha) {
+    await prisma.slotHorario.update({ where: { id: s.id }, data: { activo: false } });
+  }
+
+  console.log(`  ✓ ${GRELHA_SLOTS.length} slots horários (grelha diária 2h15m + defaults cor/lanche/sala)`);
+  if (foraDaGrelha.length > 0) {
+    console.log(`  ✓ ${foraDaGrelha.length} slots antigos desactivados (fora da grelha)\n`);
+  } else {
+    console.log("");
+  }
 }
 
 // ─── Etapas de Festa (configuração padrão) ────────────────────

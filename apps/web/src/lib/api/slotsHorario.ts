@@ -14,13 +14,12 @@ export interface FestaSlotInfo {
   numCriancas: number;
   estado: string;
   localNome: string | null;
-}
-
-/** Festa com horário custom (não corresponde a nenhum slot) */
-export interface FestaSemSlot extends FestaSlotInfo {
   horario: string;
   duracaoMinutos: number;
 }
+
+/** Festa com horário custom (não corresponde a nenhum slot) */
+export interface FestaSemSlot extends FestaSlotInfo {}
 
 /** Slot do dia combinado com festa (se houver). */
 export interface SlotDia {

@@ -154,16 +154,70 @@ describe("Reserva Service", () => {
       ).rejects.toThrow("LOCAL_NOT_FOUND");
     });
 
-    it("should throw LOCAL_NOT_AVAILABLE for time conflict", async () => {
+    it("should throw SLOT_OCCUPIED for exact same horario (slot já ocupado)", async () => {
+      // RESERVA_CONFIRMADA do seed está hoje às 10:00 no LOCAL_1
       await expect(
         reservaService.create({
           clienteId: TEST_IDS.CLIENTE_1,
           data: todayStr,
           horario: "10:00",
           duracaoMinutos: 120,
-          localId: TEST_IDS.LOCAL_1,
+          localId: TEST_IDS.LOCAL_2,
         })
-      ).rejects.toThrow("LOCAL_NOT_AVAILABLE");
+      ).rejects.toThrow("SLOT_OCCUPIED");
+    });
+
+    it("deve permitir criar festas com horários diferentes sobrepostos no MESMO local (grelha desfasada)", async () => {
+      // Grelha diária: entradas desfasadas coexistem no parque (Local é informativo)
+      const primeira = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "14:00",
+        duracaoMinutos: 135,
+        localId: TEST_IDS.LOCAL_1,
+        numCriancas: 10,
+      });
+
+      const segunda = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "14:15",
+        duracaoMinutos: 135,
+        localId: TEST_IDS.LOCAL_1, // mesmo local, sobreposição temporal
+        numCriancas: 10,
+      });
+
+      expect(primeira).toBeDefined();
+      expect(segunda).toBeDefined();
+
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: { in: [primeira.id, segunda.id] } } });
+      await testPrisma.reserva.deleteMany({ where: { id: { in: [primeira.id, segunda.id] } } });
+    });
+
+    it("deve lançar SLOT_OCCUPIED ao mover festa (update) para um slot já ocupado", async () => {
+      const a = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "09:30",
+        duracaoMinutos: 135,
+        localId: TEST_IDS.LOCAL_1,
+        numCriancas: 10,
+      });
+      const b = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "09:45",
+        duracaoMinutos: 135,
+        localId: TEST_IDS.LOCAL_2,
+        numCriancas: 10,
+      });
+
+      await expect(
+        reservaService.update(b.id, { horario: "09:30" })
+      ).rejects.toThrow("SLOT_OCCUPIED");
+
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: { in: [a.id, b.id] } } });
+      await testPrisma.reserva.deleteMany({ where: { id: { in: [a.id, b.id] } } });
     });
 
     it("should create reserva with extras", async () => {

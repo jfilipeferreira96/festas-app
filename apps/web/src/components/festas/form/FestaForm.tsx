@@ -4,8 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FormProvider, useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui";
+import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useCreateReserva, useUpdateReserva } from "@/hooks/use-reservas";
+import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
@@ -15,6 +16,7 @@ import ClienteSearchModal, { type ClienteFilho } from "@/components/common/Clien
 import PagamentoModal from "@/components/festas/PagamentoModal";
 import { mensagensDeErro, scrollToFirstFormError } from "@/components/form/form-utils";
 import { addMinutosToTime, isFimDeSemana } from "@/lib/format";
+import { coresEmConflito, corDisponivel, type FestaComIntervalo } from "@/lib/cores";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva } from "@/lib/api/reservas";
 import {
@@ -65,6 +67,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const adicionaisArray = useFieldArray({ control, name: "encarregadosAdicionais" });
 
   const watchedData = watch("data");
+  const watchedHorario = watch("horario");
+  const watchedDuracao = watch("duracaoMinutos");
+  const watchedLocalId = watch("localId");
   const watchedMenuId = watch("menuId");
   const previsaoCriancas = watch("previsaoCriancas");
   const aniversariantes = watch("aniversariantes");
@@ -91,10 +96,39 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const { data: slotsHorario } = useSlotsHorario();
   const { data: slotsDia } = useSlotsDia(watchedData);
 
+  // Aviso não-bloqueante: sobreposição temporal com outra festa no mesmo
+  // local é permitida (grelha desfasada), mas o utilizador deve ser alertado.
+  const { data: disponibilidade } = useCheckDisponibilidade({
+    data: watchedData || undefined,
+    horario: watchedHorario || undefined,
+    duracaoMinutos: watchedDuracao || undefined,
+    localId: watchedLocalId || undefined,
+    excludeId: reserva?.id,
+  });
+
+  // Todas as festas activas do dia (em slots + custom), sem a festa em edição.
+  const festasDoDia = useMemo<FestaComIntervalo[]>(() => {
+    const dosSlots = (slotsDia?.slots ?? [])
+      .map((s) => s.festa)
+      .filter((f): f is NonNullable<typeof f> => !!f)
+      .map((f) => ({ id: f.id, cor: f.cor, horario: f.horario, duracaoMinutos: f.duracaoMinutos }));
+    const semSlot = (slotsDia?.festasSemSlot ?? []).map((f) => ({
+      id: f.id,
+      cor: f.cor,
+      horario: f.horario,
+      duracaoMinutos: f.duracaoMinutos,
+    }));
+    return [...dosSlots, ...semSlot]
+      .filter((f) => f.cor && f.id !== reserva?.id)
+      .map(({ cor, horario, duracaoMinutos }) => ({ cor, horario, duracaoMinutos }));
+  }, [slotsDia, reserva?.id]);
+
+  // Regra do plano diário: só há conflito de cor se as festas se sobrepõem
+  // no tempo (sem coexistência de pulseiras no parque).
   const coresEmUso = useMemo(() => {
-    const todas = slotsDia?.coresUsadas ?? [];
-    return reserva?.cor ? todas.filter((c) => c !== reserva.cor) : todas;
-  }, [slotsDia?.coresUsadas, reserva?.cor]);
+    if (!watchedHorario) return [];
+    return coresEmConflito(festasDoDia, watchedHorario, watchedDuracao || 135);
+  }, [festasDoDia, watchedHorario, watchedDuracao]);
 
   const corOptions = useMemo(
     () => [
@@ -144,13 +178,10 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
       setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true, shouldValidate: true });
       if (slot.horaLancheDefault) setValue("horaLanche", slot.horaLancheDefault, { shouldDirty: true });
       if (slot.salaLancheId) setValue("salaLancheId", slot.salaLancheId, { shouldDirty: true, shouldValidate: true });
-      const corLivre =
-        slot.corDefault && !coresEmUso.includes(slot.corDefault)
-          ? slot.corDefault
-          : (CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value))?.value ?? "");
-      setValue("cor", corLivre, { shouldDirty: true, shouldValidate: true });
+      const conflito = coresEmConflito(festasDoDia, horaInicio, slot.duracaoMin);
+      setValue("cor", corDisponivel(conflito, slot.corDefault), { shouldDirty: true, shouldValidate: true });
     },
-    [slotsHorario, coresEmUso, setValue]
+    [slotsHorario, festasDoDia, setValue]
   );
 
   useEffect(() => {
@@ -302,6 +333,22 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               onSelectSlot={handleSelectSlot}
               dataInicial={defaultValues.data}
             />
+            {(disponibilidade?.conflitos?.length ?? 0) > 0 && (
+              <div className="flex items-start gap-2 rounded-lg bg-accent-orange-50 border border-accent-orange-200 px-3 py-2 text-xs text-accent-orange-800">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-accent-orange-600" />
+                <span>
+                  Nota: este horário sobrepõe-se a{" "}
+                  {disponibilidade!.conflitos.length === 1
+                    ? "outra festa"
+                    : `${disponibilidade!.conflitos.length} festas`}{" "}
+                  no mesmo período (
+                  {disponibilidade!.conflitos
+                    .map((c) => `${c.aniversarianteNome || "festa"} às ${c.horario}`)
+                    .join(", ")}
+                  ). É permitido - confirme apenas se intencional.
+                </span>
+              </div>
+            )}
             <MenuBoloSection menuOptions={menuOptions} menuWarning={menuWarning} />
             <ExtrasNotasSection extraItems={extraItems} />
             <PagamentoSection

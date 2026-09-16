@@ -272,6 +272,35 @@ async function findConflitos(params: {
   return conflitos;
 }
 
+/**
+ * Guard de capacidade: a grelha diária de slots define a capacidade do dia
+ * (uma festa por horário/slot). Verifica se já existe uma festa activa
+ * (RESERVA/CONFIRMADO/EM_CURSO) no mesmo dia com o MESMO horário (match
+ * exacto). A regra antiga "sem sobreposição por Local" deixou de bloquear -
+ * o Local é informativo; sobreposições de horários diferentes são permitidas
+ * (o form mostra apenas um aviso não-bloqueante via /disponibilidade).
+ */
+async function verificarSlotOcupado(params: {
+  data: string | Date;
+  horario: string;
+  excludeId?: string;
+}): Promise<void> {
+  const reservaDate = typeof params.data === "string" ? new Date(params.data) : params.data;
+  const nextDay = new Date(reservaDate);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  const existente = await prisma.reserva.findFirst({
+    where: {
+      data: { gte: reservaDate, lt: nextDay },
+      horario: params.horario,
+      estado: { in: ["RESERVA", "CONFIRMADO", "EM_CURSO"] },
+      ...(params.excludeId ? { NOT: { id: params.excludeId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (existente) throw new Error("SLOT_OCCUPIED");
+}
+
 export const reservaService = {
   async list(filters?: { estado?: string; data?: string; dataInicio?: string; dataFim?: string; localId?: string; pesquisa?: string; page?: number; pageSize?: number }) {
     const where: Record<string, unknown> = {};
@@ -412,14 +441,9 @@ export const reservaService = {
     if (!local) throw new Error("LOCAL_NOT_FOUND");
     if (!local.activo) throw new Error("LOCAL_INACTIVE");
 
-    // Check for conflicts (duration overlap)
-    const conflitosCriacao = await findConflitos({
-      data: data.data,
-      horario: data.horario,
-      duracaoMinutos: data.duracaoMinutos,
-      localId: data.localId,
-    });
-    if (conflitosCriacao.length > 0) throw new Error("LOCAL_NOT_AVAILABLE");
+    // Capacidade: um slot (horário exacto) só pode ter uma festa activa.
+    // Sobreposições de horários diferentes são permitidas (grelha desfasada).
+    await verificarSlotOcupado({ data: data.data, horario: data.horario });
 
     // ── Cálculo de preço por criança (com mínimos por aniversariante) ──
     const numAniversariantes = aniversarianteIds.length;
@@ -566,15 +590,13 @@ export const reservaService = {
       if (bloqueado) throw new Error("DAY_BLOCKED");
     }
 
-    if (data.localId || data.data || data.horario) {
-      const conflitosUpdate = await findConflitos({
+    if (data.data || data.horario) {
+      // Capacidade: um slot (horário exacto) só pode ter uma festa activa.
+      await verificarSlotOcupado({
         data: data.data ?? reserva.data,
         horario: data.horario ?? reserva.horario,
-        duracaoMinutos: data.duracaoMinutos ?? reserva.duracaoMinutos,
-        localId: data.localId ?? reserva.localId,
         excludeId: id,
       });
-      if (conflitosUpdate.length > 0) throw new Error("LOCAL_NOT_AVAILABLE");
     }
 
     // ── Ledger de pagamentos (replace-all); undefined = sem alterações ──

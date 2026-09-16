@@ -260,6 +260,9 @@ describe("SlotHorario Service", () => {
       expect(slot!.ocupado).toBe(true);
       expect(slot!.festa).not.toBeNull();
       expect(slot!.festa!.numCriancas).toBe(12);
+      // Dados para conflito temporal de pulseiras (regra do plano diário)
+      expect(slot!.festa!.horario).toBe("11:00");
+      expect(slot!.festa!.duracaoMinutos).toBe(135);
     });
 
     it("deve enviar festas sem slot (horário custom) para festasSemSlot", async () => {

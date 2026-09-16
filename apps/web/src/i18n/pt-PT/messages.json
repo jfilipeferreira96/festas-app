@@ -31,6 +31,7 @@
     "horarioRequired": "Horário da reserva é obrigatório",
     "localRequired": "Local é obrigatório",
     "localNotAvailable": "O local selecionado não está disponível neste horário",
+    "slotOccupied": "Já existe uma festa neste horário. Escolha outro slot.",
     "localInactive": "O local selecionado está inactivo",
     "clienteRequired": "Cliente é obrigatório",
     "dayBlocked": "Não é possível criar festas neste dia (dia bloqueado)",

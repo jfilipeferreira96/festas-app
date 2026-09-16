@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Clock, Plus, Users, MapPin, Eye, Pencil, CheckCircle2, Play, SquareCheck, UserCheck, History, XCircle, Trash2 } from "lucide-react";
 import { useSlotsDia } from "@/hooks/use-slots-horario";
 import type { SlotDia, FestaSemSlot } from "@/lib/api/slotsHorario";
-import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
+import { coresEmConflito, corDisponivel, type FestaComIntervalo } from "@/lib/cores";
 import type { FestaFormInitialValues } from "./form/FestaForm";
 
 type FestaAction =
@@ -35,14 +35,6 @@ function addMinutosToTime(hora: string, minutos: number): string {
   const newH = Math.floor(total / 60) % 24;
   const newM = total % 60;
   return `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
-}
-
-/** Encontra a primeira cor disponível (não usada por outras festas do dia) */
-function findAvailableColor(coresUsadas: string[]): string {
-  for (const c of FESTA_COLORS) {
-    if (!coresUsadas.includes(c.value)) return c.value;
-  }
-  return FESTA_COLORS[0].value;
 }
 
 /** Calcula a hora sugerida do lanche (início + 60 min) */
@@ -111,31 +103,31 @@ const FestaActionsRow = React.memo(function FestaActionsRow({
 // ── Cartão de slot individual ──────────────────────────────────
 const SlotCard = React.memo(function SlotCard({
   slot,
-  coresUsadas,
+  festasDoDia,
   onSlotClick,
   onAction,
   isCacifos,
 }: {
   slot: SlotDia;
-  coresUsadas: string[];
+  /** Festas activas do dia (para conflito temporal de pulseiras) */
+  festasDoDia: FestaComIntervalo[];
   onSlotClick: (initialValues: FestaFormInitialValues) => void;
   onAction?: (action: FestaAction, festaId: string) => void;
   isCacifos?: boolean;
 }) {
   const handleClick = React.useCallback(() => {
     if (slot.ocupado) return;
+    // Regra do plano diário: cor sem coexistência no parque (temporal)
+    const conflito = coresEmConflito(festasDoDia, slot.horaInicio, slot.duracaoMin);
     onSlotClick({
       horario: slot.horaInicio,
       duracaoMinutos: slot.duracaoMin,
       // Defaults do slot (cor, hora lanche, sala lanche) com fallback para heurística
       horaLanche: slot.horaLancheDefault || calcHoraLanche(slot.horaInicio),
-      cor:
-        slot.corDefault && !coresUsadas.includes(slot.corDefault)
-          ? slot.corDefault
-          : findAvailableColor(coresUsadas),
+      cor: corDisponivel(conflito, slot.corDefault),
       salaLancheId: slot.salaLancheId || undefined,
     });
-  }, [slot, coresUsadas, onSlotClick]);
+  }, [slot, festasDoDia, onSlotClick]);
 
   const horaFim = addMinutosToTime(slot.horaInicio, slot.duracaoMin);
 
@@ -265,7 +257,18 @@ const FestaSemSlotCard = React.memo(function FestaSemSlotCard({
 export default function FestasSlotsGrid({ data, onSlotClick, onFestaAction, isCacifos }: FestasSlotsGridProps) {
   const { data: slotsData, isLoading } = useSlotsDia(data);
 
-  const coresUsadas = useMemo(() => slotsData?.coresUsadas ?? [], [slotsData]);
+  const festasDoDia = useMemo<FestaComIntervalo[]>(() => {
+    const dosSlots = (slotsData?.slots ?? [])
+      .map((s) => s.festa)
+      .filter((f): f is NonNullable<typeof f> => !!f)
+      .map((f) => ({ cor: f.cor, horario: f.horario, duracaoMinutos: f.duracaoMinutos }));
+    const semSlot = (slotsData?.festasSemSlot ?? []).map((f) => ({
+      cor: f.cor,
+      horario: f.horario,
+      duracaoMinutos: f.duracaoMinutos,
+    }));
+    return [...dosSlots, ...semSlot].filter((f) => f.cor);
+  }, [slotsData]);
   const slots = useMemo(() => slotsData?.slots ?? [], [slotsData]);
   const festasSemSlot = useMemo(() => slotsData?.festasSemSlot ?? [], [slotsData]);
 
@@ -321,7 +324,7 @@ export default function FestasSlotsGrid({ data, onSlotClick, onFestaAction, isCa
           <SlotCard
             key={slot.slotId}
             slot={slot}
-            coresUsadas={coresUsadas}
+            festasDoDia={festasDoDia}
             onSlotClick={handleSlotClick}
             onAction={onFestaAction}
             isCacifos={isCacifos}
