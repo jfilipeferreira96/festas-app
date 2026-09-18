@@ -24,6 +24,7 @@ export default function ConfigPrecosContent() {
   const [precoExcessoFixo, setPrecoExcessoFixo] = useState("");
   const [caucaoDefault, setCaucaoDefault] = useState("");
   const [precoLancheEntrada, setPrecoLancheEntrada] = useState("");
+  const [precoAdulto, setPrecoAdulto] = useState("");
   const [valorHoraMonitorDefault, setValorHoraMonitorDefault] = useState("");
   const [precoMeias, setPrecoMeias] = useState("");
   const [duracaoDefaultFestaMin, setDuracaoDefaultFestaMin] = useState("");
@@ -45,6 +46,7 @@ export default function ConfigPrecosContent() {
       setPrecoExcessoFixo(String(Number(config.precoExcessoFixo)));
       setCaucaoDefault(String(Number(config.caucaoDefault ?? 40)));
       setPrecoLancheEntrada(String(Number(config.precoLancheEntrada ?? 3)));
+      setPrecoAdulto(String(Number(config.precoAdulto ?? 6)));
       setValorHoraMonitorDefault(config.valorHoraMonitorDefault != null ? String(Number(config.valorHoraMonitorDefault)) : "");
       setPrecoMeias(String(Number(config.precoMeias)));
       setDuracaoDefaultFestaMin(String(Number(config.duracaoDefaultFestaMin)));
@@ -79,6 +81,7 @@ export default function ConfigPrecosContent() {
         precoExcessoFixo: parseFloat(precoExcessoFixo) || 0,
         caucaoDefault: parseFloat(caucaoDefault) || 0,
         precoLancheEntrada: parseFloat(precoLancheEntrada) || 0,
+        precoAdulto: parseFloat(precoAdulto) || 0,
         precoMeias: parseFloat(precoMeias) || 0,
         valorHoraMonitorDefault: valorHoraMonitorDefault ? parseFloat(valorHoraMonitorDefault) : null,
         duracaoDefaultFestaMin: parseInt(duracaoDefaultFestaMin) || 135,
@@ -88,7 +91,7 @@ export default function ConfigPrecosContent() {
     } catch {
       error("Erro ao atualizar tarifário");
     }
-  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoEntrada1h, precoEntrada2h, precoEntradaHoraAdicional, precoExcessoFixo, caucaoDefault, precoLancheEntrada, valorHoraMonitorDefault, precoMeias, duracaoDefaultFestaMin, minimos, updateMutation, success, error]);
+  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoEntrada1h, precoEntrada2h, precoEntradaHoraAdicional, precoExcessoFixo, caucaoDefault, precoLancheEntrada, precoAdulto, valorHoraMonitorDefault, precoMeias, duracaoDefaultFestaMin, minimos, updateMutation, success, error]);
 
   if (isLoading) {
     return (
@@ -377,6 +380,24 @@ export default function ConfigPrecosContent() {
                 value={precoLancheEntrada}
                 onChange={(e) => setPrecoLancheEntrada(e.target.value)}
                 placeholder="3"
+                className="pr-8"
+              />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">
+              Preço de adulto acompanhante
+            </label>
+            <div className="relative">
+              <InputField
+                type="number"
+                min="0"
+                step={0.01}
+                value={precoAdulto}
+                onChange={(e) => setPrecoAdulto(e.target.value)}
+                placeholder="6"
                 className="pr-8"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium text-text-muted">€</span>

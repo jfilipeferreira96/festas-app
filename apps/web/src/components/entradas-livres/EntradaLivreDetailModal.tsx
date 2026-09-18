@@ -88,7 +88,8 @@ export default function EntradaLivreDetailModal({ entradaId, onClose, hidePrices
     const numAdultos = entrada.numAdultos ?? 0;
     const totalPessoas = numCriancas + numAdultos;
     const precoPorPessoa = getTierPricePerPerson(entrada.duracaoMinutos, configPreco);
-    const custoTempo = +(precoPorPessoa * totalPessoas).toFixed(2);
+    const precoAdulto = Number(configPreco?.precoAdulto ?? 0);
+    const custoTempo = +(precoPorPessoa * numCriancas + precoAdulto * numAdultos).toFixed(2);
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 4.5);
     const criancasComLanche = entrada.temLanche
       ? (entrada.criancas ?? []).filter((c: { querLanche?: boolean }) => c.querLanche !== false).length

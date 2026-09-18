@@ -31,6 +31,8 @@ export interface ConfiguracaoPreco {
   caucaoDefault: number;
   // Lanche em entrada livre (suplemento por pessoa quando temLanche = true)
   precoLancheEntrada: number;
+  // Adulto acompanhante (entrada livre e festa) - preço fixo por adulto
+  precoAdulto: number;
   // Valor/hora default para monitores (fallback quando monitor não tem valor individual)
   valorHoraMonitorDefault: number | null;
   // Durações default
@@ -53,6 +55,7 @@ export interface AtualizarConfiguracaoPrecoDTO {
   precoExcessoFixo?: number;
   caucaoDefault?: number;
   precoLancheEntrada?: number;
+  precoAdulto?: number;
   valorHoraMonitorDefault?: number | null;
   duracaoDefaultFestaMin?: number;
   duracaoExcessoBlocoMin?: number;

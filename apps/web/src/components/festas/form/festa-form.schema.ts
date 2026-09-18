@@ -51,10 +51,11 @@ export const festaFormSchema = z.object({
   salaLancheId: z.string(),
   cor: z.string(),
   menuId: z.string(),
-  bolo: z.enum(TIPOS_BOLO).optional(),
+  bolo: z.enum(TIPOS_BOLO, { message: "Seleccione o tipo de bolo" }),
   boloTema: z.string(),
   // Inputs numéricos vazios chegam como NaN (valueAsNumber) → normalizar para undefined
   boloQuantidade: numeroOpcional(0),
+  numAdultos: numeroOpcional(0),
   previsaoCriancas: z.number().min(1, "Mínimo 1 criança").max(100, "Máximo 100 crianças"),
   numCriancasConfirmadas: numeroOpcional(0),
   extrasIds: z.array(z.string()),
@@ -155,6 +156,7 @@ export function buildFestaDefaults(
     boloTema: reserva?.boloTema ?? "",
     boloQuantidade: reserva?.boloQuantidade ?? undefined,
     previsaoCriancas: reserva?.numCriancas ?? reserva?.previsaoCriancas ?? 10,
+    numAdultos: reserva?.numAdultos ?? undefined,
     numCriancasConfirmadas: reserva?.numCriancasConfirmadas ?? undefined,
     extrasIds: reserva?.extras?.map((e) => e.extra.id) ?? [],
     extrasTexto: {},
@@ -241,6 +243,7 @@ export function buildFestaPayload(
     bolo: data.bolo || undefined,
     boloTema: data.boloTema || undefined,
     boloQuantidade: data.boloQuantidade || undefined,
+    numAdultos: data.numAdultos ?? undefined,
     tema: data.tema || undefined,
     notas,
     notasCacifos: data.notasCacifos || undefined,
@@ -268,18 +271,21 @@ export interface EstimativaFestaInfo {
 interface EstimativaConfig {
   precoCriancaSemana: number;
   precoCriancaFimSemana: number;
+  precoAdulto?: number;
   minimosCriancasPorAniversariante?: { aniversariantes: number; minimo: number }[] | null;
 }
 
 /**
  * Estimativa do total da festa: preço por criança × nº de crianças faturadas
- * (respeitando o mínimo aplicável por nº de aniversariantes).
+ * (respeitando o mínimo aplicável por nº de aniversariantes) + adultos
+ * acompanhantes × preço de adulto (ConfiguracaoPreco.precoAdulto).
  */
 export function calcularEstimativaFesta(
   config: EstimativaConfig | null | undefined,
   dataFesta: string | undefined,
   previsaoCriancas: number | undefined,
-  numAniversariantes: number
+  numAniversariantes: number,
+  numAdultos = 0
 ): EstimativaFestaInfo {
   if (!config || !dataFesta) {
     return { estimativa: 0, precoCrianca: 0, criancasFaturadas: 0, minimoAplicavel: 0 };
@@ -293,8 +299,10 @@ export function calcularEstimativaFesta(
       .filter((m) => m.aniversariantes <= numAniv)
       .sort((a, b) => b.aniversariantes - a.aniversariantes)[0]?.minimo ?? 10;
   const criancasFaturadas = Math.max(previsaoCriancas ?? 10, minimoAplicavel);
+  const precoAdulto = Number(config.precoAdulto ?? 0);
+  const custoAdultos = precoAdulto * (numAdultos || 0);
   return {
-    estimativa: precoCrianca * criancasFaturadas,
+    estimativa: +(precoCrianca * criancasFaturadas + custoAdultos).toFixed(2),
     precoCrianca,
     criancasFaturadas,
     minimoAplicavel,

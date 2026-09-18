@@ -10,7 +10,11 @@ export type MetodoPagamento = "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFERENC
 
 export type EstadoCaucao = "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA";
 
-export type TipoBolo = "PAIS_TRAZEM" | "NOSSO_1KG" | "NOSSO_2KG" | "BOLO_ARTISTICO" | "A_DECIDIR";
+/**
+ * Valor seleccionado do bolo: chave fixa (PAIS_TRAZEM / A_DECIDIR)
+ * ou nome do bolo do catálogo de Extras (subcategoria "Bolos").
+ */
+export type TipoBolo = string;
 
 export interface Reserva {
   id: string;
@@ -46,6 +50,7 @@ export interface Reserva {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  numAdultos?: number;
 
   // Notas por equipa
   notasCacifos?: string;
@@ -145,6 +150,7 @@ export interface CriarReservaDTO {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  numAdultos?: number;
 
   // Notas por equipa
   notasCacifos?: string;

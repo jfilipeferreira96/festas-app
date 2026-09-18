@@ -364,6 +364,8 @@ model ConfiguracaoPreco {
   caucaoDefault                 Decimal  @db.Decimal(10, 2) @default(40)
   // Lanche em entrada livre (suplemento por pessoa quando temLanche = true)
   precoLancheEntrada            Decimal  @db.Decimal(10, 2) @default(3)
+  // Adulto acompanhante (entrada livre e festa) - preço fixo por adulto
+  precoAdulto                   Decimal  @db.Decimal(10, 2) @default(6)
   // Valor/hora default para monitores (usado quando o monitor não tem valor individual)
   valorHoraMonitorDefault       Decimal? @db.Decimal(10, 2)
   // Durações default
@@ -401,8 +403,9 @@ model Reserva {
   // ── Novos campos da festa ────────────────
   tema              String?
   previsaoCriancas  Int?
+  numAdultos        Int      @default(0) // Adultos acompanhantes que pagam entrada (preço: ConfiguracaoPreco.precoAdulto)
   cor               String?
-  bolo              TipoBolo?
+  bolo              String?  // Valor do select de bolo: chave fixa (PAIS_TRAZEM/A_DECIDIR) ou nome do bolo do catálogo de Extras
   boloTema          String?
   boloQuantidade    Int?
   numCriancasConfirmadas Int?

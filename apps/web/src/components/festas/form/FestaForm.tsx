@@ -73,6 +73,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const watchedLocalId = watch("localId");
   const watchedMenuId = watch("menuId");
   const previsaoCriancas = watch("previsaoCriancas");
+  const watchedNumAdultos = watch("numAdultos");
   const aniversariantes = watch("aniversariantes");
   const watchedTotalAPagar = watch("totalAPagar");
   const watchedPagamentos = watch("pagamentos");
@@ -199,9 +200,10 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
         configPreco,
         watchedData,
         previsaoCriancas,
-        aniversariantes.filter((a) => a.nome.trim()).length
+        aniversariantes.filter((a) => a.nome.trim()).length,
+        watchedNumAdultos
       ),
-    [configPreco, watchedData, previsaoCriancas, aniversariantes]
+    [configPreco, watchedData, previsaoCriancas, aniversariantes, watchedNumAdultos]
   );
 
   useEffect(() => {

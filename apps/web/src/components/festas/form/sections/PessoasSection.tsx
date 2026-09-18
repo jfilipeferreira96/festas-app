@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useFormContext, type UseFieldArrayReturn } from "react-hook-form";
-import { AlertTriangle, Cake, Plus, Search, Trash2, User } from "lucide-react";
+import { AlertTriangle, Cake, Plus, Search, Trash2, User, Users } from "lucide-react";
 import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import DatePicker from "@/components/form/date-picker";
@@ -99,6 +99,20 @@ export default function PessoasSection({
           </div>
           );
         })}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+          <Users size={14} className="text-brand-500" /> Adultos acompanhantes (pagam entrada)
+        </span>
+        <div className="w-24">
+          <InputField
+            type="number"
+            min={0}
+            {...register("numAdultos", { valueAsNumber: true })}
+            placeholder="0"
+          />
+        </div>
       </div>
 
       <div className="space-y-2">

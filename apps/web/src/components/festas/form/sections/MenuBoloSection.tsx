@@ -48,21 +48,25 @@ export default function MenuBoloSection({ menuOptions, menuWarning }: MenuBoloSe
         </span>
         <div className="flex gap-4">
           <div className="flex-1">
-            <FieldLabel>Tipo de Bolo</FieldLabel>
+            <FieldLabel>Tipo de Bolo <span className="text-error-500">*</span></FieldLabel>
             <Select
               options={TIPO_BOLO_OPTIONS}
               placeholder="Seleccionar..."
               value={bolo ?? ""}
               onChange={(val) => {
-                const tipo = val === "" ? undefined : (val as FestaFormTipoBolo);
-                setValue("bolo", tipo, { shouldDirty: true });
+                const tipo = (val || "") as FestaFormData["bolo"];
+                setValue("bolo", tipo, { shouldDirty: true, shouldValidate: true });
                 if (!tipo || BOLO_BLOQUEIA_TEMA.includes(tipo)) {
                   setValue("boloQuantidade", undefined, { shouldDirty: true });
                 } else {
                   setValue("boloQuantidade", 1, { shouldDirty: true });
                 }
               }}
+              error={!!errors.bolo}
             />
+            {errors.bolo && (
+              <p className="mt-1 text-xs text-error-500">{errors.bolo.message}</p>
+            )}
           </div>
           <div className="flex-1">
             <FieldLabel>Tema do Bolo</FieldLabel>

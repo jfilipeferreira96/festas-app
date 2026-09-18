@@ -40,6 +40,7 @@ interface CreateReservaData {
   // Festa fields
   tema?: string;
   previsaoCriancas?: number;
+  numAdultos?: number;
   cor?: string;
   bolo?: TipoBolo;
   boloTema?: string;
@@ -94,6 +95,7 @@ interface UpdateReservaData {
   menuId?: string | null;
   tema?: string;
   previsaoCriancas?: number;
+  numAdultos?: number;
   cor?: string;
   bolo?: TipoBolo;
   boloTema?: string;
@@ -477,6 +479,7 @@ export const reservaService = {
         notas: data.notas,
         tema: data.tema,
         previsaoCriancas: data.previsaoCriancas,
+        numAdultos: data.numAdultos ?? 0,
         cor: data.cor,
         bolo: data.bolo,
         boloTema: data.boloTema,
@@ -635,6 +638,7 @@ export const reservaService = {
         notas: data.notas,
         tema: data.tema,
         previsaoCriancas: data.previsaoCriancas,
+        ...(data.numAdultos !== undefined && { numAdultos: data.numAdultos }),
         cor: data.cor,
         bolo: data.bolo,
         boloTema: data.boloTema,

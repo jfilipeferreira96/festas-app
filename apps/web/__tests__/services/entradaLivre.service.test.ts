@@ -17,6 +17,7 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 import { entradaLivreService } from "@/services/entradaLivre.service";
+import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 
 describe("Entrada Livre Service", () => {
   beforeAll(async () => {
@@ -356,6 +357,31 @@ describe("Entrada Livre Service", () => {
       expect(entrada).toBeDefined();
       expect(entrada.numAdultos).toBe(1);
       expect(entrada.custoTotal).toBeGreaterThan(0);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("should price adults with the configured adult price (not the per-person tariff)", async () => {
+      const config = await configuracaoPrecoService.getConfig();
+      const tarifa1h = Number(config.precoEntrada1h);
+      const precoAdulto = Number(config.precoAdulto);
+
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Adulto Preço",
+        encarregadoTelefone: "912345681",
+        duracaoMinutos: 60,
+        pago: true,
+        criancas: [
+          { nome: "Criança A", idade: 6 },
+          { nome: "Criança B", idade: 7 },
+        ],
+        numAdultos: 2,
+      });
+
+      // 2 crianças × tarifa 1h + 2 adultos × preço de adulto
+      const esperado = +(tarifa1h * 2 + precoAdulto * 2).toFixed(2);
+      expect(entrada.custoTotal).toBe(esperado);
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });

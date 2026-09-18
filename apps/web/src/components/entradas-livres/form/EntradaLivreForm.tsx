@@ -77,8 +77,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const custoComponentes = useMemo(() => {
     const comNome = criancasWatched.filter((c) => c.nome.trim());
-    const totalPessoas = Math.max(comNome.length + numAdultos, 1);
-    const custoTempo = custoTempoPorPessoa * totalPessoas;
+    const totalPessoas = Math.max(comNome.length + numAdultos, 1); // extras "Por pessoa"
+    const precoAdulto = Number(configPreco?.precoAdulto ?? 0);
+    const custoTempo = +(custoTempoPorPessoa * comNome.length + precoAdulto * numAdultos).toFixed(2);
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 3);
     const criancasComLanche = temLanche ? comNome.filter((c) => c.querLanche).length : 0;
     const custoLanche = precoLanche * criancasComLanche;
@@ -229,6 +230,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             <DuracaoLancheSection
               custoTempoPorPessoa={custoTempoPorPessoa}
               precoLancheEntrada={Number(configPreco?.precoLancheEntrada ?? 3)}
+              precoAdulto={Number(configPreco?.precoAdulto ?? 0)}
               cacifoOptions={cacifoOptions}
             />
             <ExtrasEntradaSection numPessoas={custoComponentes.totalPessoas} />

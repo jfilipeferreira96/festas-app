@@ -13,12 +13,14 @@ import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-l
 interface DuracaoLancheSectionProps {
   custoTempoPorPessoa: number;
   precoLancheEntrada: number;
+  precoAdulto: number;
   cacifoOptions: { value: string; label: string }[];
 }
 
 export default function DuracaoLancheSection({
   custoTempoPorPessoa,
   precoLancheEntrada,
+  precoAdulto,
   cacifoOptions,
 }: DuracaoLancheSectionProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext<EntradaLivreFormData>();
@@ -80,8 +82,8 @@ export default function DuracaoLancheSection({
               onChange={(checked) => setValue("numAdultos", checked ? 1 : 0, { shouldDirty: true })}
               label="Adulto acompanha e paga entrada"
             />
-            {custoTempoPorPessoa > 0 && (
-              <p className="text-xs text-text-muted ml-8">+{formatEuro(custoTempoPorPessoa)} por adulto</p>
+            {precoAdulto > 0 && (
+              <p className="text-xs text-text-muted ml-8">+{formatEuro(precoAdulto)} por adulto</p>
             )}
           </div>
         </div>

@@ -220,6 +220,25 @@ describe("Reserva Service", () => {
       await testPrisma.reserva.deleteMany({ where: { id: { in: [a.id, b.id] } } });
     });
 
+    it("deve persistir numAdultos (create e update)", async () => {
+      const reserva = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "10:15",
+        duracaoMinutos: 135,
+        localId: TEST_IDS.LOCAL_2,
+        numCriancas: 10,
+        numAdultos: 3,
+      });
+      expect(reserva.numAdultos).toBe(3);
+
+      const atualizada = await reservaService.update(reserva.id, { numAdultos: 5 });
+      expect(atualizada.numAdultos).toBe(5);
+
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
     it("should create reserva with extras", async () => {
       const reserva = await reservaService.create({
         clienteId: TEST_IDS.CLIENTE_1,

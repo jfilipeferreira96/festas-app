@@ -261,13 +261,14 @@ export const entradaLivreService = {
     // custoHora mantém-se para registo histórico (linelegado); usa o escalão aplicável.
     const custoHora = Number(configPreco.precoEntrada1h ?? 6);
 
-    // Preço: usa valor manual do utilizador se fornecido, senão calcula a partir
-    // do tarifário por escalão × nº de pessoas (crianças + adultos).
-    // Se temLanche, adiciona o suplemento de lanche por pessoa.
+    // Preço: usa valor manual do utilizador se fornecido, senão calcula:
+    // tarifário por escalão × crianças + preço de adulto × adultos.
+    // Se temLanche, adiciona o suplemento de lanche por criança (marcada).
     const numAdultos = data.numAdultos ?? 0;
-    const totalPessoas = criancas.length + numAdultos;
+    const totalPessoas = criancas.length + numAdultos; // extras "Por pessoa" contam crianças + adultos
     const custoTempoPorPessoa = await configuracaoPrecoService.calcularPrecoEntrada(duracaoMinutos, new Date());
-    const custoTempo = custoTempoPorPessoa * totalPessoas;
+    const precoAdulto = Number(configPreco.precoAdulto ?? 6);
+    const custoTempo = +(custoTempoPorPessoa * criancas.length + precoAdulto * numAdultos).toFixed(2);
     const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
     const criancasComLanche = contarCriancasComLanche(criancas, data.temLanche);
     const custoLanche = precoLanche * criancasComLanche;
@@ -590,13 +591,18 @@ export const entradaLivreService = {
         const custoTempoPorPessoa = await configuracaoPrecoService.calcularPrecoEntrada(duracaoEfetiva, new Date(entrada.inicioEm));
         const configPreco = await configuracaoPrecoService.getConfig();
         const precoLanche = Number(configPreco.precoLancheEntrada ?? 3);
-        const totalPessoas = criancasEfetivas.length + numAdultosEfetivo;
+        const precoAdulto = Number(configPreco.precoAdulto ?? 6);
+        const totalPessoas = criancasEfetivas.length + numAdultosEfetivo; // extras "Por pessoa"
         const custoExtras = await calcularCustoExtras(extrasNovos, totalPessoas);
         const custoMeias =
           Number(data.meiasQuantidade ?? entrada.meiasQuantidade ?? 0) *
           Number(data.meiasPrecoUnit ?? entrada.meiasPrecoUnit ?? configPreco.precoMeias);
         novoCustoTotal =
-          custoTempoPorPessoa * totalPessoas + precoLanche * lancheDepois + custoExtras + custoMeias;
+          custoTempoPorPessoa * criancasEfetivas.length +
+          precoAdulto * numAdultosEfetivo +
+          precoLanche * lancheDepois +
+          custoExtras +
+          custoMeias;
       }
     }
 

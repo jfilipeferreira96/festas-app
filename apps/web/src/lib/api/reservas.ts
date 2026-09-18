@@ -73,6 +73,7 @@ export interface CreateReservaData {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  numAdultos?: number;
   notasCacifos?: string;
   notasLanche?: string;
   observacoesGerais?: string;

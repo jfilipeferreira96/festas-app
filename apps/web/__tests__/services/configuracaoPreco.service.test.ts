@@ -45,6 +45,7 @@ describe("ConfiguracaoPreco Service", () => {
       expect(Number(config.precoExcessoFixo)).toBe(5);
       expect(Number(config.caucaoDefault)).toBe(40);
       expect(Number(config.precoLancheEntrada)).toBe(3);
+      expect(Number(config.precoAdulto)).toBe(6);
     });
 
     it("should return existing config on second call (singleton)", async () => {
@@ -96,6 +97,13 @@ describe("ConfiguracaoPreco Service", () => {
         precoExcessoFixo: 7.5,
       });
       expect(Number(updated.precoExcessoFixo)).toBe(7.5);
+    });
+
+    it("should update precoAdulto", async () => {
+      const updated = await configuracaoPrecoService.updateConfig({
+        precoAdulto: 7.5,
+      });
+      expect(Number(updated.precoAdulto)).toBe(7.5);
     });
 
     it("should update caucaoDefault", async () => {

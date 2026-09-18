@@ -46,6 +46,7 @@ export const configuracaoPrecoService = {
     precoExcessoFixo?: number;
     caucaoDefault?: number;
     precoLancheEntrada?: number;
+    precoAdulto?: number;
     valorHoraMonitorDefault?: number | null;
     duracaoDefaultFestaMin?: number;
     duracaoExcessoBlocoMin?: number;
@@ -67,6 +68,7 @@ export const configuracaoPrecoService = {
           precoExcessoFixo: data.precoExcessoFixo ?? 5,
           caucaoDefault: data.caucaoDefault ?? 40,
           precoLancheEntrada: data.precoLancheEntrada ?? 3,
+          precoAdulto: data.precoAdulto ?? 6,
           valorHoraMonitorDefault: data.valorHoraMonitorDefault ?? null,
           duracaoDefaultFestaMin: data.duracaoDefaultFestaMin ?? 135,
           duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin ?? 30,
@@ -91,6 +93,7 @@ export const configuracaoPrecoService = {
         ...(data.precoExcessoFixo !== undefined && { precoExcessoFixo: data.precoExcessoFixo }),
         ...(data.caucaoDefault !== undefined && { caucaoDefault: data.caucaoDefault }),
         ...(data.precoLancheEntrada !== undefined && { precoLancheEntrada: data.precoLancheEntrada }),
+        ...(data.precoAdulto !== undefined && { precoAdulto: data.precoAdulto }),
         ...(data.valorHoraMonitorDefault !== undefined && { valorHoraMonitorDefault: data.valorHoraMonitorDefault }),
         ...(data.duracaoDefaultFestaMin !== undefined && { duracaoDefaultFestaMin: data.duracaoDefaultFestaMin }),
         ...(data.duracaoExcessoBlocoMin !== undefined && { duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin }),

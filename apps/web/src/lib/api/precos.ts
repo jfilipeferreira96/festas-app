@@ -25,6 +25,8 @@ export interface ConfiguracaoPreco {
   caucaoDefault: number;
   // Lanche entrada livre (suplemento por pessoa)
   precoLancheEntrada: number;
+  // Adulto acompanhante (entrada livre e festa)
+  precoAdulto: number;
   // Valor/hora default para monitores
   valorHoraMonitorDefault: number | null;
   // Excesso
