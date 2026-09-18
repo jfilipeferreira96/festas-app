@@ -109,11 +109,11 @@ async function seedUsers() {
 async function seedLocais() {
   console.log("  Creating locais...");
   const locais = [
-    { id: "local-001", nome: "1 Zona 1 Baloiço / Parque crianças pequenas" },
-    { id: "local-002", nome: "2 Zona 2 Ninja e Slide" },
-    { id: "local-003", nome: "3 Zona 3 Trampolins" },
-    { id: "local-004", nome: "4 Zona 4 Futebol / Discoteca" },
-    { id: "local-005", nome: "5 Zona 5 Playground" },
+    { id: "local-001", nome: "Zona 1 Baloiço / Parque crianças pequenas" },
+    { id: "local-002", nome: "Zona 2 Ninja e Slide" },
+    { id: "local-003", nome: "Zona 3 Trampolins" },
+    { id: "local-004", nome: "Zona 4 Futebol / Discoteca" },
+    { id: "local-005", nome: "Zona 5 Playground" },
     { id: "local-006", nome: "Sala Refeições 1" },
     { id: "local-007", nome: "Sala Refeições 2" },
   ];
