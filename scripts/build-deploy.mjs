@@ -819,6 +819,14 @@ if (existsSync(compilerWasm)) {
 
 // Validação 2: NENHUMA engine Rust (.node) pode existir no bundle - cada
 // libquery_engine*.node arranca um pool tokio com 1 thread por CPU visível.
+
+const engineFiles = readdirSync(prismaClientDir).filter((f) => f.endsWith(".node") || f.includes("libquery_engine"));
+if (engineFiles.length > 0) {
+  for (const f of engineFiles) {
+    rmSync(join(prismaClientDir, f), { force: true, recursive: true });
+  }
+  console.warn(`⚠️  Engines Rust removidas do bundle (${engineFiles.length}): ${engineFiles.join(", ")}`);
+}
 const rustEngines = readdirSync(prismaClientDir).filter((f) => f.endsWith(".node") || f.includes("libquery_engine") || (f.includes("query_engine") && f.endsWith(".node")));
 if (rustEngines.length > 0) {
   err(`FALHA CRÍTICA: engines Rust no bundle (${rustEngines.join(", ")}) - regenera o cliente com engineType = "client".`);
