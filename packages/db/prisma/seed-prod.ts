@@ -70,6 +70,7 @@ async function main() {
   await seedSlotsHorario();
   await seedEtapasFestaConfig();
   await seedCacifos();
+  await seedMonitores();
 
   console.log("\n✅ Production seed complete!");
 }
@@ -108,17 +109,21 @@ async function seedUsers() {
 async function seedLocais() {
   console.log("  Creating locais...");
   const locais = [
-    { id: "local-001", nome: "Sala Azul" },
-    { id: "local-002", nome: "Sala Arco-Íris" },
-    { id: "local-003", nome: "Parque Trampolins" },
+    { id: "local-001", nome: "1 Zona 1 Baloiço / Parque crianças pequenas" },
+    { id: "local-002", nome: "2 Zona 2 Ninja e Slide" },
+    { id: "local-003", nome: "3 Zona 3 Trampolins" },
+    { id: "local-004", nome: "4 Zona 4 Futebol / Discoteca" },
+    { id: "local-005", nome: "5 Zona 5 Playground" },
+    { id: "local-006", nome: "Sala Refeições 1" },
+    { id: "local-007", nome: "Sala Refeições 2" },
   ];
   for (const local of locais) {
-    await prisma.local.upsert({ where: { id: local.id }, update: {}, create: local });
+    await prisma.local.upsert({ where: { id: local.id }, update: { nome: local.nome }, create: local });
   }
-  console.log("  ✓ 3 locais\n");
+  console.log(`  ✓ ${locais.length} locais\n`);
 }
 
-// ─── Extras & Menus BasyLandy ────────────────────────────────
+// ─── Extras & Menus BasyLandy (catálogo real) ────────────────
 async function seedExtras() {
   console.log("  Creating extras & menus (BasyLandy)...");
 
@@ -132,30 +137,36 @@ async function seedExtras() {
     requerTexto: boolean;
     fimDeSemana?: boolean;
   }[] = [
-    // ─── Menus BasyLandy ────────────────────────────────────────
-    { id: "extra-menu-basy-semana", nome: "Menu BasyLandy (Semana)", precoUnitario: 14.0, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Preço de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: false },
-    { id: "extra-menu-basy-fimsemana", nome: "Menu BasyLandy (Fim-de-semana)", precoUnitario: 15.9, descricao: "Gelatina; Água e sumo; Batatas fritas; Pão de forma (queijo, fiambre, chocolate ou manteiga); Convites digitais/físicos; Prenda para o aniversariante. Aplicado a sábados, domingos e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: true },
+    // ─── Menus (5) ─────────────────────────────────────────────
+    { id: "extra-menu-basy-semana", nome: "Menu Basy (Semana)", precoUnitario: 14.5, descricao: "Menu de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: false },
+    { id: "extra-menu-basy-fimsemana", nome: "Menu Basy (Fim de semana)", precoUnitario: 15.9, descricao: "Menu de fim-de-semana e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: true },
+    { id: "extra-menu-landy-semana", nome: "Menu Landy * MAIS PROCURADO (Semana)", precoUnitario: 16.5, descricao: "Menu mais procurado, de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: false },
+    { id: "extra-menu-landy-fimsemana", nome: "Menu Landy * MAIS PROCURADO (Fim de semana)", precoUnitario: 17.9, descricao: "Menu mais procurado, de fim-de-semana e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: true },
     { id: "extra-menu-almoco-jantar", nome: "Almoço/Jantar (Suplemento)", precoUnitario: 3.5, descricao: "Pizza, fruta e nuggets. Suplemento a acrescentar ao menu base (almoço/jantar).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
-    // ─── Extras ao lanche BasyLandy ────────────────────────────
-    { id: "extra-lanche-cenoura", nome: "Cenoura Baby", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
-    { id: "extra-lanche-babybel", nome: "Queijo babybel", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
-    { id: "extra-lanche-pipocas", nome: "Pipocas", precoUnitario: 0.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
-    { id: "extra-lanche-pizzas", nome: "Pizzas", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    // ─── Extras ao lanche (9) ─────────────────────────────────
     { id: "extra-lanche-bolachas", nome: "Bolachas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
-    { id: "extra-lanche-nuggets", nome: "Nuggets", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-cenoura", nome: "Cenoura Baby", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-donuts", nome: "Donuts", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-fruta", nome: "Fruta da época", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-gomas", nome: "Gomas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-muffins", nome: "Muffins", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
-    // ─── Extras à diversão BasyLandy ────────────────────────────
-    { id: "extra-diversao-brinde", nome: "Brinde", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-lanche-nuggets", nome: "Nuggets", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pipocas", nome: "Pipocas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    { id: "extra-lanche-pizzas", nome: "Pizzas", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
+    // ─── Bolos (5) ─────────────────────────────────────────────
+    { id: "extra-bolo-1kg-hostia", nome: "Bolo 1KG (Hóstia personalizada)", precoUnitario: 18.0, descricao: "Bolo 1kg com hóstia personalizada.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-1kg-simples", nome: "Bolo 1kg (Simples)", precoUnitario: 15.0, descricao: "Bolo 1kg simples.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-2kg-hostia", nome: "Bolo 2KG (hóstia personalizada)", precoUnitario: 33.0, descricao: "Bolo 2kg com hóstia personalizada.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-2kg-simples", nome: "Bolo 2KGS (Simples)", precoUnitario: 27.0, descricao: "Bolo 2kg simples.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
+    { id: "extra-bolo-artistico", nome: "Bolo Artístico", precoUnitario: 50.0, descricao: "Bolo artístico personalizado.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: true },
+    // ─── Extras à diversão (7) ─────────────────────────────────
+    { id: "extra-diversao-brinde-1", nome: "Brinde 1", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-brinde-2", nome: "Brinde 2", precoUnitario: 2.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
+    { id: "extra-diversao-convites", nome: "Convites Personalizados", precoUnitario: 15.0, descricao: "Pacote de convites personalizados. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
     { id: "extra-diversao-boloes", nome: "Modelagem de Balões", precoUnitario: 1.0, descricao: "Modelagem de balões por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
-    { id: "extra-diversao-convites", nome: "Convites Personalizados", precoUnitario: 15.0, descricao: "Pacote de 30 convites personalizados. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: true },
+    { id: "extra-diversao-pinturas", nome: "Pinturas faciais", precoUnitario: 60.0, descricao: "Pinturas faciais. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
     { id: "extra-diversao-prol1h", nome: "Prolongamento +1h", precoUnitario: 5.0, descricao: "Prolongamento de 1 hora por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
     { id: "extra-diversao-prol30m", nome: "Prolongamento +30min", precoUnitario: 3.0, descricao: "Prolongamento de 30 minutos por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
-    // ─── Bolos BasyLandy ────────────────────────────────────────
-    { id: "extra-bolo-1kg", nome: "Bolo 1KG", precoUnitario: 17.5, descricao: "Bolo de aniversário de 1kg.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
-    { id: "extra-bolo-2kg", nome: "Bolo 2KG (hóstia incluída)", precoUnitario: 30.0, descricao: "Bolo de aniversário de 2kg com hóstia incluída.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
-    { id: "extra-bolo-artistico", nome: "Bolo Artístico", precoUnitario: 50.0, descricao: "Bolo artístico personalizado.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: true },
   ];
 
   for (const extra of extras) {
@@ -174,24 +185,27 @@ async function seedExtras() {
     });
   }
 
-  // Cobrança por pessoa (idempotente)
+  // Cobrança por pessoa (por criança) - idempotente
   await prisma.extra.updateMany({
-    where: { id: { in: ["extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-prol1h", "extra-diversao-prol30m"] } },
+    where: {
+      id: {
+        in: [
+          "extra-lanche-bolachas", "extra-lanche-cenoura", "extra-lanche-donuts",
+          "extra-lanche-fruta", "extra-lanche-gomas", "extra-lanche-muffins",
+          "extra-lanche-nuggets", "extra-lanche-pipocas", "extra-lanche-pizzas",
+          "extra-diversao-brinde-1", "extra-diversao-brinde-2", "extra-diversao-boloes",
+          "extra-diversao-prol1h", "extra-diversao-prol30m",
+        ],
+      },
+    },
     data: { baseCobranca: "POR_PESSOA" },
   });
 
   // Associar todos os extras/menus BasyLandy a todos os locais
-  const basyLandyIds = [
-    "extra-menu-basy-semana", "extra-menu-basy-fimsemana", "extra-menu-almoco-jantar",
-    "extra-lanche-cenoura", "extra-lanche-babybel", "extra-lanche-pipocas",
-    "extra-lanche-pizzas", "extra-lanche-bolachas", "extra-lanche-nuggets",
-    "extra-lanche-donuts", "extra-lanche-fruta", "extra-lanche-muffins",
-    "extra-diversao-brinde", "extra-diversao-boloes", "extra-diversao-convites",
-    "extra-diversao-prol1h", "extra-diversao-prol30m",
-    "extra-bolo-1kg", "extra-bolo-2kg", "extra-bolo-artistico",
-  ];
-  const basyLandyLocais = basyLandyIds.flatMap(eid =>
-    [{ extraId: eid, localId: "local-001" }, { extraId: eid, localId: "local-002" }, { extraId: eid, localId: "local-003" }]
+  const basyLandyIds = extras.map((e) => e.id);
+  const locaisIds = ["local-001", "local-002", "local-003", "local-004", "local-005", "local-006", "local-007"];
+  const basyLandyLocais = basyLandyIds.flatMap((eid) =>
+    locaisIds.map((localId) => ({ extraId: eid, localId }))
   );
 
   for (const el of basyLandyLocais) {
@@ -213,33 +227,56 @@ async function seedConfiguracaoPreco() {
     { aniversariantes: 1, minimo: 10 },
     { aniversariantes: 2, minimo: 15 },
     { aniversariantes: 3, minimo: 20 },
+    { aniversariantes: 4, minimo: 25 },
   ];
 
+  const tarifario = {
+    precoCriancaSemana: 14.5,
+    precoCriancaFimSemana: 15.9,
+    precoEntradaHoraSemana: 10,
+    precoEntradaHoraFimSemana: 12,
+    precoEntrada1h: 6,
+    precoEntrada2h: 10,
+    precoEntradaHoraAdicional: 5,
+    minimosCriancasPorAniversariante: minimos,
+    precoMeias: 2.5,
+    precoExcessoFixo: 5,
+    caucaoDefault: 50,
+    precoLancheEntrada: 4.5,
+    precoAdulto: 6,
+    valorHoraMonitorDefault: 6,
+    duracaoDefaultFestaMin: 135,
+    duracaoExcessoBlocoMin: 30,
+  };
+
   const existing = await prisma.configuracaoPreco.findFirst();
-  if (!existing) {
-    await prisma.configuracaoPreco.create({
-      data: {
-        precoCriancaSemana: 14,
-        precoCriancaFimSemana: 15.9,
-        precoEntradaHoraSemana: 10,
-        precoEntradaHoraFimSemana: 12,
-        precoEntrada1h: 6,
-        precoEntrada2h: 10,
-        precoEntradaHoraAdicional: 5,
-        minimosCriancasPorAniversariante: minimos,
-        precoMeias: 2.5,
-        precoExcessoFixo: 5,
-        caucaoDefault: 40,
-        precoLancheEntrada: 4.5,
-        precoAdulto: 6,
-        valorHoraMonitorDefault: 8,
-        duracaoDefaultFestaMin: 135,
-        duracaoExcessoBlocoMin: 30,
-      },
-    });
+  if (existing) {
+    // Re-seed actualiza o tarifário para os valores oficiais BasyLandy
+    await prisma.configuracaoPreco.update({ where: { id: existing.id }, data: tarifario });
+  } else {
+    await prisma.configuracaoPreco.create({ data: tarifario });
   }
 
-  console.log("  ✓ Pricing config (preço por criança + mínimos + meias)\n");
+  console.log("  ✓ Pricing config (preço por criança + mínimos + meias + adulto)\n");
+}
+
+// ─── Monitor default ──────────────────────────────────────────
+async function seedMonitores() {
+  console.log("  Creating default monitor...");
+
+  await prisma.monitor.upsert({
+    where: { id: "monitor-default" },
+    update: {},
+    create: {
+      id: "monitor-default",
+      nome: "Monitor BasyLandy",
+      contacto: "",
+      valorHora: null, // usa ConfiguracaoPreco.valorHoraMonitorDefault
+      activo: true,
+    },
+  });
+
+  console.log("  ✓ 1 monitor default (valor/hora: usa o tarifário global)\n");
 }
 
 // ─── Exceções de Calendário (feriados PT) ─────────────────────
