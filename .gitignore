@@ -76,3 +76,6 @@ docker-compose.override.yml
 tmp/
 temp/
 plans/
+
+# Config local do Kilo (agent)
+.kilo/

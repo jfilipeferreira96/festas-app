@@ -7,10 +7,11 @@ import {
   type UpdateSlotInput,
 } from "@/lib/api/slotsHorario";
 
-export function useSlotsHorario() {
+
+export function useSlotsHorario(data?: string) {
   return useQuery({
-    queryKey: ["slots-horario"],
-    queryFn: slotsHorarioApi.list,
+    queryKey: ["slots-horario", data ?? "activos"],
+    queryFn: () => slotsHorarioApi.list(data),
   });
 }
 

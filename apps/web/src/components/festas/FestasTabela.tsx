@@ -12,6 +12,7 @@ import { useSlotsDia, useSlotsHorario } from "@/hooks/use-slots-horario";
 import FestaForm, { type FestaFormInitialValues } from "./form/FestaForm";
 import { resumoLedger } from "@/lib/pagamento-ledger";
 import type { FestaComIntervalo } from "@/lib/cores";
+import { textoPlanoDia } from "@/lib/api/slotsHorario";
 import FestaDetailModal from "./FestaDetailModal";
 import PagamentoModal from "./PagamentoModal";
 import HistoricoModal from "./HistoricoModal";
@@ -314,6 +315,12 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             {tab === "amanha" && (
               <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-full">
                 Amanhã
+              </span>
+            )}
+            {/* Plano do dia: grelha de semana vs fim-de-semana */}
+            {diaUnico && textoPlanoDia(slotsDia?.plano) && (
+              <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-1 rounded-full">
+                {textoPlanoDia(slotsDia?.plano)}
               </span>
             )}
 

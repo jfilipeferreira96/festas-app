@@ -1,11 +1,34 @@
 import prisma from "@festas/db";
 import type { CriarSlotHorarioDTO } from "@saas/shared-types";
 import { reservaService } from "./reserva.service";
+import { excecaoCalendarioService } from "./excecaoCalendario.service";
 
 /** Converte "HH:MM" para minutos desde a meia-noite */
 function toMinutes(hora: string): number {
   const [h, m] = hora.split(":").map(Number);
   return (h || 0) * 60 + (m || 0);
+}
+
+/** Converte minutos para "HH:MM" */
+function minutesParaHora(total: number): string {
+  const h = Math.floor((total % 1440) / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+async function eFimDeSemanaOuFeriado(data: string | Date): Promise<boolean> {
+  const d = typeof data === "string" ? new Date(`${data}T00:00:00`) : data;
+  if (d.getDay() === 0 || d.getDay() === 6) return true;
+  try {
+    return await excecaoCalendarioService.isFeriado(d);
+  } catch {
+    return false;
+  }
+}
+
+/** Um slot aplica-se a um dia quando é "todos os dias" ou quando o tipo coincide. */
+function slotAplicaAoDia(fimDeSemana: boolean | null | undefined, diaFds: boolean): boolean {
+  return fimDeSemana === null || fimDeSemana === undefined || fimDeSemana === diaFds;
 }
 
 /** Verifica se dois intervalos [ini1,fim1) e [ini2,fim2) se sobrepõem */
@@ -42,11 +65,22 @@ export interface SlotDiaItem {
 // já fazem parte da base).
 export interface FestaSemSlotItem extends SlotDiaFesta {}
 
+export type TipoDia = "SEMANA" | "FIM_DE_SEMANA";
+
+/** Plano do dia (grelha aplicável) para badges e capacidade do dia. */
+export interface PlanoDia {
+  tipoDia: TipoDia;
+  totalSlots: number;
+  inicio: string | null; // HH:MM do primeiro slot
+  fim: string | null; // HH:MM a que acaba o último slot
+}
+
 export interface SlotsDiaResult {
   data: string;
   slots: SlotDiaItem[];
   festasSemSlot: FestaSemSlotItem[];
   coresUsadas: string[];
+  plano: PlanoDia;
 }
 
 // Mapeia o resultado do Prisma para o tipo partilhado SlotHorario,
@@ -62,9 +96,18 @@ function mapSlot<T extends { salaLanche?: { nome: string } | null }>(
 }
 
 export const slotHorarioService = {
-  async list() {
+  /**
+   * Slots activos. Com `data`, devolve apenas os que se aplicam a esse dia
+   * (grelha de fim-de-semana/feriado vs grelha de semana; null = todos os dias).
+   */
+  async list(opts?: { data?: string }) {
+    const where: Record<string, unknown> = { activo: true };
+    if (opts?.data) {
+      const diaFds = await eFimDeSemanaOuFeriado(opts.data);
+      where.OR = [{ fimDeSemana: null }, { fimDeSemana: diaFds }];
+    }
     const slots = await prisma.slotHorario.findMany({
-      where: { activo: true },
+      where,
       orderBy: { horaInicio: "asc" },
       include: { salaLanche: true },
     });
@@ -85,7 +128,12 @@ export const slotHorarioService = {
    * Inclui também festas com horário custom (que não correspondem a nenhum slot).
    */
   async getSlotsDia(data: string): Promise<SlotsDiaResult> {
-    const slots = await this.list();
+    const diaFds = await eFimDeSemanaOuFeriado(data);
+    // Apenas a grelha aplicável ao tipo de dia (nunca misturar semana ↔ FDS:
+    // 17:15/17:45 existem nas duas grelhas).
+    const todosSlots = await this.list();
+    const slots = todosSlots.filter((s) => slotAplicaAoDia(s.fimDeSemana, diaFds));
+
     const result = await reservaService.list({ data, pageSize: 100 });
     // Apenas festas não canceladas para a vista de slots
     const festasAtivas = result.items.filter((f) => f.estado !== "CANCELADA");
@@ -184,11 +232,23 @@ export const slotHorarioService = {
         horario: f.horario,
         duracaoMinutos: f.duracaoMinutos,
       }));
+    // Plano do dia (para badges "Plano de semana / fim-de-semana")
+    const ordenados = [...slots].sort((a, b) => toMinutes(a.horaInicio) - toMinutes(b.horaInicio));
+    const primeiro = ordenados[0];
+    const ultimo = ordenados[ordenados.length - 1];
+    const plano: PlanoDia = {
+      tipoDia: diaFds ? "FIM_DE_SEMANA" : "SEMANA",
+      totalSlots: slots.length,
+      inicio: primeiro?.horaInicio ?? null,
+      fim: ultimo ? minutesParaHora(toMinutes(ultimo.horaInicio) + ultimo.duracaoMin) : null,
+    };
+
     return {
       data,
       slots: slotsComFestas,
       festasSemSlot,
       coresUsadas: Array.from(coresUsadas),
+      plano,
     };
   },
 
@@ -211,6 +271,7 @@ export const slotHorarioService = {
         duracaoMin: data.duracaoMin ?? 135,
         activo: data.activo ?? true,
         ordem,
+        fimDeSemana: data.fimDeSemana ?? null,
         corDefault: data.corDefault ?? null,
         horaLancheDefault: data.horaLancheDefault ?? null,
         salaLancheId: data.salaLancheId ?? null,
@@ -228,6 +289,7 @@ export const slotHorarioService = {
         ...(data.duracaoMin !== undefined && { duracaoMin: data.duracaoMin }),
         ...(data.activo !== undefined && { activo: data.activo }),
         ...(data.ordem !== undefined && { ordem: data.ordem }),
+        ...(data.fimDeSemana !== undefined && { fimDeSemana: data.fimDeSemana }),
         ...(data.corDefault !== undefined && { corDefault: data.corDefault }),
         ...(data.horaLancheDefault !== undefined && { horaLancheDefault: data.horaLancheDefault }),
         ...(data.salaLancheId !== undefined && { salaLancheId: data.salaLancheId }),

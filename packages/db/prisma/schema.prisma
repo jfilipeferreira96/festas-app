@@ -742,6 +742,9 @@ model SlotHorario {
   duracaoMin        Int      // default 135 (2h15m)
   activo            Boolean  @default(true)
   ordem             Int      @default(0)
+  // ── Aplicabilidade por tipo de dia ──
+  // null = todos os dias · true = só fim-de-semana/feriados · false = só dias de semana
+  fimDeSemana       Boolean?
   // ── Defaults aplicados ao criar uma festa neste slot ──
   corDefault        String?  // Cor sugerida para a festa (paleta FESTA_COLORS em @saas/shared-defaults)
   horaLancheDefault String?  // HH:MM - hora sugerida do lanche

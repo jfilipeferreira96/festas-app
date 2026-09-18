@@ -19,6 +19,8 @@ interface AgendamentoSectionProps {
   isAdmin: boolean;
   onSelectSlot: (horaInicio: string) => void;
   dataInicial: string;
+  /** Plano do dia (semana vs fim-de-semana) para o chip de capacidade. */
+  planoTexto: string | null;
 }
 
 export default function AgendamentoSection({
@@ -30,6 +32,7 @@ export default function AgendamentoSection({
   isAdmin,
   onSelectSlot,
   dataInicial,
+  planoTexto,
 }: AgendamentoSectionProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext<FestaFormData>();
   const data = watch("data");
@@ -73,6 +76,11 @@ export default function AgendamentoSection({
           )}
           {errors.horario && !horarioCustom && (
             <p className="mt-1 text-xs text-error-500">{errors.horario.message}</p>
+          )}
+          {!horarioCustom && planoTexto && (
+            <p className="mt-1 text-[11px] font-medium text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded inline-block">
+              {planoTexto}
+            </p>
           )}
         </div>
         {horarioCustom && (

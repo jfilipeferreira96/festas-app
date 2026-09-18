@@ -17,7 +17,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const all = searchParams.get("all") === "true";
-    const slots = all ? await slotHorarioService.listAll() : await slotHorarioService.list();
+    const data = searchParams.get("data") ?? undefined;
+    const slots = all
+      ? await slotHorarioService.listAll()
+      : await slotHorarioService.list(data ? { data } : undefined);
     return NextResponse.json(slots);
   } catch (error) {
     return handleError(error);

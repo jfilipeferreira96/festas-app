@@ -317,28 +317,45 @@ const COR = {
   CINZENTA: corDaPaleta("Cinzento"),
 } as const;
 
-// ─── Grelha diária BaseLandia (plano diário de aniversários) ────
-// 15 slots/dia (6 manhã + 9 tarde), festas de 2h15m, lanche = entrada+1h30
-// em salas alternadas, cores em rotação de 7 (sem coexistência no parque).
-const GRELHA_SLOTS = [
-  { horaInicio: "09:15", horaLanche: "10:45", salaLancheId: "sala-lanche-1", cor: COR.AZUL }, // 1  Azul
-  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE }, // 2  Verde
-  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA }, // 3  Amarela
-  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: COR.LARANJA }, // 4  Laranja
-  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: COR.ROSA }, // 5  Rosa
-  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA }, // 6  Turquesa
-  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: COR.ROXA }, // 7  Roxa
-  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: COR.AZUL }, // 8  Azul
-  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: COR.VERDE }, // 9  Verde
-  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: COR.AMARELA }, // 10 Amarela
-  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: COR.LARANJA }, // 11 Laranja
-  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: COR.ROSA }, // 12 Rosa
-  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.TURQUESA }, // 13 Turquesa
-  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: COR.ROXA }, // 14 Roxa
-  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: COR.AZUL }, // 15 Azul
-] as const;
+// ─── Grelhas por tipo de dia (plano diário BaseLandia) ─────────
+// FDS (15 slots): 6 manhã 09h15-10h45 + 9 tarde 14h00-17h45, lanche = entrada+1h30
+//   (excepção oficial: slot 1 lanche às 10:30, 30 min mais cedo).
+// Semana (6 slots): 15h30-18h00, lanche = entrada+1h, brincar final 45 min.
+// Salas alternadas 1/2; cores em rotação (sem coexistência no parque);
+// 17:15 e 17:45 existem nas DUAS grelhas — filtrar sempre por tipo de dia.
+const GRELHA_SLOTS: {
+  horaInicio: string;
+  horaLanche: string;
+  salaLancheId: string;
+  cor: string;
+  fds: boolean;
+}[] = [
+  // ── Fim-de-semana (15) ──
+  { horaInicio: "09:15", horaLanche: "10:30", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: true }, // 1  Azul (lanche 30 min mais cedo - excepção oficial)
+  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: true }, // 2  Verde
+  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: true }, // 3  Amarela
+  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: COR.LARANJA, fds: true }, // 4  Laranja
+  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: COR.ROSA, fds: true }, // 5  Rosa
+  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA, fds: true }, // 6  Turquesa
+  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: COR.ROXA, fds: true }, // 7  Roxa
+  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: COR.AZUL, fds: true }, // 8  Azul
+  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: COR.VERDE, fds: true }, // 9  Verde
+  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: COR.AMARELA, fds: true }, // 10 Amarela
+  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: COR.LARANJA, fds: true }, // 11 Laranja
+  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: COR.ROSA, fds: true }, // 12 Rosa
+  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.TURQUESA, fds: true }, // 13 Turquesa
+  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: COR.ROXA, fds: true }, // 14 Roxa
+  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: true }, // 15 Azul
+  // ── Semana (6) — lanche = entrada+1h, salas alternadas ──
+  { horaInicio: "15:30", horaLanche: "16:30", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: false }, // S1 Azul
+  { horaInicio: "16:00", horaLanche: "17:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: false }, // S2 Verde
+  { horaInicio: "17:15", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: false }, // S3 Amarela
+  { horaInicio: "17:30", horaLanche: "18:30", salaLancheId: "sala-lanche-2", cor: COR.LARANJA, fds: false }, // S4 Laranja
+  { horaInicio: "17:45", horaLanche: "18:45", salaLancheId: "sala-lanche-1", cor: COR.ROSA, fds: false }, // S5 Rosa
+  { horaInicio: "18:00", horaLanche: "19:00", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA, fds: false }, // S6 Turquesa
+];
 
-// ─── Slots Horários (grelha diária 15 slots, 2h15m + defaults cor/lanche/sala) ──
+// ─── Slots Horários (grelhas FDS 15 + semana 6, 2h15m + defaults cor/lanche/sala) ──
 async function seedSlotsHorario() {
   console.log("  Creating time slots...");
 
@@ -347,12 +364,14 @@ async function seedSlotsHorario() {
       horaInicio: s.horaInicio,
       duracaoMin: 135,
       ordem: i + 1,
+      fimDeSemana: s.fds,
       corDefault: s.cor,
       horaLancheDefault: s.horaLanche,
       salaLancheId: s.salaLancheId,
     };
+    // 17:15/17:45 existem nas duas grelhas: match por hora + tipo de dia
     const existing = await prisma.slotHorario.findFirst({
-      where: { horaInicio: s.horaInicio },
+      where: { horaInicio: s.horaInicio, fimDeSemana: s.fds },
     });
     if (existing) {
       await prisma.slotHorario.update({
@@ -364,19 +383,31 @@ async function seedSlotsHorario() {
     }
   }
 
-  // Slots antigos fora da grelha (ex.: 10:00/16:30/18:30) → inactivos.
+  // Slots fora de AMBAS as grelhas (horas antigas ou sem aplicabilidade) → inactivos.
   // Não apagar: reservas históricas podem apontar a essas horas.
-  const horasGrelha = GRELHA_SLOTS.map((s) => s.horaInicio);
+  const fdsHoras = GRELHA_SLOTS.filter((s) => s.fds).map((s) => s.horaInicio);
+  const semanaHoras = GRELHA_SLOTS.filter((s) => !s.fds).map((s) => s.horaInicio);
   const foraDaGrelha = await prisma.slotHorario.findMany({
-    where: { horaInicio: { notIn: [...horasGrelha] }, activo: true },
+    where: {
+      activo: true,
+      NOT: {
+        OR: [
+          { horaInicio: { in: fdsHoras }, fimDeSemana: true },
+          { horaInicio: { in: semanaHoras }, fimDeSemana: false },
+        ],
+      },
+    },
   });
   for (const s of foraDaGrelha) {
     await prisma.slotHorario.update({ where: { id: s.id }, data: { activo: false } });
   }
 
-  console.log(`  ✓ ${GRELHA_SLOTS.length} slots horários (grelha diária 2h15m + defaults cor/lanche/sala)`);
+  const fdsCount = GRELHA_SLOTS.filter((s) => s.fds).length;
+  console.log(
+    `  ✓ ${GRELHA_SLOTS.length} slots horários (FDS: ${fdsCount} · semana: ${GRELHA_SLOTS.length - fdsCount})`
+  );
   if (foraDaGrelha.length > 0) {
-    console.log(`  ✓ ${foraDaGrelha.length} slots antigos desactivados (fora da grelha)\n`);
+    console.log(`  ✓ ${foraDaGrelha.length} slots antigos desactivados (fora das grelhas)\n`);
   } else {
     console.log("");
   }

@@ -179,6 +179,160 @@ describe("SlotHorario Service", () => {
     });
   });
 
+  // ── Grelhas por tipo de dia (semana vs FDS) ─────────────────────
+  describe("Grelhas por tipo de dia (semana vs FDS)", () => {
+    const fdsSlotRef = { current: "" };
+    const semanaSlotRef = { current: "" };
+
+    /** Próximo dia-de-semana pedido (diaSemana: 0=dom..6=sáb), como "YYYY-MM-DD" local. */
+    function proximoDia(diaSemana: number): string {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      let delta = (diaSemana - d.getDay() + 7) % 7;
+      if (delta === 0) delta = 7;
+      d.setDate(d.getDate() + delta);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${dd}`;
+    }
+
+    /** Avança 7 dias numa data "YYYY-MM-DD". */
+    function avanca7(dataStr: string): string {
+      const d = new Date(`${dataStr}T00:00:00`);
+      d.setDate(d.getDate() + 7);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${dd}`;
+    }
+
+    // Feriados fixos recorrentes do seed (mês-dia) - a quarta de teste não pode calhar neles
+    const FERIADOS_FIXOS = new Set(["01-01", "05-01", "06-10", "08-15", "12-08", "12-25"]);
+
+    /** Próxima quarta-feira que não seja feriado fixo (garante grelha de semana). */
+    function proximaQuartaSemFeriado(): string {
+      let dataStr = proximoDia(3);
+      while (FERIADOS_FIXOS.has(dataStr.slice(5))) dataStr = avanca7(dataStr);
+      return dataStr;
+    }
+
+    beforeAll(async () => {
+      // Mesma hora "12:00" nas DUAS grelhas (caso real: 17:15/17:45 repetem-se)
+      const fds = await slotHorarioService.create({
+        horaInicio: "12:00",
+        duracaoMin: 60,
+        fimDeSemana: true,
+        corDefault: "#0095C8",
+        horaLancheDefault: "13:00",
+      });
+      fdsSlotRef.current = fds.id;
+      const semana = await slotHorarioService.create({
+        horaInicio: "12:00",
+        duracaoMin: 60,
+        fimDeSemana: false,
+        corDefault: "#5CBE4A",
+        horaLancheDefault: "13:00",
+      });
+      semanaSlotRef.current = semana.id;
+    }, 60000);
+
+    afterAll(async () => {
+      await testPrisma.slotHorario.deleteMany({
+        where: { id: { in: [fdsSlotRef.current, semanaSlotRef.current] } },
+      });
+      await testPrisma.excecaoCalendario.deleteMany({
+        where: { nome: "Feriado Teste Grelha" },
+      });
+    });
+
+    it("sábado lista a grelha FDS (12:00 FDS) e não a de semana", async () => {
+      const sabado = proximoDia(6);
+      const lista = await slotHorarioService.list({ data: sabado });
+      const doze = lista.filter((s: { horaInicio: string }) => s.horaInicio === "12:00");
+      expect(doze).toHaveLength(1);
+      expect(doze[0]!.fimDeSemana).toBe(true);
+    });
+
+    it("quarta-feira lista a grelha de semana (12:00 semana) e não a FDS", async () => {
+      const quarta = proximaQuartaSemFeriado();
+      const lista = await slotHorarioService.list({ data: quarta });
+      const doze = lista.filter((s: { horaInicio: string }) => s.horaInicio === "12:00");
+      expect(doze).toHaveLength(1);
+      expect(doze[0]!.fimDeSemana).toBe(false);
+    });
+
+    it("slots 'todos os dias' (null) aparecem em ambos os tipos de dia", async () => {
+      // Slots 10:00/14:00 do seedTestData têm fimDeSemana null
+      const fds = await slotHorarioService.list({ data: proximoDia(6) });
+      const semana = await slotHorarioService.list({ data: proximaQuartaSemFeriado() });
+      expect(fds.some((s: { horaInicio: string }) => s.horaInicio === "10:00")).toBe(true);
+      expect(semana.some((s: { horaInicio: string }) => s.horaInicio === "10:00")).toBe(true);
+    });
+
+    it("getSlotsDia devolve plano/tipoDia e só a grelha do dia", async () => {
+      const sabado = proximoDia(6);
+      const dia = await slotHorarioService.getSlotsDia(sabado);
+      expect(dia.plano.tipoDia).toBe("FIM_DE_SEMANA");
+      expect(dia.plano.totalSlots).toBeGreaterThan(0);
+      expect(dia.plano.inicio).toBeTruthy();
+      expect(dia.plano.fim).toBeTruthy();
+      const doze = dia.slots.filter((s) => s.horaInicio === "12:00");
+      expect(doze).toHaveLength(1);
+    });
+
+    it("getSlotsDia numa quarta-feira devolve plano de semana", async () => {
+      const dia = await slotHorarioService.getSlotsDia(proximaQuartaSemFeriado());
+      expect(dia.plano.tipoDia).toBe("SEMANA");
+      const doze = dia.slots.filter((s) => s.horaInicio === "12:00");
+      expect(doze).toHaveLength(1);
+    });
+
+    it("feriado num dia de semana usa a grelha FDS", async () => {
+      // Dia de semana +73 dias (longe dos feriados demo do seed: +30/+45)
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() + 73);
+      while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const feriadoStr = `${y}-${m}-${dd}`;
+      const normalizada = new Date(`${feriadoStr}T00:00:00.000Z`);
+
+      await testPrisma.excecaoCalendario.upsert({
+        where: { data: normalizada },
+        update: { tipo: "FERIADO", nome: "Feriado Teste Grelha" },
+        create: {
+          data: normalizada,
+          tipo: "FERIADO",
+          nome: "Feriado Teste Grelha",
+          afectaPreco: true,
+          bloqueiaReserva: false,
+          recorrenciaAnual: false,
+        },
+      });
+
+      try {
+        const dia = await slotHorarioService.getSlotsDia(feriadoStr);
+        expect(dia.plano.tipoDia).toBe("FIM_DE_SEMANA");
+        const doze = dia.slots.filter((s) => s.horaInicio === "12:00");
+        expect(doze).toHaveLength(1);
+      } finally {
+        await testPrisma.excecaoCalendario.deleteMany({
+          where: { nome: "Feriado Teste Grelha" },
+        });
+      }
+    });
+
+    it("create() persiste fimDeSemana e getById devolve o campo", async () => {
+      const slot = await slotHorarioService.getById(fdsSlotRef.current);
+      expect(slot.fimDeSemana).toBe(true);
+      const semana = await slotHorarioService.getById(semanaSlotRef.current);
+      expect(semana.fimDeSemana).toBe(false);
+    });
+  });
+
   // ── Ligação slots ↔ festas (getSlotsDia) ────────────────────────
   describe("getSlotsDia() - ligação slots ↔ festas", () => {
     const DIA_TESTE = (() => {

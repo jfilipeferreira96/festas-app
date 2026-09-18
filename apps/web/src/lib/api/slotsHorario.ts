@@ -36,16 +36,36 @@ export interface SlotDia {
   salaLancheNome?: string | null;
 }
 
+/** Plano do dia (grelha aplicável) — espelha PlanoDia do serviço. */
+export interface PlanoDia {
+  tipoDia: "SEMANA" | "FIM_DE_SEMANA";
+  totalSlots: number;
+  inicio: string | null;
+  fim: string | null;
+}
+
+/** Texto curto do plano do dia para badges (null quando sem slots). */
+export function textoPlanoDia(plano: PlanoDia | null | undefined): string | null {
+  if (!plano || plano.totalSlots === 0) return null;
+  const nome = plano.tipoDia === "SEMANA" ? "Plano de semana" : "Plano de fim-de-semana";
+  const janela = plano.inicio && plano.fim ? ` · ${plano.inicio}–${plano.fim}` : "";
+  return `${nome} · ${plano.totalSlots} festas/dia${janela}`;
+}
+
 /** Resposta do endpoint /api/slots-horario/dia */
 export interface SlotsDiaResponse {
   data: string;
   slots: SlotDia[];
   festasSemSlot: FestaSemSlot[];
   coresUsadas: string[];
+  plano: PlanoDia;
 }
 
 export const slotsHorarioApi = {
-  list: () => api<SlotHorario[]>("/api/slots-horario"),
+  list: (data?: string) =>
+    api<SlotHorario[]>(
+      `/api/slots-horario${data ? `?data=${encodeURIComponent(data)}` : ""}`
+    ),
   listAll: () => api<SlotHorario[]>("/api/slots-horario?all=true"),
   getDia: (data: string) =>
     api<SlotsDiaResponse>(`/api/slots-horario/dia?data=${encodeURIComponent(data)}`),

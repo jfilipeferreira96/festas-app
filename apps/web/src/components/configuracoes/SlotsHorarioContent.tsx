@@ -20,11 +20,15 @@ import type { SlotHorario } from "@saas/shared-types";
 import type { StatusType } from "@/components/ui";
 
 // --- Zod Schema ---
+const APLICABILIDADES = ["TODOS", "FDS", "SEMANA"] as const;
+type Aplicabilidade = (typeof APLICABILIDADES)[number];
+
 const slotSchema = z
   .object({
     horaInicio: z.string().min(1, "Hora de entrada é obrigatória").regex(/^\d{2}:\d{2}$/, "Formato HH:MM"),
     horaFim: z.string().min(1, "Hora de saída é obrigatória").regex(/^\d{2}:\d{2}$/, "Formato HH:MM"),
     activo: z.boolean(),
+    aplicabilidade: z.enum(APLICABILIDADES),
     corDefault: z.string().nullable().optional(),
     horaLancheDefault: z.string().nullable().optional(),
     salaLancheId: z.string().nullable().optional(),
@@ -39,6 +43,25 @@ const slotSchema = z
   );
 
 type SlotFormData = z.infer<typeof slotSchema>;
+
+/** fimDeSemana (null/true/false) ↔ enum do form. */
+function aplicabilidadeDeSlot(fimDeSemana: boolean | null | undefined): Aplicabilidade {
+  if (fimDeSemana === true) return "FDS";
+  if (fimDeSemana === false) return "SEMANA";
+  return "TODOS";
+}
+
+const APLICABILIDADE_OPTIONS: { value: Aplicabilidade; label: string }[] = [
+  { value: "TODOS", label: "Todos os dias" },
+  { value: "FDS", label: "Só fim-de-semana e feriados" },
+  { value: "SEMANA", label: "Só dias de semana" },
+];
+
+function aplicabilidadeBadge(fimDeSemana: boolean | null | undefined): { label: string; className: string } {
+  if (fimDeSemana === true) return { label: "Fim-de-semana", className: "bg-accent-purple-100 text-accent-purple-600" };
+  if (fimDeSemana === false) return { label: "Semana", className: "bg-brand-50 text-brand-600" };
+  return { label: "Todos os dias", className: "bg-gray-100 text-text-secondary" };
+}
 
 function formatDuracao(min: number): string {
   const h = Math.floor(min / 60);
@@ -88,6 +111,7 @@ export default function SlotsHorarioContent() {
      horaInicio: "15:00",
      horaFim: "17:15",
      activo: true,
+     aplicabilidade: "TODOS",
      corDefault: null,
      horaLancheDefault: null,
      salaLancheId: null,
@@ -170,6 +194,19 @@ export default function SlotsHorarioContent() {
         ),
       },
       {
+        key: "fimDeSemana",
+        label: "Aplicação",
+        sortable: false,
+        render: (_value, s) => {
+          const b = aplicabilidadeBadge(s.fimDeSemana);
+          return (
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${b.className}`}>
+              {b.label}
+            </span>
+          );
+        },
+      },
+      {
         key: "activo",
         label: "Estado",
         sortable: true,
@@ -189,6 +226,7 @@ export default function SlotsHorarioContent() {
       horaInicio: "15:00",
       horaFim: "17:15",
       activo: true,
+      aplicabilidade: "TODOS",
       corDefault: null,
       horaLancheDefault: null,
       salaLancheId: null,
@@ -203,6 +241,7 @@ export default function SlotsHorarioContent() {
         horaInicio: slot.horaInicio,
         horaFim: addMinutosToTime(slot.horaInicio, slot.duracaoMin),
         activo: slot.activo,
+        aplicabilidade: aplicabilidadeDeSlot(slot.fimDeSemana),
         corDefault: slot.corDefault ?? null,
         horaLancheDefault: slot.horaLancheDefault ?? null,
         salaLancheId: slot.salaLancheId ?? null,
@@ -216,11 +255,13 @@ export default function SlotsHorarioContent() {
     async (data: SlotFormData) => {
       // duracaoMin é derivado da diferença entre hora de saída e entrada
       const duracaoMin = timeDiffMin(data.horaInicio, data.horaFim);
-      const { horaFim: _horaFim, ...rest } = data;
+      const { horaFim: _horaFim, aplicabilidade: _aplicabilidade, ...rest } = data;
       void _horaFim;
+      const fimDeSemana = _aplicabilidade === "FDS" ? true : _aplicabilidade === "SEMANA" ? false : null;
       const payload = {
         ...rest,
         duracaoMin,
+        fimDeSemana,
         corDefault: data.corDefault || undefined,
         horaLancheDefault: data.horaLancheDefault || undefined,
         salaLancheId: data.salaLancheId || undefined,
@@ -327,6 +368,22 @@ export default function SlotsHorarioContent() {
                   </p>
                 )}
               </div>
+              {/* ── Aplicabilidade por tipo de dia ── */}
+              <div className="mb-1">
+                <label className="block text-sm font-medium text-text-primary mb-1.5">
+                  Aplicação
+                </label>
+                <Select
+                  options={APLICABILIDADE_OPTIONS}
+                  value={watch("aplicabilidade")}
+                  onChange={(val) => setValue("aplicabilidade", (val as Aplicabilidade) || "TODOS")}
+                />
+                <p className="text-xs text-text-muted mt-1">
+                  Grelha de semana (6 festas/dia) e de fim-de-semana (15 festas/dia)
+                  aplicam-se automaticamente consoante a data da festa.
+                </p>
+              </div>
+
               {/* ── Defaults que auto-preenchem o formulário da festa ── */}
               <div className="border-t border-border pt-4 mt-2">
                 <p className="text-sm font-semibold text-text-primary mb-3">

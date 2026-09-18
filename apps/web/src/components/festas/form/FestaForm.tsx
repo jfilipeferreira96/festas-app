@@ -17,6 +17,7 @@ import PagamentoModal from "@/components/festas/PagamentoModal";
 import { mensagensDeErro, scrollToFirstFormError } from "@/components/form/form-utils";
 import { addMinutosToTime, isFimDeSemana } from "@/lib/format";
 import { coresEmConflito, corDisponivel, type FestaComIntervalo } from "@/lib/cores";
+import { textoPlanoDia } from "@/lib/api/slotsHorario";
 import type { Cliente } from "@/lib/api/clientes";
 import type { Reserva } from "@/lib/api/reservas";
 import {
@@ -93,7 +94,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     [menuExtras]
   );
 
-  const { data: slotsHorario } = useSlotsHorario();
+  const { data: slotsHorario } = useSlotsHorario(watchedData || undefined);
   const { data: slotsDia } = useSlotsDia(watchedData);
 
   // Aviso não-bloqueante: sobreposição temporal com outra festa no mesmo
@@ -332,6 +333,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               isAdmin={isGlobalAdmin}
               onSelectSlot={handleSelectSlot}
               dataInicial={defaultValues.data}
+              planoTexto={textoPlanoDia(slotsDia?.plano)}
             />
             {(disponibilidade?.conflitos?.length ?? 0) > 0 && (
               <div className="flex items-start gap-2 rounded-lg bg-accent-orange-50 border border-accent-orange-200 px-3 py-2 text-xs text-accent-orange-800">
