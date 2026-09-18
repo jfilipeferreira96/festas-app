@@ -86,7 +86,7 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
         <PagamentoCard titulo="Pagamento & Caução">
           {/* Total a pagar (editável, pré-preenchido com a estimativa) */}
           <div>
-            <FieldLabel required>Total a pagar (€)</FieldLabel>
+            <FieldLabel>Total a pagar (€)</FieldLabel>
             <div className="flex items-center gap-2">
               <InputField
                 type="number"

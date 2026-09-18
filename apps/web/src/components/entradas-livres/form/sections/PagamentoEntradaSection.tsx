@@ -94,7 +94,7 @@ export default function PagamentoEntradaSection({
             <>
               {/* Custo total (editável, pré-preenchido com o cálculo) */}
               <div>
-                <FieldLabel required>Total a pagar (€)</FieldLabel>
+                <FieldLabel>Total a pagar (€)</FieldLabel>
                 <div className="flex items-center gap-2">
                   <InputField
                     type="number"
@@ -171,7 +171,7 @@ export default function PagamentoEntradaSection({
       {(!isEdit || !registarPagamento) && (
         <BreakdownEntrada
           custoComponentes={custoComponentes}
-          custoFinal={custo}
+          custoFinal={isEdit ? devido : custo}
           precoMeias={precoMeias}
           meias={meias}
           duracaoLabel={duracaoLabel}

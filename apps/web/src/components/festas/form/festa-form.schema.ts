@@ -56,7 +56,10 @@ export const festaFormSchema = z.object({
   // Inputs numéricos vazios chegam como NaN (valueAsNumber) → normalizar para undefined
   boloQuantidade: numeroOpcional(0),
   numAdultos: numeroOpcional(0),
-  previsaoCriancas: z.number().min(1, "Mínimo 1 criança").max(100, "Máximo 100 crianças"),
+  previsaoCriancas: z
+    .number({ message: "Indique o nº de crianças previstas" })
+    .min(1, "Mínimo 1 criança")
+    .max(100, "Máximo 100 crianças"),
   numCriancasConfirmadas: numeroOpcional(0),
   extrasIds: z.array(z.string()),
   extrasTexto: z.record(z.string(), z.string()),
@@ -159,7 +162,9 @@ export function buildFestaDefaults(
     numAdultos: reserva?.numAdultos ?? undefined,
     numCriancasConfirmadas: reserva?.numCriancasConfirmadas ?? undefined,
     extrasIds: reserva?.extras?.map((e) => e.extra.id) ?? [],
-    extrasTexto: {},
+    extrasTexto: Object.fromEntries(
+      (reserva?.extras ?? []).map((e) => [e.extra.id, e.textoPersonalizado ?? ""])
+    ),
     extrasQuantidades: Object.fromEntries(
       (reserva?.extras ?? []).map((e) => [e.extra.id, e.quantidade ?? 1])
     ),

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui";
 import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade } from "@/hooks/use-reservas";
+import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade, useReserva } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
@@ -63,7 +63,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     resolver: zodResolver(festaFormSchema),
     defaultValues,
   });
-  const { control, handleSubmit, watch, setValue, getValues, formState: { isSubmitting } } = methods;
+  const { control, handleSubmit, watch, setValue, getValues, formState: { isSubmitting, dirtyFields } } = methods;
   const aniversariantesArray = useFieldArray({ control, name: "aniversariantes" });
   const adicionaisArray = useFieldArray({ control, name: "encarregadosAdicionais" });
 
@@ -75,8 +75,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const previsaoCriancas = watch("previsaoCriancas");
   const watchedNumAdultos = watch("numAdultos");
   const aniversariantes = watch("aniversariantes");
-  const watchedTotalAPagar = watch("totalAPagar");
-  const watchedPagamentos = watch("pagamentos");
 
   const extraItems = useMemo(
     () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo && e.subcategoria !== "Bolos"),
@@ -149,6 +147,12 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [menuWarning, setMenuWarning] = useState("");
 
+  // A modal de pagamento usa dados frescos da BD: a prop `reserva` pode estar
+  // stale (total/pagamentos ajustados na própria modal) e mostraria
+  // falta/liquidado errados - mesmo padrão do form de Entradas Livres.
+  const { data: reservaFresca } = useReserva(showPagamentoModal && reserva ? reserva.id : "");
+  const reservaParaPagamento = reservaFresca ?? reserva;
+
   useEffect(() => {
     if (!slotsHorario) return;
     const horarioVal = reserva?.horario ?? initialValues?.horario;
@@ -208,17 +212,12 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
 
   useEffect(() => {
     if (reserva && reserva.valorTotal != null) return;
+    if (dirtyFields.totalAPagar) return; // total escrito à mão - respeitar
     if (!watchedData || !configPreco) return;
     if (estimativaFesta.estimativa > 0) {
-      setValue("totalAPagar", estimativaFesta.estimativa, { shouldDirty: true });
+      setValue("totalAPagar", estimativaFesta.estimativa);
     }
-  }, [watchedData, configPreco, reserva, estimativaFesta, setValue]);
-
-  // Falta pagar derivada do ledger (total − soma dos pagamentos)
-  const faltaPagamento = useMemo(() => {
-    const soma = (watchedPagamentos ?? []).reduce((acc, p) => acc + (Number(p?.valor) || 0), 0);
-    return Math.max((watchedTotalAPagar ?? 0) - soma, 0);
-  }, [watchedTotalAPagar, watchedPagamentos]);
+  }, [watchedData, configPreco, reserva, estimativaFesta, setValue, dirtyFields.totalAPagar]);
 
   useEffect(() => {
     if (!watchedData || menuExtras.length === 0 || reserva) return;
@@ -378,8 +377,8 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
         onSelect={handleClienteSelected}
       />
 
-      {showPagamentoModal && reserva && (
-        <PagamentoModal reserva={reserva} onClose={() => setShowPagamentoModal(false)} />
+      {showPagamentoModal && reservaParaPagamento && (
+        <PagamentoModal reserva={reservaParaPagamento} onClose={() => setShowPagamentoModal(false)} />
       )}
     </div>
   );
