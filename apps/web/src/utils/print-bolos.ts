@@ -1,4 +1,4 @@
-import { BOLO_LABELS } from "@/lib/constants/bolo";
+import { BOLO_LABELS, BOLOS_NOSSOS, ehBoloNosso } from "@/lib/constants/bolo";
 import { formatDate } from "@/utils/date";
 
 // ── Tipos mínimos para a impressão (duck-typing, como print-lista.ts) ──
@@ -13,9 +13,6 @@ interface ReservaBoloInfo {
   numCriancas?: number | null;
   numCriancasConfirmadas?: number | null;
 }
-
-/** Tipos de bolo produzidos pela casa (impressão para a cozinha). */
-const BOLOS_NOSSOS = ["NOSSO_1KG", "NOSSO_2KG", "BOLO_ARTISTICO"];
 
 const ENT_AMP = String.fromCharCode(38) + "amp;";
 const ENT_LT = String.fromCharCode(38) + "lt;";
@@ -35,7 +32,7 @@ function escapeHtml(text: string): string {
  * agrupada por tipo - pronta para a cozinha/pastelaria.
  */
 export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
-  const bolos = reservas.filter((r) => r.bolo && BOLOS_NOSSOS.includes(r.bolo));
+  const bolos = reservas.filter((r) => ehBoloNosso(r.bolo));
 
   // Agrupar por tipo, mantendo a ordem definida em BOLOS_NOSSOS
   const grupos = BOLOS_NOSSOS.map((tipo) => ({

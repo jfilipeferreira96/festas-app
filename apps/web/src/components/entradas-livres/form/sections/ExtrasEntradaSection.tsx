@@ -106,8 +106,7 @@ export default function ExtrasEntradaSection({ numPessoas }: ExtrasEntradaSectio
           </div>
           {extrasIds.length > 0 && totalExtras > 0 && (
             <p className="text-xs text-text-secondary">
-              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> — soma ao custo final ({numPessoas}{" "}
-              {numPessoas === 1 ? "pessoa" : "pessoas"})
+              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span>
             </p>
           )}
         </>

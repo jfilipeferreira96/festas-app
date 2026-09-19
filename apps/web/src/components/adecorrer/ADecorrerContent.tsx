@@ -13,11 +13,7 @@ const ABAS: { value: Aba; label: string; icon: React.ReactNode }[] = [
   { value: "entradas", label: "Entradas Livres", icon: <DoorOpen className="w-4 h-4" /> },
 ];
 
-/**
- * Vista consolidada do que está a decorrer no parque (pedido do cliente,
- * 19/09/2026): festas + entradas livres, com abas Tudo | Festas | Entradas.
- * Reutiliza as vistas existentes (FestasContent / EntradasAtivasContent).
- */
+
 export default function ADecorrerContent() {
   const [aba, setAba] = useState<Aba>("tudo");
 
@@ -40,6 +36,10 @@ export default function ADecorrerContent() {
           </button>
         ))}
       </div>
+
+      <p className="mt-4 text-xs text-text-muted">
+        Vista em tempo real — atualiza automaticamente a cada 30 segundos.
+      </p>
 
       <div className="mt-6 space-y-10">
         {(aba === "tudo" || aba === "festas") && (

@@ -808,7 +808,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
       />
 
       <p className="mt-3 text-xs text-text-muted">
-        Alertas: linha a piscar, festa nos últimos 15 min de tempo restante.
+        Alertas: linha a piscar, festa nos últimos 15 min de tempo restante. · A caução paga é devolvida ao cliente
+        no final (se tudo estiver em ordem). · Estado pago = soma dos pagamentos ≥ total acordado.
       </p>
 
       {/* Form Modal */}

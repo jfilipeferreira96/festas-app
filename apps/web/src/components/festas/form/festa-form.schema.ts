@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { CreateReservaData, Reserva } from "@/lib/api/reservas";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import { calcIdade, isFimDeSemana, toISODate } from "@/lib/format";
+import { BOLOS_NOSSOS } from "@/lib/constants/bolo";
 import { DATA_NASCIMENTO_DEFAULT } from "@/components/entradas-livres/form/entrada-livre-form.schema";
 
 /** Data de nascimento por omissão - mesma fonte do form de Entradas Livres. */
@@ -29,7 +30,8 @@ const encarregadoAdicionalSchema = z.object({
 });
 
 const METODOS_PAGAMENTO = ["DINHEIRO", "MULTIBANCO", "MBWAY", "TRANSFERENCIA", "CARTAO", "OUTRO"] as const;
-const TIPOS_BOLO = ["PAIS_TRAZEM", "A_DECIDIR", "NOSSO_1KG", "NOSSO_2KG", "BOLO_ARTISTICO"] as const;
+// Lista completa de tipos: chaves fixas + bolos da casa (fonte única)
+const TIPOS_BOLO = ["PAIS_TRAZEM", "A_DECIDIR", ...BOLOS_NOSSOS] as const;
 const CAUCOES = ["NAO_PAGA", "PAGA", "PAGA_NO_DIA"] as const;
 
 /** Número opcional tolerante: "" / NaN (valueAsNumber em input vazio) → undefined. */

@@ -1,4 +1,17 @@
 /**
+ * Tipos de bolo produzidos pela casa (a encomendar/imprimir para a cozinha).
+ * Fonte única - era duplicado em ~3 ficheiros (print-bolos, BolosContent).
+ */
+export const BOLOS_NOSSOS = ["NOSSO_1KG", "NOSSO_2KG", "BOLO_ARTISTICO"] as const;
+
+export type BoloNosso = (typeof BOLOS_NOSSOS)[number];
+
+/** Type guard: o valor é um tipo de bolo da casa? */
+export function ehBoloNosso(bolo: unknown): bolo is BoloNosso {
+  return typeof bolo === "string" && (BOLOS_NOSSOS as readonly string[]).includes(bolo);
+}
+
+/**
  * Labels para o tipo de bolo - usados em FestaDetailModal e FestasTabela
  */
 export const BOLO_LABELS: Record<string, string> = {

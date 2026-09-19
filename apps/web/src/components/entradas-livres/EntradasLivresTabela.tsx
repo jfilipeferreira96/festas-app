@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Trash2, CheckCircle, XCircle, Users, Clock, Pencil, CreditCard, Wallet } from "lucide-react";
+import { Plus, Eye, Trash2, CheckCircle, XCircle, Users, Clock, Pencil, CreditCard, Wallet, Info } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -419,6 +419,12 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
           ),
         }}
       />
+
+      {/* Rodapé informativo */}
+      <div className="flex items-center gap-1.5 mt-4 text-xs text-text-muted">
+        <Info size={13} className="shrink-0" />
+        O estado de pagamento é derivado dos pagamentos registados · Talão disponível em Gerir pagamento → Talão.
+      </div>
 
       {/* Create / Edit Modal */}
       {isFormOpen && (

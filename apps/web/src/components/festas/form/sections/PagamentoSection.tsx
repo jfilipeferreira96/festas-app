@@ -105,9 +105,6 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
                 ≈ {formatEuro(estimativa?.estimativa ?? 0)}
               </span>
             </div>
-            <p className="text-[11px] text-text-muted mt-1">
-              Pré-preenchido com o cálculo — editável (valor final acordado).
-            </p>
           </div>
 
           {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
@@ -159,7 +156,7 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
                   }
                 />
                 <p className="text-[11px] text-text-muted mt-1">
-                  Sugerida da configuração de preços — editável.
+                  Sugerida — editável.
                 </p>
               </div>
               <div>

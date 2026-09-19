@@ -7,12 +7,9 @@ import LoadingState from "@/components/ui/LoadingState";
 import DatePicker from "@/components/form/date-picker";
 import { useReservas } from "@/hooks/use-reservas";
 import { imprimirBolos } from "@/utils/print-bolos";
-import { BOLO_LABELS } from "@/lib/constants/bolo";
+import { BOLO_LABELS, BOLOS_NOSSOS, ehBoloNosso } from "@/lib/constants/bolo";
 import { toISODate } from "@/lib/format";
 import type { Reserva } from "@/lib/api/reservas";
-
-/** Tipos de bolo produzidos pela casa (a encomendar) - igual ao utilitário de impressão. */
-const BOLOS_NOSSOS = ["NOSSO_1KG", "NOSSO_2KG", "BOLO_ARTISTICO"];
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("pt-PT", {
@@ -34,13 +31,13 @@ export default function BolosContent() {
   const bolos = useMemo(() => {
     const items = resultado?.items ?? [];
     return items
-      .filter((r: Reserva) => r.bolo && BOLOS_NOSSOS.includes(r.bolo))
+      .filter((r: Reserva) => ehBoloNosso(r.bolo))
       .sort((a: Reserva, b: Reserva) => (a.horario ?? "").localeCompare(b.horario ?? ""));
   }, [resultado]);
 
   const temBoloPais = useMemo(() => {
     const items = resultado?.items ?? [];
-    return items.filter((r: Reserva) => r.bolo && !BOLOS_NOSSOS.includes(r.bolo));
+    return items.filter((r: Reserva) => r.bolo && !ehBoloNosso(r.bolo));
   }, [resultado]);
 
   return (
