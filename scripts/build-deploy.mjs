@@ -840,7 +840,7 @@ if (rustEngines.length > 0) {
 // node_modules do workspace, que está ACIMA de deploy/) mas falha no cPanel
 // com "Cannot find module". Copiamos o pacote + as suas deps de produção
 // (resolvidas com o npm local, respeitando nested node_modules).
-const adapterDeps = ["mariadb", "@prisma/adapter-mariadb", "better-auth"];
+const adapterDeps = ["mariadb", "@prisma/adapter-mariadb", "better-auth", "nodemailer"];
 {
   const copyProdClosure = (roots) => {
     const done = new Set();

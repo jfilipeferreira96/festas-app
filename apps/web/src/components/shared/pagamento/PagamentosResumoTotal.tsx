@@ -78,7 +78,7 @@ export const PagamentosResumoTotal = React.memo(function PagamentosResumoTotal({
       {caucaoAtiva > 0 && (
         <Row
           label={`Caução · ${CAUCAO_LABELS[caucaoEstado]}`}
-          labelNota="conta para o total do dia — devolvível"
+          labelNota="conta para o total do dia - devolvível"
           valor={`+${formatEuro(caucaoAtiva)}`}
         />
       )}

@@ -452,7 +452,7 @@ const FilaEmailsAlert = React.memo(function FilaEmailsAlert() {
     <div className="mt-4 flex items-center gap-2 rounded-xl border border-accent-orange-200 bg-accent-orange-50 px-4 py-3">
       <MailWarning size={16} className="text-accent-orange-600 shrink-0" />
       <p className="text-sm text-accent-orange-700">
-        {porEnviar} {porEnviar === 1 ? "email por enviar" : "emails por enviar"} na fila — nova tentativa no próximo
+        {porEnviar} {porEnviar === 1 ? "email por enviar" : "emails por enviar"} na fila - nova tentativa no próximo
         carregamento.
       </p>
     </div>

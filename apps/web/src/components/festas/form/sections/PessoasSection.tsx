@@ -92,7 +92,7 @@ export default function PessoasSection({
           </div>
           {idadeAlerta && (
             <p className="text-[11px] font-medium text-accent-orange-700 mt-1">
-              Atenção: idade fora do intervalo permitido ({IDADE_MIN_CRIANCA}-{IDADE_MAX_CRIANCA} anos) — confirma a
+              Atenção: idade fora do intervalo permitido ({IDADE_MIN_CRIANCA}-{IDADE_MAX_CRIANCA} anos) - confirma a
               data de nascimento. Podes gravar mesmo assim.
             </p>
           )}

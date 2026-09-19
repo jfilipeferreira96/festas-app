@@ -1,5 +1,5 @@
 /**
- * Preview de TODOS os tipos de email da aplicação — envia uma amostra de cada
+ * Preview de TODOS os tipos de email da aplicação - envia uma amostra de cada
  * um para análise (pedido do cliente, 19/09/2026).
  *
  * Uso:
@@ -10,8 +10,8 @@
  *   [1/5] Boas-vindas (registo)
  *   [2/5] Verificação de email (registo)
  *   [3/5] Recuperação de palavra-passe
- *   [4/5] Confirmação de festa — caução PAGA
- *   [5/5] Confirmação de festa — caução POR PAGAR (com dados de pagamento)
+ *   [4/5] Confirmação de festa - caução PAGA
+ *   [5/5] Confirmação de festa - caução POR PAGAR (com dados de pagamento)
  */
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";

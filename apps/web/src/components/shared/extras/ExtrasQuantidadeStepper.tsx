@@ -56,7 +56,7 @@ export default function ExtrasQuantidadeStepper({
           ? quantidadeFixa
             ? `${formatEuro(Number(extra.precoUnitario))} × ${qtdEfetiva} ${qtdEfetiva === 1 ? "criança" : "crianças"}`
             : ocultarPessoas
-              ? `${formatEuro(Number(extra.precoUnitario))} / criança — cobrado no dia`
+              ? `${formatEuro(Number(extra.precoUnitario))} / criança - cobrado no dia`
               : `${formatEuro(Number(extra.precoUnitario))} × ${qtdEfetiva} ${qtdEfetiva === 1 ? "pessoa" : "pessoas"}`
           : `${formatEuro(Number(extra.precoUnitario))} × ${quantidade}`}
       </span>

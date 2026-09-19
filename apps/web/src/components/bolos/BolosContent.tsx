@@ -118,7 +118,7 @@ export default function BolosContent() {
       {temBoloPais.length > 0 && (
         <div className="mt-4 rounded-xl border border-border bg-surface p-4">
           <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-            Sem encomenda (pais trazem / a decidir) — {temBoloPais.length}
+            Sem encomenda (pais trazem / a decidir) - {temBoloPais.length}
           </p>
           <ul className="text-sm text-text-secondary space-y-1">
             {temBoloPais.map((r: Reserva) => (

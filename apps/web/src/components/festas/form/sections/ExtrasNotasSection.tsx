@@ -129,7 +129,7 @@ export default function ExtrasNotasSection({ extraItems, numPessoas }: ExtrasNot
           )}
           {extrasIds.length > 0 && totalExtras > 0 && (
             <p className="text-xs text-text-secondary">
-              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> — cobrados no dia pelo nº de
+              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> - cobrados no dia pelo nº de
               crianças presentes
             </p>
           )}

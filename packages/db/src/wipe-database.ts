@@ -4,11 +4,11 @@
  *
  * Porque NÃO `TRUNCATE`?
  * - `TRUNCATE` no pai falha (erro 1701) enquanto existir QUALQUER tabela filha
- *   com FK para ele — mesmo vazia — a menos que `FOREIGN_KEY_CHECKS = 0`.
+ *   com FK para ele - mesmo vazia - a menos que `FOREIGN_KEY_CHECKS = 0`.
  * - `SET FOREIGN_KEY_CHECKS` é variável de SESSÃO: com o pool do driver adapter
  *   (mariadb), o SET e os TRUNCATEs correm em ligações diferentes.
  *
- * Solução: `DELETE FROM` valida FKs por LINHAS — basta esvaziar os filhos
+ * Solução: `DELETE FROM` valida FKs por LINHAS - basta esvaziar os filhos
  * primeiro (ordem topológica), sem qualquer estado de sessão. O contador
  * `AUTO_INCREMENT` é reposto com `ALTER TABLE ... AUTO_INCREMENT = 1`.
  */

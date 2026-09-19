@@ -251,7 +251,7 @@ export default function ConcluirResumoModal({
               className="w-28 h-10 px-3 rounded-lg border border-border bg-transparent text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
             <p className="text-[11px] text-text-muted mt-1">
-              Opcional — registo do nº real de crianças na saída.
+              Opcional - registo do nº real de crianças na saída.
             </p>
           </div>
         )}

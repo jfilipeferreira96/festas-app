@@ -36,7 +36,7 @@ export interface SlotDia {
   salaLancheNome?: string | null;
 }
 
-/** Plano do dia (grelha aplicável) — espelha PlanoDia do serviço. */
+/** Plano do dia (grelha aplicável) - espelha PlanoDia do serviço. */
 export interface PlanoDia {
   tipoDia: "SEMANA" | "FIM_DE_SEMANA";
   totalSlots: number;

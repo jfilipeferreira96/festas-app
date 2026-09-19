@@ -1,6 +1,6 @@
 import { api } from "./utils";
 
-/** Item da vista consolidada de cauciones (GET /api/caucoes). */
+/** Item da vista consolidada de cauções (GET /api/caucoes). */
 export interface CaucaoItem {
   id: string;
   data: string;

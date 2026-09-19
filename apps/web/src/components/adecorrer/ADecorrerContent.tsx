@@ -38,7 +38,7 @@ export default function ADecorrerContent() {
       </div>
 
       <p className="mt-4 text-xs text-text-muted">
-        Vista em tempo real — atualiza automaticamente a cada 30 segundos.
+        Vista em tempo real - atualiza automaticamente a cada 30 segundos.
       </p>
 
       <div className="mt-6 space-y-10">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { caucaoService } from "@/services/caucao.service";
 import { requireAuth } from "@/lib/auth-server";
 
-// GET /api/caucoes - lista consolidada de cauciones (pagas / por pagar)
+// GET /api/caucoes - lista consolidada de cauções (pagas / por pagar)
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if (!auth.ok) return auth.response;

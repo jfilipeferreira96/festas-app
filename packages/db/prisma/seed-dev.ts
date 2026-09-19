@@ -393,7 +393,7 @@ async function seedSalasLanche() {
   console.log(`  ✓ ${salas.length} salas de lanche\n`);
 }
 
-// ─── Cores de pulseira — FONTE ÚNICA: FESTA_COLORS (@saas/shared-defaults) ───
+// ─── Cores de pulseira - FONTE ÚNICA: FESTA_COLORS (@saas/shared-defaults) ───
 // Nomes do plano diário → nomes da paleta (Turquesa = "Verde-água", Roxa = "Roxo").
 // NÃO usar hex literais aqui: qualquer alteração de cor é feita em
 // packages/shared/shared-defaults/src/defaults/festa-colors.ts
@@ -418,7 +418,7 @@ const COR = {
 //   (excepção oficial: slot 1 lanche às 10:30, 30 min mais cedo).
 // Semana (6 slots): 15h30-18h00, lanche = entrada+1h, brincar final 45 min.
 // Salas alternadas 1/2; cores em rotação (sem coexistência no parque);
-// 17:15 e 17:45 existem nas DUAS grelhas — filtrar sempre por tipo de dia.
+// 17:15 e 17:45 existem nas DUAS grelhas - filtrar sempre por tipo de dia.
 const GRELHA_SLOTS: {
   horaInicio: string;
   horaLanche: string;
@@ -442,7 +442,7 @@ const GRELHA_SLOTS: {
   { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.TURQUESA, fds: true }, // 13 Turquesa
   { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: COR.ROXA, fds: true }, // 14 Roxa
   { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: true }, // 15 Azul
-  // ── Semana (6) — lanche = entrada+1h, salas alternadas ──
+  // ── Semana (6) - lanche = entrada+1h, salas alternadas ──
   { horaInicio: "15:30", horaLanche: "16:30", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: false }, // S1 Azul
   { horaInicio: "16:00", horaLanche: "17:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: false }, // S2 Verde
   { horaInicio: "17:15", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: false }, // S3 Amarela

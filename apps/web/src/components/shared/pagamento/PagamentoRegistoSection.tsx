@@ -94,7 +94,7 @@ export const PagamentoRegistoSection = React.memo(function PagamentoRegistoSecti
           <span className="text-xs text-text-muted whitespace-nowrap">≈ {formatEuro(totalCalculado)}</span>
         </div>
         <p className="text-[11px] text-text-muted mt-1">
-          Pré-preenchido com o cálculo — editável (valor final acordado).
+          Pré-preenchido com o cálculo - editável (valor final acordado).
         </p>
       </div>
 

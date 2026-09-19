@@ -35,15 +35,17 @@ export default function CaucoesContent() {
     filtro ? { estadoCaucao: filtro } : undefined
   );
 
+  // 3 cartões com semântica clara: pagas (PAGA) vs por pagar (restantes,
+  // incluindo "paga no dia" que ainda não foi cobrada).
   const totais = useMemo(() => {
     const lista = caucoes ?? [];
     const pagas = lista.filter((c) => c.caucao === "PAGA");
-    const pagaNoDia = lista.filter((c) => c.caucao === "PAGA_NO_DIA");
-    const porPagar = lista.filter((c) => c.caucao !== "PAGA" && c.caucao !== "PAGA_NO_DIA");
+    const porPagar = lista.filter((c) => c.caucao !== "PAGA");
+    const valorTotal = lista.reduce((s, c) => s + (c.valorCaucao ?? 0), 0);
     return {
       total: lista.length,
+      valorTotal,
       valorPagas: pagas.reduce((s, c) => s + (c.valorCaucao ?? 0), 0),
-      valorPagaNoDia: pagaNoDia.reduce((s, c) => s + (c.valorCaucao ?? 0), 0),
       valorPorPagar: porPagar.reduce((s, c) => s + (c.valorCaucao ?? 0), 0),
     };
   }, [caucoes]);
@@ -75,15 +77,12 @@ export default function CaucoesContent() {
         sortable: true,
         render: (_v, r) => (
           <div>
-            <p className="text-sm text-text-primary whitespace-nowrap">{formatDate(r.data)}</p>
-            <p className="text-xs text-text-muted">{r.horario}</p>
+            <p className="text-sm text-text-primary whitespace-nowrap">
+              {formatDate(r.data)} · {r.horario}
+            </p>
+            <p className="text-xs text-text-muted">{r.local?.nome ?? "-"}</p>
           </div>
         ),
-      },
-      {
-        key: "sala",
-        label: "Sala",
-        render: (_v, r) => <span className="text-sm text-text-secondary">{r.local?.nome ?? "-"}</span>,
       },
       {
         key: "valorCaucao",
@@ -131,26 +130,24 @@ export default function CaucoesContent() {
     <div>
       <PageHeader
         title="Cauções"
-        subtitle="Controlo de cauções — pagas e por pagar"
+        subtitle="Controlo de cauções - pagas e por pagar"
       />
 
-      {/* Totais */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+      {/* Totais: 3 cartões - pagas vs por pagar (inclui "paga no dia", que
+          ainda não foi cobrada) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
         <div className="rounded-xl border border-border bg-surface shadow-card p-4">
           <p className="text-xs text-text-muted">Total de cauções</p>
           <p className="text-xl font-bold text-text-primary font-poppins">{totais.total}</p>
+          <p className="text-xs text-text-muted mt-0.5">{fmtEuro(totais.valorTotal)} em cauções</p>
         </div>
         <div className="rounded-xl border border-accent-green-200 bg-accent-green-50 shadow-card p-4">
           <p className="text-xs text-accent-green-700">Pagas</p>
           <p className="text-xl font-bold text-accent-green-700 font-poppins">{fmtEuro(totais.valorPagas)}</p>
         </div>
         <div className="rounded-xl border border-accent-orange-200 bg-accent-orange-50 shadow-card p-4">
-          <p className="text-xs text-accent-orange-700">Paga no dia</p>
-          <p className="text-xl font-bold text-accent-orange-700 font-poppins">{fmtEuro(totais.valorPagaNoDia)}</p>
-        </div>
-        <div className="rounded-xl border border-gray-200 bg-gray-50 shadow-card p-4">
-          <p className="text-xs text-text-muted">Por pagar</p>
-          <p className="text-xl font-bold text-text-primary font-poppins">{fmtEuro(totais.valorPorPagar)}</p>
+          <p className="text-xs text-accent-orange-700">Por pagar</p>
+          <p className="text-xl font-bold text-accent-orange-700 font-poppins">{fmtEuro(totais.valorPorPagar)}</p>
         </div>
       </div>
 
@@ -191,7 +188,7 @@ export default function CaucoesContent() {
             (r.aniversariantes?.some((a) => a.aniversariante.nome.toLowerCase().includes(q)) ?? false)
           }
           pagination
-          pageSize={15}
+          pageSize={10}
           emptyState={{
             title: "Sem cauções",
             description: "Não há cauções para o filtro selecionado.",
@@ -201,7 +198,7 @@ export default function CaucoesContent() {
 
       <div className="flex items-center gap-1.5 mt-4 text-xs text-text-muted">
         <Shield size={13} />
-        Cauciones pagas são devolvidas ao cliente no final da festa (se tudo estiver em ordem).
+        Cauções pagas são devolvidas ao cliente no final da festa (se tudo estiver em ordem).
       </div>
     </div>
   );
