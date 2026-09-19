@@ -6,6 +6,7 @@ import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { cacifoService } from "@/services/cacifo.service";
 import {
   normalizarPagamentos,
+  rederivarPagoEntradaLivre,
   sincronizarPagamentosEntradaLivre,
   type PagamentoInput,
 } from "@/services/pagamento.service";
@@ -409,6 +410,10 @@ export const entradaLivreService = {
       },
     });
 
+    // O total devido mudou (custoTotalFinal inclui excesso) → re-derivar `pago`.
+    // Sem isto, uma entrada paga ficava "Pago" mesmo faltando o excesso.
+    const pago = await rederivarPagoEntradaLivre(prisma, id);
+
     // Libertar cacifo
     if (entrada.cacifoId) {
       await prisma.cacifo.update({
@@ -420,6 +425,7 @@ export const entradaLivreService = {
     // Convert Decimal fields to numbers
     return {
       ...updated,
+      pago,
       custoHora: Number(updated.custoHora),
       custoTotal: Number(updated.custoTotal),
       custoExcesso: updated.custoExcesso ? Number(updated.custoExcesso) : null,
@@ -490,6 +496,9 @@ export const entradaLivreService = {
         where: { id },
         data: { pagoExcesso: data.pagoExcesso },
       });
+      // Marcar o excesso como pago altera o que "falta" → re-derivar `pago`.
+      // Sem isto, o badge ficava "Por pagar" mesmo após pagar o excesso.
+      await rederivarPagoEntradaLivre(prisma, id);
     }
 
     return this.getById(id);

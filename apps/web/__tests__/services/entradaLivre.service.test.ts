@@ -493,6 +493,47 @@ describe("Entrada Livre Service", () => {
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
     });
 
+    it("deve re-derivar pago=false ao concluir com excesso não pago (regressão: ficava Pago)", async () => {
+      // Entrada paga (ledger cobre o base 6€), criada agora e concluída com
+      // excesso manual de 5€ → custoTotalFinal=11€ > recebido → pago=false.
+      const entrada = await entradaLivreService.create({
+        encarregadoNome: "Teste Concluir Excesso",
+        encarregadoTelefone: "999999997",
+        duracaoMinutos: 60,
+        criancas: [{ nome: "Criança" }],
+        pago: true,
+        pagamentos: [{ valor: 6, metodo: "DINHEIRO" }],
+      });
+
+      // Simular atraso: início 120 min atrás, fim previsto 60 min após início
+      const inicio = new Date(Date.now() - 120 * 60 * 1000);
+      await testPrisma.entradaLivre.update({
+        where: { id: entrada.id },
+        data: {
+          inicioEm: inicio,
+          fimPrevisto: new Date(inicio.getTime() + 60 * 60 * 1000),
+        },
+      });
+
+      const concluida = await entradaLivreService.concluir(entrada.id, {
+        custoExcessoManual: 5,
+      });
+
+      expect(concluida.estado).toBe("CONCLUIDA");
+      expect(Number(concluida.custoTotalFinal)).toBe(11);
+      // REGRESSÃO: sem a re-derivação, pago mantinha true embora faltasse o excesso
+      expect(concluida.pago).toBe(false);
+
+      // Marcar o excesso como pago → volta a liquidado
+      const final = await entradaLivreService.atualizarPagamento(entrada.id, {
+        pagoExcesso: true,
+      });
+      expect(final.pago).toBe(true);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
     it("should throw NOT_FOUND for non-existent entrada", async () => {
       await expect(entradaLivreService.concluir("non-existent-id")).rejects.toThrow("NOT_FOUND");
     });
@@ -729,6 +770,42 @@ describe("Entrada Livre Service", () => {
       });
 
       expect(atualizada.pagoExcesso).toBe(true);
+
+      // Cleanup
+      await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });
+    });
+
+    it("deve marcar pago=true ao marcar excesso pago quando o ledger cobre o custo base (regressão: badge Por pagar)", async () => {
+      // Entrada CONCLUIDA com excesso; ledger cobre só o base (12€)
+      const now = new Date();
+      const inicio = new Date(now.getTime() - 120 * 60 * 1000);
+
+      const entrada = await testPrisma.entradaLivre.create({
+        data: {
+          id: "test-pagamento-excesso-pago",
+          encarregadoNome: "Teste Excesso Pago",
+          encarregadoTelefone: "999999998",
+          inicioEm: inicio,
+          duracaoMinutos: 90,
+          custoHora: 10.0,
+          custoTotal: 12.0,
+          custoExcesso: 5.0,
+          excessoMinutos: 30,
+          custoTotalFinal: 17.0,
+          estado: "CONCLUIDA",
+          fimPrevisto: new Date(inicio.getTime() + 90 * 60 * 1000),
+          criancas: { create: [{ nome: "Criança" }] },
+          pagamentos: { create: [{ valor: 12.0, metodo: "DINHEIRO" }] },
+        },
+      });
+
+      const atualizada = await entradaLivreService.atualizarPagamento(entrada.id, {
+        pagoExcesso: true,
+      });
+
+      expect(atualizada.pagoExcesso).toBe(true);
+      // REGRESSÃO: sem a re-derivação, pago ficava false ("Por pagar") para sempre
+      expect(atualizada.pago).toBe(true);
 
       // Cleanup
       await testPrisma.entradaLivre.delete({ where: { id: entrada.id } });

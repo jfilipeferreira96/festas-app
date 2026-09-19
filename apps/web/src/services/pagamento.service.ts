@@ -100,9 +100,33 @@ export async function sincronizarPagamentosReserva(
   return totalPago;
 }
 
+/** Seleção mínima da entrada necessária para derivar o estado `pago`. */
+type EntradaParaDerivacao = {
+  custoTotal: unknown;
+  custoTotalFinal: unknown;
+  pagoExcesso: boolean;
+} | null;
+
+/**
+ * Regra de derivação do `pago` numa entrada livre:
+ * - Com `pagoExcesso` (excesso pago à parte), basta cobrir o custo base.
+ * - Sem excesso pago, o ledger tem de cobrir custoTotalFinal ?? custoTotal.
+ * Centralizada para que sincronizar e re-derivar nunca divirjam.
+ */
+function derivarPagoEntrada(
+  entrada: EntradaParaDerivacao,
+  soma: number,
+): boolean {
+  if (!entrada) return false;
+  const custoBase = Number(entrada.custoTotal ?? 0);
+  const totalDevido = Number(entrada.custoTotalFinal ?? entrada.custoTotal ?? 0);
+  if (entrada.pagoExcesso) return custoBase <= 0 || soma >= custoBase - EPS;
+  return totalDevido > 0 ? soma >= totalDevido - EPS : false;
+}
+
 /**
  * Substitui o ledger de uma entrada livre (replace-all) e deriva o estado
- * `pago` (contra custoTotalFinal ?? custoTotal).
+ * `pago` (contra custoTotalFinal ?? custoTotal; com pagoExcesso basta o base).
  */
 export async function sincronizarPagamentosEntradaLivre(
   tx: TX,
@@ -128,12 +152,10 @@ export async function sincronizarPagamentosEntradaLivre(
 
   const entrada = await tx.entradaLivre.findUnique({
     where: { id: entradaLivreId },
-    select: { custoTotal: true, custoTotalFinal: true },
+    select: { custoTotal: true, custoTotalFinal: true, pagoExcesso: true },
   });
-  const totalDevido = Number(entrada?.custoTotalFinal ?? entrada?.custoTotal ?? 0);
   const pago =
-    opcoes?.pagoExplicito ??
-    (totalDevido > 0 ? totalPago >= totalDevido - EPS : false);
+    opcoes?.pagoExplicito ?? derivarPagoEntrada(entrada, totalPago);
 
   await tx.entradaLivre.update({
     where: { id: entradaLivreId },
@@ -163,13 +185,11 @@ export async function rederivarPagoEntradaLivre(tx: TX, entradaLivreId: string):
   const [entrada, soma] = await Promise.all([
     tx.entradaLivre.findUnique({
       where: { id: entradaLivreId },
-      select: { custoTotal: true, custoTotalFinal: true },
+      select: { custoTotal: true, custoTotalFinal: true, pagoExcesso: true },
     }),
     tx.pagamento.aggregate({ where: { entradaLivreId }, _sum: { valor: true } }),
   ]);
-  if (!entrada) return false;
-  const totalDevido = Number(entrada.custoTotalFinal ?? entrada.custoTotal ?? 0);
-  const pago = totalDevido > 0 ? round2(Number(soma._sum.valor ?? 0)) >= totalDevido - EPS : false;
+  const pago = derivarPagoEntrada(entrada, round2(Number(soma._sum.valor ?? 0)));
   await tx.entradaLivre.update({ where: { id: entradaLivreId }, data: { pago } });
   return pago;
 }

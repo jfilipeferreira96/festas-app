@@ -241,6 +241,24 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
             ),
           },
           {
+            key: "fimReal",
+            label: "Saída",
+            render: (_v, r) =>
+              r.fimReal ? (
+                <span className="text-sm font-medium text-text-primary whitespace-nowrap flex items-center gap-1">
+                  <Clock size={13} className="text-text-muted shrink-0" />
+                  {formatTime(r.fimReal)}
+                </span>
+              ) : (
+                <span
+                  className="text-sm text-text-muted whitespace-nowrap"
+                  title="Saída prevista (ainda em curso)"
+                >
+                  {r.fimPrevisto ? `${formatTime(r.fimPrevisto)} prev.` : "-"}
+                </span>
+              ),
+          },
+          {
             key: "custo",
             label: "Custo",
             render: (_v, r) => (

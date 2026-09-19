@@ -1,9 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import InputField from "@/components/form/input/InputField";
-import Checkbox from "@/components/form/input/Checkbox";
 import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
@@ -38,7 +36,6 @@ export default function PagamentoEntradaSection({
 }: PagamentoEntradaSectionProps) {
   const isEdit = !!entrada;
   const { setValue, watch } = useFormContext<EntradaLivreFormData>();
-  const [registarPagamento, setRegistarPagamento] = useState(false);
 
   const duracao = watch("duracaoMinutos");
   const meias = watch("meiasQuantidade") ?? 0;
@@ -85,59 +82,48 @@ export default function PagamentoEntradaSection({
         />
       ) : (
         <div className="space-y-3">
-          <Checkbox
-            checked={registarPagamento}
-            onChange={setRegistarPagamento}
-            label="Registar pagamento na entrada (opcional)"
-          />
-          {registarPagamento && (
-            <>
-              {/* Custo total (editável, pré-preenchido com o cálculo) */}
-              <div>
-                <FieldLabel>Total a pagar (€)</FieldLabel>
-                <div className="flex items-center gap-2">
-                  <InputField
-                    type="number"
-                    step={0.01}
-                    min={0}
-                    placeholder="0,00"
-                    autoComplete="off"
-                    value={watch("custoTotal") != null ? String(watch("custoTotal")) : ""}
-                    onChange={(e) =>
-                      setValue("custoTotal", e.target.value === "" ? undefined : Number(e.target.value), {
-                        shouldDirty: true,
-                      })
-                    }
-                  />
-                  <span className="text-xs text-text-muted whitespace-nowrap">≈ {formatEuro(custoCalculado)}</span>
-                </div>
-                <p className="text-[11px] text-text-muted mt-1">
-                  Pré-preenchido com o cálculo — editável (valor final acordado).
-                </p>
-              </div>
-
-              {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
-              <PagamentosLedgerSection
-                totalDevido={custo}
-                pagamentos={pagamentosForm}
-                onAdd={(p) =>
-                  setValue(
-                    "pagamentos",
-                    [
-                      ...pagamentosForm,
-                      { ...p, id: `pg-${Date.now()}-${pagamentosForm.length}`, createdAt: new Date().toISOString() },
-                    ] as PagamentoLedgerItem[],
-                    { shouldDirty: true },
-                  )
-                }
-                onRemove={(id) =>
-                  setValue("pagamentos", pagamentosForm.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
+          {/* Custo total: sempre visível, pré-preenchido com o cálculo e
+              apagável (vazio = segue o cálculo). Sem checkbox opcional. */}
+          <div>
+            <FieldLabel>Total a pagar (€)</FieldLabel>
+            <div className="flex items-center gap-2">
+              <InputField
+                type="number"
+                step={0.01}
+                min={0}
+                placeholder={custoCalculado > 0 ? custoCalculado.toFixed(2).replace(".", ",") : "0,00"}
+                autoComplete="off"
+                value={watch("custoTotal") != null ? String(watch("custoTotal")) : ""}
+                onChange={(e) =>
+                  setValue("custoTotal", e.target.value === "" ? undefined : Number(e.target.value), {
                     shouldDirty: true,
                   })
                 }
               />
-            </>
-          )}
+              <span className="text-xs text-text-muted whitespace-nowrap">≈ {formatEuro(custoCalculado)}</span>
+            </div>
+          </div>
+
+          {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
+          <PagamentosLedgerSection
+            totalDevido={custo}
+            pagamentos={pagamentosForm}
+            onAdd={(p) =>
+              setValue(
+                "pagamentos",
+                [
+                  ...pagamentosForm,
+                  { ...p, id: `pg-${Date.now()}-${pagamentosForm.length}`, createdAt: new Date().toISOString() },
+                ] as PagamentoLedgerItem[],
+                { shouldDirty: true },
+              )
+            }
+            onRemove={(id) =>
+              setValue("pagamentos", pagamentosForm.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
+                shouldDirty: true,
+              })
+            }
+          />
         </div>
       )}
 
@@ -168,10 +154,10 @@ export default function PagamentoEntradaSection({
         </div>
       </div>
 
-      {(!isEdit || !registarPagamento) && (
+      {!isEdit && (
         <BreakdownEntrada
           custoComponentes={custoComponentes}
-          custoFinal={isEdit ? devido : custo}
+          custoFinal={custo}
           precoMeias={precoMeias}
           meias={meias}
           duracaoLabel={duracaoLabel}

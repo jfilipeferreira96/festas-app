@@ -65,13 +65,21 @@ export const PagamentosLedgerSection = React.memo(function PagamentosLedgerSecti
 
   return (
     <div className="space-y-2.5">
-      {/* Estado derivado da soma - nunca manual */}
+      {/* Estado derivado da soma - nunca manual. Sem pagamentos, mostra o
+          total neutro (não "Falta pagar", que só faz sentido com pagamentos
+          parciais e era confundido com o valor a entregar). */}
       <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface border border-border">
         <span className="inline-flex items-center gap-1.5 text-xs font-medium">
           {pago ? (
             <>
               <CheckCircle2 size={14} className="text-accent-green-500" />
               <span className="text-accent-green-600">Liquidado</span>
+            </>
+          ) : pagamentos.length === 0 ? (
+            <>
+              <Wallet size={14} className="text-text-muted" />
+              <span className="text-text-primary">Total a pagar</span>
+              <span className="font-bold text-text-primary">{formatEuro(totalDevido)}</span>
             </>
           ) : (
             <>
