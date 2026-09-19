@@ -9,6 +9,8 @@ interface ExtrasQuantidadeStepperProps {
   quantidade: number;
   numPessoas: number;
   ocultarPessoas?: boolean;
+  /** Quando true, a quantidade é sempre o total de crianças - sem controlo manual. */
+  quantidadeFixa?: boolean;
   onChange: (qtd: number) => void;
 }
 
@@ -17,15 +19,17 @@ export default function ExtrasQuantidadeStepper({
   quantidade,
   numPessoas,
   ocultarPessoas = false,
+  quantidadeFixa = false,
   onChange,
 }: ExtrasQuantidadeStepperProps) {
   const porPessoa = extra.baseCobranca === "POR_PESSOA";
-  const qtdEfetiva = porPessoa ? Math.max(1, numPessoas) : quantidade;
+  const fixo = quantidadeFixa || porPessoa;
+  const qtdEfetiva = fixo ? Math.max(1, numPessoas) : quantidade;
   const subtotal = Number(extra.precoUnitario) * qtdEfetiva;
 
   return (
     <div className="flex items-center gap-2 text-xs pl-1">
-      {!porPessoa && (
+      {!fixo && (
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -48,10 +52,12 @@ export default function ExtrasQuantidadeStepper({
         </div>
       )}
       <span className="text-text-muted">
-        {porPessoa
-          ? ocultarPessoas
-            ? `${formatEuro(Number(extra.precoUnitario))} / criança — cobrado no dia`
-            : `${formatEuro(Number(extra.precoUnitario))} × ${qtdEfetiva} ${qtdEfetiva === 1 ? "pessoa" : "pessoas"}`
+        {fixo
+          ? quantidadeFixa
+            ? `${formatEuro(Number(extra.precoUnitario))} × ${qtdEfetiva} ${qtdEfetiva === 1 ? "criança" : "crianças"}`
+            : ocultarPessoas
+              ? `${formatEuro(Number(extra.precoUnitario))} / criança — cobrado no dia`
+              : `${formatEuro(Number(extra.precoUnitario))} × ${qtdEfetiva} ${qtdEfetiva === 1 ? "pessoa" : "pessoas"}`
           : `${formatEuro(Number(extra.precoUnitario))} × ${quantidade}`}
       </span>
       <span className="font-semibold text-text-primary tabular-nums">{formatEuro(subtotal)}</span>

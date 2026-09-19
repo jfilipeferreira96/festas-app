@@ -41,8 +41,6 @@ export default function PagamentoEntradaSection({
   const meias = watch("meiasQuantidade") ?? 0;
   const duracaoLabel = DURACAO_ENTRADA_OPTIONS.find((o) => o.value === String(duracao))?.label ?? `${duracao}min`;
 
-  const setMeias = (quantidade: number) => setValue("meiasQuantidade", Math.max(0, quantidade), { shouldDirty: true });
-
   const pagamentosForm = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
   const custo = watch("custoTotal") ?? custoCalculado;
 
@@ -127,32 +125,8 @@ export default function PagamentoEntradaSection({
         </div>
       )}
 
-      <div className="border-t border-border pt-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-text-primary">Meias</span>
-          <span className="text-xs text-text-muted">{formatEuro(precoMeias)} / par</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setMeias(meias - 1)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
-            >
-              −
-            </button>
-            <span className="w-10 text-center text-sm font-medium text-text-primary">{meias}</span>
-            <button
-              type="button"
-              onClick={() => setMeias(meias + 1)}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
-            >
-              +
-            </button>
-          </div>
-          <p className="text-xs text-text-muted">Incluídas no total a pagar</p>
-        </div>
-      </div>
+      {/* Bloco Meias movido para DuracaoLancheSection (antes do pagamento),
+          a pedido do cliente (19/09/2026). */}
 
       {!isEdit && (
         <BreakdownEntrada

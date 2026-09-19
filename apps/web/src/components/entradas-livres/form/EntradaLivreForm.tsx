@@ -231,6 +231,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               custoTempoPorPessoa={custoTempoPorPessoa}
               precoLancheEntrada={Number(configPreco?.precoLancheEntrada ?? 3)}
               precoAdulto={Number(configPreco?.precoAdulto ?? 0)}
+              precoMeias={Number(configPreco?.precoMeias ?? 1.5)}
               cacifoOptions={cacifoOptions}
             />
             <ExtrasEntradaSection numPessoas={custoComponentes.totalPessoas} />

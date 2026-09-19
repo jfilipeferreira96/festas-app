@@ -14,6 +14,7 @@ interface DuracaoLancheSectionProps {
   custoTempoPorPessoa: number;
   precoLancheEntrada: number;
   precoAdulto: number;
+  precoMeias: number;
   cacifoOptions: { value: string; label: string }[];
 }
 
@@ -21,6 +22,7 @@ export default function DuracaoLancheSection({
   custoTempoPorPessoa,
   precoLancheEntrada,
   precoAdulto,
+  precoMeias,
   cacifoOptions,
 }: DuracaoLancheSectionProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext<EntradaLivreFormData>();
@@ -28,6 +30,7 @@ export default function DuracaoLancheSection({
   const temLanche = watch("temLanche");
   const numAdultos = watch("numAdultos") ?? 0;
   const cacifoId = watch("cacifoId");
+  const numMeias = watch("meiasQuantidade") ?? 0;
 
   return (
     <div className="space-y-4">
@@ -86,6 +89,39 @@ export default function DuracaoLancheSection({
               <p className="text-xs text-text-muted ml-8">+{formatEuro(precoAdulto)} por adulto</p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Meias: antes da secção de pagamento (pedido do cliente, 19/09/2026).
+          Incluídas no total a pagar - o stepper soma no custo final. */}
+      <div className="border-t border-border pt-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-text-primary">Meias</span>
+          <span className="text-xs text-text-muted">{formatEuro(precoMeias)} / par</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() =>
+                setValue("meiasQuantidade", Math.max(0, (watch("meiasQuantidade") ?? 0) - 1), { shouldDirty: true })
+              }
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+            >
+              −
+            </button>
+            <span className="w-10 text-center text-sm font-medium text-text-primary">{numMeias}</span>
+            <button
+              type="button"
+              onClick={() =>
+                setValue("meiasQuantidade", (watch("meiasQuantidade") ?? 0) + 1, { shouldDirty: true })
+              }
+              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+            >
+              +
+            </button>
+          </div>
+          <p className="text-xs text-text-muted">Incluídas no total a pagar</p>
         </div>
       </div>
 

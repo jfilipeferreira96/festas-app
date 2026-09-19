@@ -1,10 +1,13 @@
 "use client";
 
-import { AlertTriangle, Cake } from "lucide-react";
+import { AlertTriangle, Cake, Utensils } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
 import FieldLabel from "@/components/form/FieldLabel";
+import ExtrasQuantidadeStepper from "@/components/shared/extras/ExtrasQuantidadeStepper";
+import { formatEuro } from "@/lib/format";
+import type { Extra } from "@/lib/api/extras";
 import {
   BOLO_BLOQUEIA_TEMA,
   TIPO_BOLO_OPTIONS,
@@ -15,12 +18,26 @@ import {
 interface MenuBoloSectionProps {
   menuOptions: { value: string; label: string }[];
   menuWarning: string;
+  /** Extras de almoço/jantar (por nome) - aparecem por baixo do select Menu. */
+  suplementosMenu: Extra[];
+  /** Total de crianças (confirmadas ?? previstas ?? 1). */
+  numPessoas: number;
 }
 
-export default function MenuBoloSection({ menuOptions, menuWarning }: MenuBoloSectionProps) {
+export default function MenuBoloSection({ menuOptions, menuWarning, suplementosMenu, numPessoas }: MenuBoloSectionProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext<FestaFormData>();
   const bolo = watch("bolo");
+  const extrasIds = watch("extrasIds");
+  const extrasQuantidades = watch("extrasQuantidades");
   const bloqueiaTema = !bolo || BOLO_BLOQUEIA_TEMA.includes(bolo);
+
+  const toggleSuplemento = (id: string) => {
+    setValue(
+      "extrasIds",
+      extrasIds.includes(id) ? extrasIds.filter((x) => x !== id) : [...extrasIds, id],
+      { shouldDirty: true }
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -41,6 +58,46 @@ export default function MenuBoloSection({ menuOptions, menuWarning }: MenuBoloSe
           )}
         </div>
       </div>
+
+      {/* Suplementos de menu (Almoço/Jantar): por baixo do Menu, a pedido do
+          cliente (19/09/2026). Quantidade sempre = total de crianças. */}
+      {suplementosMenu.length > 0 && (
+        <div className="space-y-2 pl-3 border-l-2 border-border">
+          <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Utensils size={13} className="text-brand-500" /> Almoço / Jantar
+          </span>
+          <div className="flex flex-wrap gap-3">
+            {suplementosMenu.map((item) => {
+              const isSelected = extrasIds.includes(item.id);
+              return (
+                <div key={item.id} className="flex flex-col gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleSuplemento(item.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors cursor-pointer ${
+                      isSelected ? "border-primary-300 bg-primary-50/50" : "border-border hover:border-gray-300"
+                    }`}
+                  >
+                    <span className="text-sm text-text-primary">{item.nome}</span>
+                    <span className="text-xs font-medium text-text-secondary">
+                      +{formatEuro(Number(item.precoUnitario))}
+                    </span>
+                  </button>
+                  {isSelected && (
+                    <ExtrasQuantidadeStepper
+                      extra={item}
+                      quantidade={numPessoas}
+                      numPessoas={numPessoas}
+                      quantidadeFixa
+                      onChange={() => {}}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">

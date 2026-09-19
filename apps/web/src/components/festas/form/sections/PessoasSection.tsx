@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useFormContext, type UseFieldArrayReturn } from "react-hook-form";
-import { AlertTriangle, Cake, Plus, Search, Trash2, User, Users } from "lucide-react";
+import { AlertTriangle, Cake, Plus, Search, Trash2, User } from "lucide-react";
 import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import DatePicker from "@/components/form/date-picker";
@@ -101,19 +101,9 @@ export default function PessoasSection({
         })}
       </div>
 
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-          <Users size={14} className="text-brand-500" /> Adultos acompanhantes (pagam entrada)
-        </span>
-        <div className="w-24">
-          <InputField
-            type="number"
-            min={0}
-            {...register("numAdultos", { valueAsNumber: true })}
-            placeholder="0"
-          />
-        </div>
-      </div>
+      {/* Adultos acompanhantes removido a pedido do cliente (19/09/2026):
+          não faz sentido no contexto das festas. O campo mantém-se no schema
+          com default 0 para compatibilidade do payload. */}
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">

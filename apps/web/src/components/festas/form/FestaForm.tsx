@@ -38,6 +38,9 @@ import PagamentoSection from "./sections/PagamentoSection";
 
 export type { FestaFormInitialValues } from "./festa-form.schema";
 
+/** Extras identificados como Almoço/Jantar pelo nome ficam na secção do Menu. */
+const EXTRAS_SUPLEMENTO_MENU_RE = /almo[çc]o|jant[ae]/i;
+
 interface FestaFormProps {
   reserva?: Reserva | null;
   onClose: () => void;
@@ -76,8 +79,17 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const watchedNumAdultos = watch("numAdultos");
   const aniversariantes = watch("aniversariantes");
 
+  // Suplementos de menu (Almoço/Jantar, identificados pelo nome) ficam por
+  // baixo do select de Menu - não na secção de Extras (pedido do cliente).
+  const suplementosMenu = useMemo(
+    () => (extras ?? []).filter((e) => e.activo && EXTRAS_SUPLEMENTO_MENU_RE.test(e.nome)),
+    [extras]
+  );
   const extraItems = useMemo(
-    () => (extras ?? []).filter((e) => e.categoria === "EXTRA" && e.activo && e.subcategoria !== "Bolos"),
+    () =>
+      (extras ?? []).filter(
+        (e) => e.categoria === "EXTRA" && e.activo && e.subcategoria !== "Bolos" && !EXTRAS_SUPLEMENTO_MENU_RE.test(e.nome)
+      ),
     [extras]
   );
   const menuExtras = useMemo(
@@ -92,6 +104,16 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     () => [{ value: "NONE", label: "Sem menu" }, ...menuExtras.map((m) => ({ value: m.id, label: m.nome }))],
     [menuExtras]
   );
+  // Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras.
+  const numCriancasConfirmadasWatched = watch("numCriancasConfirmadas");
+  const numPessoasExtras = useMemo(() => {
+    const base = Number.isFinite(numCriancasConfirmadasWatched)
+      ? (numCriancasConfirmadasWatched as number)
+      : Number.isFinite(previsaoCriancas)
+        ? (previsaoCriancas as number)
+        : 1;
+    return Math.max(base, 1);
+  }, [numCriancasConfirmadasWatched, previsaoCriancas]);
 
   const { data: slotsHorario } = useSlotsHorario(watchedData || undefined);
   const { data: slotsDia } = useSlotsDia(watchedData);
@@ -129,18 +151,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     if (!watchedHorario) return [];
     return coresEmConflito(festasDoDia, watchedHorario, watchedDuracao || 135);
   }, [festasDoDia, watchedHorario, watchedDuracao]);
-
-  const corOptions = useMemo(
-    () => [
-      { value: "NONE", label: "Sem cor" },
-      ...CORES_PREDEFINIDAS.filter((c) => !coresEmUso.includes(c.value)).map((c) => ({
-        value: c.value,
-        label: c.label,
-        color: c.value,
-      })),
-    ],
-    [coresEmUso]
-  );
 
   const [horarioCustom, setHorarioCustom] = useState(false);
   const [showClienteSearch, setShowClienteSearch] = useState(false);
@@ -328,7 +338,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
             <AgendamentoSection
               slotOptions={slotOptions}
               salaOptions={salaOptions}
-              corOptions={corOptions}
               horarioCustom={horarioCustom}
               onToggleHorarioCustom={setHorarioCustom}
               isAdmin={isGlobalAdmin}
@@ -352,8 +361,13 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
                 </span>
               </div>
             )}
-            <MenuBoloSection menuOptions={menuOptions} menuWarning={menuWarning} />
-            <ExtrasNotasSection extraItems={extraItems} />
+            <MenuBoloSection
+              menuOptions={menuOptions}
+              menuWarning={menuWarning}
+              suplementosMenu={suplementosMenu}
+              numPessoas={numPessoasExtras}
+            />
+            <ExtrasNotasSection extraItems={extraItems} numPessoas={numPessoasExtras} />
             <PagamentoSection
               reserva={reserva}
               onOpenPagamento={() => setShowPagamentoModal(true)}

@@ -13,7 +13,6 @@ import { DURACAO_FESTA_OPTIONS, type FestaFormData } from "../festa-form.schema"
 interface AgendamentoSectionProps {
   slotOptions: { value: string; label: string; disabled?: boolean }[];
   salaOptions: { value: string; label: string }[];
-  corOptions: { value: string; label: string; color?: string; disabled?: boolean }[];
   horarioCustom: boolean;
   onToggleHorarioCustom: (v: boolean) => void;
   isAdmin: boolean;
@@ -26,7 +25,6 @@ interface AgendamentoSectionProps {
 export default function AgendamentoSection({
   slotOptions,
   salaOptions,
-  corOptions,
   horarioCustom,
   onToggleHorarioCustom,
   isAdmin,
@@ -39,7 +37,6 @@ export default function AgendamentoSection({
   const horario = watch("horario");
   const duracao = watch("duracaoMinutos");
   const localId = watch("localId");
-  const cor = watch("cor");
 
   return (
     <div className="space-y-4">
@@ -113,15 +110,9 @@ export default function AgendamentoSection({
           />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
         </div>
-        <div className="flex-1">
-          <FieldLabel>Cor da Festa</FieldLabel>
-          <Select
-            options={corOptions}
-            showColorIndicators
-            value={cor || "NONE"}
-            onChange={(val) => setValue("cor", val === "NONE" ? "" : val, { shouldDirty: true })}
-          />
-        </div>
+        {/* Cor da Festa removida a pedido do cliente (19/09/2026): a cor passa
+            sempre pela pulseira do slot (slot.corDefault, aplicada em
+            onSelectSlot). Não é editável à mão. */}
       </div>
 
       {isAdmin && (

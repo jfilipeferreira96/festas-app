@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { FileText } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import InputField from "@/components/form/input/InputField";
@@ -13,6 +13,8 @@ import type { FestaFormData } from "../festa-form.schema";
 
 interface ExtrasNotasSectionProps {
   extraItems: Extra[];
+  /** Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras. */
+  numPessoas: number;
 }
 
 function groupBySubcategoria(items: Extra[]) {
@@ -29,22 +31,23 @@ function groupBySubcategoria(items: Extra[]) {
   return { grouped, ungrouped };
 }
 
-export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionProps) {
+export default function ExtrasNotasSection({ extraItems, numPessoas }: ExtrasNotasSectionProps) {
   const { watch, setValue } = useFormContext<FestaFormData>();
   const extrasIds = watch("extrasIds");
   const extrasTexto = watch("extrasTexto");
   const extrasQuantidades = watch("extrasQuantidades");
-  const numCriancasConfirmadas = watch("numCriancasConfirmadas");
-  const previsaoCriancas = watch("previsaoCriancas");
   const { grouped, ungrouped } = useMemo(() => groupBySubcategoria(extraItems), [extraItems]);
 
-  // Inputs numéricos vazios chegam como NaN - tratar antes de multiplicar
-  const basePessoas = Number.isFinite(numCriancasConfirmadas)
-    ? (numCriancasConfirmadas as number)
-    : Number.isFinite(previsaoCriancas)
-      ? (previsaoCriancas as number)
-      : 1;
-  const numPessoas = Math.max(basePessoas, 1);
+  // Extras são SEMPRE cobrados pelo total de crianças (pedido do cliente,
+  // 19/09/2026): a quantidade acompanha numPessoas, sem controlo manual.
+  useEffect(() => {
+    if (extrasIds.length === 0) return;
+    const dessincronizado = extrasIds.some((id) => (extrasQuantidades[id] ?? 1) !== numPessoas);
+    if (!dessincronizado) return;
+    const novo = { ...extrasQuantidades };
+    for (const id of extrasIds) novo[id] = numPessoas;
+    setValue("extrasQuantidades", novo, { shouldDirty: true });
+  }, [extrasIds, extrasQuantidades, numPessoas, setValue]);
 
   const totalExtras = useMemo(
     () =>
@@ -66,10 +69,6 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
 
   const setTextoExtra = (id: string, texto: string) => {
     setValue("extrasTexto", { ...extrasTexto, [id]: texto }, { shouldDirty: true });
-  };
-
-  const setQuantidade = (id: string, qtd: number) => {
-    setValue("extrasQuantidades", { ...extrasQuantidades, [id]: qtd }, { shouldDirty: true });
   };
 
   const renderChip = (item: Extra) => {
@@ -99,10 +98,10 @@ export default function ExtrasNotasSection({ extraItems }: ExtrasNotasSectionPro
         {isSelected && (
           <ExtrasQuantidadeStepper
             extra={item}
-            quantidade={extrasQuantidades[item.id] ?? 1}
+            quantidade={numPessoas}
             numPessoas={numPessoas}
-            ocultarPessoas={item.baseCobranca === "POR_PESSOA"}
-            onChange={(qtd) => setQuantidade(item.id, qtd)}
+            quantidadeFixa
+            onChange={() => {}}
           />
         )}
       </div>
