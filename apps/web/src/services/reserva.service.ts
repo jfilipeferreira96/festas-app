@@ -1,5 +1,7 @@
 import prisma from "@festas/db";
 import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo } from "@saas/shared-types";
+import logger from "@/lib/logger";
+import { enviarEmailConfirmacaoReserva } from "@/services/email.service";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 import { cacifoService } from "@/services/cacifo.service";
@@ -47,6 +49,9 @@ interface CreateReservaData {
   numCriancasConfirmadas?: number;
   /** Nº total de crianças que apareceram na festa (receção/conclusão). */
   numCriancasPresentes?: number | null;
+  /** Enviar email de confirmação ao cliente na criação (default true; o backend
+   *  respeita sempre o optOut global do cliente). */
+  enviarEmail?: boolean;
   notasCacifos?: string;
   notasLanche?: string;
   // Observações
@@ -558,6 +563,18 @@ export const reservaService = {
       created.numCriancasConfirmadas || created.numCriancas || created.previsaoCriancas || 0;
     if (alvoCacifos > 0) {
       await cacifoService.preReservarCacifos(created.id, alvoCacifos);
+    }
+
+    // ── Email de confirmação ao cliente (fire-and-forget: um falha de email
+    // NUNCA falha a criação da reserva). Condições: opt-in da marcação +
+    // optOut global do cliente + email conhecido.
+    if (data.enviarEmail !== false && created.cliente?.optOut !== true && created.cliente?.email) {
+      void enviarEmailConfirmacaoReserva(created.id).catch((err: unknown) => {
+        logger.error("Falha ao enviar email de confirmação da reserva", {
+          reservaId: created.id,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      });
     }
 
     return created;

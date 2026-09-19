@@ -163,11 +163,16 @@ export default function PessoasSection({
           <div className="w-40">
             <InputField {...register("encarregadoCodigoPostal")} placeholder="Código Postal" />
           </div>
-          <div className="flex items-center shrink-0 pb-0.5">
+          <div className="flex items-center gap-4 shrink-0 pb-0.5">
             <Checkbox
               label="Adicionar aos clientes"
               checked={watch("adicionarCliente")}
               onChange={(checked) => setValue("adicionarCliente", checked, { shouldDirty: true })}
+            />
+            <Checkbox
+              label="Enviar confirmação por email"
+              checked={watch("enviarEmail")}
+              onChange={(checked) => setValue("enviarEmail", checked, { shouldDirty: true })}
             />
           </div>
         </div>

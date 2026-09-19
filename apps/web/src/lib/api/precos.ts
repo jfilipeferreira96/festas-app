@@ -34,6 +34,9 @@ export interface ConfiguracaoPreco {
   // Durações
   duracaoDefaultFestaMin: number;
   duracaoExcessoBlocoMin: number;
+  // Dados de pagamento (IBAN, MBWay...) incluídos no email de confirmação
+  // quando a caução ainda não foi paga
+  dadosPagamento?: string | null;
   createdAt: string;
   updatedAt: string;
 }

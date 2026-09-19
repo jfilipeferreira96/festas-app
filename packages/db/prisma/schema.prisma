@@ -371,6 +371,9 @@ model ConfiguracaoPreco {
   // Durações default
   duracaoDefaultFestaMin        Int      @default(135) // 2h15m
   duracaoExcessoBlocoMin        Int      @default(30)
+  // Dados de pagamento (IBAN, MBWay, etc.) incluídos no email de confirmação
+  // quando a caução ainda não foi paga
+  dadosPagamento                String?  @db.Text
   createdAt                     DateTime @default(now())
   updatedAt                     DateTime @updatedAt
 

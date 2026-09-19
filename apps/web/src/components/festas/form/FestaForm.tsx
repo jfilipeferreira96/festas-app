@@ -275,6 +275,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
       if (cliente.email) setValue("encarregadoEmail", cliente.email, { shouldDirty: true });
       if (cliente.codigoPostal) setValue("encarregadoCodigoPostal", cliente.codigoPostal, { shouldDirty: true });
       setValue("adicionarCliente", false, { shouldDirty: true });
+      // Cliente com optOut (ex.: marketing) não recebe email por defeito -
+      // o utilizador pode sempre ligar o checkbox para esta festa.
+      setValue("enviarEmail", cliente.optOut !== true, { shouldDirty: true });
       if (filhos.length > 0) {
         aniversariantesArray.replace(
           filhos.map((filho) => ({

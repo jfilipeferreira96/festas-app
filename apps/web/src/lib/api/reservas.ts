@@ -48,6 +48,9 @@ export interface CreateReservaData {
   clienteEmail?: string;
   clienteCodigoPostal?: string;
   adicionarCliente?: boolean;
+  /** Enviar email de confirmação ao cliente na criação (default true; o backend
+   *  respeita o optOut global do cliente). */
+  enviarEmail?: boolean;
   idadeAnos: number;
   data: string;
   horario: string;

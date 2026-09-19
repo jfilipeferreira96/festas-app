@@ -50,6 +50,8 @@ export const configuracaoPrecoService = {
     valorHoraMonitorDefault?: number | null;
     duracaoDefaultFestaMin?: number;
     duracaoExcessoBlocoMin?: number;
+    /** Dados de pagamento (IBAN, MBWay...) para o email de confirmação. */
+    dadosPagamento?: string | null;
   }) {
     const existing = await prisma.configuracaoPreco.findFirst();
 
@@ -97,6 +99,7 @@ export const configuracaoPrecoService = {
         ...(data.valorHoraMonitorDefault !== undefined && { valorHoraMonitorDefault: data.valorHoraMonitorDefault }),
         ...(data.duracaoDefaultFestaMin !== undefined && { duracaoDefaultFestaMin: data.duracaoDefaultFestaMin }),
         ...(data.duracaoExcessoBlocoMin !== undefined && { duracaoExcessoBlocoMin: data.duracaoExcessoBlocoMin }),
+        ...(data.dadosPagamento !== undefined && { dadosPagamento: data.dadosPagamento }),
       },
     });
   },

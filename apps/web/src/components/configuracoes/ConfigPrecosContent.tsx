@@ -28,6 +28,7 @@ export default function ConfigPrecosContent() {
   const [valorHoraMonitorDefault, setValorHoraMonitorDefault] = useState("");
   const [precoMeias, setPrecoMeias] = useState("");
   const [duracaoDefaultFestaMin, setDuracaoDefaultFestaMin] = useState("");
+  const [dadosPagamento, setDadosPagamento] = useState("");
   const [minimos, setMinimos] = useState<MinimoConfig[]>([
     { aniversariantes: 1, minimo: 10 },
     { aniversariantes: 2, minimo: 15 },
@@ -50,6 +51,7 @@ export default function ConfigPrecosContent() {
       setValorHoraMonitorDefault(config.valorHoraMonitorDefault != null ? String(Number(config.valorHoraMonitorDefault)) : "");
       setPrecoMeias(String(Number(config.precoMeias)));
       setDuracaoDefaultFestaMin(String(Number(config.duracaoDefaultFestaMin)));
+      setDadosPagamento(config.dadosPagamento ?? "");
       if (config.minimosCriancasPorAniversariante && config.minimosCriancasPorAniversariante.length > 0) {
         setMinimos(config.minimosCriancasPorAniversariante);
       }
@@ -85,13 +87,14 @@ export default function ConfigPrecosContent() {
         precoMeias: parseFloat(precoMeias) || 0,
         valorHoraMonitorDefault: valorHoraMonitorDefault ? parseFloat(valorHoraMonitorDefault) : null,
         duracaoDefaultFestaMin: parseInt(duracaoDefaultFestaMin) || 135,
+        dadosPagamento: dadosPagamento.trim() ? dadosPagamento.trim() : null,
         minimosCriancasPorAniversariante: minimos.sort((a, b) => a.aniversariantes - b.aniversariantes),
       });
       success("Tarifário atualizado com sucesso");
     } catch {
       error("Erro ao atualizar tarifário");
     }
-  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoEntrada1h, precoEntrada2h, precoEntradaHoraAdicional, precoExcessoFixo, caucaoDefault, precoLancheEntrada, precoAdulto, valorHoraMonitorDefault, precoMeias, duracaoDefaultFestaMin, minimos, updateMutation, success, error]);
+  }, [precoCriancaSemana, precoCriancaFimSemana, precoEntradaHoraSemana, precoEntradaHoraFimSemana, precoEntrada1h, precoEntrada2h, precoEntradaHoraAdicional, precoExcessoFixo, caucaoDefault, precoLancheEntrada, precoAdulto, valorHoraMonitorDefault, precoMeias, duracaoDefaultFestaMin, dadosPagamento, minimos, updateMutation, success, error]);
 
   if (isLoading) {
     return (
@@ -421,6 +424,23 @@ export default function ConfigPrecosContent() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Dados de pagamento (email de confirmação quando a caução não está paga) */}
+      <div className="rounded-[14px] border border-border bg-surface shadow-card p-5">
+        <label className="block text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">
+          Dados de pagamento (email de confirmação)
+        </label>
+        <textarea
+          rows={3}
+          value={dadosPagamento}
+          onChange={(e) => setDadosPagamento(e.target.value)}
+          placeholder={"Ex.: MBWay 912 345 678 · IBAN PT50 0002 0123 1234 5678 9015 4"}
+          className="w-full px-4 py-3 rounded-lg border border-border bg-transparent text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+        />
+        <p className="text-[11px] text-text-muted mt-1">
+          Enviados no email de confirmação quando a caução ainda não foi paga.
+        </p>
       </div>
 
       {/* Save button */}
