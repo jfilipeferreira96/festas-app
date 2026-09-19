@@ -32,6 +32,9 @@ import {
   Sandwich,
   CalendarX,
   Clock,
+  Activity,
+  Shield,
+  Cake,
 } from "lucide-react";
 
 type NavItem = {
@@ -70,6 +73,7 @@ const mainNavItems: NavItem[] = [
     subItems: [
       { name: "Todas", path: "/festas", icon: <PartyPopper className="w-4 h-4" /> },
       { name: "A decorrer", path: "/festas/a-decorrer", icon: <Sparkles className="w-4 h-4" /> },
+      { name: "Bolos", path: "/bolos", icon: <Cake className="w-4 h-4" /> },
     ],
   },
   {
@@ -81,6 +85,18 @@ const mainNavItems: NavItem[] = [
       { name: "Todas", path: "/entradas-livres", icon: <DoorOpen className="w-4 h-4" /> },
       { name: "A decorrer", path: "/entradas-livres/a-decorrer", icon: <Sparkles className="w-4 h-4" /> },
     ],
+  },
+  {
+    name: "A Decorrer",
+    icon: <Activity className="w-5 h-5" />,
+    path: "/a-decorrer",
+    modulo: "reservas",
+  },
+  {
+    name: "Cauções",
+    icon: <Shield className="w-5 h-5" />,
+    path: "/caucoes",
+    modulo: "reservas",
   },
   {
     name: "Calendário",
