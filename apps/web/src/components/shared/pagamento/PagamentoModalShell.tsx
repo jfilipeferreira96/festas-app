@@ -23,6 +23,8 @@ interface PagamentoModalShellProps {
   avisos?: React.ReactNode;
   tabs: PagamentoTabConfig[];
   resumo?: React.ReactNode;
+  /** Ação opcional no rodapé (ex.: imprimir talão). */
+  acaoExtra?: React.ReactNode;
 }
 
 export default function PagamentoModalShell({
@@ -36,6 +38,7 @@ export default function PagamentoModalShell({
   avisos,
   tabs,
   resumo,
+  acaoExtra,
 }: PagamentoModalShellProps) {
   const [tabId, setTabId] = useState(tabs[0]?.id ?? "");
   const tabAtiva = tabs.find((t) => t.id === tabId) ?? tabs[0];
@@ -96,6 +99,7 @@ export default function PagamentoModalShell({
         <div className="flex items-center justify-between gap-3 pt-4 mt-4 border-t border-border shrink-0">
           <div className="text-xs text-text-muted min-w-0 truncate">{resumo}</div>
           <div className="flex items-center gap-3 shrink-0">
+            {acaoExtra}
             <Button variant="outline" onClick={onClose} type="button">
               Cancelar
             </Button>

@@ -14,14 +14,23 @@ export const festasAcabarService = {
    */
   async getFestasTV() {
     const agora = new Date();
-    const janelaMin = new Date(agora.getTime() - 5 * 60 * 1000); // 5 min atrás
-    const janelaMax = new Date(agora.getTime() + 5 * 60 * 1000); // 5 min à frente
+    // Pedido do cliente (19/09/2026): o monitor mostra festas/entradas quando
+    // faltam 10 min para o fim e mantém-nas até serem concluídas (sem limite
+    // inferior - festas atrasadas continuam visíveis).
+    const limiteSuperior = new Date(agora.getTime() + 10 * 60 * 1000);
+    // Lanche: chamar 10 min antes da horaLanche (janela de 30 min depois)
+    const lancheMin = new Date(agora.getTime() - 30 * 60 * 1000);
+    const lancheMax = new Date(agora.getTime() + 10 * 60 * 1000);
 
-    const [festas, entradas] = await Promise.all([
+    const hoje = new Date(agora);
+    hoje.setHours(0, 0, 0, 0);
+    const amanha = new Date(hoje.getTime() + 24 * 60 * 60 * 1000);
+
+    const [festas, entradas, festasLancheHoje] = await Promise.all([
       prisma.reserva.findMany({
         where: {
-          estado: { in: ["EM_CURSO", "CONCLUIDA"] },
-          fimPrevisto: { gte: janelaMin, lte: janelaMax },
+          estado: "EM_CURSO",
+          fimPrevisto: { lte: limiteSuperior },
         },
         include: {
           local: true,
@@ -30,7 +39,10 @@ export const festasAcabarService = {
         orderBy: { fimPrevisto: "asc" },
       }),
       prisma.entradaLivre.findMany({
-        where: { estado: "ATIVA" },
+        where: {
+          estado: "ATIVA",
+          fimPrevisto: { lte: limiteSuperior },
+        },
         select: {
           id: true,
           criancas: true,
@@ -40,6 +52,17 @@ export const festasAcabarService = {
           duracaoMinutos: true,
         },
         orderBy: { inicioEm: "asc" },
+      }),
+      // Lanches de hoje (EM_CURSO com horaLanche marcada) - a TV avisa a
+      // equipa 10 min antes da hora do lanche
+      prisma.reserva.findMany({
+        where: {
+          estado: "EM_CURSO",
+          data: { gte: hoje, lt: amanha },
+          horaLanche: { not: null },
+        },
+        include: { aniversariantes: { include: { aniversariante: { select: { nome: true } } } } },
+        orderBy: { horaLanche: "asc" },
       }),
     ]);
 
@@ -76,7 +99,29 @@ export const festasAcabarService = {
       };
     });
 
-    return { festas: festasFormatadas, entradas: entradasFormatadas };
+    // Lanches dentro da janela [horaLanche - 30min, horaLanche + 10min]
+    const lanchesFormatados = festasLancheHoje
+      .map((r) => {
+        const [h, m] = (r.horaLanche ?? "").split(":").map(Number);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+        const lancheEm = new Date(r.data);
+        lancheEm.setHours(h, m, 0, 0);
+        if (lancheEm < lancheMin || lancheEm > lancheMax) return null;
+        return {
+          id: r.id,
+          nomeFesta:
+            r.aniversariantes
+              .map((a) => a.aniversariante?.nome)
+              .filter(Boolean)
+              .join(", ") || "-",
+          cor: r.cor,
+          horaLanche: r.horaLanche ?? "",
+          numCriancas: r.numCriancas,
+        };
+      })
+      .filter((l): l is NonNullable<typeof l> => l !== null);
+
+    return { festas: festasFormatadas, entradas: entradasFormatadas, lanches: lanchesFormatados };
   },
 
   async getFestas() {

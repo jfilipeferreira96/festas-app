@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { ArrowUpDown, CreditCard } from "lucide-react";
+import { ArrowUpDown, CreditCard, Printer } from "lucide-react";
+import { Button } from "@/components/ui";
+import { imprimirTalaoEntrada } from "@/utils/print-talao";
 import { useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useToast } from "@/hooks/use-toast";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
@@ -134,6 +136,24 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
     },
   ];
 
+  const handleImprimirTalao = useCallback(() => {
+    imprimirTalaoEntrada({
+      id: entrada.id,
+      inicioEm: entrada.inicioEm,
+      fimPrevisto: entrada.fimPrevisto,
+      duracaoMinutos: entrada.duracaoMinutos,
+      criancas: entrada.criancas,
+      encarregadoNome: entrada.encarregadoNome,
+      extras: entrada.extras,
+      meiasQuantidade: entrada.meiasQuantidade,
+      temLanche: entrada.temLanche,
+      custoTotal: entrada.custoTotal,
+      custoTotalFinal: entrada.custoTotalFinal,
+      // Ledger em memória: o utilizador imprime o talão com o que acabou de registar
+      pagamentos: pagamentos.map((p) => ({ valor: p.valor, metodo: p.metodo, nota: p.nota })),
+    });
+  }, [entrada, pagamentos]);
+
   return (
     <PagamentoModalShell
       titulo={`Pagamento - ${criancaNomes}`}
@@ -148,6 +168,11 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
       avisos={avisos}
       tabs={tabs}
       resumo={resumo}
+      acaoExtra={
+        <Button variant="outline" onClick={handleImprimirTalao} className="flex items-center gap-1.5">
+          <Printer size={14} /> Talão
+        </Button>
+      }
     />
   );
 }
