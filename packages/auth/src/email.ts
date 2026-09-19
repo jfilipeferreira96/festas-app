@@ -1,10 +1,18 @@
+import nodemailer, { type Transporter } from "nodemailer";
 import { createWelcomeEmailHTML, createPasswordResetEmailHTML, createVerificationEmailHTML } from "./email-templates";
 
-// Sender configuration
-const sender = {
-  address: process.env.MAILJET_SENDER_EMAIL || "hello@example.com",
-  name: process.env.MAILJET_SENDER_NAME || "Gestão de Festas Infantis",
+// ── Configuração SMTP (cPanel) ─────────────────────────────────────
+// Ex.: SMTP_HOST=mail.baselandia.pt · SMTP_PORT=465 · SMTP_USER=reservas@baselandia.pt
+const smtpConfig = {
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT || 465),
+  secure: (process.env.SMTP_SECURE || "true") === "true", // 465 = TLS implícito
+  user: process.env.SMTP_USER,
+  pass: process.env.SMTP_PASS,
 };
+
+const fromAddress = process.env.EMAIL_FROM_ADDRESS || smtpConfig.user || "noreply@example.com";
+const fromName = process.env.EMAIL_FROM_NAME || "Gestão de Festas Infantis";
 
 // Typings
 export interface User {
@@ -19,84 +27,39 @@ interface SendEmailOptions {
   text?: string;
 }
 
-interface MailjetMessageResponse {
-  Status: string;
-  To: Array<{ Email: string; MessageID: number }>;
+interface SendEmailResult {
+  success: true;
+  messageId: string;
 }
 
-interface MailjetApiResponse {
-  Messages: MailjetMessageResponse[];
-}
+let transporter: Transporter | null = null;
 
-interface MailjetApiError {
-  ErrorMessage?: string;
-  ErrorCode?: string;
-  Messages?: Array<{
-    Status: string;
-    Errors?: Array<{ ErrorMessage: string; ErrorCode: string }>;
-  }>;
-}
-
-// Base sendEmail function using Mailjet API v3.1
-export const sendEmail = async ({ to, subject, html, text }: SendEmailOptions) => {
-  const API_KEY = process.env.MAILJET_API_KEY;
-  const API_SECRET = process.env.MAILJET_API_SECRET;
-
-  if (!API_KEY || !API_SECRET) {
-    throw new Error("MAILJET_API_KEY and MAILJET_API_SECRET environment variables are not set");
+function getTransporter(): Transporter {
+  if (!smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
+    throw new Error("SMTP_HOST, SMTP_USER and SMTP_PASS environment variables are not set");
   }
-
-  try {
-    const auth = Buffer.from(`${API_KEY}:${API_SECRET}`).toString("base64");
-
-    const response = await fetch("https://api.mailjet.com/v3.1/send", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        Messages: [
-          {
-            From: {
-              Email: sender.address,
-              Name: sender.name,
-            },
-            To: [
-              {
-                Email: to,
-              },
-            ],
-            Subject: subject,
-            HTMLPart: html,
-            TextPart: text || "",
-            Headers: {
-              "X-Priority": "1",
-              Importance: "high",
-            },
-          },
-        ],
-      }),
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.secure,
+      auth: { user: smtpConfig.user, pass: smtpConfig.pass },
     });
+  }
+  return transporter;
+}
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      const errorData = data as MailjetApiError;
-      const errorMessage =
-        errorData.ErrorMessage ||
-        errorData.Messages?.[0]?.Errors?.[0]?.ErrorMessage ||
-        `HTTP ${response.status}`;
-      throw new Error(`Mailjet API error: ${response.status} - ${errorMessage}`);
-    }
-
-    const successData = data as MailjetApiResponse;
-    const messageId = successData.Messages[0]?.To[0]?.MessageID?.toString() || "sent";
-
-    return {
-      success: true,
-      messageId,
-    };
+// sendEmail via SMTP do alojamento (cPanel)
+export const sendEmail = async ({ to, subject, html, text }: SendEmailOptions): Promise<SendEmailResult> => {
+  try {
+    const info = await getTransporter().sendMail({
+      from: `"${fromName}" <${fromAddress}>`,
+      to,
+      subject,
+      html,
+      text: text || "",
+    });
+    return { success: true, messageId: info.messageId || "sent" };
   } catch (error) {
     console.error("Failed to send email:", error);
     throw new Error(`Failed to send email: ${error instanceof Error ? error.message : "Unknown error"}`);

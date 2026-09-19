@@ -24,7 +24,7 @@ function linha(label: string, valor: string): string {
   </tr>`;
 }
 
-function buildReservaConfirmacaoHtml(
+export function buildReservaConfirmacaoHtml(
   reserva: Awaited<ReturnType<typeof carregarReserva>>,
   dadosPagamento: string
 ): { assunto: string; html: string } {

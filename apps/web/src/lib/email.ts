@@ -1,8 +1,37 @@
+import nodemailer, { type Transporter } from "nodemailer";
+
 /**
- * Cliente MailJet v3.1 (REST) para emails transacionais do app.
- * Config: MAILJET_API_KEY / MAILJET_API_SECRET / MAILJET_SENDER_EMAIL / MAILJET_SENDER_NAME.
- * Sem SDK - fetch direto, igual ao pacote @festas/auth (emails de autenticação).
+ * Envio de email via SMTP do alojamento (cPanel) - ex.: mail.baselandia.pt:465.
+ * Config: SMTP_HOST / SMTP_PORT / SMTP_SECURE / SMTP_USER / SMTP_PASS
+ *         EMAIL_FROM_ADDRESS / EMAIL_FROM_NAME
+ * Sem credenciais (dev): degrada graciosamente - apenas regista e sai.
  */
+
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = Number(process.env.SMTP_PORT || 465);
+const smtpSecure = (process.env.SMTP_SECURE || "true") === "true"; // 465 = TLS implícito
+const smtpUser = process.env.SMTP_USER;
+const smtpPass = process.env.SMTP_PASS;
+
+const fromAddress = process.env.EMAIL_FROM_ADDRESS || smtpUser || "noreply@example.com";
+const fromName = process.env.EMAIL_FROM_NAME || "Baselandia - Festas";
+
+export const isEmailConfigurado = (): boolean =>
+  Boolean(smtpHost && smtpUser && smtpPass);
+
+let transporter: Transporter | null = null;
+
+function getTransporter(): Transporter {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+  }
+  return transporter;
+}
 
 interface SendEmailOptions {
   to: string;
@@ -11,56 +40,28 @@ interface SendEmailOptions {
   text?: string;
 }
 
-export const isEmailConfigurado = (): boolean =>
-  Boolean(process.env.MAILJET_API_KEY && process.env.MAILJET_API_SECRET);
-
 export async function sendEmail({ to, subject, html, text }: SendEmailOptions): Promise<void> {
-  const API_KEY = process.env.MAILJET_API_KEY;
-  const API_SECRET = process.env.MAILJET_API_SECRET;
-
-  if (!API_KEY || !API_SECRET) {
+  if (!isEmailConfigurado()) {
     // Sem credenciais (dev): não rebenta - registar e sair.
-    console.warn("[email] MAILJET não configurado - email não enviado para", to);
+    console.warn("[email] SMTP não configurado - email não enviado para", to);
     return;
   }
 
-  const senderAddress = process.env.MAILJET_SENDER_EMAIL || "hello@example.com";
-  const senderName = process.env.MAILJET_SENDER_NAME || "Gestão de Festas Infantis";
-
-  const auth = Buffer.from(`${API_KEY}:${API_SECRET}`).toString("base64");
-  const response = await fetch("https://api.mailjet.com/v3.1/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      Messages: [
-        {
-          From: { Email: senderAddress, Name: senderName },
-          To: [{ Email: to }],
-          Subject: subject,
-          HTMLPart: html,
-          TextPart: text || "",
-        },
-      ],
-    }),
+  const info = await getTransporter().sendMail({
+    from: `"${fromName}" <${fromAddress}>`,
+    to,
+    subject,
+    html,
+    text: text || "",
   });
 
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as
-      | { ErrorMessage?: string; Messages?: Array<{ Errors?: Array<{ ErrorMessage?: string }> }> }
-      | null;
-    const detalhe =
-      body?.ErrorMessage ||
-      body?.Messages?.[0]?.Errors?.[0]?.ErrorMessage ||
-      `HTTP ${response.status}`;
-    throw new Error(`Mailjet API error: ${detalhe}`);
+  if (info.rejected && info.rejected.length > 0) {
+    throw new Error(`SMTP rejeitou o destinatário: ${info.rejected.join(", ")}`);
   }
 }
 
-// Entidades HTML construídas por partes (mesma técnica de print-bolos.ts)
-// para não serem descodificadas por formatação/transporte do código.
+// Entidades HTML por partes (téc. de print-bolos.ts) para não serem
+// descodificadas no transporte do código.
 const ENT_AMP = String.fromCharCode(38) + "amp;";
 const ENT_LT = String.fromCharCode(38) + "lt;";
 const ENT_GT = String.fromCharCode(38) + "gt;";
