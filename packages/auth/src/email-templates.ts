@@ -1,6 +1,5 @@
 /**
- * Email Templates – TailwindCSS-inspired professional layout
- * Consistent structure and styles across all templates.
+ * Email Templates - layout profissional consistente para todos os templates.
  */
 
 const baseStyles = `
@@ -62,36 +61,36 @@ const baseStyles = `
   }
 `;
 
-// ✅ Email Verification
+// Verificação de email
 export const createVerificationEmailHTML = (user: { name: string | null; email: string }, verificationUrl: string) => {
-  const userName = user?.name || "there";
+  const userName = user?.name || "utilizador";
 
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Verify your email address</title>
+  <title>Verifique o seu endereço de email</title>
   <style>${baseStyles}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1 class="title">Verify Your Email Address</h1>
+      <h1 class="title">Verifique o seu endereço de email</h1>
     </div>
-    <p class="text">Hello ${userName},</p>
+    <p class="text">Olá ${userName},</p>
     <p class="text">
-      Thank you for signing up! Please verify your email address to complete your registration.
+      Obrigado pelo seu registo! Para concluir o registo, confirme o seu endereço de email clicando no botão abaixo.
     </p>
     <p style="text-align: center; margin: 30px 0;">
-      <a href="${verificationUrl}" class="button">Verify Email</a>
+      <a href="${verificationUrl}" class="button">Verificar email</a>
     </p>
     <p class="text">
-      If you didn’t create an account with us, you can safely ignore this message.
+      Se não criou uma conta connosco, pode ignorar esta mensagem.
     </p>
     <div class="footer">
-      This verification link expires in 24 hours.<br>
-      © ${new Date().getFullYear()} Your Company. All rights reserved.
+      Este link de verificação expira em 24 horas.<br>
+      © ${new Date().getFullYear()} Baselandia. Todos os direitos reservados.
     </div>
   </div>
 </body>
@@ -99,33 +98,33 @@ export const createVerificationEmailHTML = (user: { name: string | null; email: 
 `;
 };
 
-// ✅ Welcome Email
+// Boas-vindas
 export const createWelcomeEmailHTML = (user: { name: string | null; email: string }) => {
-  const userName = user?.name || "there";
+  const userName = user?.name || "utilizador";
 
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Welcome to Our Platform</title>
+  <title>Bem-vindo à nossa plataforma</title>
   <style>${baseStyles}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1 class="title">Welcome to Our Platform</h1>
+      <h1 class="title">Bem-vindo!</h1>
     </div>
-    <p class="text">Hello ${userName},</p>
+    <p class="text">Olá ${userName},</p>
     <p class="text">
-      Welcome aboard! We’re thrilled to have you as part of our community. Your account has been successfully created, and you’re all set to start using our platform.
+      A sua conta foi criada com sucesso e já pode começar a utilizar a plataforma.
     </p>
     <p class="text">
-      Explore the features we’ve built to help you get the most out of your experience. If you have any questions, feel free to contact our support team.
+      Se tiver alguma questão, não hesite em contactar a equipa de apoio.
     </p>
     <div class="footer">
-      We’re glad to have you with us.<br>
-      © ${new Date().getFullYear()} Your Company. All rights reserved.
+      Bem-vindo à equipa.<br>
+      © ${new Date().getFullYear()} Baselandia. Todos os direitos reservados.
     </div>
   </div>
 </body>
@@ -133,36 +132,36 @@ export const createWelcomeEmailHTML = (user: { name: string | null; email: strin
 `;
 };
 
-// ✅ Password Reset
+// Recuperação de palavra-passe
 export const createPasswordResetEmailHTML = (user: { name: string | null; email: string }, resetUrl: string) => {
-  const userName = user?.name || "there";
+  const userName = user?.name || "utilizador";
 
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Reset Your Password</title>
+  <title>Recuperar palavra-passe</title>
   <style>${baseStyles}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1 class="title">Reset Your Password</h1>
+      <h1 class="title">Recuperar palavra-passe</h1>
     </div>
-    <p class="text">Hello ${userName},</p>
+    <p class="text">Olá ${userName},</p>
     <p class="text">
-      We received a request to reset your password. Click the button below to choose a new one.
+      Recebemos um pedido para recuperar a sua palavra-passe. Clique no botão abaixo para definir uma nova.
     </p>
     <p style="text-align: center; margin: 30px 0;">
-      <a href="${resetUrl}" class="button" style="background-color:#dc2626;">Reset Password</a>
+      <a href="${resetUrl}" class="button" style="background-color:#dc2626;">Definir nova palavra-passe</a>
     </p>
     <p class="text">
-      If you didn’t request this password reset, you can safely ignore this email.
+      Se não fez este pedido, pode ignorar este email.
     </p>
     <div class="footer">
-      This link will expire in 1 hour.<br>
-      © ${new Date().getFullYear()} Your Company. All rights reserved.
+      Este link expira em 1 hora.<br>
+      © ${new Date().getFullYear()} Baselandia. Todos os direitos reservados.
     </div>
   </div>
 </body>
@@ -170,40 +169,40 @@ export const createPasswordResetEmailHTML = (user: { name: string | null; email:
 `;
 };
 
-// ✅ Organization Invitation
+// Convite de organização
 export const createOrganizationInvitationEmailHTML = (params: { invitedEmail: string; invitedByUsername: string; invitedByEmail: string; teamName: string; inviteLink: string }) => {
   const { invitedEmail, invitedByUsername, invitedByEmail, teamName, inviteLink } = params;
 
   return `
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <title>Invitation to Join ${teamName}</title>
+  <title>Convite para ${teamName}</title>
   <style>${baseStyles}</style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1 class="title">Invitation to Join ${teamName}</h1>
+      <h1 class="title">Convite para ${teamName}</h1>
     </div>
-    <p class="text">Hello,</p>
+    <p class="text">Olá,</p>
     <p class="text">
       <strong>${invitedByUsername}</strong> (<a href="mailto:${invitedByEmail}" style="color:#2563eb; text-decoration:none;">${invitedByEmail}</a>)
-      has invited you to join the organization <strong>${teamName}</strong>.
+      convidou-o(a) para fazer parte da organização <strong>${teamName}</strong>.
     </p>
     <p class="text">
-      Click the button below to accept the invitation and become part of the team:
+      Clique no botão abaixo para aceitar o convite:
     </p>
     <p style="text-align: center; margin: 30px 0;">
-      <a href="${inviteLink}" class="button">Accept Invitation</a>
+      <a href="${inviteLink}" class="button">Aceitar convite</a>
     </p>
     <p class="text">
-      If you don’t want to join or believe this email was sent in error, you can safely ignore it.
+      Se não pretende aceitar ou considera que este email foi enviado por engano, pode ignorá-lo.
     </p>
     <div class="footer">
-      This invitation will expire in 7 days.<br>
-      © ${new Date().getFullYear()} ${teamName}. All rights reserved.
+      Este convite expira em 7 dias.<br>
+      © ${new Date().getFullYear()} ${teamName}. Todos os direitos reservados.
     </div>
   </div>
 </body>

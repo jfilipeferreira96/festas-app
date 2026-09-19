@@ -62,7 +62,7 @@ export function imprimirTalaoEntrada(entrada: TalaoEntradaInfo): void {
     .join(", ");
 
   const linhasItens: string[] = [];
-  linhasItens.push(`Entrada — ${escapeHtml(nomesCriancas || "-")}`);
+  linhasItens.push(`Entrada - ${escapeHtml(nomesCriancas || "-")}`);
   linhasItens.push(
     `${hora(entrada.inicioEm)} → ${hora(entrada.fimPrevisto)} (${entrada.duracaoMinutos} min)`
   );
@@ -122,7 +122,7 @@ export function imprimirTalaoEntrada(entrada: TalaoEntradaInfo): void {
     falta > 0 ? "FALTA PAGAR" : "LIQUIDADO"
   }</span><span>${falta > 0 ? euro(falta) : "OK"}</span></div>
   <hr>
-  <div class="rodape">Encarregado: ${escapeHtml(entrada.encarregadoNome || "-")}<br>Obrigado pela visita! 🎉</div>
+  <div class="rodape">Encarregado: ${escapeHtml(entrada.encarregadoNome || "-")}<br>Obrigado pela visita!</div>
   <script>window.onload = () => { window.print(); }</script>
 </body>
 </html>`;

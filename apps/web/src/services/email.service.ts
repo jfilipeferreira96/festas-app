@@ -1,14 +1,15 @@
 import prisma from "@festas/db";
 import logger from "@/lib/logger";
 import { emailShell, escapeHtmlEmail, isEmailConfigurado, sendEmail } from "@/lib/email";
+import { BOLO_LABELS } from "@/lib/constants/bolo";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 
 /**
- * Emails transacionais do app (MailJet) com FILA simples (FASE 9):
+ * Emails transacionais do app (SMTP do cPanel) com FILA simples (FASE 9):
  * 1. Enfileira em EnvioEmail (PENDENTE).
  * 2. Tenta enviar imediatamente (sucesso → ENVIADO; falha → FALHADO +
  *    tentativas/ultimoErro).
- * 3. reprocessarFila() volta a tentar PENDENTE/FALHADO com < MAX_TENTATIVAS.
+ * 3. reprocessarFilaEmails() volta a tentar PENDENTE/FALHADO com < MAX_TENTATIVAS.
  * Um falha de email NUNCA falha a operação de negócio.
  */
 
@@ -24,8 +25,28 @@ function linha(label: string, valor: string): string {
   </tr>`;
 }
 
+/** Seleção mínima da reserva necessária para construir o email. */
+type ReservaParaEmail = {
+  data: Date | string;
+  horario: string;
+  duracaoMinutos: number;
+  caucao: string;
+  valorCaucao: unknown;
+  valorTotal: unknown;
+  bolo: string | null;
+  boloTema: string | null;
+  numCriancas: number;
+  numCriancasConfirmadas: number | null;
+  local: { nome: string } | null;
+  cliente: { nome: string } | null;
+  aniversariantes: { aniversariante: { nome: string } }[];
+  extras: { extra: { nome: string }; quantidade: number }[];
+  menu: { nome: string } | null;
+};
+
+/** Constrói assunto + HTML do email de confirmação da festa. */
 export function buildReservaConfirmacaoHtml(
-  reserva: Awaited<ReturnType<typeof carregarReserva>>,
+  reserva: ReservaParaEmail,
   dadosPagamento: string
 ): { assunto: string; html: string } {
   const cauCaoPaga = reserva.caucao === "PAGA" || reserva.caucao === "PAGA_NO_DIA";
@@ -63,7 +84,14 @@ export function buildReservaConfirmacaoHtml(
         ]
       : []),
     ...(reserva.bolo
-      ? [linha("Bolo", escapeHtmlEmail(`${reserva.bolo}${reserva.boloTema ? ` — ${reserva.boloTema}` : ""}`))]
+      ? [
+          linha(
+            "Bolo",
+            escapeHtmlEmail(
+              `${BOLO_LABELS[reserva.bolo] ?? reserva.bolo}${reserva.boloTema ? ` - ${reserva.boloTema}` : ""}`
+            )
+          ),
+        ]
       : []),
     ...(valorCaucao > 0 ? [linha("Caução", escapeHtmlEmail(euro(valorCaucao)))] : []),
     ...(reserva.valorTotal != null
@@ -73,11 +101,11 @@ export function buildReservaConfirmacaoHtml(
 
   const blocoCaucao = cauCaoPaga
     ? `<div style="margin-top:20px;padding:14px 16px;border-radius:10px;background:#ecfdf5;border:1px solid #a7f3d0;">
-         <p style="margin:0;color:#047857;font-weight:700;">✅ Reserva confirmada — caução recebida</p>
+         <p style="margin:0;color:#047857;font-weight:700;">Reserva confirmada - caução recebida</p>
        </div>`
     : `<div style="margin-top:20px;padding:14px 16px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;">
          <p style="margin:0;color:#b45309;font-weight:700;">
-           ⚠️ Falta pagar a caução${valorCaucao > 0 ? ` de ${euro(valorCaucao)}` : ""} para confirmar a reserva
+           Falta pagar a caução${valorCaucao > 0 ? ` de ${euro(valorCaucao)}` : ""} para confirmar a reserva
          </p>
          ${
            dadosPagamento
@@ -96,12 +124,12 @@ export function buildReservaConfirmacaoHtml(
      <table style="width:100%;border-collapse:collapse;">${linhasItens}</table>
      ${blocoCaucao}
      <p style="margin:20px 0 0;color:#6b7280;font-size:13px;">
-       Qualquer alteração, contacte-nos. Esperamos por vocês! 🎉
+       Para qualquer alteração, contacte-nos. Contamos consigo!
      </p>`
   );
 
   return {
-    assunto: `Confirmação de marcação de festa — ${new Date(reserva.data).toLocaleDateString("pt-PT")}`,
+    assunto: `Confirmação de marcação de festa - ${new Date(reserva.data).toLocaleDateString("pt-PT")}`,
     html,
   };
 }
@@ -130,7 +158,7 @@ async function enviarItem(item: { para: string; assunto: string; html: string })
 /** Enfileira o email de confirmação da reserva e tenta enviar imediatamente. */
 export async function enfileirarEmailConfirmacaoReserva(reservaId: string): Promise<void> {
   if (!isEmailConfigurado()) {
-    logger.info("Email de confirmação ignorado - MailJet não configurado", { reservaId });
+    logger.info("Email de confirmação ignorado - SMTP não configurado", { reservaId });
     return;
   }
 

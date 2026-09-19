@@ -89,7 +89,7 @@ export function emailShell(titulo: string, conteudoHtml: string): string {
       </div>
       <div style="padding:24px;">${conteudoHtml}</div>
       <div style="padding:16px 24px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px;">
-        Este email foi enviado automaticamente — não responda.
+        Este email foi enviado automaticamente. Não responda.
       </div>
     </div>
   </div>

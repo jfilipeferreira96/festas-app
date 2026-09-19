@@ -25,7 +25,10 @@ const destinatario = process.argv[2] || "sistema@baselandia.pt";
 const envPath = resolve(raiz, "apps/web/.env");
 for (const linha of readFileSync(envPath, "utf8").split(/\r?\n/)) {
   const m = linha.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-  if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2];
+  if (m) {
+    const chave = m[1] as string;
+    if (process.env[chave] === undefined) process.env[chave] = m[2] as string;
+  }
 }
 
 // Imports dinâmicos (módulos TS que leem process.env no load)
@@ -60,44 +63,65 @@ const reservaFicticia = {
   valorTotal: 320,
   numCriancas: 20,
   numCriancasConfirmadas: 18,
-} as never;
+};
 
+// Dados de pagamento de EXEMPLO - em produção vem de Configurações → Preços
 const dadosPagamento = "MBWay: 912 345 678 (Baselandia)\nIBAN: PT50 0002 0123 1234 5678 9015 4";
 
+type Params = Parameters<typeof buildReservaConfirmacaoHtml>[0];
 const confirmacaoPaga = buildReservaConfirmacaoHtml(
-  { ...reservaFicticia, caucao: "PAGA", valorCaucao: 40 },
+  { ...reservaFicticia, caucao: "PAGA", valorCaucao: 40 } as Params,
   dadosPagamento
 );
 const confirmacaoPorPagar = buildReservaConfirmacaoHtml(
-  { ...reservaFicticia, caucao: "NAO_PAGA", valorCaucao: 40 },
+  { ...reservaFicticia, caucao: "NAO_PAGA", valorCaucao: 40 } as Params,
   dadosPagamento
 );
 
+const { buildAniversarioHtml } = await import("../apps/web/src/services/marketing.service");
+
 const amostras: EmailAmostra[] = [
   {
-    titulo: "[1/5] Boas-vindas (registo de utilizador)",
-    subject: "[AMOSTRA 1/5] Bem-vindo à Gestão de Festas Infantis!",
+    titulo: "[1/6] Boas-vindas (registo de utilizador)",
+    subject: "[AMOSTRA 1/6] Bem-vindo!",
     html: createWelcomeEmailHTML(utilizador),
   },
   {
-    titulo: "[2/5] Verificação de email (registo)",
-    subject: "[AMOSTRA 2/5] Verificar endereço de email",
+    titulo: "[2/6] Verificação de email (registo)",
+    subject: "[AMOSTRA 2/6] Verificar endereço de email",
     html: createVerificationEmailHTML(utilizador, urlFalso),
   },
   {
-    titulo: "[3/5] Recuperação de palavra-passe",
-    subject: "[AMOSTRA 3/5] Recuperar palavra-passe",
+    titulo: "[3/6] Recuperação de palavra-passe",
+    subject: "[AMOSTRA 3/6] Recuperar palavra-passe",
     html: createPasswordResetEmailHTML(utilizador, urlFalso),
   },
   {
-    titulo: "[4/5] Confirmação de festa — caução PAGA",
-    subject: `[AMOSTRA 4/5] ${confirmacaoPaga.assunto}`,
+    titulo: "[4/6] Confirmação de festa - caução PAGA",
+    subject: `[AMOSTRA 4/6] ${confirmacaoPaga.assunto}`,
     html: confirmacaoPaga.html,
   },
   {
-    titulo: "[5/5] Confirmação de festa — caução POR PAGAR",
-    subject: `[AMOSTRA 5/5] ${confirmacaoPorPagar.assunto}`,
+    titulo: "[5/6] Confirmação de festa - caução POR PAGAR",
+    subject: `[AMOSTRA 5/6] ${confirmacaoPorPagar.assunto}`,
     html: confirmacaoPorPagar.html,
+  },
+  {
+    titulo: "[6/6] Marketing - aniversário a aproximar-se",
+    subject: buildAniversarioHtml({
+      encarregadoNome: "Maria Santos",
+      criancaNome: "Tomás",
+      idade: 8,
+      dataAniversario: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      email: destinatario,
+    }).assunto,
+    html: buildAniversarioHtml({
+      encarregadoNome: "Maria Santos",
+      criancaNome: "Tomás",
+      idade: 8,
+      dataAniversario: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      email: destinatario,
+    }).html,
   },
 ];
 

@@ -207,9 +207,12 @@ model EnvioEmail {
   id             String   @id @default(cuid())
   para           String
   assunto        String
-  tipo           String // "RESERVA_CONFIRMACAO" ...
+  tipo           String // "RESERVA_CONFIRMACAO" | "ANIVERSARIO" ...
   reservaId      String?
   entradaLivreId String?
+  // Para emails de aniversário: dedup por criança + ano
+  aniversarianteId String?
+  anoReferencia  Int?
   // PENDENTE | ENVIADO | FALHADO
   estado         String   @default("PENDENTE")
   tentativas     Int      @default(0)
