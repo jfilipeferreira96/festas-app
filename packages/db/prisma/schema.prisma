@@ -409,6 +409,9 @@ model Reserva {
   boloTema          String?
   boloQuantidade    Int?
   numCriancasConfirmadas Int?
+  // Nº total de crianças que efetivamente apareceram na festa (preenchido
+  // na receção/conclusão) - difere da previsão/confirmadas.
+  numCriancasPresentes   Int?
 
   // Notas por equipa
   notasCacifos      String?  @db.Text

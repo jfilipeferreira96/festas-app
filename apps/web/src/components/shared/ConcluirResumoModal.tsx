@@ -51,8 +51,13 @@ function formatDuration(minutos: number): string {
 interface ConcluirResumoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (custoExcesso?: number) => void;
+  onConfirm: (custoExcesso?: number, numCriancasPresentes?: number | null) => void;
   isConfirming?: boolean;
+
+  /** Mostra o input "Nº crianças presentes" (festas) - preenchido na saída. */
+  comCriancasPresentes?: boolean;
+  /** Valor atual do nº de crianças presentes (edição). */
+  numCriancasPresentesInicial?: number | null;
 
   /** Modal title, e.g. "Finalizar Festa" or "Concluir Entrada" */
   titulo: string;
@@ -88,6 +93,8 @@ export default function ConcluirResumoModal({
   onClose,
   onConfirm,
   isConfirming = false,
+  comCriancasPresentes = false,
+  numCriancasPresentesInicial = null,
   titulo,
   entidadeNome,
   localNome,
@@ -125,14 +132,21 @@ export default function ConcluirResumoModal({
   // ── Excess cost state ──────────────────────
   const [cobrarExcesso, setCobrarExcesso] = useState(true);
   const [custoExcessoInput, setCustoExcessoInput] = useState("");
+  // Nº de crianças que apareceram (festas): vazio = sem registo
+  const [criancasPresentesInput, setCriancasPresentesInput] = useState(
+    numCriancasPresentesInicial != null ? String(numCriancasPresentesInicial) : ""
+  );
 
   // Sync default when modal opens or config loads
   useEffect(() => {
     if (isOpen) {
       setCobrarExcesso(hasExcesso);
       setCustoExcessoInput(String(precoExcessoFixo.toFixed(2)));
+      setCriancasPresentesInput(
+        numCriancasPresentesInicial != null ? String(numCriancasPresentesInicial) : ""
+      );
     }
-  }, [isOpen, hasExcesso, precoExcessoFixo]);
+  }, [isOpen, hasExcesso, precoExcessoFixo, numCriancasPresentesInicial]);
 
   const custoExcesso = useMemo(() => {
     const parsed = parseFloat(custoExcessoInput);
@@ -146,12 +160,17 @@ export default function ConcluirResumoModal({
   const temNotas = Boolean(notas?.cacifos || notas?.lesoes || notasCacifoItens.length > 0);
 
   const handleConfirm = useCallback(() => {
+    const presentes = comCriancasPresentes
+      ? criancasPresentesInput.trim() === ""
+        ? null
+        : Math.max(0, Math.round(Number(criancasPresentesInput) || 0))
+      : undefined;
     if (hasExcesso && cobrarExcesso) {
-      onConfirm(custoExcesso);
+      onConfirm(custoExcesso, presentes);
     } else {
-      onConfirm(undefined);
+      onConfirm(undefined, presentes);
     }
-  }, [hasExcesso, cobrarExcesso, custoExcesso, onConfirm]);
+  }, [hasExcesso, cobrarExcesso, custoExcesso, onConfirm, comCriancasPresentes, criancasPresentesInput]);
 
   // ── Render ─────────────────────────────────
   return (
@@ -216,6 +235,26 @@ export default function ConcluirResumoModal({
             </p>
           </div>
         </div>
+
+        {/* Nº crianças presentes (festas) - registo do nº real na saída */}
+        {comCriancasPresentes && (
+          <div className="rounded-xl border border-border bg-surface p-4 mb-5">
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">
+              Nº total de crianças que apareceram
+            </label>
+            <input
+              type="number"
+              min={0}
+              value={criancasPresentesInput}
+              onChange={(e) => setCriancasPresentesInput(e.target.value)}
+              placeholder="0"
+              className="w-28 h-10 px-3 rounded-lg border border-border bg-transparent text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <p className="text-[11px] text-text-muted mt-1">
+              Opcional — registo do nº real de crianças na saída.
+            </p>
+          </div>
+        )}
 
         {/* Excess warning */}
         {hasExcesso && (

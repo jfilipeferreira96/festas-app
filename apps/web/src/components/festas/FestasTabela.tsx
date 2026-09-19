@@ -254,9 +254,9 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   }, []);
 
   const confirmFinalizar = useCallback(
-    async (custoExcesso?: number) => {
+    async (custoExcesso?: number, numCriancasPresentes?: number | null) => {
       if (!finalizarModal) return;
-      await finalizarReserva.mutateAsync({ id: finalizarModal.id, custoExcesso });
+      await finalizarReserva.mutateAsync({ id: finalizarModal.id, custoExcesso, numCriancasPresentes });
       setFinalizarModal(null);
     },
     [finalizarReserva, finalizarModal],
@@ -631,7 +631,29 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
               </StatusBadge>
             ),
           },
-        ] as Column<Reserva>[]).filter((c) => !(isCacifos && (c.key === "contacto" || c.key === "temaMenu" || c.key === "extras" || c.key === "pagamento")))}
+          {
+            key: "caucao",
+            label: "Caução",
+            render: (_v, r) => {
+              const paga = r.caucao === "PAGA";
+              const pagaNoDia = r.caucao === "PAGA_NO_DIA";
+              const label = paga ? "Paga" : pagaNoDia ? "Paga no dia" : "Não paga";
+              const cls = paga
+                ? "bg-accent-green-50 text-accent-green-600 border-accent-green-200"
+                : pagaNoDia
+                  ? "bg-accent-orange-50 text-accent-orange-600 border-accent-orange-200"
+                  : "bg-gray-50 text-text-muted border-gray-200";
+              return (
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold border whitespace-nowrap ${cls}`}
+                  title={r.valorCaucao ? `Valor: ${new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(r.valorCaucao))}` : undefined}
+                >
+                  {label}
+                </span>
+              );
+            },
+          },
+        ] as Column<Reserva>[]).filter((c) => !(isCacifos && (c.key === "contacto" || c.key === "temaMenu" || c.key === "extras" || c.key === "pagamento" || c.key === "caucao")))}
         loading={isLoading}
         searchable
         searchPlaceholder="Pesquisar por nome, contacto, email..."
@@ -850,6 +872,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
           onClose={() => setFinalizarModal(null)}
           onConfirm={confirmFinalizar}
           isConfirming={finalizarReserva.isPending}
+          comCriancasPresentes
+          numCriancasPresentesInicial={finalizarModal.numCriancasPresentes}
           titulo="Finalizar Festa"
           entidadeNome={getAniversarianteNome(finalizarModal)}
           localNome={finalizarModal.local?.nome}

@@ -15,6 +15,8 @@ export async function POST(request: NextRequest, { params }: Params) {
     const body = await request.json().catch(() => ({}));
     const reserva = await reservaService.finalizar(id, {
       custoExcessoManual: typeof body.custoExcesso === "number" ? body.custoExcesso : undefined,
+      numCriancasPresentes:
+        typeof body.numCriancasPresentes === "number" ? body.numCriancasPresentes : undefined,
     });
     return NextResponse.json(reserva);
   } catch (error) {

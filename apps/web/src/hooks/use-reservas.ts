@@ -105,8 +105,12 @@ export function useIniciarReserva() {
 export function useFinalizarReserva() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, custoExcesso }: { id: string; custoExcesso?: number }) =>
-      reservasApi.finalizar(id, custoExcesso),
+    mutationFn: ({
+      id,
+      custoExcesso,
+      numCriancasPresentes,
+    }: { id: string; custoExcesso?: number; numCriancasPresentes?: number | null }) =>
+      reservasApi.finalizar(id, custoExcesso, numCriancasPresentes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["reservas"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });

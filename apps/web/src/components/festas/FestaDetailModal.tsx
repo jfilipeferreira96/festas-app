@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CheckCircle2, Play, Users, MapPin,
   Clock, Cake, Sparkles, Package, CreditCard, Shield,
@@ -13,7 +13,8 @@ import { Button } from "@/components/ui";
 import { StatusBadge, type StatusType } from "@/components/ui";
 import { StatusStepper } from "@/components/ui/status-stepper/StatusStepper";
 import { FestaColorDot } from "@/components/ui/FestaColorPicker";
-import { useReserva } from "@/hooks/use-reservas";
+import { useReserva, useUpdateReserva } from "@/hooks/use-reservas";
+import { useToast } from "@/hooks/use-toast";
 import type { Reserva } from "@/lib/api/reservas";
 import { formatDate, formatDuration } from "@/utils/date";
 import { differenceInYears } from "date-fns";
@@ -214,7 +215,16 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
           {reserva.numCriancasConfirmadas != null && reserva.numCriancasConfirmadas > 0 && (
             <DetailRow icon={<Users size={13} />} label="Confirmadas" value={String(reserva.numCriancasConfirmadas)} />
           )}
+          {reserva.numCriancasPresentes != null && (
+            <DetailRow icon={<Users size={13} />} label="Presentes" value={String(reserva.numCriancasPresentes)} />
+          )}
         </div>
+        {/* Nº de crianças que apareceram: editável na receção (em curso/concluída) */}
+        {(reserva.estado === "EM_CURSO" || reserva.estado === "CONCLUIDA") && (
+          <div className="mt-3 pt-3 border-t border-border">
+            <CriancasPresentesField reserva={reserva} />
+          </div>
+        )}
       </Section>
 
       {/* Encarregado */}
@@ -272,6 +282,19 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
             )}
           </div>
           {reserva.menu.notas && <p className="text-xs text-text-muted mt-1">{reserva.menu.notas}</p>}
+        </Section>
+      )}
+
+      {/* Monitores atribuídos - tudo o que foi marcado deve aparecer na receção */}
+      {reserva.monitores && reserva.monitores.length > 0 && (
+        <Section title="Monitores" icon={<Users size={13} />}>
+          <div className="space-y-1">
+            {reserva.monitores.map((rm) => (
+              <div key={rm.id} className="flex items-center justify-between py-1 px-2 rounded-lg hover:bg-gray-50">
+                <span className="text-sm text-text-primary">{rm.monitor.nome}</span>
+              </div>
+            ))}
+          </div>
         </Section>
       )}
 
@@ -646,6 +669,57 @@ function DetailRow({ icon, label, value }: { icon?: React.ReactNode; label: stri
         {label}:
       </span>
       <span className="text-sm text-text-primary min-w-0 break-words">{value}</span>
+    </div>
+  );
+}
+
+// ── Crianças Presentes (receção) ──────────────────────────────────
+/** Nº total de crianças que efetivamente apareceram na festa. Editável
+ *  inline na receção/conclusão; guardado com o update normal da reserva. */
+function CriancasPresentesField({ reserva }: { reserva: Reserva }) {
+  const toast = useToast();
+  const updateReserva = useUpdateReserva();
+  const valorGuardado = reserva.numCriancasPresentes != null ? String(reserva.numCriancasPresentes) : "";
+  const [valor, setValor] = useState(valorGuardado);
+
+  // Re-sincronizar quando os dados frescos chegam (ex.: após finalizar)
+  useEffect(() => {
+    setValor(valorGuardado);
+  }, [valorGuardado]);
+
+  const sujo = valor !== valorGuardado;
+
+  const guardar = async () => {
+    const n = valor.trim() === "" ? null : Math.max(0, Math.round(Number(valor) || 0));
+    try {
+      await updateReserva.mutateAsync({ id: reserva.id, data: { numCriancasPresentes: n } });
+      toast.success("Nº de crianças presentes atualizado.");
+    } catch (err) {
+      toast.handleApiError(err, "Não foi possível guardar o nº de crianças presentes.");
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-text-muted shrink-0">Crianças presentes:</span>
+      <input
+        type="number"
+        min={0}
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        placeholder="0"
+        className="w-20 h-8 px-2 rounded-lg border border-border bg-transparent text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+      />
+      {sujo && (
+        <button
+          type="button"
+          onClick={guardar}
+          disabled={updateReserva.isPending}
+          className="px-2.5 py-1 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
+        >
+          {updateReserva.isPending ? "A guardar..." : "Guardar"}
+        </button>
+      )}
     </div>
   );
 }

@@ -68,9 +68,9 @@ export default function FestasContent() {
   }, []);
 
   const handleFinalizar = useCallback(
-    async (custoExcesso?: number) => {
+    async (custoExcesso?: number, numCriancasPresentes?: number | null) => {
       if (!confirmFinalizar) return;
-      await finalizarFesta.mutateAsync({ id: confirmFinalizar.id, custoExcesso });
+      await finalizarFesta.mutateAsync({ id: confirmFinalizar.id, custoExcesso, numCriancasPresentes });
       setConfirmFinalizar(null);
     },
     [finalizarFesta, confirmFinalizar]
@@ -143,6 +143,8 @@ export default function FestasContent() {
           onClose={() => setConfirmFinalizar(null)}
           onConfirm={handleFinalizar}
           isConfirming={finalizarFesta.isPending}
+          comCriancasPresentes
+          numCriancasPresentesInicial={confirmFinalizar.numCriancasPresentes}
           titulo="Finalizar Festa"
           entidadeNome={getAniversarianteNome(confirmFinalizar)}
           localNome={confirmFinalizar.local?.nome}

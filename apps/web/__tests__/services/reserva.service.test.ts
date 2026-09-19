@@ -292,6 +292,23 @@ describe("Reserva Service", () => {
     });
   });
 
+  // ── numCriancasPresentes (receção/conclusão) ──────────────────
+  describe("numCriancasPresentes", () => {
+    it("deve guardar o nº de crianças presentes via update (receção)", async () => {
+      const atualizada = await reservaService.update(TEST_IDS.RESERVA_CONFIRMADA, {
+        numCriancasPresentes: 18,
+      });
+      expect(atualizada.numCriancasPresentes).toBe(18);
+    });
+
+    it("deve limpar o nº de crianças presentes (null)", async () => {
+      const limpa = await reservaService.update(TEST_IDS.RESERVA_CONFIRMADA, {
+        numCriancasPresentes: null,
+      });
+      expect(limpa.numCriancasPresentes).toBeNull();
+    });
+  });
+
   // ── updateStatus ──────────────────────────────────────────────
   describe("updateStatus()", () => {
     it("should transition RESERVA → CONFIRMADO", async () => {

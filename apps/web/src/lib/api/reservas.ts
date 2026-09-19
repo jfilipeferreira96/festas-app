@@ -73,6 +73,8 @@ export interface CreateReservaData {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  /** Nº total de crianças que apareceram na festa (receção/conclusão). */
+  numCriancasPresentes?: number | null;
   numAdultos?: number;
   notasCacifos?: string;
   notasLanche?: string;
@@ -205,10 +207,13 @@ export const reservasApi = {
       method: "POST",
     }),
 
-  finalizar: (id: string, custoExcesso?: number) =>
+  finalizar: (id: string, custoExcesso?: number, numCriancasPresentes?: number | null) =>
     api<Reserva>(`/api/reservas/${id}/finalizar`, {
       method: "POST",
-      body: JSON.stringify(custoExcesso !== undefined ? { custoExcesso } : {}),
+      body: JSON.stringify({
+        ...(custoExcesso !== undefined ? { custoExcesso } : {}),
+        ...(numCriancasPresentes !== undefined ? { numCriancasPresentes } : {}),
+      }),
     }),
 
   alocarMonitor: (id: string, monitorId: string) =>

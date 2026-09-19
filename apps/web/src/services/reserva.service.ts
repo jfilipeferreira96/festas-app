@@ -45,6 +45,8 @@ interface CreateReservaData {
   bolo?: TipoBolo;
   boloTema?: string;
   numCriancasConfirmadas?: number;
+  /** Nº total de crianças que apareceram na festa (receção/conclusão). */
+  numCriancasPresentes?: number | null;
   notasCacifos?: string;
   notasLanche?: string;
   // Observações
@@ -101,6 +103,8 @@ interface UpdateReservaData {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  /** Nº total de crianças que apareceram na festa (receção/conclusão). */
+  numCriancasPresentes?: number | null;
   notasCacifos?: string;
   notasLanche?: string;
   observacoesGerais?: string;
@@ -647,6 +651,7 @@ export const reservaService = {
             ? normalizarBoloQuantidade(data.bolo, data.boloQuantidade ?? (reserva.boloQuantidade ?? undefined))
             : data.boloQuantidade,
         numCriancasConfirmadas: data.numCriancasConfirmadas,
+        ...(data.numCriancasPresentes !== undefined && { numCriancasPresentes: data.numCriancasPresentes }),
         notasCacifos: data.notasCacifos,
         notasLanche: data.notasLanche,
         observacoesGerais: data.observacoesGerais,
@@ -870,7 +875,7 @@ export const reservaService = {
     return this.getById(id);
   },
 
-  async finalizar(id: string, options?: { custoExcessoManual?: number }) {
+  async finalizar(id: string, options?: { custoExcessoManual?: number; numCriancasPresentes?: number | null }) {
     const reserva = await this.getById(id);
     if (reserva.estado !== "EM_CURSO") throw new Error("NOT_IN_PROGRESS");
 
@@ -949,6 +954,9 @@ export const reservaService = {
           excessoMinutos,
           custoExcesso,
           custoTotalFinal,
+          ...(options?.numCriancasPresentes !== undefined && {
+            numCriancasPresentes: options.numCriancasPresentes,
+          }),
         },
         include: {
           local: true,

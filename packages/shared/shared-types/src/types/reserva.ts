@@ -50,6 +50,8 @@ export interface Reserva {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  /** Nº total de crianças que efetivamente apareceram na festa (receção/conclusão). */
+  numCriancasPresentes?: number | null;
   numAdultos?: number;
 
   // Notas por equipa
