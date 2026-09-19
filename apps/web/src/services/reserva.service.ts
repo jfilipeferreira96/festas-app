@@ -1,7 +1,7 @@
 import prisma from "@festas/db";
 import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo } from "@saas/shared-types";
 import logger from "@/lib/logger";
-import { enviarEmailConfirmacaoReserva } from "@/services/email.service";
+import { enfileirarEmailConfirmacaoReserva } from "@/services/email.service";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 import { cacifoService } from "@/services/cacifo.service";
@@ -569,8 +569,8 @@ export const reservaService = {
     // NUNCA falha a criação da reserva). Condições: opt-in da marcação +
     // optOut global do cliente + email conhecido.
     if (data.enviarEmail !== false && created.cliente?.optOut !== true && created.cliente?.email) {
-      void enviarEmailConfirmacaoReserva(created.id).catch((err: unknown) => {
-        logger.error("Falha ao enviar email de confirmação da reserva", {
+      void enfileirarEmailConfirmacaoReserva(created.id).catch((err: unknown) => {
+        logger.error("Falha ao enfileirar email de confirmação da reserva", {
           reservaId: created.id,
           err: err instanceof Error ? err.message : String(err),
         });

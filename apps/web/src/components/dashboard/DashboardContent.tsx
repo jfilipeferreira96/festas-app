@@ -13,6 +13,7 @@ import {
   Lock,
   Clock,
   Users,
+  MailWarning,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
 import {
@@ -423,6 +424,41 @@ const ReceitasDoDiaSection = React.memo(function ReceitasDoDiaSection() {
   );
 });
 
+/** Alerta da fila de emails: tenta reprocessar pendentes ao carregar e mostra
+ *  badge discreto se ainda houver emails por enviar (FASE 9, simples). */
+const FilaEmailsAlert = React.memo(function FilaEmailsAlert() {
+  const [porEnviar, setPorEnviar] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        await fetch("/api/emails/reprocessar", { method: "POST", credentials: "include" });
+        const res = await fetch("/api/emails/reprocessar", { credentials: "include" });
+        if (!res.ok) return;
+        const data = (await res.json()) as { porEnviar: number };
+        if (vivo) setPorEnviar(data.porEnviar);
+      } catch {
+        // silencioso - a fila é reprocessada no próximo carregamento
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  if (porEnviar == null || porEnviar <= 0) return null;
+  return (
+    <div className="mt-4 flex items-center gap-2 rounded-xl border border-accent-orange-200 bg-accent-orange-50 px-4 py-3">
+      <MailWarning size={16} className="text-accent-orange-600 shrink-0" />
+      <p className="text-sm text-accent-orange-700">
+        {porEnviar} {porEnviar === 1 ? "email por enviar" : "emails por enviar"} na fila — nova tentativa no próximo
+        carregamento.
+      </p>
+    </div>
+  );
+});
+
 // Main component
 export default function DashboardContent({ }: DashboardContentProps) {
   const { user } = useUser();
@@ -440,6 +476,7 @@ export default function DashboardContent({ }: DashboardContentProps) {
       </div>
 
       <KPIGrid />
+      <FilaEmailsAlert />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
         <FestasEmCursoSection />
         <ProximasFestasSection />

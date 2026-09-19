@@ -199,6 +199,28 @@ model Cliente {
   @@map("cliente")
 }
 
+// ============================================
+// FILA DE EMAILS (retries simples + alerta)
+// ============================================
+
+model EnvioEmail {
+  id             String   @id @default(cuid())
+  para           String
+  assunto        String
+  tipo           String // "RESERVA_CONFIRMACAO" ...
+  reservaId      String?
+  entradaLivreId String?
+  // PENDENTE | ENVIADO | FALHADO
+  estado         String   @default("PENDENTE")
+  tentativas     Int      @default(0)
+  ultimoErro     String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([estado])
+  @@map("envio_email")
+}
+
 model Aniversariante {
   id             String   @id @default(cuid())
   nome           String
