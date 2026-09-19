@@ -10,6 +10,10 @@
 //   reset       → truncate + seed (recria o admin)
 //   sync-schema → aplicar prisma/schema-diff.sql (gerado no PC pelo build-deploy)
 //                 de forma IDEMPOTENTE: instruções já aplicadas são ignoradas.
+//                 Também valida o schema-full.sql: cria tabelas em falta, adiciona
+//                 colunas em falta e converte colunas ENUM/SET para o novo tipo
+//                 (widening seguro, ex.: Reserva.bolo ENUM → VARCHAR). Nunca apaga
+//                 dados nem colunas.
 //                 É o passo que garante o sync do schema em TODO o deploy.
 //
 // Uso (cPanel, via SSH ou "Run NPM Script"):
@@ -244,13 +248,28 @@ async function cmdSyncSchema() {
           .split(/\r?\n/)
           .map((l) => l.trim().replace(/,$/, ""))
           .filter((l) => /^`/.test(l)); // definições de coluna começam por `nome`
-        const colRows = await conn.query("SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?", [table]);
-        const existing = new Set(colRows.map((r) => String(r.column_name).toLowerCase()));
+        const colRows = await conn.query("SELECT column_name, column_type FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?", [table]);
+        const existing = new Map(colRows.map((r) => [String(r.column_name).toLowerCase(), String(r.column_type).toLowerCase()]));
         for (const def of colDefs) {
           const colName = /^`([^`]+)`/.exec(def);
-          if (!colName || existing.has(colName[1].toLowerCase())) continue;
-          console.log("  + coluna nova em " + table + ": " + colName[1]);
-          await tryApply("ALTER TABLE `" + table + "` ADD COLUMN " + def);
+          if (!colName) continue;
+          const key = colName[1].toLowerCase();
+          const existingType = existing.get(key);
+          if (!existingType) {
+            console.log("  + coluna nova em " + table + ": " + colName[1]);
+            await tryApply("ALTER TABLE `" + table + "` ADD COLUMN " + def);
+            continue;
+          }
+          // ENUM/SET → outro tipo (ex.: Reserva.bolo ENUM → VARCHAR 191): widening
+          // seguro - preserva os valores existentes como strings. Outras diferenças
+          // de tipo ficam para o push a partir do PC (npm run db:push:remote).
+          const expectedType = def.slice(colName[0].length).trim().toLowerCase();
+          const isEnumish = /^(enum\(|set\()/.test(existingType);
+          const wantsEnumish = /^(enum\(|set\()/.test(expectedType);
+          if (isEnumish && !wantsEnumish) {
+            console.log("  ~ tipo em " + table + "." + colName[1] + ": " + existingType + " → " + expectedType.split(/\s+/)[0] + " (conversão ENUM, preserva dados)");
+            await tryApply("ALTER TABLE `" + table + "` MODIFY COLUMN " + def);
+          }
         }
       }
     }
