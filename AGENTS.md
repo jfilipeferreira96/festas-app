@@ -4,7 +4,7 @@
 
 ## Project Overview
 
-Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, festas em curso, cacifos, menus/lanches, monitores, locais/salas, participantes, clientes, utilizadores e campanhas de marketing (newsletter e SMS).
+Plataforma de gestão para espaços de festas infantis. Permite gerir reservas, festas em curso, cacifos, menus/lanches, monitores, locais/salas, participantes, clientes, utilizadores e marketing por email (emails automáticos de aniversário + fila de emails).
 
 > **Page Reference:** See [`PAGINAS.md`](PAGINAS.md) for a complete list of all routes, page components, and sidebar navigation structure.
 > **Project Reference:** See [`PROJECTO.md`](PROJECTO.md) for the design system, navigation, modules, and TypeScript types.
@@ -174,7 +174,6 @@ if (error.message in ERROR_MAP) {
 | Extras | `/api/extras/*` | `src/services/extra.service.ts` |
 | Etapas de Festa | `/api/etapas-festa/*` | `src/services/etapaFesta.service.ts` |
 | Participantes | `/api/participantes/*` | `src/services/participante.service.ts` |
-| Campanhas | `/api/campanhas/*` | `src/services/campanha.service.ts` |
 | Utilizadores | `/api/utilizadores/*` | `src/services/utilizador.service.ts` |
 | Upload | `/api/upload/*` | `src/services/upload.service.ts` |
 | Aloc. Monitores | `/api/alocacao-monitores/*` | `src/services/alocacaoMonitor.service.ts` |
@@ -228,7 +227,6 @@ The app uses Next.js route groups:
 | `/lanche` | Lanche (protected) |
 | `/menus` | Menus (protected) |
 | `/relatorios` | Relatórios (protected) |
-| `/divulgacoes` | Divulgações (protected) |
 | `/clientes` | Clientes (protected) |
 | `/configuracoes/utilizadores` | Utilizadores (protected) |
 | `/configuracoes/precos` | Config. Preços (protected) |
@@ -306,7 +304,6 @@ Default configurations for: extras, menus, locais, menu-templates.
 | `extra.service.test.ts` | CRUD for extras |
 | `cliente.service.test.ts` | CRUD for clientes, search |
 | `monitor.service.test.ts` | CRUD for monitores, listActive |
-| `campanha.service.test.ts` | Create, update, enviar, metricas |
 | `menu.service.test.ts` | getByReservaId, create |
 | `dashboard.service.test.ts` | getKPIs, getFestasEmCurso, getProximasFestas, totalCriancasNoParque |
 | `utilizador.service.test.ts` | CRUD for utilizadores, updateFuncao |

@@ -149,18 +149,6 @@
     "emailRequired": "Email é obrigatório",
     "telefoneRequired": "Telefone é obrigatório"
   },
-  "campanha": {
-    "notFound": "Campanha não encontrada",
-    "createdSuccessfully": "Campanha criada com sucesso",
-    "updatedSuccessfully": "Campanha atualizada com sucesso",
-    "sentSuccessfully": "Campanha enviada com sucesso",
-    "draftSaved": "Rascunho guardado com sucesso",
-    "subjectRequired": "Assunto é obrigatório",
-    "messageRequired": "Mensagem é obrigatória",
-    "segmentRequired": "Segmento é obrigatório",
-    "cannotModifySent": "Não é possível modificar uma campanha já enviada",
-    "optOutFiltered": "Contactos com opt-out foram filtrados automaticamente"
-  },
   "utilizador": {
     "notFound": "Utilizador não encontrado",
     "createdSuccessfully": "Utilizador criado com sucesso",

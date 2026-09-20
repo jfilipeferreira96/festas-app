@@ -13,7 +13,6 @@ export type Modulo =
   | "menus"
   | "lanche"
   | "relatorios"
-  | "divulgacoes"
   | "configuracoes"
   | "monitores"
   | "festas_acabar"
@@ -27,7 +26,6 @@ export const MODULOS: Modulo[] = [
   "menus",
   "lanche",
   "relatorios",
-  "divulgacoes",
   "configuracoes",
   "monitores",
   "festas_acabar",
@@ -47,7 +45,6 @@ export const MODULO_LABELS: Record<Modulo, string> = {
   menus: "Menus",
   lanche: "Lanche",
   relatorios: "Relatórios",
-  divulgacoes: "Marketing",
   configuracoes: "Configurações",
   monitores: "Monitores",
   festas_acabar: "Festas a Acabar",
@@ -89,7 +86,6 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
     menus: "administracao",
     lanche: "administracao",
     relatorios: "administracao",
-    divulgacoes: "administracao",
     configuracoes: "administracao",
     monitores: "administracao",
     festas_acabar: "administracao",
