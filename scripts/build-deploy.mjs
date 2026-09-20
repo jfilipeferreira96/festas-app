@@ -840,7 +840,10 @@ if (rustEngines.length > 0) {
 // node_modules do workspace, que está ACIMA de deploy/) mas falha no cPanel
 // com "Cannot find module". Copiamos o pacote + as suas deps de produção
 // (resolvidas com o npm local, respeitando nested node_modules).
-const adapterDeps = ["mariadb", "@prisma/adapter-mariadb", "better-auth", "nodemailer"];
+// @prisma/client incluído explicitamente: os comandos de BD no terminal
+// (scripts/db.js verify) correm ANTES de a app criar o symlink
+// node_modules -> node_modules_deps, e sem isto falham com "Cannot find module".
+const adapterDeps = ["mariadb", "@prisma/adapter-mariadb", "better-auth", "nodemailer", "@prisma/client"];
 {
   const copyProdClosure = (roots) => {
     const done = new Set();
