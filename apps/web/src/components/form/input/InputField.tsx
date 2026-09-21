@@ -83,14 +83,14 @@ const Input: FC<InputProps> = React.forwardRef<HTMLInputElement, InputProps>(({
         ref={ref}
       />
 
-      {hint && (
+      {/* 21/09/2026: hints informativos escondidos para um look mais clean -
+          só erros/sucesso são mostrados. */}
+      {hint && (error || success) && (
         <p
           className={`mt-1.5 text-xs ${
             error
               ? "text-error-500"
-              : success
-              ? "text-success-500"
-              : "text-gray-500"
+              : "text-success-500"
           }`}
         >
           {hint}

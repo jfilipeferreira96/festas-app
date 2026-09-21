@@ -18,11 +18,13 @@ export default async function ProtectedLayout({
     redirect("/entrar");
   }
 
-  // Roles focados numa única página (CACIFOS, FESTAS_ACABAR, LANCHE) - sem menu lateral.
+  // Roles focados numa única página (CACIFOS, FESTAS_ACABAR, LANCHE, MONITOR)
+  // - sem menu lateral (21/09/2026: MONITOR adicionado).
   const isSidebarHidden =
     (session.user as { funcao?: string }).funcao === "CACIFOS" ||
     (session.user as { funcao?: string }).funcao === "FESTAS_ACABAR" ||
-    (session.user as { funcao?: string }).funcao === "LANCHE";
+    (session.user as { funcao?: string }).funcao === "LANCHE" ||
+    (session.user as { funcao?: string }).funcao === "MONITOR";
 
   return (
     <ProtectedProviders>

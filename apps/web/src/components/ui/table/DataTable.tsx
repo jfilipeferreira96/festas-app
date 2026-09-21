@@ -74,7 +74,8 @@ function DataTable<T extends { id: string }>({
   searchableFields = [],
   searchFn,
   pagination = true,
-  pageSize: initialPageSize = 10,
+  // 50 elementos por omissão (pedido do cliente, 21/09/2026)
+  pageSize: initialPageSize = 50,
   onEdit,
   onDelete,
   onView,
