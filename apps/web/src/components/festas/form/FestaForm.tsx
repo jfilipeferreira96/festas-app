@@ -8,9 +8,11 @@ import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade, useReserva } from "@/hooks/use-reservas";
 import { useLocaisAtivos } from "@/hooks/use-locais";
+import { useSalasLanche } from "@/hooks/use-salas-lanche";
 import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
 import { useSlotsHorario, useSlotsDia } from "@/hooks/use-slots-horario";
+import { ehSubcategoriaBolos } from "@/lib/constants/bolo";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
 import ClienteSearchModal, { type ClienteFilho } from "@/components/common/ClienteSearchModal";
 import PagamentoModal from "@/components/festas/PagamentoModal";
@@ -53,6 +55,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const createReserva = useCreateReserva();
   const updateReserva = useUpdateReserva();
   const { data: locais } = useLocaisAtivos();
+  const { data: salasLanche } = useSalasLanche();
   const { data: extras } = useExtras();
   const { data: configPreco } = useConfigPreco();
   const { isGlobalAdmin } = useMinhasPermissoes();
@@ -85,10 +88,16 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     () => (extras ?? []).filter((e) => e.activo && EXTRAS_SUPLEMENTO_MENU_RE.test(e.nome)),
     [extras]
   );
+  // Bolos ficam FORA dos extras: a subcategoria varia de capitalização na BD
+  // ("Bolos" no seed vs "BOLOS" em produção) - ver Parte B do plano.
   const extraItems = useMemo(
     () =>
       (extras ?? []).filter(
-        (e) => e.categoria === "EXTRA" && e.activo && e.subcategoria !== "Bolos" && !EXTRAS_SUPLEMENTO_MENU_RE.test(e.nome)
+        (e) =>
+          e.categoria === "EXTRA" &&
+          e.activo &&
+          !ehSubcategoriaBolos(e.subcategoria) &&
+          !EXTRAS_SUPLEMENTO_MENU_RE.test(e.nome)
       ),
     [extras]
   );
@@ -104,6 +113,18 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     () => [{ value: "NONE", label: "Sem menu" }, ...menuExtras.map((m) => ({ value: m.id, label: m.nome }))],
     [menuExtras]
   );
+  // Salas de lanche activas; se a sala guardada na reserva estiver inactiva,
+  // é acrescentada às opções para continuar a ser exibida em edição.
+  const salasLancheOptions = useMemo(() => {
+    const options = (salasLanche ?? [])
+      .filter((s) => s.activo)
+      .map((s) => ({ value: s.id, label: s.nome }));
+    const atual = defaultValues.salaLancheId;
+    if (atual && !options.some((o) => o.value === atual)) {
+      options.push({ value: atual, label: reserva?.salaLanche?.nome ?? atual });
+    }
+    return options;
+  }, [salasLanche, defaultValues.salaLancheId, reserva?.salaLanche?.nome]);
   // Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras.
   const numCriancasConfirmadasWatched = watch("numCriancasConfirmadas");
   const numPessoasExtras = useMemo(() => {
@@ -170,8 +191,11 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
       setHorarioCustom(false);
       return;
     }
-    setHorarioCustom(!slotsHorario.some((s) => s.horaInicio === horarioVal));
-  }, [slotsHorario, reserva?.horario, initialValues?.horario]);
+    // Horário personalizado (fora dos slots): só o admin pode marcar/editar.
+    // Para os restantes papéis a hora fora dos slots é mostrada read-only na
+    // secção de agendamento (nunca editável por não-admins).
+    setHorarioCustom(!slotsHorario.some((s) => s.horaInicio === horarioVal) && isGlobalAdmin);
+  }, [slotsHorario, reserva?.horario, initialValues?.horario, isGlobalAdmin]);
 
   const slotOptions = useMemo(() => {
     const ocupados = new Set((slotsDia?.slots ?? []).filter((s) => s.ocupado).map((s) => s.horaInicio));
@@ -341,6 +365,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
             <AgendamentoSection
               slotOptions={slotOptions}
               salaOptions={salaOptions}
+              salasLancheOptions={salasLancheOptions}
               horarioCustom={horarioCustom}
               onToggleHorarioCustom={setHorarioCustom}
               isAdmin={isGlobalAdmin}

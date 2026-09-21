@@ -22,6 +22,11 @@ export const BOLO_LABELS: Record<string, string> = {
   BOLO_ARTISTICO: "Bolo artístico",
 };
 
+
+export function ehSubcategoriaBolos(subcategoria: string | null | undefined): boolean {
+  return !!subcategoria && subcategoria.trim().toLowerCase() === "bolos";
+}
+
 /**
  * Labels abreviados para tabelas (menos espaço)
  */

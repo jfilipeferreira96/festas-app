@@ -113,10 +113,9 @@ async function seedLocais() {
     { id: "local-002", nome: "Zona 2 Ninja e Slide" },
     { id: "local-003", nome: "Zona 3 Trampolins" },
     { id: "local-004", nome: "Zona 4 Futebol / Discoteca" },
-    { id: "local-005", nome: "Zona 5 Playground" },
-    { id: "local-006", nome: "Sala Refeições 1" },
-    { id: "local-007", nome: "Sala Refeições 2" },
+    { id: "local-005", nome: "Zona 5 Playground" }
   ];
+  
   for (const local of locais) {
     await prisma.local.upsert({ where: { id: local.id }, update: { nome: local.nome }, create: local });
   }
@@ -203,7 +202,7 @@ async function seedExtras() {
 
   // Associar todos os extras/menus BasyLandy a todos os locais
   const basyLandyIds = extras.map((e) => e.id);
-  const locaisIds = ["local-001", "local-002", "local-003", "local-004", "local-005", "local-006", "local-007"];
+  const locaisIds = ["local-001", "local-002", "local-003", "local-004", "local-005"];
   const basyLandyLocais = basyLandyIds.flatMap((eid) =>
     locaisIds.map((localId) => ({ extraId: eid, localId }))
   );

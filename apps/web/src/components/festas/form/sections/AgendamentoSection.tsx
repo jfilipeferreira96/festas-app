@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin } from "lucide-react";
+import { MapPin, Utensils } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
@@ -13,6 +13,7 @@ import { DURACAO_FESTA_OPTIONS, type FestaFormData } from "../festa-form.schema"
 interface AgendamentoSectionProps {
   slotOptions: { value: string; label: string; disabled?: boolean }[];
   salaOptions: { value: string; label: string }[];
+  salasLancheOptions: { value: string; label: string }[];
   horarioCustom: boolean;
   onToggleHorarioCustom: (v: boolean) => void;
   isAdmin: boolean;
@@ -25,6 +26,7 @@ interface AgendamentoSectionProps {
 export default function AgendamentoSection({
   slotOptions,
   salaOptions,
+  salasLancheOptions,
   horarioCustom,
   onToggleHorarioCustom,
   isAdmin,
@@ -37,11 +39,22 @@ export default function AgendamentoSection({
   const horario = watch("horario");
   const duracao = watch("duracaoMinutos");
   const localId = watch("localId");
+  const salaLancheId = watch("salaLancheId");
+
+  // Hora fora dos slots (festa criada em modo personalizado): para não-admins
+  // o valor é mostrado read-only em vez do select de slots - a hora guardada
+  // nunca se perde, mas também não pode ser alterada por quem não é admin.
+  const foraDosSlots = !!horario && !horarioCustom && !slotOptions.some((o) => o.value === horario);
+  const mostraHoraManual = horarioCustom || foraDosSlots;
+  // A hora do lanche vem do slot (não pode ser modificada no form). Só no modo
+  // personalizado do admin - onde não há slot de onde assumir o default - é
+  // que pode ser definida aqui.
+  const podeEditarHoraLanche = isAdmin && horarioCustom;
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-4">
-        <div className="flex-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
           <FieldLabel required>Data</FieldLabel>
           <DatePicker
             id="festa-data"
@@ -53,12 +66,13 @@ export default function AgendamentoSection({
           />
           {errors.data && <p className="mt-1 text-xs text-error-500">{errors.data.message}</p>}
         </div>
-        <div className="flex-1">
+        <div>
           <FieldLabel required>Horário</FieldLabel>
-          {horarioCustom ? (
+          {mostraHoraManual ? (
             <InputField
               type="time"
               {...register("horario")}
+              readOnly={!isAdmin}
               error={!!errors.horario}
               hint={errors.horario?.message}
             />
@@ -71,35 +85,39 @@ export default function AgendamentoSection({
               error={!!errors.horario}
             />
           )}
-          {errors.horario && !horarioCustom && (
+          {errors.horario && !mostraHoraManual && (
             <p className="mt-1 text-xs text-error-500">{errors.horario.message}</p>
           )}
-          {!horarioCustom && planoTexto && (
+          {!mostraHoraManual && planoTexto && (
             <p className="mt-1 text-[11px] font-medium text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded inline-block">
               {planoTexto}
             </p>
           )}
         </div>
-        {horarioCustom && (
-          <div className="flex-1">
+        {mostraHoraManual && (
+          <div>
             <FieldLabel required>Duração</FieldLabel>
             <Select
               options={DURACAO_FESTA_OPTIONS}
               placeholder="Seleccionar"
               value={String(duracao ?? 120)}
+              disabled={!isAdmin}
               onChange={(val) => setValue("duracaoMinutos", Number(val), { shouldValidate: true })}
             />
           </div>
         )}
-        {isAdmin && (
-          <div className="flex-1">
-            <FieldLabel>Hora do Lanche</FieldLabel>
-            <InputField type="time" {...register("horaLanche")} />
-          </div>
-        )}
-        <div className="flex-1">
+        <div>
+          <FieldLabel>Hora do Lanche</FieldLabel>
+          <InputField
+            type="time"
+            {...register("horaLanche")}
+            readOnly={!podeEditarHoraLanche}
+            hint={podeEditarHoraLanche ? undefined : "Definida pelo slot configurado"}
+          />
+        </div>
+        <div>
           <FieldLabel required className="flex items-center gap-1">
-            <MapPin size={12} /> Sala
+            <MapPin size={12} /> Zona da Festa
           </FieldLabel>
           <Select
             options={salaOptions}
@@ -109,6 +127,23 @@ export default function AgendamentoSection({
             error={!!errors.localId}
           />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
+        </div>
+        <div>
+          <FieldLabel className="flex items-center gap-1">
+            <Utensils size={12} /> Sala de Lanche
+          </FieldLabel>
+          <Select
+            options={salasLancheOptions}
+            placeholder="Seleccionar"
+            value={salaLancheId || undefined}
+            disabled={!isAdmin}
+            onChange={(val) => setValue("salaLancheId", val, { shouldDirty: true, shouldValidate: true })}
+          />
+          <p className="mt-1 text-[11px] text-text-muted">
+            {isAdmin
+              ? "Assumida automaticamente do slot configurado."
+              : "Assumida automaticamente do slot (gerida pela administração)."}
+          </p>
         </div>
         {/* Cor da Festa removida a pedido do cliente (19/09/2026): a cor passa
             sempre pela pulseira do slot (slot.corDefault, aplicada em
@@ -128,6 +163,11 @@ export default function AgendamentoSection({
             </span>
           )}
         </div>
+      )}
+      {!isAdmin && slotOptions.length === 0 && !foraDosSlots && (
+        <span className="text-xs text-text-muted">
+          Sem slots configurados para este dia - contacte a administração.
+        </span>
       )}
     </div>
   );
