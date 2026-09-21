@@ -18,6 +18,7 @@ import ClienteSearchModal, { type ClienteFilho } from "@/components/common/Clien
 import PagamentoModal from "@/components/festas/PagamentoModal";
 import { mensagensDeErro, scrollToFirstFormError } from "@/components/form/form-utils";
 import { addMinutosToTime, isFimDeSemana } from "@/lib/format";
+import { calcularCustoExtras } from "@/lib/extras-custo";
 import { encontrarSalaCorrespondente } from "@/lib/salas";
 import { coresEmConflito, corDisponivel, type FestaComIntervalo } from "@/lib/cores";
 import { textoPlanoDia } from "@/lib/api/slotsHorario";
@@ -70,7 +71,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     resolver: zodResolver(festaFormSchema),
     defaultValues,
   });
-  const { control, handleSubmit, watch, setValue, getValues, formState: { isSubmitting, dirtyFields } } = methods;
+  const { control, handleSubmit, watch, setValue, getValues, formState: { isSubmitting } } = methods;
   const aniversariantesArray = useFieldArray({ control, name: "aniversariantes" });
   const adicionaisArray = useFieldArray({ control, name: "encarregadosAdicionais" });
 
@@ -83,6 +84,8 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const previsaoCriancas = watch("previsaoCriancas");
   const watchedNumAdultos = watch("numAdultos");
   const aniversariantes = watch("aniversariantes");
+  const watchedExtrasIds = watch("extrasIds");
+  const watchedExtrasQuantidades = watch("extrasQuantidades");
 
   // Suplementos de menu (Almoço/Jantar, identificados pelo nome) ficam por
   // baixo do select de Menu - não na secção de Extras (pedido do cliente).
@@ -288,14 +291,27 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     [configPreco, watchedData, previsaoCriancas, aniversariantes, watchedNumAdultos]
   );
 
+  // Total CALCULADO (sem input livre): tarifário (crianças faturadas × preço
+  // + adultos) + extras seleccionados (bolos, suplementos, diversão).
+  const extrasTodos = useMemo(() => (extras ?? []).filter((e) => e.activo), [extras]);
+  const custoExtrasTotal = useMemo(
+    () =>
+      calcularCustoExtras(
+        watchedExtrasIds.map((id) => ({ extraId: id, quantidade: watchedExtrasQuantidades[id] ?? 1 })),
+        extrasTodos,
+        numPessoasExtras
+      ),
+    [watchedExtrasIds, watchedExtrasQuantidades, extrasTodos, numPessoasExtras]
+  );
+
   useEffect(() => {
-    if (reserva && reserva.valorTotal != null) return;
-    if (dirtyFields.totalAPagar) return; // total escrito à mão - respeitar
+    if (reserva && reserva.valorTotal != null) return; // edição: manter o acordado
     if (!watchedData || !configPreco) return;
-    if (estimativaFesta.estimativa > 0) {
-      setValue("totalAPagar", estimativaFesta.estimativa);
+    const totalCalculado = +(estimativaFesta.estimativa + custoExtrasTotal).toFixed(2);
+    if (totalCalculado > 0) {
+      setValue("totalAPagar", totalCalculado);
     }
-  }, [watchedData, configPreco, reserva, estimativaFesta, setValue, dirtyFields.totalAPagar]);
+  }, [watchedData, configPreco, reserva, estimativaFesta, custoExtrasTotal, setValue]);
 
   useEffect(() => {
     if (!watchedData || menuExtras.length === 0 || reserva) return;
@@ -450,6 +466,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               reserva={reserva}
               onOpenPagamento={() => setShowPagamentoModal(true)}
               estimativa={estimativaFesta}
+              extrasTotal={custoExtrasTotal}
             />
           </div>
           <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end shrink-0">

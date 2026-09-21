@@ -306,6 +306,16 @@ export default function MenuBoloSection({
             {...register("numCriancasConfirmadas", { valueAsNumber: true })}
           />
         </div>
+        <div className="flex-1">
+          <FieldLabel>Total de Crianças</FieldLabel>
+          <InputField
+            type="number"
+            min={1}
+            max={100}
+            placeholder="Opcional"
+            {...register("numCriancasTotal", { valueAsNumber: true })}
+          />
+        </div>
       </div>
     </div>
   );

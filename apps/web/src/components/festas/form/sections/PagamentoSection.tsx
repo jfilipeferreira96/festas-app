@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Shield } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
-import Checkbox from "@/components/form/input/Checkbox";
 import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
 import { metodoPagamentoLabel, METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pagamento";
@@ -23,13 +20,19 @@ import {
 interface PagamentoSectionProps {
   reserva?: Reserva | null;
   onOpenPagamento: () => void;
-  /** Estimativa calculada (preço por criança × crianças faturadas). */
+  /** Estimativa calculada (preço por criança × crianças faturadas + adultos). */
   estimativa?: EstimativaFestaInfo;
+  /** Custo dos extras seleccionados (bolos, suplementos, diversão). */
+  extrasTotal: number;
 }
 
-export default function PagamentoSection({ reserva, onOpenPagamento, estimativa }: PagamentoSectionProps) {
+export default function PagamentoSection({
+  reserva,
+  onOpenPagamento,
+  estimativa,
+  extrasTotal,
+}: PagamentoSectionProps) {
   const { setValue, watch } = useFormContext<FestaFormData>();
-  const [registarPagamento, setRegistarPagamento] = useState(false);
 
   if (reserva) {
     const caucaoLabel = CAUCAO_OPTIONS.find((o) => o.value === reserva.caucao)?.label ?? "Não paga";
@@ -70,111 +73,112 @@ export default function PagamentoSection({ reserva, onOpenPagamento, estimativa 
     );
   }
 
+  // ─── Criação ────────────────────────────────────────────────
+  // Total CALCULADO (tarifário + extras) - já não existe input livre:
+  // correções formais ficam nos Ajustes de pagamento após criar a reserva.
   const total = watch("totalAPagar");
   const pagamentos = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
-  const totalDevido = total ?? estimativa?.estimativa ?? 0;
+  const totalDevido = +(total ?? (estimativa?.estimativa ?? 0) + extrasTotal).toFixed(2);
+  const criancasFaturadas = estimativa?.criancasFaturadas ?? 0;
+  const numAdultos = watch("numAdultos") ?? 0;
+  const custoAdultos =
+    estimativa && criancasFaturadas >= 0 ? estimativa.estimativa - estimativa.precoCrianca * criancasFaturadas : 0;
 
   return (
     <div className="space-y-3">
-      <Checkbox
-        checked={registarPagamento}
-        onChange={setRegistarPagamento}
-        label="Registar pagamento na reserva (opcional)"
-      />
-
-      {registarPagamento && (
-        <PagamentoCard titulo="Pagamento & Caução">
-          {/* Total a pagar (editável, pré-preenchido com a estimativa) */}
+      {/* Caução — SEMPRE visível; marca-se na reserva da festa. A lógica de
+          pagamento (ledger) fica por baixo, depois da caução. */}
+      <PagamentoCard titulo="Caução">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <FieldLabel>Total a pagar (€)</FieldLabel>
-            <div className="flex items-center gap-2">
-              <InputField
-                type="number"
-                step={0.01}
-                min={0}
-                placeholder="0,00"
-                autoComplete="off"
-                value={total != null ? String(total) : ""}
-                onChange={(e) =>
-                  setValue("totalAPagar", e.target.value === "" ? undefined : Number(e.target.value), {
-                    shouldDirty: true,
-                  })
-                }
-              />
-              <span className="text-xs text-text-muted whitespace-nowrap">
-                ≈ {formatEuro(estimativa?.estimativa ?? 0)}
-              </span>
-            </div>
+            <FieldLabel>Estado</FieldLabel>
+            <Select
+              options={CAUCAO_OPTIONS}
+              value={watch("caucao") ?? "NAO_PAGA"}
+              onChange={(val) => setValue("caucao", val as FestaFormCaucao, { shouldDirty: true })}
+            />
           </div>
+          <div>
+            <FieldLabel>Valor da Caução (€)</FieldLabel>
+            <InputField
+              type="number"
+              step={0.01}
+              min={0}
+              placeholder="0,00"
+              value={watch("valorCaucao") != null ? String(watch("valorCaucao")) : ""}
+              onChange={(e) =>
+                setValue("valorCaucao", e.target.value === "" ? undefined : Number(e.target.value), {
+                  shouldDirty: true,
+                })
+              }
+            />
+          </div>
+          <div>
+            <FieldLabel>Método de pagamento</FieldLabel>
+            <Select
+              options={METODO_PAGAMENTO_OPTIONS}
+              value={watch("metodoCaucao") ?? "NONE"}
+              onChange={(val) => setValue("metodoCaucao", val, { shouldDirty: true })}
+            />
+          </div>
+        </div>
+        <p className="text-[11px] text-text-muted mt-2">
+          A caução marca-se na reserva da festa - o pagamento entra depois, no livro de pagamentos.
+        </p>
+      </PagamentoCard>
 
-          {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
-          <PagamentosLedgerSection
-            totalDevido={totalDevido}
-            pagamentos={pagamentos}
-            onAdd={(p) =>
-              setValue(
-                "pagamentos",
-                [
-                  ...pagamentos,
-                  { ...p, id: `pg-${Date.now()}-${pagamentos.length}`, createdAt: new Date().toISOString() },
-                ] as PagamentoLedgerItem[],
-                { shouldDirty: true },
-              )
-            }
-            onRemove={(id) =>
-              setValue("pagamentos", pagamentos.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
-                shouldDirty: true,
-              })
-            }
-          />
-
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-            <span className="text-xs font-medium text-text-secondary flex items-center gap-1 mb-2">
-              <Shield size={13} className="text-text-muted" /> Caução
+      <PagamentoCard titulo="Pagamento">
+        {/* Decomposição do total - calculado, sem input livre */}
+        <div className="text-xs space-y-1 pb-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex justify-between">
+            <span className="text-text-secondary">
+              Tarifário ({criancasFaturadas} crianças × {formatEuro(estimativa?.precoCrianca ?? 0)})
             </span>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <FieldLabel>Estado</FieldLabel>
-                <Select
-                  options={CAUCAO_OPTIONS}
-                  value={watch("caucao") ?? "NAO_PAGA"}
-                  onChange={(val) => setValue("caucao", val as FestaFormCaucao, { shouldDirty: true })}
-                />
-              </div>
-              <div>
-                <FieldLabel>Valor da Caução (€)</FieldLabel>
-                <InputField
-                  type="number"
-                  step={0.01}
-                  min={0}
-                  placeholder="0,00"
-                  value={watch("valorCaucao") != null ? String(watch("valorCaucao")) : ""}
-                  onChange={(e) =>
-                    setValue("valorCaucao", e.target.value === "" ? undefined : Number(e.target.value), {
-                      shouldDirty: true,
-                    })
-                  }
-                />
-                <p className="text-[11px] text-text-muted mt-1">
-                  Sugerida - editável.
-                </p>
-              </div>
-              <div>
-                <FieldLabel>Método de pagamento</FieldLabel>
-                <Select
-                  options={METODO_PAGAMENTO_OPTIONS}
-                  value={watch("metodoCaucao") ?? "NONE"}
-                  onChange={(val) => setValue("metodoCaucao", val, { shouldDirty: true })}
-                />
-              </div>
-            </div>
+            <span className="text-text-primary tabular-nums">
+              {formatEuro(estimativa ? estimativa.estimativa - custoAdultos : 0)}
+            </span>
           </div>
+          {numAdultos > 0 && (
+            <div className="flex justify-between">
+              <span className="text-text-secondary">Adultos acompanhantes ({numAdultos})</span>
+              <span className="text-text-primary tabular-nums">{formatEuro(custoAdultos)}</span>
+            </div>
+          )}
+          <div className="flex justify-between">
+            <span className="text-text-secondary">Extras (bolos, diversão, suplementos)</span>
+            <span className="text-text-primary tabular-nums">{formatEuro(extrasTotal)}</span>
+          </div>
+          <div className="flex justify-between font-semibold text-text-primary">
+            <span>Total</span>
+            <span className="tabular-nums">{formatEuro(totalDevido)}</span>
+          </div>
+        </div>
 
-          <p className="text-[11px] text-text-muted">
-            Descontos ficam disponíveis em "Gerir pagamento" após criar a reserva.
-          </p>
-        </PagamentoCard>
-      )}
+        {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
+        <PagamentosLedgerSection
+          totalDevido={totalDevido}
+          pagamentos={pagamentos}
+          onAdd={(p) =>
+            setValue(
+              "pagamentos",
+              [
+                ...pagamentos,
+                { ...p, id: `pg-${Date.now()}-${pagamentos.length}`, createdAt: new Date().toISOString() },
+              ] as PagamentoLedgerItem[],
+              { shouldDirty: true },
+            )
+          }
+          onRemove={(id) =>
+            setValue("pagamentos", pagamentos.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
+              shouldDirty: true,
+            })
+          }
+        />
+
+        <p className="text-[11px] text-text-muted">
+          Descontos ficam disponíveis em "Gerir pagamento" após criar a reserva.
+        </p>
+      </PagamentoCard>
     </div>
   );
 }

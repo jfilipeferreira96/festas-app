@@ -67,6 +67,8 @@ export const festaFormSchema = z.object({
     .min(1, "Mínimo 1 criança")
     .max(100, "Máximo 100 crianças"),
   numCriancasConfirmadas: numeroOpcional(0),
+  /** Total de crianças da festa (gravado em Reserva.numCriancas). */
+  numCriancasTotal: numeroOpcional(0),
   extrasIds: z.array(z.string()),
   extrasTexto: z.record(z.string(), z.string()),
   extrasQuantidades: z.record(z.string(), z.number()),
@@ -168,6 +170,7 @@ export function buildFestaDefaults(
     previsaoCriancas: reserva?.numCriancas ?? reserva?.previsaoCriancas ?? 10,
     numAdultos: reserva?.numAdultos ?? undefined,
     numCriancasConfirmadas: reserva?.numCriancasConfirmadas ?? undefined,
+    numCriancasTotal: reserva?.numCriancas ?? undefined,
     extrasIds: reserva?.extras?.map((e) => e.extra.id) ?? [],
     extrasTexto: Object.fromEntries(
       (reserva?.extras ?? []).map((e) => [e.extra.id, e.textoPersonalizado ?? ""])
@@ -241,7 +244,7 @@ export function buildFestaPayload(
     duracaoMinutos: data.duracaoMinutos,
     localId: data.localId,
     salaLancheId: data.salaLancheId || undefined,
-    numCriancas: data.previsaoCriancas,
+    numCriancas: data.numCriancasTotal ?? data.previsaoCriancas,
     numCriancasConfirmadas: data.numCriancasConfirmadas || undefined,
     extrasIds: data.extrasIds.length > 0 ? data.extrasIds : undefined,
     extrasTexto: Object.fromEntries(Object.entries(data.extrasTexto).filter(([, v]) => v.trim())),

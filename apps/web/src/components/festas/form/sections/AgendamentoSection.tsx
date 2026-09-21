@@ -50,10 +50,8 @@ export default function AgendamentoSection({
   // nunca se perde, mas também não pode ser alterada por quem não é admin.
   const foraDosSlots = !!horario && !horarioCustom && !slotOptions.some((o) => o.value === horario);
   const mostraHoraManual = horarioCustom || foraDosSlots;
-  // A hora do lanche vem do slot (não pode ser modificada no form). Só no modo
-  // personalizado do admin - onde não há slot de onde assumir o default - é
-  // que pode ser definida aqui.
-  const podeEditarHoraLanche = isAdmin && horarioCustom;
+  // Hora do lanche e sala: definidas pelo slot e BLOQUEADAS (21/09/2026) -
+  // mexe-se na configuração do slot, não na festa.
 
   return (
     <div className="space-y-4">
@@ -115,8 +113,8 @@ export default function AgendamentoSection({
           <InputField
             type="time"
             {...register("horaLanche")}
-            readOnly={!podeEditarHoraLanche}
-            hint={podeEditarHoraLanche ? undefined : "Definida pelo slot configurado"}
+            readOnly
+            hint="Definida pelo slot configurado"
           />
         </div>
         <div>
@@ -127,14 +125,15 @@ export default function AgendamentoSection({
             options={salaOptions}
             placeholder="Seleccionar"
             value={localId}
+            disabled={!!localId || !isAdmin}
             onChange={onSalaRefeicoesChange}
             error={!!errors.localId}
           />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
           <p className="mt-1 text-[11px] text-text-muted">
-            {isAdmin
-              ? "Assumida automaticamente do slot; podes trocar se necessário."
-              : "Assumida automaticamente do slot."}
+            {localId
+              ? "Assumida pelo slot (bloqueada)."
+              : "Sem sala no slot - o admin pode escolher."}
           </p>
           {avisoSala && <p className="mt-1 text-[11px] text-accent-orange-700">{avisoSala}</p>}
         </div>

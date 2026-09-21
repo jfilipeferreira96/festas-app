@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { FileText } from "lucide-react";
+import { Baby, Coins, FileText } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
@@ -13,7 +13,7 @@ import type { FestaFormData } from "../festa-form.schema";
 
 interface ExtrasNotasSectionProps {
   extraItems: Extra[];
-  /** Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras. */
+  /** Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras POR_PESSOA. */
   numPessoas: number;
   /** IDs a excluir da sincronização com numPessoas (ex.: bolos - quantidade própria). */
   excluirIds?: string[];
@@ -33,27 +33,45 @@ function groupBySubcategoria(items: Extra[]) {
   return { grouped, ungrouped };
 }
 
-export default function ExtrasNotasSection({ extraItems, numPessoas, excluirIds }: ExtrasNotasSectionProps) {
+export default function ExtrasNotasSection({
+  extraItems,
+  numPessoas,
+  excluirIds,
+}: ExtrasNotasSectionProps) {
   const { watch, setValue } = useFormContext<FestaFormData>();
   const extrasIds = watch("extrasIds");
   const extrasTexto = watch("extrasTexto");
   const extrasQuantidades = watch("extrasQuantidades");
-  const { grouped, ungrouped } = useMemo(() => groupBySubcategoria(extraItems), [extraItems]);
 
-  // Extras são SEMPRE cobrados pelo total de crianças (pedido do cliente,
-  // 19/09/2026): a quantidade acompanha numPessoas, sem controlo manual.
+  // ── Separação por cobrança (21/09/2026) ──
+  // POR_PESSOA → paga por criança (quantidade = nº de crianças)
+  // POR_UNIDADE → por valor / total (quantidade fixa do dia, editável)
+  const porPessoa = useMemo(
+    () => extraItems.filter((e) => e.baseCobranca === "POR_PESSOA"),
+    [extraItems]
+  );
+  const porValor = useMemo(
+    () => extraItems.filter((e) => e.baseCobranca !== "POR_PESSOA"),
+    [extraItems]
+  );
+
+  // Extras POR_PESSOA sincronizam SEMPRE com o nº de crianças. Os POR_UNIDADE
+  // (e os bolos, excluídos) têm quantidade própria.
   useEffect(() => {
     if (extrasIds.length === 0) return;
-    // Bolos (excluirIds) têm quantidade própria - NÃO acompanham numPessoas.
     const excluidos = new Set(excluirIds ?? []);
-    const sincronizaveis = extrasIds.filter((id) => !excluidos.has(id));
+    const sincronizaveis = extrasIds.filter((id) => {
+      if (excluidos.has(id)) return false;
+      const extra = porPessoa.find((e) => e.id === id);
+      return !!extra;
+    });
     if (sincronizaveis.length === 0) return;
     const dessincronizado = sincronizaveis.some((id) => (extrasQuantidades[id] ?? 1) !== numPessoas);
     if (!dessincronizado) return;
     const novo = { ...extrasQuantidades };
     for (const id of sincronizaveis) novo[id] = numPessoas;
     setValue("extrasQuantidades", novo, { shouldDirty: true });
-  }, [extrasIds, extrasQuantidades, numPessoas, setValue, excluirIds]);
+  }, [extrasIds, extrasQuantidades, numPessoas, setValue, porPessoa, excluirIds]);
 
   const totalExtras = useMemo(
     () =>
@@ -77,8 +95,13 @@ export default function ExtrasNotasSection({ extraItems, numPessoas, excluirIds 
     setValue("extrasTexto", { ...extrasTexto, [id]: texto }, { shouldDirty: true });
   };
 
+  const alterarQuantidade = (id: string, qtd: number) => {
+    setValue("extrasQuantidades", { ...extrasQuantidades, [id]: Math.max(1, qtd) }, { shouldDirty: true });
+  };
+
   const renderChip = (item: Extra) => {
     const isSelected = extrasIds.includes(item.id);
+    const ehPorPessoa = item.baseCobranca === "POR_PESSOA";
     return (
       <div key={item.id} className="flex flex-col gap-1.5">
         <button
@@ -91,7 +114,7 @@ export default function ExtrasNotasSection({ extraItems, numPessoas, excluirIds 
           <span className="text-sm text-text-primary">{item.nome}</span>
           <span className="text-xs font-medium text-text-secondary">
             +{formatEuro(Number(item.precoUnitario))}
-            {item.baseCobranca === "POR_PESSOA" ? "/pessoa" : ""}
+            {ehPorPessoa ? "/criança" : " (total)"}
           </span>
         </button>
         {isSelected && item.requerTexto && (
@@ -104,42 +127,61 @@ export default function ExtrasNotasSection({ extraItems, numPessoas, excluirIds 
         {isSelected && (
           <ExtrasQuantidadeStepper
             extra={item}
-            quantidade={numPessoas}
+            quantidade={ehPorPessoa ? numPessoas : extrasQuantidades[item.id] ?? 1}
             numPessoas={numPessoas}
-            quantidadeFixa
-            onChange={() => {}}
+            onChange={(qtd) => !ehPorPessoa && alterarQuantidade(item.id, qtd)}
           />
         )}
       </div>
     );
   };
 
+  const renderGrupo = (items: Extra[], mostrarHeaderVazio: boolean) => {
+    const { grouped, ungrouped } = groupBySubcategoria(items);
+    return (
+      <>
+        {Object.entries(grouped).map(([sub, groupItems]) => (
+          <div key={sub}>
+            <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">{sub}</p>
+            <div className="flex flex-wrap gap-3">{groupItems.map(renderChip)}</div>
+          </div>
+        ))}
+        {ungrouped.length > 0 && (
+          <div>
+            {Object.keys(grouped).length > 0 && mostrarHeaderVazio && (
+              <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">Outros</p>
+            )}
+            <div className="flex flex-wrap gap-3">{ungrouped.map(renderChip)}</div>
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="space-y-4">
-      {extraItems.length > 0 && (
+      {porPessoa.length > 0 && (
         <div className="space-y-3">
-          <span className="text-xs font-semibold text-text-primary block">Extras</span>
-          {Object.entries(grouped).map(([sub, items]) => (
-            <div key={sub}>
-              <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">{sub}</p>
-              <div className="flex flex-wrap gap-3">{items.map(renderChip)}</div>
-            </div>
-          ))}
-          {ungrouped.length > 0 && (
-            <div>
-              {Object.keys(grouped).length > 0 && (
-                <p className="text-[10px] font-medium text-text-muted uppercase tracking-wider mb-1.5">Outros</p>
-              )}
-              <div className="flex flex-wrap gap-3">{ungrouped.map(renderChip)}</div>
-            </div>
-          )}
-          {extrasIds.length > 0 && totalExtras > 0 && (
-            <p className="text-xs text-text-secondary">
-              <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> - cobrados no dia pelo nº de
-              crianças presentes
-            </p>
-          )}
+          <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Baby size={13} className="text-brand-500" /> Por criança — cobrado pelo nº de crianças
+          </span>
+          {renderGrupo(porPessoa, false)}
         </div>
+      )}
+
+      {porValor.length > 0 && (
+        <div className="space-y-3">
+          <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+            <Coins size={13} className="text-brand-500" /> Por valor — total fixo do dia
+          </span>
+          {renderGrupo(porValor, true)}
+        </div>
+      )}
+
+      {extrasIds.length > 0 && totalExtras > 0 && (
+        <p className="text-xs text-text-secondary">
+          <span className="font-semibold">Extras: {formatEuro(totalExtras)}</span> - cobrados no dia
+        </p>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

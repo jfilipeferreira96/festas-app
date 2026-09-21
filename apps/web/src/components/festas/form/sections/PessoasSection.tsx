@@ -164,11 +164,7 @@ export default function PessoasSection({
             <InputField {...register("encarregadoCodigoPostal")} placeholder="Código Postal" />
           </div>
           <div className="flex items-center gap-4 shrink-0 pb-0.5">
-            <Checkbox
-              label="Adicionar aos clientes"
-              checked={watch("adicionarCliente")}
-              onChange={(checked) => setValue("adicionarCliente", checked, { shouldDirty: true })}
-            />
+            {/* "Adicionar aos clientes" removido (21/09/2026): o cliente é SEMPRE adicionado. */}
             <Checkbox
               label="Enviar confirmação por email"
               checked={watch("enviarEmail")}

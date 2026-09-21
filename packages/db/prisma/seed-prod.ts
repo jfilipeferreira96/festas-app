@@ -1,4 +1,4 @@
-/**
+ /**
  * Production seed - MINIMUM data to bring the app online.
  *
  * Creates ONLY:
@@ -108,18 +108,26 @@ async function seedUsers() {
 // ─── Locais ───────────────────────────────────────────────────
 async function seedLocais() {
   console.log("  Creating locais...");
-  const locais = [
-    { id: "local-001", nome: "Zona 1 Baloiço / Parque crianças pequenas" },
-    { id: "local-002", nome: "Zona 2 Ninja e Slide" },
-    { id: "local-003", nome: "Zona 3 Trampolins" },
-    { id: "local-004", nome: "Zona 4 Futebol / Discoteca" },
-    { id: "local-005", nome: "Zona 5 Playground" }
+  const locais: { id: string; nome: string; isSalaLanche: boolean }[] = [
+    { id: "local-001", nome: "Zona 1 Baloiço / Parque crianças pequenas", isSalaLanche: false },
+    { id: "local-002", nome: "Zona 2 Ninja e Slide", isSalaLanche: false },
+    { id: "local-003", nome: "Zona 3 Trampolins", isSalaLanche: false },
+    { id: "local-004", nome: "Zona 4 Futebol / Discoteca", isSalaLanche: false },
+    { id: "local-005", nome: "Zona 5 Playground", isSalaLanche: false },
+    // Salas de refeições/lanche: são ESTAS que se reservam no formulário de
+    // festas (plano diário) - ficam marcadas com isSalaLanche = true.
+    { id: "local-006", nome: "Sala Refeições 1", isSalaLanche: true },
+    { id: "local-007", nome: "Sala Refeições 2", isSalaLanche: true },
   ];
-  
+
   for (const local of locais) {
-    await prisma.local.upsert({ where: { id: local.id }, update: { nome: local.nome }, create: local });
+    await prisma.local.upsert({
+      where: { id: local.id },
+      update: { nome: local.nome, isSalaLanche: local.isSalaLanche },
+      create: local,
+    });
   }
-  console.log(`  ✓ ${locais.length} locais\n`);
+  console.log(`  ✓ ${locais.length} locais (5 zonas + 2 salas de refeições)\n`);
 }
 
 // ─── Extras & Menus BasyLandy (catálogo real) ────────────────
