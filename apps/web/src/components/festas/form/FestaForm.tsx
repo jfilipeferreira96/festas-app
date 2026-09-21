@@ -18,6 +18,7 @@ import ClienteSearchModal, { type ClienteFilho } from "@/components/common/Clien
 import PagamentoModal from "@/components/festas/PagamentoModal";
 import { mensagensDeErro, scrollToFirstFormError } from "@/components/form/form-utils";
 import { addMinutosToTime, isFimDeSemana } from "@/lib/format";
+import { encontrarSalaCorrespondente } from "@/lib/salas";
 import { coresEmConflito, corDisponivel, type FestaComIntervalo } from "@/lib/cores";
 import { textoPlanoDia } from "@/lib/api/slotsHorario";
 import type { Cliente } from "@/lib/api/clientes";
@@ -77,6 +78,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const watchedHorario = watch("horario");
   const watchedDuracao = watch("duracaoMinutos");
   const watchedLocalId = watch("localId");
+  const watchedSalaLancheId = watch("salaLancheId");
   const watchedMenuId = watch("menuId");
   const previsaoCriancas = watch("previsaoCriancas");
   const watchedNumAdultos = watch("numAdultos");
@@ -105,26 +107,31 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     () => (extras ?? []).filter((e) => e.categoria === "MENU" && e.activo),
     [extras]
   );
-  const salaOptions = useMemo(
-    () => (locais ?? []).map((l) => ({ value: l.id, label: l.nome })),
-    [locais]
-  );
+  // Plano diário: no formulário de festas SÓ existem as salas de
+  // refeições/lanche (Local.isSalaLanche) - as zonas de brincadeira não são
+  // reserváveis. Fallback: se nenhuma local estiver marcado, mostram-se todos
+  // (com aviso) para não bloquear a criação de festas.
+  const salasRefeicoes = useMemo(() => (locais ?? []).filter((l) => l.isSalaLanche), [locais]);
+  const salaOptions = useMemo(() => {
+    const base = salasRefeicoes.length > 0 ? salasRefeicoes : (locais ?? []);
+    const options = base.map((l) => ({ value: l.id, label: l.nome }));
+    const atual = defaultValues.localId;
+    if (atual && !options.some((o) => o.value === atual)) {
+      options.unshift({ value: atual, label: reserva?.local?.nome ?? atual });
+    }
+    return options;
+  }, [salasRefeicoes, locais, defaultValues.localId, reserva?.local?.nome]);
+
+  const avisoSala = useMemo(() => {
+    if ((locais ?? []).length > 0 && salasRefeicoes.length === 0) {
+      return "Nenhum local está marcado como Sala de Refeições - a mostrar todas as zonas. Marca as salas em Configurações → Locais (switch \"Sala de Refeições / Lanche\").";
+    }
+    return null;
+  }, [locais, salasRefeicoes]);
   const menuOptions = useMemo(
     () => [{ value: "NONE", label: "Sem menu" }, ...menuExtras.map((m) => ({ value: m.id, label: m.nome }))],
     [menuExtras]
   );
-  // Salas de lanche activas; se a sala guardada na reserva estiver inactiva,
-  // é acrescentada às opções para continuar a ser exibida em edição.
-  const salasLancheOptions = useMemo(() => {
-    const options = (salasLanche ?? [])
-      .filter((s) => s.activo)
-      .map((s) => ({ value: s.id, label: s.nome }));
-    const atual = defaultValues.salaLancheId;
-    if (atual && !options.some((o) => o.value === atual)) {
-      options.push({ value: atual, label: reserva?.salaLanche?.nome ?? atual });
-    }
-    return options;
-  }, [salasLanche, defaultValues.salaLancheId, reserva?.salaLanche?.nome]);
   // Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras.
   const numCriancasConfirmadasWatched = watch("numCriancasConfirmadas");
   const numPessoasExtras = useMemo(() => {
@@ -231,6 +238,37 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
       setValue("cor", CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value))?.value ?? "");
     }
   }, [reserva, coresEmUso, setValue, getValues]);
+
+  // A sala de refeições (Local.isSalaLanche → Reserva.localId) acompanha a
+  // sala de lanche configurada no slot (SalaLanche → salaLancheId):
+  // correspondência por número no nome ("Sala 1" ↔ "Sala Refeições 1").
+  // Só preenche quando o campo está vazio - a escolha manual do admin
+  // (handleSalaRefeicoesChange) não é sobrescrita.
+  useEffect(() => {
+    if (!watchedSalaLancheId || watchedLocalId) return;
+    const sala = (salasLanche ?? []).find((s) => s.id === watchedSalaLancheId);
+    const local = encontrarSalaCorrespondente(
+      sala,
+      salasRefeicoes.length > 0 ? salasRefeicoes : (locais ?? [])
+    );
+    if (local) {
+      setValue("localId", local.id, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [watchedSalaLancheId, watchedLocalId, salasLanche, salasRefeicoes, locais, setValue]);
+
+  // Admin troca manualmente a sala de refeições → sincronizar a sala de lanche
+  // (SalaLanche) para as vistas do Lanche continuarem coerentes.
+  const handleSalaRefeicoesChange = useCallback(
+    (localIdVal: string) => {
+      setValue("localId", localIdVal, { shouldDirty: true, shouldValidate: true });
+      const local = (locais ?? []).find((l) => l.id === localIdVal);
+      const sala = encontrarSalaCorrespondente(local, (salasLanche ?? []).filter((s) => s.activo));
+      if (sala) {
+        setValue("salaLancheId", sala.id, { shouldDirty: true });
+      }
+    },
+    [locais, salasLanche, setValue]
+  );
 
   const estimativaFesta = useMemo(
     () =>
@@ -365,7 +403,8 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
             <AgendamentoSection
               slotOptions={slotOptions}
               salaOptions={salaOptions}
-              salasLancheOptions={salasLancheOptions}
+              onSalaRefeicoesChange={handleSalaRefeicoesChange}
+              avisoSala={avisoSala}
               horarioCustom={horarioCustom}
               onToggleHorarioCustom={setHorarioCustom}
               isAdmin={isGlobalAdmin}

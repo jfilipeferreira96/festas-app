@@ -247,6 +247,10 @@ model Local {
   id         String   @id @default(cuid())
   nome       String
   activo     Boolean  @default(true)
+  // Sala de refeições/lanche: é esta a "sala" atribuída a cada festa no plano
+  // diário (slot.salaLanche). Zonas de brincadeira ficam a false - não são
+  // reserváveis no formulário de festas.
+  isSalaLanche Boolean @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

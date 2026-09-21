@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Utensils } from "lucide-react";
+import { Utensils } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
@@ -12,8 +12,12 @@ import { DURACAO_FESTA_OPTIONS, type FestaFormData } from "../festa-form.schema"
 
 interface AgendamentoSectionProps {
   slotOptions: { value: string; label: string; disabled?: boolean }[];
+  /** Salas de refeições/lanche (Local.isSalaLanche) - as únicas reserváveis. */
   salaOptions: { value: string; label: string }[];
-  salasLancheOptions: { value: string; label: string }[];
+  /** Troca manual da sala de refeições (sincroniza a sala de lanche do slot). */
+  onSalaRefeicoesChange: (localId: string) => void;
+  /** Aviso quando nenhum local está marcado como sala de refeições. */
+  avisoSala: string | null;
   horarioCustom: boolean;
   onToggleHorarioCustom: (v: boolean) => void;
   isAdmin: boolean;
@@ -26,7 +30,8 @@ interface AgendamentoSectionProps {
 export default function AgendamentoSection({
   slotOptions,
   salaOptions,
-  salasLancheOptions,
+  onSalaRefeicoesChange,
+  avisoSala,
   horarioCustom,
   onToggleHorarioCustom,
   isAdmin,
@@ -39,7 +44,6 @@ export default function AgendamentoSection({
   const horario = watch("horario");
   const duracao = watch("duracaoMinutos");
   const localId = watch("localId");
-  const salaLancheId = watch("salaLancheId");
 
   // Hora fora dos slots (festa criada em modo personalizado): para não-admins
   // o valor é mostrado read-only em vez do select de slots - a hora guardada
@@ -117,37 +121,27 @@ export default function AgendamentoSection({
         </div>
         <div>
           <FieldLabel required className="flex items-center gap-1">
-            <MapPin size={12} /> Zona da Festa
+            <Utensils size={12} /> Sala de Refeições
           </FieldLabel>
           <Select
             options={salaOptions}
             placeholder="Seleccionar"
             value={localId}
-            onChange={(val) => setValue("localId", val, { shouldValidate: true })}
+            onChange={onSalaRefeicoesChange}
             error={!!errors.localId}
           />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
-        </div>
-        <div>
-          <FieldLabel className="flex items-center gap-1">
-            <Utensils size={12} /> Sala de Lanche
-          </FieldLabel>
-          <Select
-            options={salasLancheOptions}
-            placeholder="Seleccionar"
-            value={salaLancheId || undefined}
-            disabled={!isAdmin}
-            onChange={(val) => setValue("salaLancheId", val, { shouldDirty: true, shouldValidate: true })}
-          />
           <p className="mt-1 text-[11px] text-text-muted">
             {isAdmin
-              ? "Assumida automaticamente do slot configurado."
-              : "Assumida automaticamente do slot (gerida pela administração)."}
+              ? "Assumida automaticamente do slot; podes trocar se necessário."
+              : "Assumida automaticamente do slot."}
           </p>
+          {avisoSala && <p className="mt-1 text-[11px] text-accent-orange-700">{avisoSala}</p>}
         </div>
         {/* Cor da Festa removida a pedido do cliente (19/09/2026): a cor passa
             sempre pela pulseira do slot (slot.corDefault, aplicada em
-            onSelectSlot). Não é editável à mão. */}
+            onSelectSlot). Não é editável à mão. As zonas de brincadeira não são
+            reserváveis - a sala da festa é a sala de refeições do plano diário. */}
       </div>
 
       {isAdmin && (

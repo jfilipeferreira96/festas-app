@@ -7,6 +7,8 @@ export type { Local };
 export type CreateLocalInput = {
   nome: string;
   activo?: boolean;
+  /** Sala de refeições/lanche - atribuída às festas no formulário. */
+  isSalaLanche?: boolean;
 };
 
 export type UpdateLocalInput = Partial<CreateLocalInput>;

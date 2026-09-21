@@ -19,6 +19,7 @@ import type { StatusType } from "@/components/ui";
 const localSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   activo: z.boolean(),
+  isSalaLanche: z.boolean(),
 });
 
 type LocalFormData = z.infer<typeof localSchema>;
@@ -37,6 +38,19 @@ const columns: Column<Local>[] = [
         <span className="text-sm font-medium text-text-primary">{l.nome}</span>
       </div>
     ),
+  },
+  {
+    key: "isSalaLanche",
+    label: "Tipo",
+    sortable: true,
+    render: (_value, l) =>
+      l.isSalaLanche ? (
+        <span className="text-xs font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded">
+          Sala de Refeições
+        </span>
+      ) : (
+        <span className="text-xs text-text-muted">Zona de brincadeira</span>
+      ),
   },
   {
     key: "activo",
@@ -71,14 +85,16 @@ export default function LocaisContent() {
     defaultValues: {
       nome: "",
       activo: true,
+      isSalaLanche: false,
     },
   });
 
   const activo = watch("activo");
+  const isSalaLanche = watch("isSalaLanche");
 
   const handleCreate = useCallback(() => {
     setEditingLocal(null);
-    reset({ nome: "", activo: true });
+    reset({ nome: "", activo: true, isSalaLanche: false });
     setShowForm(true);
   }, [reset]);
 
@@ -88,6 +104,7 @@ export default function LocaisContent() {
       reset({
         nome: local.nome,
         activo: local.activo,
+        isSalaLanche: local.isSalaLanche,
       });
       setShowForm(true);
     },
@@ -99,12 +116,13 @@ export default function LocaisContent() {
       if (editingLocal) {
         await updateLocal.mutateAsync({
           id: editingLocal.id,
-          data: { nome: data.nome, activo: data.activo },
+          data: { nome: data.nome, activo: data.activo, isSalaLanche: data.isSalaLanche },
         });
       } else {
         await createLocal.mutateAsync({
           nome: data.nome,
           activo: data.activo,
+          isSalaLanche: data.isSalaLanche,
         });
       }
       setShowForm(false);
@@ -173,6 +191,19 @@ export default function LocaisContent() {
                   checked={activo}
                   onChange={(checked: boolean) => setValue("activo", checked)}
                   label={activo ? "Activo" : "Inactivo"}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-text-primary">Sala de Refeições / Lanche</label>
+                  <p className="text-xs text-text-muted">
+                    É esta a sala atribuída às festas no formulário (plano diário).
+                  </p>
+                </div>
+                <Switch
+                  checked={isSalaLanche}
+                  onChange={(checked: boolean) => setValue("isSalaLanche", checked)}
+                  label={isSalaLanche ? "Sim" : "Não"}
                 />
               </div>
               <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">

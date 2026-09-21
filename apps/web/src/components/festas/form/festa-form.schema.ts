@@ -51,7 +51,7 @@ export const festaFormSchema = z.object({
   horario: z.string().min(1, "Horário é obrigatório"),
   horaLanche: z.string(),
   duracaoMinutos: z.number().min(30, "Duração mínima é 30 minutos"),
-  localId: z.string().min(1, "Seleccione uma sala"),
+  localId: z.string().min(1, "Seleccione a sala de refeições"),
   salaLancheId: z.string(),
   cor: z.string(),
   menuId: z.string(),
