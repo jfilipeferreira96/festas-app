@@ -583,6 +583,20 @@ export default function CacifosContent() {
                     : cacifo.criancas || `Cacifo ${cacifo.numero}`
                 }
               >
+                {/* Cor da pulseira da festa (21/09/2026) */}
+                {(() => {
+                  const festaCor =
+                    festas.find((f) => f.id === cacifo.reservaId) ??
+                    (previewFesta ? festas.find((f) => f.id === previewFesta.id) : undefined);
+                  if (!festaCor?.cor) return null;
+                  return (
+                    <span
+                      className="absolute top-1 right-1 w-3 h-3 rounded-full border-2 border-white shadow"
+                      style={{ backgroundColor: festaCor.cor }}
+                      title={`Pulseira da festa`}
+                    />
+                  );
+                })()}
                 <Package size={14} className={previewFesta ? "text-brand-400" : style.icon} />
                 <span className="text-xs font-bold mt-0.5">{cacifo.numero}</span>
                 {previewFesta && (
