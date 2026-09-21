@@ -11,6 +11,8 @@ export interface CreateExtraInput {
   icone?: string;
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
+  /** Ponte com Reserva.bolo (cozinha): NOSSO_1KG | NOSSO_2KG | BOLO_ARTISTICO. */
+  boloTipo?: string;
   requerTexto?: boolean;
   baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
@@ -24,6 +26,7 @@ export interface UpdateExtraInput {
   icone?: string;
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
+  boloTipo?: string;
   requerTexto?: boolean;
   baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;

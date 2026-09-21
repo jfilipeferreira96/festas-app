@@ -28,6 +28,16 @@ export function ehSubcategoriaBolos(subcategoria: string | null | undefined): bo
 }
 
 /**
+ * Opções do dropdown "Tipo interno (cozinha)" na config de Extras - a ponte
+ * entre o catálogo de bolos (extras subcategoria "Bolos") e a coluna
+ * Reserva.bolo que alimenta cozinha/email/lanche.
+ */
+export const BOLO_TIPO_INTERNO_OPTIONS = [
+  { value: "", label: "Sem tipo interno (não vai para a cozinha)" },
+  ...BOLOS_NOSSOS.map((tipo) => ({ value: tipo, label: BOLO_LABELS[tipo] ?? tipo })),
+] as const;
+
+/**
  * Labels abreviados para tabelas (menos espaço)
  */
 export const BOLO_LABELS_SHORT: Record<string, string> = {

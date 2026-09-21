@@ -107,6 +107,12 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     () => (extras ?? []).filter((e) => e.categoria === "MENU" && e.activo),
     [extras]
   );
+  // Catálogo de bolos (extras subcategoria "Bolos") - gerido pelo cliente em
+  // Config → Menus & Extras; alimenta a secção "Bolo de Aniversário" do form.
+  const bolosCatalogo = useMemo(
+    () => (extras ?? []).filter((e) => e.activo && ehSubcategoriaBolos(e.subcategoria)),
+    [extras]
+  );
   // Plano diário: no formulário de festas SÓ existem as salas de
   // refeições/lanche (Local.isSalaLanche) - as zonas de brincadeira não são
   // reserváveis. Fallback: se nenhuma local estiver marcado, mostram-se todos
@@ -432,9 +438,14 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               menuOptions={menuOptions}
               menuWarning={menuWarning}
               suplementosMenu={suplementosMenu}
+              bolosCatalogo={bolosCatalogo}
               numPessoas={numPessoasExtras}
             />
-            <ExtrasNotasSection extraItems={extraItems} numPessoas={numPessoasExtras} />
+            <ExtrasNotasSection
+              extraItems={extraItems}
+              numPessoas={numPessoasExtras}
+              excluirIds={bolosCatalogo.map((b) => b.id)}
+            />
             <PagamentoSection
               reserva={reserva}
               onOpenPagamento={() => setShowPagamentoModal(true)}

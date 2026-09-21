@@ -10,6 +10,7 @@ interface CreateExtraData {
   icone?: string;
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
+  boloTipo?: string;
   requerTexto?: boolean;
   baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
@@ -24,6 +25,7 @@ interface UpdateExtraData {
   icone?: string;
   categoria?: "MENU" | "EXTRA";
   subcategoria?: string;
+  boloTipo?: string;
   requerTexto?: boolean;
   baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
@@ -80,6 +82,7 @@ export const extraService = {
         icone: data.icone,
         categoria: data.categoria ?? "EXTRA",
         subcategoria: data.subcategoria,
+        boloTipo: data.boloTipo,
         requerTexto: data.requerTexto ?? false,
         baseCobranca: data.baseCobranca ?? "POR_UNIDADE",
         fimDeSemana: data.fimDeSemana ?? null,
@@ -109,6 +112,7 @@ export const extraService = {
         icone: data.icone,
         categoria: data.categoria,
         subcategoria: data.subcategoria,
+        boloTipo: data.boloTipo,
         requerTexto: data.requerTexto,
         baseCobranca: data.baseCobranca,
         fimDeSemana: data.fimDeSemana,

@@ -134,6 +134,7 @@ async function seedExtras() {
     categoria: "MENU" | "EXTRA";
     subcategoria: string;
     requerTexto: boolean;
+    boloTipo?: string;
     fimDeSemana?: boolean;
   }[] = [
     // ─── Menus (5) ─────────────────────────────────────────────
@@ -153,11 +154,12 @@ async function seedExtras() {
     { id: "extra-lanche-pipocas", nome: "Pipocas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
     { id: "extra-lanche-pizzas", nome: "Pizzas", precoUnitario: 1.5, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
     // ─── Bolos (5) ─────────────────────────────────────────────
-    { id: "extra-bolo-1kg-hostia", nome: "Bolo 1KG (Hóstia personalizada)", precoUnitario: 18.0, descricao: "Bolo 1kg com hóstia personalizada.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
-    { id: "extra-bolo-1kg-simples", nome: "Bolo 1kg (Simples)", precoUnitario: 15.0, descricao: "Bolo 1kg simples.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
-    { id: "extra-bolo-2kg-hostia", nome: "Bolo 2KG (hóstia personalizada)", precoUnitario: 33.0, descricao: "Bolo 2kg com hóstia personalizada.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
-    { id: "extra-bolo-2kg-simples", nome: "Bolo 2KGS (Simples)", precoUnitario: 27.0, descricao: "Bolo 2kg simples.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false },
-    { id: "extra-bolo-artistico", nome: "Bolo Artístico", precoUnitario: 50.0, descricao: "Bolo artístico personalizado.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: true },
+    // boloTipo = ponte com Reserva.bolo (cozinha/email/lanche)
+    { id: "extra-bolo-1kg-hostia", nome: "Bolo 1KG (Hóstia personalizada)", precoUnitario: 18.0, descricao: "Bolo 1kg com hóstia personalizada.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false, boloTipo: "NOSSO_1KG" },
+    { id: "extra-bolo-1kg-simples", nome: "Bolo 1kg (Simples)", precoUnitario: 15.0, descricao: "Bolo 1kg simples.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false, boloTipo: "NOSSO_1KG" },
+    { id: "extra-bolo-2kg-hostia", nome: "Bolo 2KG (hóstia personalizada)", precoUnitario: 33.0, descricao: "Bolo 2kg com hóstia personalizada.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false, boloTipo: "NOSSO_2KG" },
+    { id: "extra-bolo-2kg-simples", nome: "Bolo 2KGS (Simples)", precoUnitario: 27.0, descricao: "Bolo 2kg simples.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: false, boloTipo: "NOSSO_2KG" },
+    { id: "extra-bolo-artistico", nome: "Bolo Artístico", precoUnitario: 50.0, descricao: "Bolo artístico personalizado.", categoria: "EXTRA", subcategoria: "Bolos", requerTexto: true, boloTipo: "BOLO_ARTISTICO" },
     // ─── Extras à diversão (7) ─────────────────────────────────
     { id: "extra-diversao-brinde-1", nome: "Brinde 1", precoUnitario: 1.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
     { id: "extra-diversao-brinde-2", nome: "Brinde 2", precoUnitario: 2.0, descricao: "Brinde por criança. Extras à diversão.", categoria: "EXTRA", subcategoria: "Extras à diversão", requerTexto: false },
@@ -177,6 +179,7 @@ async function seedExtras() {
         descricao: extra.descricao,
         categoria: extra.categoria,
         subcategoria: extra.subcategoria,
+        boloTipo: extra.boloTipo,
         requerTexto: extra.requerTexto,
         fimDeSemana: extra.fimDeSemana,
       },

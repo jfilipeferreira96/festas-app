@@ -15,6 +15,8 @@ interface ExtrasNotasSectionProps {
   extraItems: Extra[];
   /** Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras. */
   numPessoas: number;
+  /** IDs a excluir da sincronização com numPessoas (ex.: bolos - quantidade própria). */
+  excluirIds?: string[];
 }
 
 function groupBySubcategoria(items: Extra[]) {
@@ -31,7 +33,7 @@ function groupBySubcategoria(items: Extra[]) {
   return { grouped, ungrouped };
 }
 
-export default function ExtrasNotasSection({ extraItems, numPessoas }: ExtrasNotasSectionProps) {
+export default function ExtrasNotasSection({ extraItems, numPessoas, excluirIds }: ExtrasNotasSectionProps) {
   const { watch, setValue } = useFormContext<FestaFormData>();
   const extrasIds = watch("extrasIds");
   const extrasTexto = watch("extrasTexto");
@@ -42,12 +44,16 @@ export default function ExtrasNotasSection({ extraItems, numPessoas }: ExtrasNot
   // 19/09/2026): a quantidade acompanha numPessoas, sem controlo manual.
   useEffect(() => {
     if (extrasIds.length === 0) return;
-    const dessincronizado = extrasIds.some((id) => (extrasQuantidades[id] ?? 1) !== numPessoas);
+    // Bolos (excluirIds) têm quantidade própria - NÃO acompanham numPessoas.
+    const excluidos = new Set(excluirIds ?? []);
+    const sincronizaveis = extrasIds.filter((id) => !excluidos.has(id));
+    if (sincronizaveis.length === 0) return;
+    const dessincronizado = sincronizaveis.some((id) => (extrasQuantidades[id] ?? 1) !== numPessoas);
     if (!dessincronizado) return;
     const novo = { ...extrasQuantidades };
-    for (const id of extrasIds) novo[id] = numPessoas;
+    for (const id of sincronizaveis) novo[id] = numPessoas;
     setValue("extrasQuantidades", novo, { shouldDirty: true });
-  }, [extrasIds, extrasQuantidades, numPessoas, setValue]);
+  }, [extrasIds, extrasQuantidades, numPessoas, setValue, excluirIds]);
 
   const totalExtras = useMemo(
     () =>

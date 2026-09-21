@@ -55,7 +55,9 @@ export const festaFormSchema = z.object({
   salaLancheId: z.string(),
   cor: z.string(),
   menuId: z.string(),
-  bolo: z.enum(TIPOS_BOLO, { message: "Seleccione o tipo de bolo" }),
+  // Opcional: com o catálogo de bolos (extras), um bolo sem "tipo interno"
+  // não deriva valor para a cozinha - e não selecionar bolo também é válido.
+  bolo: z.enum(TIPOS_BOLO).optional(),
   boloTema: z.string(),
   // Inputs numéricos vazios chegam como NaN (valueAsNumber) → normalizar para undefined
   boloQuantidade: numeroOpcional(0),

@@ -14,6 +14,7 @@ import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { useExtras, useCreateExtra, useUpdateExtra, useDeleteExtra } from "@/hooks/use-extras";
 import type { Extra } from "@/lib/api/extras";
+import { ehSubcategoriaBolos, BOLO_TIPO_INTERNO_OPTIONS } from "@/lib/constants/bolo";
 import type { StatusType } from "@/components/ui";
 
 // --- Helpers ---
@@ -38,6 +39,7 @@ const extraSchema = z.object({
   icone: z.string().optional(),
   categoria: z.string().optional(),
   subcategoria: z.string().optional(),
+  boloTipo: z.string().optional(),
   requerTexto: z.boolean().optional(),
   baseCobranca: z.string().optional(),
 });
@@ -147,6 +149,7 @@ export default function ExtrasContent() {
       icone: "",
       categoria: "EXTRA",
       subcategoria: "",
+      boloTipo: "",
       requerTexto: false,
       baseCobranca: "POR_UNIDADE",
     },
@@ -154,10 +157,14 @@ export default function ExtrasContent() {
 
   const currentCategoria = watch("categoria");
   const currentBaseCobranca = watch("baseCobranca");
+  const currentSubcategoria = watch("subcategoria");
+  const currentBoloTipo = watch("boloTipo");
+  // Ponte com a cozinha: só relevante para extras da subcategoria "Bolos"
+  const ehBolo = ehSubcategoriaBolos(currentSubcategoria);
 
   const handleCreate = useCallback(() => {
     setEditingExtra(null);
-    reset({ nome: "", descricao: "", precoUnitario: 0, icone: "", categoria: "EXTRA", subcategoria: "", requerTexto: false, baseCobranca: "POR_UNIDADE" });
+    reset({ nome: "", descricao: "", precoUnitario: 0, icone: "", categoria: "EXTRA", subcategoria: "", boloTipo: "", requerTexto: false, baseCobranca: "POR_UNIDADE" });
     setShowForm(true);
   }, [reset]);
 
@@ -171,6 +178,7 @@ export default function ExtrasContent() {
         icone: extra.icone || "",
         categoria: extra.categoria || "EXTRA",
         subcategoria: extra.subcategoria || "",
+        boloTipo: extra.boloTipo || "",
         requerTexto: extra.requerTexto || false,
         baseCobranca: extra.baseCobranca || "POR_UNIDADE",
       });
@@ -188,6 +196,7 @@ export default function ExtrasContent() {
         icone: data.icone,
         categoria: (data.categoria || "EXTRA") as "EXTRA" | "MENU",
         subcategoria: data.subcategoria || undefined,
+        boloTipo: ehBolo ? data.boloTipo || undefined : undefined,
         requerTexto: data.requerTexto || false,
         baseCobranca: (data.baseCobranca || "POR_UNIDADE") as "POR_UNIDADE" | "POR_PESSOA",
       };
@@ -338,6 +347,22 @@ export default function ExtrasContent() {
                   </label>
                 </div>
               </div>
+              {ehBolo && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-1.5">
+                    Tipo interno (cozinha)
+                  </label>
+                  <Select
+                    options={[...BOLO_TIPO_INTERNO_OPTIONS]}
+                    value={currentBoloTipo || ""}
+                    onChange={(val) => setValue("boloTipo", val, { shouldDirty: true })}
+                    placeholder="Sem tipo interno"
+                  />
+                  <p className="text-xs text-text-muted mt-1">
+                    Liga este bolo à cozinha/e-mail/lanche. Ex.: todos os bolos de 1kg → "Nosso bolo 1kg".
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-1.5">
                   Ícone (Lucide)

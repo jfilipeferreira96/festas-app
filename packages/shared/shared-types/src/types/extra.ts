@@ -15,6 +15,8 @@ export interface Extra {
   categoria: CategoriaItem;
   subcategoria?: string;
   requerTexto: boolean;
+  /** Ponte com Reserva.bolo (cozinha): NOSSO_1KG | NOSSO_2KG | BOLO_ARTISTICO. */
+  boloTipo?: string | null;
   baseCobranca?: BaseCobranca;
   fimDeSemana?: boolean | null;
   activo: boolean;

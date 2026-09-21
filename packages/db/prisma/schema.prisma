@@ -274,6 +274,9 @@ model Extra {
   categoria     CategoriaItem @default(EXTRA)
   subcategoria  String?       // Ex: "Diversão", "Premium" - para agrupar extras no formulário
   requerTexto   Boolean       @default(false) // Se true, mostra input de texto ao selecionar
+  // Ponte com a coluna Reserva.bolo (cozinha/email/lanche): NOSSO_1KG,
+  // NOSSO_2KG ou BOLO_ARTISTICO. Só relevante quando subcategoria = "Bolos".
+  boloTipo      String?
   baseCobranca  BaseCobranca  @default(POR_UNIDADE) // POR_PESSOA = quantidade pré-preenchida com nº de pessoas
   // Flag para menus: true = apenas fim-de-semana/feriados, false = apenas dias de semana, null = todos os dias
   fimDeSemana   Boolean?
