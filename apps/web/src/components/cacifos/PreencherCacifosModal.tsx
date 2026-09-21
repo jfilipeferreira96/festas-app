@@ -104,6 +104,14 @@ export default React.memo(function PreencherCacifosModal({
       .catch(() => toast.error("Não foi possível pré-reservar cacifos."));
   }, [reservaId, reserva, cacifos, queryClient, toast]);
 
+  // Reset dos refs de sessão quando muda a festa: sem isto, abrir outra festa
+  // na mesma modal herdava os refs da anterior (bug de estado, 21/09/2026).
+  React.useEffect(() => {
+    preselectedAddedRef.current = null;
+    materializadoRef.current = null;
+    setShowAddDropdown(false);
+  }, [reservaId]);
+
   const preenchidos = cacifosList.filter(
     (c) => c.criancas && c.criancas !== "Por preencher"
   ).length;
@@ -139,11 +147,16 @@ export default React.memo(function PreencherCacifosModal({
     adicionarCacifo.mutate(
       { reservaId },
       {
-        onSuccess: () => toast.success("Cacifo adicionado."),
-        onError: () => toast.error("Não há cacifos livres disponíveis."),
+        onSuccess: () => {
+          toast.success("Cacifo adicionado.");
+          setShowAddDropdown(false);
+        },
+        onError: () => {
+          toast.error("Não há cacifos livres disponíveis.");
+          setShowAddDropdown(false);
+        },
       }
     );
-    setShowAddDropdown(false);
   }, [reservaId, adicionarCacifo, toast]);
 
   const handleRealocar = useCallback(() => {
@@ -240,10 +253,22 @@ export default React.memo(function PreencherCacifosModal({
             {/* Notas */}
             <NotasSection reservaId={reservaId} reserva={reserva} />
 
-            {/* Footer */}
+            {/* Footer: Gravar (invalida e fecha) / Cancelar (fecha sem gravar pendentes) */}
             <div className="flex items-center gap-3 pt-2 border-t border-border">
-              <Button variant="outline" onClick={onClose} className="ml-auto">
-                Fechar
+              <Button variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button
+                className="ml-auto flex items-center gap-2"
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: ["cacifos"] });
+                  queryClient.invalidateQueries({ queryKey: ["reservas"] });
+                  toast.success("Alterações gravadas.");
+                  onClose();
+                }}
+              >
+                <CheckCircle2 size={16} />
+                Gravar
               </Button>
             </div>
           </div>
