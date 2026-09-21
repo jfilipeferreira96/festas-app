@@ -35,6 +35,17 @@ export default function CaucoesContent() {
     filtro ? { estadoCaucao: filtro } : undefined
   );
 
+  // Não pagas PRIMEIRO (21/09/2026)
+  const caucoesOrdenadas = useMemo(() => {
+    const lista = [...(caucoes ?? [])];
+    lista.sort((a, b) => {
+      const pesoA = a.caucao === "PAGA" ? 1 : 0;
+      const pesoB = b.caucao === "PAGA" ? 1 : 0;
+      return pesoA - pesoB;
+    });
+    return lista;
+  }, [caucoes]);
+
   // 3 cartões com semântica clara: pagas (PAGA) vs por pagar (restantes,
   // incluindo "paga no dia" que ainda não foi cobrada).
   const totais = useMemo(() => {
@@ -176,7 +187,7 @@ export default function CaucoesContent() {
         </div>
       ) : (
         <DataTable<CaucaoItem>
-          data={caucoes ?? []}
+          data={caucoesOrdenadas}
           itemLabel="cauções"
           defaultSort={{ key: "data", direction: "desc" }}
           columns={columns}

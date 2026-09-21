@@ -625,11 +625,17 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             key: "estado",
             label: "Estado",
             sortable: true,
-            render: (_v, r) => (
-              <StatusBadge status={r.estado as StatusType}>
-                {ESTADO_LABELS[r.estado] ?? r.estado}
-              </StatusBadge>
-            ),
+            render: (_v, r) => {
+              // RESERVA com caução paga APRESENTA-SE como Confirmada (apenas
+              // visual - o estado real na BD mantém-se, 21/09/2026).
+              const efectivo =
+                r.estado === "RESERVA" && r.caucao === "PAGA" ? "CONFIRMADO" : r.estado;
+              return (
+                <StatusBadge status={efectivo as StatusType}>
+                  {ESTADO_LABELS[efectivo] ?? efectivo}
+                </StatusBadge>
+              );
+            },
           },
           {
             key: "caucao",

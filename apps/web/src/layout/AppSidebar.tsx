@@ -105,30 +105,6 @@ const mainNavItems: NavItem[] = [
     modulo: "reservas",
   },
   {
-    name: "Cacifos",
-    icon: <Package className="w-5 h-5" />,
-    path: "/cacifos",
-    modulo: "cacifos",
-  },
-  {
-    name: "Lanche",
-    icon: <Sandwich className="w-5 h-5" />,
-    path: "/lanche",
-    modulo: "lanche",
-  },
-  {
-    name: "Monitores",
-    icon: <UserCog className="w-5 h-5" />,
-    path: "/monitores",
-    modulo: "monitores",
-  },
-  {
-    name: "Festas a Acabar",
-    icon: <Clock className="w-5 h-5" />,
-    path: "/festas-acabar",
-    modulo: "festas_acabar",
-  },
-  {
     name: "Clientes",
     icon: <BookUser className="w-5 h-5" />,
     path: "/clientes",
@@ -141,6 +117,19 @@ const mainNavItems: NavItem[] = [
     modulo: "relatorios",
   },
 ];
+
+// Grupo "Páginas Funcionários" (21/09/2026): Cacifos, Lanche, Monitores e
+// Festas a Acabar agrupados no fundo do menu.
+const funcionariosItems: NavItem = {
+  name: "Páginas Funcionários",
+  icon: <UserCog className="w-5 h-5" />,
+  subItems: [
+    { name: "Cacifos", path: "/cacifos", icon: <Package className="w-4 h-4" />, modulo: "cacifos" },
+    { name: "Lanche", path: "/lanche", icon: <Sandwich className="w-4 h-4" />, modulo: "lanche" },
+    { name: "Monitores", path: "/monitores", icon: <UserCog className="w-4 h-4" />, modulo: "monitores" },
+    { name: "Festas a Acabar", path: "/festas-acabar", icon: <Clock className="w-4 h-4" />, modulo: "festas_acabar" },
+  ],
+};
 
 const configItems: NavItem = {
   name: "Configurações",
@@ -313,6 +302,55 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
               </li>
             ))}
           </ul>
+
+          {/* Páginas Funcionários (Cacifos, Lanche, Monitores, Festas a Acabar) - 21/09/2026 */}
+          {(() => {
+            const visiveis = funcionariosItems.subItems?.filter(
+              (subItem) => !subItem.modulo || permissoesLoading || canRead(subItem.modulo)
+            ) ?? [];
+            const isFuncOpen = openSubmenu === "funcionarios";
+            const funcionariosActivo = funcionariosItems.subItems?.some((s) => pathname.startsWith(s.path)) ?? false;
+            if (visiveis.length === 0) return null;
+            return (
+              <div className="mt-4 pt-3 border-t border-border">
+                <button
+                  onClick={() => toggleSubmenu("funcionarios")}
+                  className={`menu-item group w-full ${isFuncOpen || funcionariosActivo ? "menu-item-soft-active" : "menu-item-inactive"}`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-3">
+                      <span className={`${isFuncOpen || funcionariosActivo ? "menu-item-icon-soft-active" : "menu-item-icon-inactive"}`}>
+                        {funcionariosItems.icon}
+                      </span>
+                      {showExpanded && <span className="menu-item-text">Páginas Funcionários</span>}
+                    </div>
+                    <ChevronDown
+                      className={`menu-item-arrow w-4 h-4 transition-all duration-200 ${
+                        isFuncOpen || funcionariosActivo ? "menu-item-arrow-soft-active" : "menu-item-arrow-inactive"
+                      } ${!showExpanded ? "opacity-0 w-0 h-0" : ""}`}
+                    />
+                  </div>
+                </button>
+
+                {showExpanded && (
+                  <div className={`grid transition-all duration-200 ease-in-out ${isFuncOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}>
+                    <div className="overflow-hidden">
+                      <ul className="mt-1 space-y-0.5 pl-3">
+                        {visiveis.map((subItem) => (
+                          <li key={subItem.path}>
+                            <Link href={subItem.path as Route} className={`menu-dropdown-item ${isActive(subItem.path) ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"}`}>
+                              <span className={`${isActive(subItem.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{subItem.icon}</span>
+                              <span className="flex-1">{subItem.name}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Configurações Section - only show if at least one sub-item is visible */}
           {(() => {
