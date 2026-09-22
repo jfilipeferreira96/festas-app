@@ -250,7 +250,6 @@ model Local {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  reservas      Reserva[]
   extras        ExtraLocal[]
   alocacoes     AlocacaoMonitor[]
 
@@ -499,9 +498,6 @@ model Reserva {
   clienteId       String
   cliente         Cliente       @relation(fields: [clienteId], references: [id])
 
-  localId         String
-  local           Local         @relation(fields: [localId], references: [id])
-
   // Sala do lanche (opcional - tabela separada SalaLanche)
   salaLanche      SalaLanche?   @relation(fields: [salaLancheId], references: [id])
 
@@ -514,7 +510,7 @@ model Reserva {
   aniversariantes ReservaAniversariante[]
   ajustes         AjustePagamento[]
 
-  @@index([data, localId])
+  @@index([data])
   @@index([estado])
   @@map("reserva")
 }

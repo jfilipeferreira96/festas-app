@@ -689,7 +689,7 @@ async function seedReservas() {
         observacoesBrindes: c.brindes,
         valorTotal: c.dur * 1.4, pago: true,
         caucao: "PAGA",
-        clienteId: c.cli, localId: c.local
+        clienteId: c.cli
       }
     });
     await prisma.reservaAniversariante.upsert({ where: { id: `ra-${c.id}` }, update: {}, create: { id: `ra-${c.id}`, reservaId: c.id, aniversarianteId: c.aniv } });
@@ -733,7 +733,7 @@ async function seedReservas() {
         observacoesGerais: c.obs,
         valorTotal: c.dur * 1.4, pago: true,
         caucao: "PAGA",
-        clienteId: c.cli, localId: c.local
+        clienteId: c.cli
       }
     });
     await prisma.reservaAniversariante.upsert({ where: { id: `ra-${id}` }, update: {}, create: { id: `ra-${id}`, reservaId: id, aniversarianteId: c.aniv } });
@@ -777,7 +777,7 @@ async function seedReservas() {
         observacoesGerais: c.obs,
         valorTotal: c.dur * 1.2, pago: true,
         caucao: "PAGA_NO_DIA",
-        clienteId: c.cli, localId: c.local
+        clienteId: c.cli
       }
     });
     await prisma.reservaAniversariante.upsert({ where: { id: `ra-${id}` }, update: {}, create: { id: `ra-${id}`, reservaId: id, aniversarianteId: c.aniv } });
@@ -817,7 +817,7 @@ async function seedReservas() {
         { numero: 23, estado: "OCUPADO", criancas: "Mariana, Teresa" },
         { numero: 24, estado: "OCUPADO", criancas: "Inês, Madalena, Joana" },
       ],
-      clienteId: "cliente-006", localId: "local-002"
+      clienteId: "cliente-006"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-today-3" }, update: {}, create: { id: "ra-today-3", reservaId: "reserva-today-3", aniversarianteId: "aniv-007" } });
@@ -855,7 +855,7 @@ async function seedReservas() {
       caucao: "PAGA",
       notas: "Marta faz 8 anos. Decoração cor-de-rosa.",
       notasCacifos: "Cacifos 1, 3, 9 e 11 com alertas de saúde - confirmar com os pais no pagamento e na saída.",
-      clienteId: "cliente-001", localId: "local-001"
+      clienteId: "cliente-001"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-001" }, update: {}, create: { id: "ra-001", reservaId: "reserva-001", aniversarianteId: "aniv-001" } });
@@ -904,7 +904,7 @@ async function seedReservas() {
       valorTotal: 150.00, pago: false,
       caucao: "PAGA_NO_DIA",
       notas: "Beatriz quer decoração de unicórnios.",
-      clienteId: "cliente-002", localId: "local-002"
+      clienteId: "cliente-002"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-002" }, update: {}, create: { id: "ra-002", reservaId: "reserva-002", aniversarianteId: "aniv-003" } });
@@ -940,7 +940,7 @@ async function seedReservas() {
       valorTotal: 120.00, pago: false,
       caucao: "NAO_PAGA",
       notas: "Francisco é alérgico a frutos secos.",
-      clienteId: "cliente-003", localId: "local-002"
+      clienteId: "cliente-003"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-003" }, update: {}, create: { id: "ra-003", reservaId: "reserva-003", aniversarianteId: "aniv-004" } });
@@ -966,7 +966,7 @@ async function seedReservas() {
       observacoesBrindes: "Capas de super-herói para as crianças.",
       valorTotal: 200.00, pago: true,
       caucao: "PAGA",
-      clienteId: "cliente-002", localId: "local-001"
+      clienteId: "cliente-002"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-f1" }, update: {}, create: { id: "ra-f1", reservaId: "reserva-future-001", aniversarianteId: "aniv-003" } });
@@ -993,7 +993,7 @@ async function seedReservas() {
       observacoesBrindes: "Binóculos de brincar.",
       valorTotal: 120.00, pago: false,
       caucao: "NAO_PAGA",
-      clienteId: "cliente-004", localId: "local-002"
+      clienteId: "cliente-004"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-f2" }, update: {}, create: { id: "ra-f2", reservaId: "reserva-future-002", aniversarianteId: "aniv-005" } });
@@ -1016,7 +1016,7 @@ async function seedReservas() {
       observacoesGerais: "Mariana adora o mar e sereias.",
       valorTotal: 130.00, pago: false,
       caucao: "NAO_PAGA",
-      clienteId: "cliente-008", localId: "local-003"
+      clienteId: "cliente-008"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-f3" }, update: {}, create: { id: "ra-f3", reservaId: "reserva-future-003", aniversarianteId: "aniv-009" } });
@@ -1040,7 +1040,7 @@ async function seedReservas() {
       observacoesBrindes: "Conchas e estrelas-do-mar de brincar.",
       valorTotal: 120.00, pago: true,
       caucao: "PAGA",
-      clienteId: "cliente-008", localId: "local-003"
+      clienteId: "cliente-008"
     }
   });
   await prisma.reservaAniversariante.upsert({ where: { id: "ra-tmr-2" }, update: {}, create: { id: "ra-tmr-2", reservaId: "reserva-tmr-2", aniversarianteId: "aniv-009" } });
