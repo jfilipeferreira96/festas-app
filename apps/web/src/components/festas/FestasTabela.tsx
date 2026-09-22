@@ -450,7 +450,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
           },
           {
             key: "local",
-            label: "Sala",
+            label: "Local",
             render: (_v, r) => (
               <span className="text-sm text-text-secondary">{r.local?.nome ?? "-"}</span>
             ),

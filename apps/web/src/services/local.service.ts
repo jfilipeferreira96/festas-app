@@ -3,13 +3,11 @@ import prisma from "@festas/db";
 interface CreateLocalData {
   nome: string;
   activo?: boolean;
-  isSalaLanche?: boolean;
 }
 
 interface UpdateLocalData {
   nome?: string;
   activo?: boolean;
-  isSalaLanche?: boolean;
 }
 
 export const localService = {
@@ -32,7 +30,6 @@ export const localService = {
       data: {
         nome: data.nome,
         activo: data.activo !== undefined ? data.activo : true,
-        isSalaLanche: data.isSalaLanche ?? false,
       },
     });
   },

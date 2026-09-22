@@ -1,6 +1,6 @@
 "use client";
 
-import { Utensils } from "lucide-react";
+import { MapPin, Utensils } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
@@ -12,12 +12,12 @@ import { DURACAO_FESTA_OPTIONS, type FestaFormData } from "../festa-form.schema"
 
 interface AgendamentoSectionProps {
   slotOptions: { value: string; label: string; disabled?: boolean }[];
-  /** Salas de refeições/lanche (Local.isSalaLanche) - as únicas reserváveis. */
+  /** Locais (zonas de brincadeira) onde a festa decorre. */
   salaOptions: { value: string; label: string }[];
-  /** Troca manual da sala de refeições (sincroniza a sala de lanche do slot). */
-  onSalaRefeicoesChange: (localId: string) => void;
-  /** Aviso quando nenhum local está marcado como sala de refeições. */
-  avisoSala: string | null;
+  /** Escolha manual do Local. */
+  onLocalChange: (localId: string) => void;
+  /** Sala de lanche assumida do slot (SalaLanche) - só display. */
+  salaLancheNome: string | null;
   horarioCustom: boolean;
   onToggleHorarioCustom: (v: boolean) => void;
   isAdmin: boolean;
@@ -30,8 +30,8 @@ interface AgendamentoSectionProps {
 export default function AgendamentoSection({
   slotOptions,
   salaOptions,
-  onSalaRefeicoesChange,
-  avisoSala,
+  onLocalChange,
+  salaLancheNome,
   horarioCustom,
   onToggleHorarioCustom,
   isAdmin,
@@ -119,28 +119,24 @@ export default function AgendamentoSection({
         </div>
         <div>
           <FieldLabel required className="flex items-center gap-1">
-            <Utensils size={12} /> Sala de Refeições
+            <MapPin size={12} /> Local
           </FieldLabel>
           <Select
             options={salaOptions}
-            placeholder="Seleccionar"
+            placeholder="Seleccionar zona"
             value={localId}
-            disabled={!!localId || !isAdmin}
-            onChange={onSalaRefeicoesChange}
+            onChange={onLocalChange}
             error={!!errors.localId}
           />
           {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
-          <p className="mt-1 text-[11px] text-text-muted">
-            {localId
-              ? "Assumida pelo slot (bloqueada)."
-              : "Sem sala no slot - o admin pode escolher."}
-          </p>
-          {avisoSala && <p className="mt-1 text-[11px] text-accent-orange-700">{avisoSala}</p>}
         </div>
-        {/* Cor da Festa removida a pedido do cliente (19/09/2026): a cor passa
-            sempre pela pulseira do slot (slot.corDefault, aplicada em
-            onSelectSlot). Não é editável à mão. As zonas de brincadeira não são
-            reserváveis - a sala da festa é a sala de refeições do plano diário. */}
+        <div>
+          <FieldLabel className="flex items-center gap-1">
+            <Utensils size={12} /> Sala do Lanche
+          </FieldLabel>
+          <InputField value={salaLancheNome ?? ""} placeholder="-" readOnly />
+          <p className="mt-1 text-[11px] text-text-muted">Definida pelo slot configurado.</p>
+        </div>
       </div>
 
       {isAdmin && (

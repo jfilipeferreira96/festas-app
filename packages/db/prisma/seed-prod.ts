@@ -108,26 +108,41 @@ async function seedUsers() {
 // ─── Locais ───────────────────────────────────────────────────
 async function seedLocais() {
   console.log("  Creating locais...");
-  const locais: { id: string; nome: string; isSalaLanche: boolean }[] = [
-    { id: "local-001", nome: "Zona 1 Baloiço / Parque crianças pequenas", isSalaLanche: false },
-    { id: "local-002", nome: "Zona 2 Ninja e Slide", isSalaLanche: false },
-    { id: "local-003", nome: "Zona 3 Trampolins", isSalaLanche: false },
-    { id: "local-004", nome: "Zona 4 Futebol / Discoteca", isSalaLanche: false },
-    { id: "local-005", nome: "Zona 5 Playground", isSalaLanche: false },
-    // Salas de refeições/lanche: são ESTAS que se reservam no formulário de
-    // festas (plano diário) - ficam marcadas com isSalaLanche = true.
-    { id: "local-006", nome: "Sala Refeições 1", isSalaLanche: true },
-    { id: "local-007", nome: "Sala Refeições 2", isSalaLanche: true },
+  // Apenas zonas de brincadeira. As salas de refeições/lanche são OUTRA coisa
+  // (modelo SalaLanche: Sala 1 / Sala 2, secção em baixo na página de Locais).
+  const locais: { id: string; nome: string }[] = [
+    { id: "local-001", nome: "Zona 1 Baloiço / Parque crianças pequenas" },
+    { id: "local-002", nome: "Zona 2 Ninja e Slide" },
+    { id: "local-003", nome: "Zona 3 Trampolins" },
+    { id: "local-004", nome: "Zona 4 Futebol / Discoteca" },
+    { id: "local-005", nome: "Zona 5 Playground" },
   ];
 
   for (const local of locais) {
     await prisma.local.upsert({
       where: { id: local.id },
-      update: { nome: local.nome, isSalaLanche: local.isSalaLanche },
-      create: local,
+      update: { nome: local.nome },
+      create: { ...local, activo: true },
     });
   }
-  console.log(`  ✓ ${locais.length} locais (5 zonas + 2 salas de refeições)\n`);
+
+  // Limpeza: versões antigas criavam "Sala Refeições 1/2" como Locais.
+  // Falha (e é ignorada) se alguma reserva ainda referenciar um deles.
+  try {
+    const removidos = await prisma.local.deleteMany({
+      where: { id: { in: ["local-006", "local-007"] } },
+    });
+    if (removidos.count > 0) {
+      console.log(
+        `  ✓ Removidos ${removidos.count} Locais "Sala Refeições" (salas de lanche vivem só em Salas de Lanche)`
+      );
+    }
+  } catch {
+    console.log(
+      '  ⚠️ "Sala Refeições" em Locais não removida (há reservas associadas) - remover manualmente após migrar.'
+    );
+  }
+  console.log(`  ✓ ${locais.length} locais (zonas de brincadeira)\n`);
 }
 
 // ─── Extras & Menus BasyLandy (catálogo real) ────────────────

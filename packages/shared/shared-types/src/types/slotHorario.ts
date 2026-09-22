@@ -14,7 +14,7 @@ export interface SlotHorario {
   // ── Defaults aplicados ao criar uma festa neste slot ──
   corDefault?: string | null; // Cor sugerida (paleta FESTA_COLORS em @saas/shared-defaults)
   horaLancheDefault?: string | null; // HH:MM - hora sugerida do lanche
-  salaLancheId?: string | null; // FK opcional para Local (isSalaLanche)
+  salaLancheId?: string | null; // FK opcional para SalaLanche
   salaLancheNome?: string | null; // Nome da sala de lanche (denormalizado para UI)
   createdAt: string;
   updatedAt: string;
