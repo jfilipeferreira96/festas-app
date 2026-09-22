@@ -26,10 +26,10 @@ export interface Reserva {
   duracaoMinutos: number;
   numCriancas: number;
   notas?: string;
-   estado: EstadoReserva;
-   clienteId: string;
+  estado: EstadoReserva;
+  clienteId: string;
 
-   // Runtime fields (filled when estado = EM_CURSO)
+  // Runtime fields (filled when estado = EM_CURSO)
   inicioEm?: string;
   fimPrevisto?: string;
   fimReal?: string;
@@ -139,10 +139,10 @@ export interface CriarReservaDTO {
   salaLancheId?: string;
   duracaoMinutos: number;
   numCriancas?: number;
-   notas?: string;
-   clienteId: string;
+  notas?: string;
+  clienteId: string;
 
-   // Festa fields
+  // Festa fields
   tema?: string;
   previsaoCriancas?: number;
   cor?: string;
