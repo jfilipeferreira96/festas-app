@@ -78,7 +78,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const custoComponentes = useMemo(() => {
     const comNome = criancasWatched.filter((c) => c.nome.trim());
     const totalPessoas = Math.max(comNome.length + numAdultos, 1); // extras "Por pessoa"
-    const precoAdulto = Number(configPreco?.precoAdulto ?? 0);
+    const precoAdulto = Number(configPreco?.precoAdulto ?? 6);
     const custoTempo = +(custoTempoPorPessoa * comNome.length + precoAdulto * numAdultos).toFixed(2);
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 3);
     const criancasComLanche = temLanche ? comNome.filter((c) => c.querLanche).length : 0;
@@ -115,12 +115,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   // Total pré-preenchido com o cálculo (igual ao form de Festas): qualquer
   // alteração nos componentes (crianças, lanche, meias, extras, duração)
-  // atualiza o total. Sem gate por comparação de valores - o valor auto-
-  // preenchido ficava stale e a comparação bloqueava o sync para sempre
-  // (bug: total preso no custo do tempo enquanto o cálculo subia).
+  // atualiza o total. Sem input livre, logo sem gate por campo escrito à mão.
   // Em edição, o total guardado é o valor acordado e mantém-se enquanto a
   // composição não mudar; ao mudar (ex: +1 hora pedida no balcão), segue o
-  // recálculo do tarifário - salvo se o total foi escrito à mão.
+  // recálculo do tarifário.
   const composicaoMudou = Boolean(
     dirtyFields.duracaoMinutos ||
       dirtyFields.temLanche ||
@@ -131,10 +129,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       dirtyFields.extrasQuantidades
   );
   useEffect(() => {
-    if (dirtyFields.custoTotal) return; // total escrito à mão - respeitar
     if (entrada && !composicaoMudou) return; // edição sem alterações: manter acordado
     if (custoCalculado > 0) setValue("custoTotal", Number(custoCalculado.toFixed(2)));
-  }, [custoCalculado, setValue, entrada, composicaoMudou, dirtyFields.custoTotal]);
+  }, [custoCalculado, setValue, entrada, composicaoMudou]);
 
   const cacifoAtual = entrada?.cacifo;
   const cacifoOptions = useMemo(() => {
@@ -230,7 +227,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             <DuracaoLancheSection
               custoTempoPorPessoa={custoTempoPorPessoa}
               precoLancheEntrada={Number(configPreco?.precoLancheEntrada ?? 3)}
-              precoAdulto={Number(configPreco?.precoAdulto ?? 0)}
+              precoAdulto={Number(configPreco?.precoAdulto ?? 6)}
               precoMeias={Number(configPreco?.precoMeias ?? 1.5)}
               cacifoOptions={cacifoOptions}
             />
