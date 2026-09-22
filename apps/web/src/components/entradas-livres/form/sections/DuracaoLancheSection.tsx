@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Package, Users } from "lucide-react";
+import { Clock, Package } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
@@ -58,70 +58,64 @@ export default function DuracaoLancheSection({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-          <Users size={14} className="text-brand-500" /> Lanche e Acompanhantes
-        </span>
-        <div className="flex items-center justify-between py-1">
-          <div>
-            <span className="text-sm font-medium text-text-primary">Inclui lanche?</span>
-            <p className="text-xs text-text-muted">+{formatEuro(precoLancheEntrada)} por criança (marcar por criança acima)</p>
+      {/* Lanche / Adulto / Meias numa única linha (pedido do cliente, 22/09/2026) */}
+      <div className="border-t border-border pt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-text-primary">Inclui lanche?</span>
+              <Switch
+                checked={!!temLanche}
+                onChange={(checked) => setValue("temLanche", checked, { shouldDirty: true })}
+              />
+            </div>
+            <p className="text-xs text-text-muted">
+              +{formatEuro(precoLancheEntrada)}/criança (marcar por criança acima)
+            </p>
           </div>
-          <Switch
-            checked={temLanche}
-            onChange={(checked) => setValue("temLanche", checked, { shouldDirty: true })}
-          />
-        </div>
-        {temLanche && (
-          <div className="w-40">
-            <FieldLabel>Hora do lanche</FieldLabel>
-            <InputField type="time" {...register("horaLanche")} />
-          </div>
-        )}
-        <div className="flex items-center justify-between py-1">
-          <div>
+          <div className="space-y-1.5">
             <Checkbox
               checked={numAdultos > 0}
               onChange={(checked) => setValue("numAdultos", checked ? 1 : 0, { shouldDirty: true })}
               label="Adulto acompanha e paga entrada"
             />
-            {precoAdulto > 0 && (
-              <p className="text-xs text-text-muted ml-8">+{formatEuro(precoAdulto)} por adulto</p>
-            )}
+            <p className="text-xs text-text-muted ml-8">+{formatEuro(precoAdulto)}/adulto</p>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium text-text-primary">Meias</span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setValue("meiasQuantidade", Math.max(0, (watch("meiasQuantidade") ?? 0) - 1), { shouldDirty: true })
+                  }
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                >
+                  −
+                </button>
+                <span className="w-10 text-center text-sm font-medium text-text-primary">{numMeias}</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setValue("meiasQuantidade", (watch("meiasQuantidade") ?? 0) + 1, { shouldDirty: true })
+                  }
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-text-muted">{formatEuro(precoMeias)}/par</p>
           </div>
         </div>
-      </div>
 
-      {/* Meias: antes da secção de pagamento (pedido do cliente, 19/09/2026).
-          Incluídas no total a pagar - o stepper soma no custo final. */}
-      <div className="border-t border-border pt-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-text-primary">Meias</span>
-          <span className="text-xs text-text-muted">{formatEuro(precoMeias)} / par</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() =>
-                setValue("meiasQuantidade", Math.max(0, (watch("meiasQuantidade") ?? 0) - 1), { shouldDirty: true })
-              }
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
-            >
-              −
-            </button>
-            <span className="w-10 text-center text-sm font-medium text-text-primary">{numMeias}</span>
-            <button
-              type="button"
-              onClick={() =>
-                setValue("meiasQuantidade", (watch("meiasQuantidade") ?? 0) + 1, { shouldDirty: true })
-              }
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
-            >
-              +
-            </button>
+        {temLanche && (
+          <div className="w-40 mt-4">
+            <FieldLabel>Hora do lanche</FieldLabel>
+            <InputField type="time" {...register("horaLanche")} />
           </div>
-        </div>
+        )}
       </div>
 
       {cacifoOptions.length > 1 && (
