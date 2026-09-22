@@ -1,12 +1,15 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
+import { ArrowUpDown, CreditCard } from "lucide-react";
 import { formatEuro } from "@/lib/format";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/components/shared/PagamentoCard";
 import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
-import { totalPago, faltaPagar, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
+import InlineTabs from "@/components/shared/pagamento/InlineTabs";
+import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
+import { EPS, faltaPagar, totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
 import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-livre-form.schema";
 
 interface CustoComponentes {
@@ -38,90 +41,126 @@ export default function PagamentoEntradaSection({
 
   const duracao = watch("duracaoMinutos");
   const meias = watch("meiasQuantidade") ?? 0;
-  // Total vivo: o EntradaLivreForm preenche custoTotal quando a composição
-  // muda (efeito de recálculo). Sem alterações, mantém o valor acordado
-  // guardado na BD - nunca fica preso a uma prop stale com 0.00 antigo.
-  const custoTotalForm = watch("custoTotal");
   const duracaoLabel = DURACAO_ENTRADA_OPTIONS.find((o) => o.value === String(duracao))?.label ?? `${duracao}min`;
+
+  // Total vivo: o EntradaLivreForm preenche custoTotal quando a composição
+  // muda (efeito de recálculo) e os Acertos sincronizam-no via setValue.
+  // Sem alterações, mantém o valor acordado guardado na BD.
+  const custoTotalForm = watch("custoTotal");
+  const totalBase = Number(custoTotalForm ?? entrada?.custoTotalFinal ?? entrada?.custoTotal ?? 0);
 
   const pagamentosForm = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
 
-  // Resumo em edição: estado do acerto visível sem abrir "Gerir pagamento".
-  const pagamentosEntrada: PagamentoLedgerItem[] = (entrada?.pagamentos ?? []).map((p) => ({
-    id: p.id,
-    valor: Number(p.valor),
-    metodo: p.metodo as PagamentoLedgerItem["metodo"],
-    nota: p.nota ?? null,
-    createdAt: p.createdAt,
-  }));
-  const devido = Number(custoTotalForm ?? entrada?.custoTotalFinal ?? entrada?.custoTotal ?? 0);
-  const recebido = totalPago(pagamentosEntrada);
-  const falta = faltaPagar(devido, pagamentosEntrada);
+  // ─── Edição: resumo + Acertos (mesma funcionalidade da modal de pagamento) ───
+  if (isEdit && entrada) {
+    const pagamentosEntrada: PagamentoLedgerItem[] = (entrada.pagamentos ?? []).map((p) => ({
+      id: p.id,
+      valor: Number(p.valor),
+      metodo: p.metodo as PagamentoLedgerItem["metodo"],
+      nota: p.nota ?? null,
+      createdAt: p.createdAt,
+    }));
+    const recebido = totalPago(pagamentosEntrada);
+    const falta = faltaPagar(totalBase, pagamentosEntrada);
+    const liquidado = falta <= EPS && totalBase > 0;
 
-  return (
-    <PagamentoCard acao={isEdit && entrada ? <BotaoGerirPagamento onClick={onOpenPagamento} /> : undefined}>
-      {isEdit && entrada ? (
-        <PagamentoResumo
-          items={[
-            { label: "Estado", value: entrada.pago ? "Pago" : "Por pagar", tone: entrada.pago ? "verde" : "laranja" },
+    // Acertos: write-through na BD pelo backend; sincronizar o custoTotal do
+    // form para o "Guardar Alterações" não desfazer o acerto.
+    const aplicarAjuste = (delta: number) => {
+      setValue("custoTotal", Math.round((totalBase + delta) * 100) / 100);
+    };
+    const redefinirTotal = (novoTotal: number) => {
+      setValue("custoTotal", Math.round(novoTotal * 100) / 100);
+    };
+
+    return (
+      <PagamentoCard acao={<BotaoGerirPagamento onClick={onOpenPagamento} />}>
+        <InlineTabs
+          ariaLabel="Pagamento da entrada livre"
+          tabs={[
             {
-              label: "Valor total",
-              value: formatEuro(devido),
+              id: "pagamento",
+              label: "Pagamento",
+              icon: CreditCard,
+              content: (
+                <PagamentoResumo
+                  items={[
+                    {
+                      label: "Estado",
+                      value: liquidado ? "Pago" : "Por pagar",
+                      tone: liquidado ? "verde" : "laranja",
+                    },
+                    { label: "Valor total", value: formatEuro(totalBase) },
+                    { label: "Valor pago", value: formatEuro(recebido) },
+                    ...(falta > 0
+                      ? [{ label: "Falta", value: formatEuro(falta), tone: "laranja" as const }]
+                      : []),
+                    {
+                      label: "Método",
+                      value:
+                        pagamentosEntrada.length > 0
+                          ? pagamentosEntrada.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
+                          : "Não definido",
+                    },
+                    { label: "Meias", value: `${meias} ${meias === 1 ? "par" : "pares"}` },
+                  ]}
+                />
+              ),
             },
-            { label: "Valor pago", value: formatEuro(recebido) },
-            ...(falta > 0 ? [{ label: "Falta", value: formatEuro(falta), tone: "laranja" as const }] : []),
             {
-              label: "Método",
-              value:
-                pagamentosEntrada.length > 0
-                  ? pagamentosEntrada.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
-                  : "Não definido",
+              id: "acertos",
+              label: "Acertos",
+              icon: ArrowUpDown,
+              content: (
+                <AjustesPagamentoSection
+                  entradaLivreId={entrada.id}
+                  numCriancas={Array.isArray(entrada.criancas) ? entrada.criancas.length : 0}
+                  onAjusteAplicado={aplicarAjuste}
+                  onTotalRedefinido={redefinirTotal}
+                />
+              ),
             },
-            { label: "Meias", value: `${meias} ${meias === 1 ? "par" : "pares"}` },
           ]}
         />
-      ) : (
-        <div className="space-y-3">
-          {/* Total sempre calculado (tarifário + extras), igual ao form de Festas:
-              não existe input livre - correcções formais ficam no "Gerir pagamento"
-              (ajustes) após criar a entrada. O custoTotal segue hidden no payload. */}
+      </PagamentoCard>
+    );
+  }
 
-          {/* Ledger de pagamentos: adicionar (método obrigatório) até completar; pago derivado */}
-          <PagamentosLedgerSection
-            totalDevido={custoCalculado}
-            pagamentos={pagamentosForm}
-            onAdd={(p) =>
-              setValue(
-                "pagamentos",
-                [
-                  ...pagamentosForm,
-                  { ...p, id: `pg-${Date.now()}-${pagamentosForm.length}`, createdAt: new Date().toISOString() },
-                ] as PagamentoLedgerItem[],
-                { shouldDirty: true },
-              )
-            }
-            onRemove={(id) =>
-              setValue("pagamentos", pagamentosForm.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
-                shouldDirty: true,
-              })
-            }
-          />
-        </div>
-      )}
-
-      {/* Bloco Meias movido para DuracaoLancheSection (antes do pagamento),
-          a pedido do cliente (19/09/2026). */}
-
-      {!isEdit && (
-        <BreakdownEntrada
-          custoComponentes={custoComponentes}
-          custoFinal={custoCalculado}
-          precoMeias={precoMeias}
-          meias={meias}
-          duracaoLabel={duracaoLabel}
-          comTitulo
+  // ─── Criação ────────────────────────────────────────────────
+  // Ledger de pagamentos + breakdown do total calculado. Sem tab "Acertos":
+  // ainda não existe ID - correcções formais ficam disponíveis logo após criar.
+  return (
+    <PagamentoCard>
+      <div className="space-y-3">
+        <PagamentosLedgerSection
+          totalDevido={custoCalculado}
+          pagamentos={pagamentosForm}
+          onAdd={(p) =>
+            setValue(
+              "pagamentos",
+              [
+                ...pagamentosForm,
+                { ...p, id: `pg-${Date.now()}-${pagamentosForm.length}`, createdAt: new Date().toISOString() },
+              ] as PagamentoLedgerItem[],
+              { shouldDirty: true },
+            )
+          }
+          onRemove={(id) =>
+            setValue("pagamentos", pagamentosForm.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
+              shouldDirty: true,
+            })
+          }
         />
-      )}
+      </div>
+
+      <BreakdownEntrada
+        custoComponentes={custoComponentes}
+        custoFinal={custoCalculado}
+        precoMeias={precoMeias}
+        meias={meias}
+        duracaoLabel={duracaoLabel}
+        comTitulo
+      />
     </PagamentoCard>
   );
 }

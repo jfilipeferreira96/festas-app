@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
+import { ArrowUpDown, CreditCard } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
 import FieldLabel from "@/components/form/FieldLabel";
@@ -9,6 +10,8 @@ import { metodoPagamentoLabel, METODO_PAGAMENTO_OPTIONS } from "@/lib/metodo-pag
 import type { Reserva } from "@/lib/api/reservas";
 import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/components/shared/PagamentoCard";
 import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
+import InlineTabs from "@/components/shared/pagamento/InlineTabs";
+import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import { totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
 import {
   CAUCAO_OPTIONS,
@@ -47,28 +50,57 @@ export default function PagamentoSection({
 
     return (
       <PagamentoCard acao={<BotaoGerirPagamento onClick={onOpenPagamento} />}>
-        <PagamentoResumo
-          items={[
-            { label: "Caução", value: `${caucaoLabel}${caucaoValor}${caucaoMetodo}` },
-            { label: "Estado", value: reserva.pago ? "Pago" : "Por pagar", tone: reserva.pago ? "verde" : "laranja" },
-            { label: "Total", value: formatEuro(Number(reserva.valorTotal ?? 0)) },
+        <InlineTabs
+          ariaLabel="Pagamento da festa"
+          tabs={[
             {
-              label: "Valor pago",
-              value: pagamentos.length > 0 ? formatEuro(totalPago(pagamentos)) : "-",
+              id: "pagamento",
+              label: "Pagamento",
+              icon: CreditCard,
+              content: (
+                <>
+                  <PagamentoResumo
+                    items={[
+                      { label: "Caução", value: `${caucaoLabel}${caucaoValor}${caucaoMetodo}` },
+                      {
+                        label: "Estado",
+                        value: reserva.pago ? "Pago" : "Por pagar",
+                        tone: reserva.pago ? "verde" : "laranja",
+                      },
+                      { label: "Total", value: formatEuro(Number(reserva.valorTotal ?? 0)) },
+                      {
+                        label: "Valor pago",
+                        value: pagamentos.length > 0 ? formatEuro(totalPago(pagamentos)) : "-",
+                      },
+                      { label: "Método", value: metodos },
+                    ]}
+                  />
+
+                  {estimativa &&
+                    estimativa.estimativa > 0 &&
+                    Math.abs(estimativa.estimativa - Number(reserva.valorTotal ?? 0)) > 0.01 && (
+                      <p className="text-[11px] text-accent-orange-600 mt-2">
+                        Preço do tarifário para a composição atual: ≈{formatEuro(estimativa.estimativa)} (
+                        {estimativa.criancasFaturadas} crianças × {formatEuro(estimativa.precoCrianca)}) - difere do
+                        total acordado. Ajuste na tab "Acertos" para ficar com registo de auditoria.
+                      </p>
+                    )}
+                </>
+              ),
             },
-            { label: "Método", value: metodos },
+            {
+              id: "acertos",
+              label: "Acertos",
+              icon: ArrowUpDown,
+              content: (
+                <AjustesPagamentoSection
+                  reservaId={reserva.id}
+                  numCriancas={reserva.numCriancasConfirmadas ?? reserva.previsaoCriancas ?? null}
+                />
+              ),
+            },
           ]}
         />
-
-        {estimativa &&
-          estimativa.estimativa > 0 &&
-          Math.abs(estimativa.estimativa - Number(reserva.valorTotal ?? 0)) > 0.01 && (
-            <p className="text-[11px] text-accent-orange-600 mt-2">
-              Preço do tarifário para a composição atual: ≈{formatEuro(estimativa.estimativa)} (
-              {estimativa.criancasFaturadas} crianças × {formatEuro(estimativa.precoCrianca)}) - difere do total
-              acordado. Ajuste em "Gerir pagamento" para ficar com registo de auditoria.
-            </p>
-          )}
       </PagamentoCard>
     );
   }

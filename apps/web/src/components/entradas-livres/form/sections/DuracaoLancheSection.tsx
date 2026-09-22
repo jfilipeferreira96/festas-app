@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Clock, Package } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
@@ -9,8 +8,6 @@ import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
 import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-livre-form.schema";
 import DuracaoLancheCartoes from "./variantes/DuracaoLancheCartoes";
-import DuracaoLancheDefinicoes from "./variantes/DuracaoLancheDefinicoes";
-import DuracaoLancheSelects from "./variantes/DuracaoLancheSelects";
 
 interface DuracaoLancheSectionProps {
   custoTempoPorPessoa: number;
@@ -19,14 +16,6 @@ interface DuracaoLancheSectionProps {
   precoMeias: number;
   cacifoOptions: { value: string; label: string }[];
 }
-
-type Variante = "cartoes" | "definicoes" | "selects";
-
-const VARIANTES: { id: Variante; label: string }[] = [
-  { id: "cartoes", label: "A · Cartões" },
-  { id: "definicoes", label: "B · Definições" },
-  { id: "selects", label: "C · Selects" },
-];
 
 export default function DuracaoLancheSection({
   custoTempoPorPessoa,
@@ -41,33 +30,8 @@ export default function DuracaoLancheSection({
   const cacifoId = watch("cacifoId");
   const numCriancas = (watch("criancas") ?? []).length;
 
-  // TEMPORÁRIO (pré-visualização): selector das 3 variantes visuais pedidas
-  // pelo cliente - fixar a escolhida e remover o selector quando decidir.
-  const [variante, setVariante] = useState<Variante>("cartoes");
-
-  const propsVariante = { precoLancheEntrada, precoAdulto, precoMeias, numCriancas };
-
   return (
     <div className="space-y-4">
-      {/* Selector de variantes - TEMPORÁRIO para escolha do cliente */}
-      <div className="flex items-center justify-end gap-1.5">
-        <span className="text-[10px] uppercase tracking-wider text-text-muted">Pré-visualização:</span>
-        {VARIANTES.map((v) => (
-          <button
-            key={v.id}
-            type="button"
-            onClick={() => setVariante(v.id)}
-            className={`px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors ${
-              variante === v.id
-                ? "bg-brand-500 text-white border-brand-500"
-                : "border-border text-text-muted hover:bg-gray-50 dark:hover:bg-gray-800"
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
-      </div>
-
       <div className="flex gap-4">
         <div className="flex-1">
           <FieldLabel required className="flex items-center gap-1">
@@ -92,10 +56,13 @@ export default function DuracaoLancheSection({
         </div>
       </div>
 
-      {/* Lanche / Adulto / Meias - variante visual escolhida na pré-visualização */}
-      {variante === "cartoes" && <DuracaoLancheCartoes {...propsVariante} />}
-      {variante === "definicoes" && <DuracaoLancheDefinicoes {...propsVariante} />}
-      {variante === "selects" && <DuracaoLancheSelects {...propsVariante} />}
+      {/* Lanche / Adulto / Meias - cartões seleccionáveis (padrão dos Extras) */}
+      <DuracaoLancheCartoes
+        precoLancheEntrada={precoLancheEntrada}
+        precoAdulto={precoAdulto}
+        precoMeias={precoMeias}
+        numCriancas={numCriancas}
+      />
 
       {temLanche && (
         <div className="w-40">

@@ -187,10 +187,12 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [menuWarning, setMenuWarning] = useState("");
 
-  // A modal de pagamento usa dados frescos da BD: a prop `reserva` pode estar
-  // stale (total/pagamentos ajustados na própria modal) e mostraria
-  // falta/liquidado errados - mesmo padrão do form de Entradas Livres.
-  const { data: reservaFresca } = useReserva(showPagamentoModal && reserva ? reserva.id : "");
+  // Dados frescos da BD SEMPRE que o form abre em edição: a prop `reserva`
+  // pode ficar stale (total/pagamentos/ajustes mudados na tab "Acertos" ou na
+  // modal de pagamento) e mostraria falta/liquidado errados. Os hooks de
+  // ajustes invalidam ["reservas"] - esta query refresca o resumo sozinha.
+  const { data: reservaFresca } = useReserva(reserva?.id ?? "");
+  const reservaAtual = reservaFresca ?? reserva;
   const reservaParaPagamento = reservaFresca ?? reserva;
 
   useEffect(() => {
@@ -426,7 +428,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
             />
             <SectionHeader titulo="Pagamentos" />
             <PagamentoSection
-              reserva={reserva}
+              reserva={reservaAtual}
               onOpenPagamento={() => setShowPagamentoModal(true)}
               estimativa={estimativaFesta}
               extrasTotal={custoExtrasTotal}
