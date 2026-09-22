@@ -9,6 +9,7 @@ import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/component
 import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
 import InlineTabs from "@/components/shared/pagamento/InlineTabs";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
+import AcertosLocaisSection, { type AcertoLocal } from "@/components/shared/pagamento/AcertosLocaisSection";
 import { EPS, faltaPagar, totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
 import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-livre-form.schema";
 
@@ -50,6 +51,13 @@ export default function PagamentoEntradaSection({
   const totalBase = Number(custoTotalForm ?? entrada?.custoTotalFinal ?? entrada?.custoTotal ?? 0);
 
   const pagamentosForm = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
+
+  // Acertos locais (criação): array que segue no payload - o backend grava-os
+  // após criar, com write-through no total e auditoria do autor.
+  const ajustesLocais = (watch("ajustes") ?? []) as AcertoLocal[];
+  const liquidoAjustes =
+    Math.round(ajustesLocais.reduce((s, a) => (a.tipo === "ACRESCIMO" ? s + a.valor : s - a.valor), 0) * 100) / 100;
+  const totalComAjustes = Math.round((custoCalculado + liquidoAjustes) * 100) / 100;
 
   // ─── Edição: resumo + Acertos (mesma funcionalidade da modal de pagamento) ───
   if (isEdit && entrada) {
@@ -127,39 +135,65 @@ export default function PagamentoEntradaSection({
   }
 
   // ─── Criação ────────────────────────────────────────────────
-  // Ledger de pagamentos + breakdown do total calculado. Sem tab "Acertos":
-  // ainda não existe ID - correcções formais ficam disponíveis logo após criar.
+  // Tabs Pagamento (ledger + breakdown) e Acertos (array local que segue no
+  // payload - o backend grava-os após criar, com write-through e auditoria).
   return (
     <PagamentoCard>
-      <div className="space-y-3">
-        <PagamentosLedgerSection
-          totalDevido={custoCalculado}
-          pagamentos={pagamentosForm}
-          onAdd={(p) =>
-            setValue(
-              "pagamentos",
-              [
-                ...pagamentosForm,
-                { ...p, id: `pg-${Date.now()}-${pagamentosForm.length}`, createdAt: new Date().toISOString() },
-              ] as PagamentoLedgerItem[],
-              { shouldDirty: true },
-            )
-          }
-          onRemove={(id) =>
-            setValue("pagamentos", pagamentosForm.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
-              shouldDirty: true,
-            })
-          }
-        />
-      </div>
+      <InlineTabs
+        ariaLabel="Pagamento da nova entrada livre"
+        tabs={[
+          {
+            id: "pagamento",
+            label: "Pagamento",
+            icon: CreditCard,
+            content: (
+              <>
+                <div className="space-y-3">
+                  <PagamentosLedgerSection
+                    totalDevido={totalComAjustes}
+                    pagamentos={pagamentosForm}
+                    onAdd={(p) =>
+                      setValue(
+                        "pagamentos",
+                        [
+                          ...pagamentosForm,
+                          { ...p, id: `pg-${Date.now()}-${pagamentosForm.length}`, createdAt: new Date().toISOString() },
+                        ] as PagamentoLedgerItem[],
+                        { shouldDirty: true },
+                      )
+                    }
+                    onRemove={(id) =>
+                      setValue("pagamentos", pagamentosForm.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
+                        shouldDirty: true,
+                      })
+                    }
+                  />
+                </div>
 
-      <BreakdownEntrada
-        custoComponentes={custoComponentes}
-        custoFinal={custoCalculado}
-        precoMeias={precoMeias}
-        meias={meias}
-        duracaoLabel={duracaoLabel}
-        comTitulo
+                <BreakdownEntrada
+                  custoComponentes={custoComponentes}
+                  custoFinal={totalComAjustes}
+                  ajustesLiquido={liquidoAjustes}
+                  precoMeias={precoMeias}
+                  meias={meias}
+                  duracaoLabel={duracaoLabel}
+                  comTitulo
+                />
+              </>
+            ),
+          },
+          {
+            id: "acertos",
+            label: "Acertos",
+            icon: ArrowUpDown,
+            content: (
+              <AcertosLocaisSection
+                value={ajustesLocais}
+                onChange={(next) => setValue("ajustes", next, { shouldDirty: true })}
+              />
+            ),
+          },
+        ]}
       />
     </PagamentoCard>
   );
@@ -168,13 +202,23 @@ export default function PagamentoEntradaSection({
 interface BreakdownProps {
   custoComponentes: CustoComponentes;
   custoFinal: number;
+  /** Líquido dos acertos locais (criação) - linha só aparece quando ≠ 0. */
+  ajustesLiquido?: number;
   precoMeias: number;
   meias: number;
   duracaoLabel: string;
   comTitulo?: boolean;
 }
 
-function BreakdownEntrada({ custoComponentes, custoFinal, precoMeias, meias, duracaoLabel, comTitulo }: BreakdownProps) {
+function BreakdownEntrada({
+  custoComponentes,
+  custoFinal,
+  ajustesLiquido,
+  precoMeias,
+  meias,
+  duracaoLabel,
+  comTitulo,
+}: BreakdownProps) {
   return (
     <div className={`space-y-1.5 ${comTitulo ? "border-t border-border pt-3" : ""}`}>
       <div className="flex items-center justify-between">
@@ -203,6 +247,15 @@ function BreakdownEntrada({ custoComponentes, custoFinal, precoMeias, meias, dur
         <div className="flex items-center justify-between">
           <span className="text-xs text-text-muted">Extras</span>
           <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoExtras)}</span>
+        </div>
+      )}
+      {ajustesLiquido != null && ajustesLiquido !== 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-text-muted">Acertos</span>
+          <span className={`text-xs text-text-secondary ${ajustesLiquido < 0 ? "text-accent-orange-600" : ""}`}>
+            {ajustesLiquido > 0 ? "+" : "−"}
+            {formatEuro(Math.abs(ajustesLiquido))}
+          </span>
         </div>
       )}
       <div className="flex items-center justify-between pt-1.5 border-t border-border/50">

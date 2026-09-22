@@ -94,6 +94,15 @@ export const festaFormSchema = z.object({
       })
     )
     .optional(),
+  /** Acertos iniciais (criação): gravados após criar a festa, com auditoria. */
+  ajustes: z.array(
+    z.object({
+      tipo: z.enum(["ACRESCIMO", "DESCONTO"]),
+      valor: z.number().positive("Valor tem de ser maior que zero"),
+      motivo: z.string().min(1, "Motivo obrigatório"),
+      metodoPagamento: z.string().optional(),
+    })
+  ).optional(),
   pago: z.boolean().optional(),
   caucao: z.enum(CAUCOES).optional(),
   valorCaucao: numeroOpcional(0),
@@ -194,6 +203,7 @@ export function buildFestaDefaults(
       nota: p.nota ?? undefined,
       createdAt: p.createdAt,
     })),
+    ajustes: [],
     pago: reserva?.pago ?? false,
     caucao: (reserva?.caucao || undefined) as FestaFormData["caucao"],
     valorCaucao: reserva?.valorCaucao ? Number(reserva.valorCaucao) : undefined,
@@ -267,6 +277,8 @@ export function buildFestaPayload(
     outrosExtras: data.outrosExtras || undefined,
     valorTotal: opts.isEdit ? undefined : data.totalAPagar || undefined,
     pagamentos: opts.isEdit ? undefined : data.pagamentos,
+    // Acertos iniciais: o backend grava-os após criar (write-through + auditoria)
+    ajustes: opts.isEdit ? undefined : (data.ajustes ?? []).length > 0 ? data.ajustes : undefined,
     pago: opts.isEdit ? undefined : data.pago,
     caucao: opts.isEdit ? undefined : data.caucao,
     valorCaucao: opts.isEdit ? undefined : data.valorCaucao || undefined,

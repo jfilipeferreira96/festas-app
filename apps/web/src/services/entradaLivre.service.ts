@@ -10,6 +10,13 @@ import {
   sincronizarPagamentosEntradaLivre,
   type PagamentoInput,
 } from "@/services/pagamento.service";
+import { ajustePagamentoService } from "@/services/ajustePagamento.service";
+
+/** Utilizador autenticado (para auditoria dos ajustes iniciais). */
+interface SessionUser {
+  id: string;
+  name?: string;
+}
 
 interface CriancaInput {
   nome: string;
@@ -18,6 +25,8 @@ interface CriancaInput {
 }
 
 interface CriarEntradaLivreDTO {
+  /** Acertos iniciais (criação): gravados após a entrada existir, com auditoria. */
+  ajustes?: { tipo: "ACRESCIMO" | "DESCONTO"; valor: number; motivo: string; metodoPagamento?: MetodoPagamento }[];
   criancas: CriancaInput[];
   encarregadoNome: string;
   encarregadoTelefone: string;
@@ -242,7 +251,7 @@ export const entradaLivreService = {
   },
 
   // ── Criar entrada livre ─────────────────────────
-  async create(data: CriarEntradaLivreDTO) {
+  async create(data: CriarEntradaLivreDTO, user?: SessionUser) {
     // O estado de pagamento é obrigatório: o utilizador tem de escolher
     // explicitamente "Pago" (true) ou "Não pago" (false).
     if (data.pago === undefined || data.pago === null) {
@@ -251,7 +260,7 @@ export const entradaLivreService = {
 
 
     // encarregadoCodigoPostal é extraído antes do ...rest (não é coluna da entrada)
-    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, pagamentos: pagamentosInput, encarregadoCodigoPostal, ...rest } = data;
+    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, pagamentos: pagamentosInput, encarregadoCodigoPostal, ajustes: ajustesInput, ...rest } = data;
 
     // ── Ledger de pagamentos (fonte única do recebido); [] = sem pagamentos ──
     const listaPagamentos: PagamentoInput[] =
@@ -358,6 +367,25 @@ export const entradaLivreService = {
           criancas: criancas.map((c) => c.nome).join(", "),
         },
       });
+    }
+
+    // ── Acertos iniciais (tab "Acertos" do form na criação): gravados DEPOIS
+    // da entrada existir (tabela AjustePagamento, write-through no custo com
+    // auditoria do autor). Depois dos pagamentos para o `pago` re-derivar
+    // contra o total final.
+    if (ajustesInput?.length) {
+      for (const ajuste of ajustesInput) {
+        await ajustePagamentoService.create(
+          {
+            tipo: ajuste.tipo,
+            valor: ajuste.valor,
+            motivo: ajuste.motivo,
+            metodoPagamento: ajuste.metodoPagamento,
+            entradaLivreId: entrada.id,
+          },
+          user
+        );
+      }
     }
 
     return this.getById(entrada.id);

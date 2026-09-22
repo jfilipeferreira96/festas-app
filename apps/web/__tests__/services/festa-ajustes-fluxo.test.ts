@@ -3,6 +3,7 @@ import testPrisma from "../helpers/test-prisma";
 import { seedTestData, cleanTestData, TEST_IDS } from "../helpers/seed";
 import { ajustePagamentoService } from "@/services/ajustePagamento.service";
 import { reservaService } from "@/services/reserva.service";
+import { entradaLivreService } from "@/services/entradaLivre.service";
 
 vi.mock("@festas/db", () => ({
   default: testPrisma,
@@ -54,7 +55,22 @@ describe("Festa + Acertos (fluxo completo do form)", () => {
     });
   });
 
+  const FESTA_CRIADA_ID = { id: "" };
+  const ENTRADA_CRIADA_ID = { id: "" };
+
   afterAll(async () => {
+    // Registros criados pelos testes de "criar com ajustes" (ids dinâmicos)
+    if (FESTA_CRIADA_ID.id) {
+      await testPrisma.ajustePagamento.deleteMany({ where: { reservaId: FESTA_CRIADA_ID.id } });
+      await testPrisma.pagamento.deleteMany({ where: { reservaId: FESTA_CRIADA_ID.id } });
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: FESTA_CRIADA_ID.id } });
+      await testPrisma.reserva.deleteMany({ where: { id: FESTA_CRIADA_ID.id } });
+    }
+    if (ENTRADA_CRIADA_ID.id) {
+      await testPrisma.ajustePagamento.deleteMany({ where: { entradaLivreId: ENTRADA_CRIADA_ID.id } });
+      await testPrisma.pagamento.deleteMany({ where: { entradaLivreId: ENTRADA_CRIADA_ID.id } });
+      await testPrisma.entradaLivre.deleteMany({ where: { id: ENTRADA_CRIADA_ID.id } });
+    }
     await testPrisma.pagamento.deleteMany({ where: { reservaId: FESTA_ID } });
     await testPrisma.ajustePagamento.deleteMany({ where: { reservaId: FESTA_ID } });
     await testPrisma.reserva.deleteMany({ where: { id: FESTA_ID } });
@@ -171,5 +187,65 @@ describe("Festa + Acertos (fluxo completo do form)", () => {
     const reserva = await testPrisma.reserva.findUniqueOrThrow({ where: { id: FESTA_ID } });
     expect(Number(reserva.valorTotal)).toBe(150);
     expect(reserva.pago).toBe(true);
+  });
+
+  // ── CRIAR festa COM ajustes no payload (tab "Acertos" do form na criação) ──
+  it("criar festa COM ajustes: backend grava-os após criar com write-through (100 → 95) e auditoria", async () => {
+    const created = await reservaService.create(
+      {
+        data: "2030-07-15",
+        horario: "10:00",
+        duracaoMinutos: 135,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 0,
+        enviarEmail: false,
+        valorTotal: 100,
+        pagamentos: [{ valor: 40, metodo: "DINHEIRO" }],
+        ajustes: [
+          { tipo: "DESCONTO", valor: 10, motivo: "Desconto na criação" },
+          { tipo: "ACRESCIMO", valor: 5, motivo: "Hora extra na criação" },
+        ],
+      },
+      USER
+    );
+    FESTA_CRIADA_ID.id = created.id;
+
+    // Write-through: 100 - 10 + 5 = 95 (devolvido fresco pelo serviço)
+    expect(Number(created.valorTotal)).toBe(95);
+
+    // Tabela de ajustes: 2 registos com auditoria do autor
+    const ajustes = await ajustePagamentoService.list({ reservaId: created.id });
+    expect(ajustes).toHaveLength(2);
+    expect(ajustes.map((a) => a.motivo).sort()).toEqual(["Desconto na criação", "Hora extra na criação"]);
+    expect(ajustes[0].criadoPorId).toBe(TEST_IDS.USER_ADMIN);
+
+    // pago re-derivado contra o total final: 40 < 95
+    const reserva = await testPrisma.reserva.findUniqueOrThrow({ where: { id: created.id } });
+    expect(reserva.pago).toBe(false);
+  });
+
+  // ── CRIAR entrada livre COM ajustes no payload ──
+  it("criar entrada livre COM ajustes: write-through no custoTotal (20 → 25) e auditoria", async () => {
+    const entrada = await entradaLivreService.create(
+      {
+        criancas: [{ nome: "Criança Acertos", idade: 6 }],
+        encarregadoNome: "Encarregado Acertos",
+        encarregadoTelefone: "934444444",
+        duracaoMinutos: 60,
+        custoTotal: 20,
+        pago: false,
+        ajustes: [{ tipo: "ACRESCIMO", valor: 5, motivo: "Extra na criação" }],
+      },
+      USER
+    );
+    ENTRADA_CRIADA_ID.id = entrada.id;
+
+    // Sem custoTotalFinal, o ajuste aplica-se ao custoTotal: 20 + 5 = 25
+    expect(Number(entrada.custoTotal)).toBe(25);
+
+    const ajustes = await ajustePagamentoService.list({ entradaLivreId: entrada.id });
+    expect(ajustes).toHaveLength(1);
+    expect(ajustes[0].motivo).toBe("Extra na criação");
+    expect(ajustes[0].criadoPorId).toBe(TEST_IDS.USER_ADMIN);
   });
 });

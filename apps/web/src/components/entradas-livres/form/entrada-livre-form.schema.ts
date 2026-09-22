@@ -54,6 +54,15 @@ export const entradaLivreFormSchema = z.object({
       })
     )
     .optional(),
+  /** Acertos iniciais (criação): gravados após criar a entrada, com auditoria. */
+  ajustes: z.array(
+    z.object({
+      tipo: z.enum(["ACRESCIMO", "DESCONTO"]),
+      valor: z.number().positive("Valor tem de ser maior que zero"),
+      motivo: z.string().min(1, "Motivo obrigatório"),
+      metodoPagamento: z.string().optional(),
+    })
+  ).optional(),
   pago: z.boolean().optional(),
   cacifoId: z.string(),
   observacoes: z.string(),
@@ -99,6 +108,7 @@ export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefin
       nota: p.nota ?? undefined,
       createdAt: p.createdAt,
     })),
+    ajustes: [],
     pago: entrada?.pago,
     cacifoId: entrada?.cacifoId ?? "",
     observacoes: entrada?.observacoes ?? "",
@@ -142,6 +152,8 @@ export function buildEntradaPayload(
     duracaoMinutos: data.duracaoMinutos,
     custoTotal: data.custoTotal,
     pagamentos: opts.isEdit ? undefined : data.pagamentos,
+    // Acertos iniciais: o backend grava-os após criar (write-through + auditoria)
+    ajustes: opts.isEdit ? undefined : (data.ajustes ?? []).length > 0 ? data.ajustes : undefined,
     // Criação exige estado explícito (PAGAMENTO_OBRIGATORIO): deriva do ledger
     pago: opts.isEdit
       ? undefined

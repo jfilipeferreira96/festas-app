@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reservaService } from "@/services/reserva.service";
+// (auth.user é passado ao service para auditoria dos ajustes iniciais)
 import { menuService } from "@/services/menu.service";
 import { requireAuth } from "@/lib/auth-server";
 import { createRouteErrorHandler } from "@/lib/route-error";
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
       observacoesBrindes,
       outrosExtras,
       pagamentos,
+      ajustes,
       meiasQuantidade,
       pago,
       caucao,
@@ -165,7 +167,8 @@ export async function POST(request: NextRequest) {
       clienteCodigoPostal,
       adicionarCliente,
       menuId: menuId || undefined,
-    });
+      ajustes: ajustes || undefined,
+    }, auth.user);
 
     // Create menu if provided
     if (menuNome && menuPreco !== undefined) {

@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
     const auth = await requireAuth(request);
     if (!auth.ok) return auth.response;
 
-    const entrada = await entradaLivreService.create(await request.json());
+    // auth.user: auditoria dos ajustes iniciais (AjustePagamento.criadoPor)
+    const entrada = await entradaLivreService.create(await request.json(), auth.user);
     return NextResponse.json(entrada, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === "PAGAMENTO_OBRIGATORIO") {

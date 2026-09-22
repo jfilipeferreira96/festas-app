@@ -5,6 +5,13 @@ import { enfileirarEmailConfirmacaoReserva } from "@/services/email.service";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
 import { cacifoService } from "@/services/cacifo.service";
+import { ajustePagamentoService } from "@/services/ajustePagamento.service";
+
+/** Utilizador autenticado (para auditoria dos ajustes iniciais). */
+interface SessionUser {
+  id: string;
+  name?: string;
+}
 import { menuService } from "@/services/menu.service";
 import {
   normalizarPagamentos,
@@ -29,6 +36,8 @@ interface AniversarianteInput {
 }
 
 interface CreateReservaData {
+  /** Acertos iniciais (criação): gravados após criar, com write-through + auditoria. */
+  ajustes?: { tipo: "ACRESCIMO" | "DESCONTO"; valor: number; motivo: string; metodoPagamento?: string }[];
   data: string;
   horario: string;
    horaLanche?: string;
@@ -410,7 +419,7 @@ export const reservaService = {
     return { disponivel: conflitos.length === 0, conflitos };
   },
 
-  async create(data: CreateReservaData) {
+  async create(data: CreateReservaData, user?: SessionUser) {
     if (!data.data) throw new Error("DATA_REQUIRED");
     if (!data.horario) throw new Error("HORARIO_REQUIRED");
 
@@ -574,6 +583,28 @@ export const reservaService = {
           err: err instanceof Error ? err.message : String(err),
         });
       });
+    }
+
+    // ── Acertos iniciais (tab "Acertos" do form na criação): gravados DEPOIS
+    // da reserva existir (tabela AjustePagamento, write-through no valorTotal
+    // com auditoria do autor). Depois dos pagamentos para o estado `pago`
+    // re-derivar contra o total final. Um acerto inválido falha a criação
+    // (payload inválido é erro do cliente).
+    if (data.ajustes?.length) {
+      for (const ajuste of data.ajustes) {
+        await ajustePagamentoService.create(
+          {
+            tipo: ajuste.tipo,
+            valor: ajuste.valor,
+            motivo: ajuste.motivo,
+            metodoPagamento: ajuste.metodoPagamento as MetodoPagamento | undefined,
+            reservaId: created.id,
+          },
+          user
+        );
+      }
+      // Total mudou (write-through) - devolver a reserva fresca
+      return this.getById(created.id);
     }
 
     return created;

@@ -1,6 +1,7 @@
 import { api } from "./utils";
 import type { Reserva as ReservaBase, EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo } from "@saas/shared-types";
 import type { Extra, Menu, Pagamento, CriarPagamentoDTO } from "@saas/shared-types";
+import type { CriarAjusteDTO } from "./ajustes-pagamento";
 
 // Re-export base types
 export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo };
@@ -40,7 +41,12 @@ export interface MenuItemInput {
   extraId?: string;
 }
 
+/**
+ * Acertos iniciais (criação): gravados DEPOIS da festa existir, com write-through
+ * no total acordado e auditoria (AjustePagamento.criadoPor).
+ */
 export interface CreateReservaData {
+  ajustes?: Omit<CriarAjusteDTO, "reservaId" | "entradaLivreId">[];
   aniversarianteNome: string;
   clienteNome: string;
   clienteContacto: string;

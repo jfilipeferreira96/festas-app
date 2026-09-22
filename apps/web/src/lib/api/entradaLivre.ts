@@ -1,5 +1,6 @@
 import { api } from "./utils";
 import type { Pagamento, CriarPagamentoDTO } from "@saas/shared-types";
+import type { CriarAjusteDTO } from "./ajustes-pagamento";
 
 export interface Crianca {
   nome: string;
@@ -57,6 +58,8 @@ export interface EntradaLivre {
 }
 
 export interface CriarEntradaLivreDTO {
+  /** Acertos iniciais: gravados após a entrada existir (write-through + auditoria). */
+  ajustes?: Omit<CriarAjusteDTO, "reservaId" | "entradaLivreId">[];
   criancas: Crianca[];
   encarregadoNome: string;
   encarregadoTelefone: string;

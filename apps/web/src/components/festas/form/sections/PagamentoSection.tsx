@@ -12,6 +12,7 @@ import { BotaoGerirPagamento, PagamentoCard, PagamentoResumo } from "@/component
 import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
 import InlineTabs from "@/components/shared/pagamento/InlineTabs";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
+import AcertosLocaisSection, { type AcertoLocal } from "@/components/shared/pagamento/AcertosLocaisSection";
 import { totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
 import {
   CAUCAO_OPTIONS,
@@ -111,6 +112,12 @@ export default function PagamentoSection({
   const total = watch("totalAPagar");
   const pagamentos = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
   const totalDevido = +(total ?? (estimativa?.estimativa ?? 0) + extrasTotal).toFixed(2);
+  // Acertos locais (criação): array no payload - o backend grava-os após criar
+  // a reserva, com write-through no valorTotal e auditoria do autor.
+  const ajustesLocais = (watch("ajustes") ?? []) as AcertoLocal[];
+  const liquidoAjustes =
+    Math.round(ajustesLocais.reduce((s, a) => (a.tipo === "ACRESCIMO" ? s + a.valor : s - a.valor), 0) * 100) / 100;
+  const totalFinal = +(totalDevido + liquidoAjustes).toFixed(2);
   const criancasFaturadas = estimativa?.criancasFaturadas ?? 0;
   const numAdultos = watch("numAdultos") ?? 0;
   const custoAdultos =
@@ -160,56 +167,88 @@ export default function PagamentoSection({
       </PagamentoCard>
 
       <PagamentoCard titulo="Pagamento">
-        {/* Decomposição do total - calculado, sem input livre */}
-        <div className="text-xs space-y-1 pb-2 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between">
-            <span className="text-text-secondary">
-              Tarifário ({criancasFaturadas} crianças × {formatEuro(estimativa?.precoCrianca ?? 0)})
-            </span>
-            <span className="text-text-primary tabular-nums">
-              {formatEuro(estimativa ? estimativa.estimativa - custoAdultos : 0)}
-            </span>
-          </div>
-          {numAdultos > 0 && (
-            <div className="flex justify-between">
-              <span className="text-text-secondary">Adultos acompanhantes ({numAdultos})</span>
-              <span className="text-text-primary tabular-nums">{formatEuro(custoAdultos)}</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span className="text-text-secondary">Extras (bolos, diversão, suplementos)</span>
-            <span className="text-text-primary tabular-nums">{formatEuro(extrasTotal)}</span>
-          </div>
-          <div className="flex justify-between font-semibold text-text-primary">
-            <span>Total</span>
-            <span className="tabular-nums">{formatEuro(totalDevido)}</span>
-          </div>
-        </div>
+        <InlineTabs
+          ariaLabel="Pagamento da nova festa"
+          tabs={[
+            {
+              id: "pagamento",
+              label: "Pagamento",
+              icon: CreditCard,
+              content: (
+                <>
+                  {/* Decomposição do total - calculado, sem input livre */}
+                  <div className="text-xs space-y-1 pb-2 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">
+                        Tarifário ({criancasFaturadas} crianças × {formatEuro(estimativa?.precoCrianca ?? 0)})
+                      </span>
+                      <span className="text-text-primary tabular-nums">
+                        {formatEuro(estimativa ? estimativa.estimativa - custoAdultos : 0)}
+                      </span>
+                    </div>
+                    {numAdultos > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-text-secondary">Adultos acompanhantes ({numAdultos})</span>
+                        <span className="text-text-primary tabular-nums">{formatEuro(custoAdultos)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-text-secondary">Extras (bolos, diversão, suplementos)</span>
+                      <span className="text-text-primary tabular-nums">{formatEuro(extrasTotal)}</span>
+                    </div>
+                    {liquidoAjustes !== 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-text-secondary">Acertos</span>
+                        <span
+                          className={`text-text-primary tabular-nums ${liquidoAjustes < 0 ? "text-accent-orange-600" : ""}`}
+                        >
+                          {liquidoAjustes > 0 ? "+" : "−"}
+                          {formatEuro(Math.abs(liquidoAjustes))}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-semibold text-text-primary">
+                      <span>Total</span>
+                      <span className="tabular-nums">{formatEuro(totalFinal)}</span>
+                    </div>
+                  </div>
 
-        {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
-        <PagamentosLedgerSection
-          totalDevido={totalDevido}
-          pagamentos={pagamentos}
-          onAdd={(p) =>
-            setValue(
-              "pagamentos",
-              [
-                ...pagamentos,
-                { ...p, id: `pg-${Date.now()}-${pagamentos.length}`, createdAt: new Date().toISOString() },
-              ] as PagamentoLedgerItem[],
-              { shouldDirty: true },
-            )
-          }
-          onRemove={(id) =>
-            setValue("pagamentos", pagamentos.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
-              shouldDirty: true,
-            })
-          }
+                  {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
+                  <PagamentosLedgerSection
+                    totalDevido={totalFinal}
+                    pagamentos={pagamentos}
+                    onAdd={(p) =>
+                      setValue(
+                        "pagamentos",
+                        [
+                          ...pagamentos,
+                          { ...p, id: `pg-${Date.now()}-${pagamentos.length}`, createdAt: new Date().toISOString() },
+                        ] as PagamentoLedgerItem[],
+                        { shouldDirty: true },
+                      )
+                    }
+                    onRemove={(id) =>
+                      setValue("pagamentos", pagamentos.filter((x) => x.id !== id) as PagamentoLedgerItem[], {
+                        shouldDirty: true,
+                      })
+                    }
+                  />
+                </>
+              ),
+            },
+            {
+              id: "acertos",
+              label: "Acertos",
+              icon: ArrowUpDown,
+              content: (
+                <AcertosLocaisSection
+                  value={ajustesLocais}
+                  onChange={(next) => setValue("ajustes", next, { shouldDirty: true })}
+                />
+              ),
+            },
+          ]}
         />
-
-        <p className="text-[11px] text-text-muted">
-          Descontos ficam disponíveis em "Gerir pagamento" após criar a reserva.
-        </p>
       </PagamentoCard>
     </div>
   );
