@@ -48,6 +48,7 @@ import PagamentoModal from "./PagamentoModal";
 import type { Reserva } from "@/lib/api/reservas";
 import { getAniversarianteNome, getAniversarianteNomes } from "@/lib/api/reservas";
 import { imprimirListaConvidados } from "@/utils/print-lista";
+import { BOLO_LABELS_SHORT } from "@/lib/constants/bolo";
 import type { EstadoCacifo } from "@/lib/api/cacifos";
 import type { StatusType } from "@/components/ui";
 
@@ -595,7 +596,9 @@ function FestaCard({
         {festa.bolo && (
           <div className="flex items-center gap-2">
             <Gift size={14} className="text-text-muted" />
-            <span className="text-xs text-text-secondary">{festa.bolo}</span>
+            <span className="text-xs text-text-secondary">
+              {BOLO_LABELS_SHORT[festa.bolo] ?? festa.bolo}
+            </span>
           </div>
         )}
 

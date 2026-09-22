@@ -10,6 +10,7 @@ interface ReservaBoloInfo {
   salaLanche?: { nome?: string } | null;
   bolo?: string | null;
   boloTema?: string | null;
+  boloQuantidade?: number | null;
   numCriancas?: number | null;
   numCriancasConfirmadas?: number | null;
 }
@@ -46,10 +47,12 @@ function secoesPorTipo(bolos: ReservaBoloInfo[]): string {
         .map((r) => {
           const anv = r.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "-";
           const pessoas = r.numCriancasConfirmadas ?? r.numCriancas ?? "-";
+          const qtd = r.boloQuantidade ?? 1;
           return `<tr>
         <td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:70px;font-weight:600;color:#555;">${escapeHtml(r.horario ?? "-")}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;font-size:15px;">${escapeHtml(anv)}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#444;">${escapeHtml(r.boloTema ?? "")}</td>
+        <td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:50px;font-weight:600;">${escapeHtml(String(qtd))}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:90px;">${escapeHtml(String(pessoas))}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#666;">${escapeHtml(r.salaLanche?.nome ?? "-")}</td>
       </tr>`;
@@ -64,6 +67,7 @@ function secoesPorTipo(bolos: ReservaBoloInfo[]): string {
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:center;">Hora</th>
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Aniversariante(s)</th>
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Tema</th>
+          <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:center;">Qtd</th>
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:center;">Pessoas</th>
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Sala do Lanche</th>
         </tr>
