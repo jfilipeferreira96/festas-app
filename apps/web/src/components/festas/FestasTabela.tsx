@@ -1,7 +1,7 @@
  "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCheck, History, Clock, ClipboardList, Bell, Wallet, Cake } from "lucide-react";
+import { Plus, Eye, Pencil, Trash2, CheckCircle2, Play, XCircle, Users, SquareCheck, History, Clock, ClipboardList, Bell, Wallet, Cake, Printer } from "lucide-react";
 import { PageHeader, StatusBadge, Button, type StatusType } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
@@ -28,6 +28,8 @@ import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import { formatDate, formatDuration } from "@/utils/date";
 import { imprimirBolos } from "@/utils/print-bolos";
+import { imprimirListaConvidados } from "@/utils/print-lista";
+import { cacifosApi } from "@/lib/api/cacifos";
 import { useNow } from "@/hooks/use-now";
 import { differenceInYears, parseISO } from "date-fns";
 import { BOLO_LABELS_SHORT } from "@/lib/constants/bolo";
@@ -217,6 +219,21 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
   const handleDelete = useCallback((id: string) => {
     setDeleteModal({ isOpen: true, id });
   }, []);
+
+  // Imprimir a atribuição de cacifos da festa (pedido do cliente, 21/09/2026)
+  const handleImprimirCacifos = useCallback(
+    async (reserva: Reserva) => {
+      try {
+        const cacifos = await cacifosApi.list({ reservaId: reserva.id });
+        const anv =
+          reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "festa";
+        imprimirListaConvidados(reserva, cacifos, `Cacifos - ${anv} · ${formatDate(reserva.data)}`);
+      } catch {
+        toast.handleApiError(undefined, "Não foi possível imprimir os cacifos.");
+      }
+    },
+    [toast]
+  );
 
   const confirmDelete = useCallback(async () => {
     try {
@@ -745,6 +762,17 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                   className="p-1.5 rounded-lg hover:bg-blue-50 text-text-muted hover:text-brand-500 transition-colors"
                 >
                   <ClipboardList size={15} />
+                </button>
+              </Tooltip>
+            )}
+            {/* Quick action: Imprimir cacifos (RESERVA / CONFIRMADO / EM_CURSO) */}
+            {(r.estado === "RESERVA" || r.estado === "CONFIRMADO" || r.estado === "EM_CURSO") && (
+              <Tooltip content="Imprimir cacifos da festa" position="top" theme="dark">
+                <button
+                  onClick={() => handleImprimirCacifos(r)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 text-text-muted hover:text-brand-500 transition-colors"
+                >
+                  <Printer size={15} />
                 </button>
               </Tooltip>
             )}

@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/utils/date";
 import { imprimirListaConvidados } from "@/utils/print-lista";
 import { cacifosApi, type Cacifo } from "@/lib/api/cacifos";
+import SeletorCriancas from "./SeletorCriancas";
 
 // ── Props ──────────────────────────────────────────────────────────
 interface PreencherCacifosModalProps {
@@ -117,6 +118,15 @@ export default React.memo(function PreencherCacifosModal({
   ).length;
   const total = cacifosList.length;
 
+  // Crianças da festa para as pills dos cacifos (aniversariantes)
+  const opcoesCriancas = useMemo(
+    () =>
+      (reserva?.aniversariantes ?? [])
+        .map((a) => a.aniversariante.nome)
+        .filter(Boolean),
+    [reserva]
+  );
+
   // ── Handlers ─────────────────────────────────────────────────────
   const handleChamar = useCallback(
     (checked: boolean) => {
@@ -212,7 +222,7 @@ export default React.memo(function PreencherCacifosModal({
             />
 
             {/* Lista de cacifos */}
-            <CacifosList cacifos={cacifosList} reservaId={reservaId} disponiveis={disponiveis ?? []} />
+            <CacifosList cacifos={cacifosList} reservaId={reservaId} disponiveis={disponiveis ?? []} opcoesCriancas={opcoesCriancas} />
 
             {/* Acções: adicionar + realocar todos */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -408,10 +418,13 @@ function CacifosList({
   cacifos,
   reservaId,
   disponiveis,
+  opcoesCriancas,
 }: {
   cacifos: Cacifo[];
   reservaId: string;
   disponiveis: Cacifo[];
+  /** Nomes da festa para as pills de selecção (1 ou várias crianças). */
+  opcoesCriancas: string[];
 }) {
   if (cacifos.length === 0) {
     return (
@@ -436,6 +449,7 @@ function CacifosList({
           cacifo={cacifo}
           reservaId={reservaId}
           disponiveis={disponiveis}
+          opcoesCriancas={opcoesCriancas}
         />
       ))}
     </div>
@@ -447,25 +461,28 @@ function CacifoRow({
   cacifo,
   reservaId,
   disponiveis,
+  opcoesCriancas,
 }: {
   cacifo: Cacifo;
   reservaId: string;
   disponiveis: Cacifo[];
+  opcoesCriancas: string[];
 }) {
   const actualizar = useActualizarCacifo();
   const libertar = useLibertar();
   const trocar = useTrocarCacifo();
   const [nome, setNome] = useState(cacifo.criancas ?? "");
-  const isPlaceholder = !nome || nome === "Por preencher";
 
-  const handleBlur = useCallback(() => {
-    const trimmed = nome.trim();
-    if (trimmed === (cacifo.criancas ?? "")) return;
-    actualizar.mutate({
-      id: cacifo.id,
-      criancas: trimmed || null,
-    });
-  }, [nome, cacifo.criancas, cacifo.id, actualizar]);
+  const handleCommit = useCallback(
+    (v: string | null) => {
+      if ((v ?? "") === (cacifo.criancas ?? "")) return;
+      actualizar.mutate({
+        id: cacifo.id,
+        criancas: v,
+      });
+    },
+    [cacifo.criancas, cacifo.id, actualizar]
+  );
 
   const handleRemove = useCallback(() => {
     libertar.mutate(cacifo.id);
@@ -500,18 +517,14 @@ function CacifoRow({
         />
       </div>
 
-      {/* Input nome */}
-      <input
-        data-cacifo-input={cacifo.id}
-        type="text"
-        value={isPlaceholder ? "" : nome}
-        placeholder="Por preencher"
-        onChange={(e) => setNome(e.target.value)}
-        onBlur={handleBlur}
+      {/* Selecção de crianças (1 ou várias) + input livre */}
+      <SeletorCriancas
+        value={nome}
+        opcoes={opcoesCriancas}
+        onChange={setNome}
+        onCommit={handleCommit}
         disabled={cacifo.estado === "LIVRE" || trocar.isPending}
-        className={`flex-1 px-3 py-2 text-sm rounded-lg border-0 bg-transparent focus:outline-none focus:ring-2 focus:ring-brand-200 ${
-          isPlaceholder ? "italic text-text-muted" : "text-text-primary"
-        } ${trocar.isPending ? "opacity-50" : ""}`}
+        dataCacifoInput={cacifo.id}
       />
 
       {/* Remove */}

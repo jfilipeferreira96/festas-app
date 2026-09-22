@@ -13,6 +13,7 @@ import {
   useCacifosEsquecidos,
   useLibertarTodos,
   useCacifosDisponiveis,
+  useActualizarCacifo,
 } from "@/hooks/use-cacifos";
 import { useReservas } from "@/hooks/use-reservas";
 import { useEntradasLivres, useAtualizarEntradaLivre } from "@/hooks/use-entrada-livre";
@@ -24,6 +25,7 @@ import type { StatusType } from "@/components/ui";
 import { formatDate } from "@/utils/date";
 import { imprimirListaConvidados } from "@/utils/print-lista";
 import PreencherCacifosModal from "./PreencherCacifosModal";
+import SeletorCriancas from "./SeletorCriancas";
 
 const ESTADO_STYLES: Record<string, { base: string; hover: string; icon: string }> = {
   LIVRE: {
@@ -260,12 +262,23 @@ export default function CacifosContent() {
   }, [atualizarEntrada, queryClient, toast]);
 
   const handleImprimir = useCallback(() => {
+    // Com filtro de festa activo: imprime só os cacifos dessa festa.
+    if (filtroFesta) {
+      const festa = festas.find((f) => f.id === filtroFesta);
+      const cacifosFesta = (cacifos ?? []).filter((c) => c.reservaId === filtroFesta);
+      if (festa) {
+        const anv =
+          festa.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "festa";
+        imprimirListaConvidados(festa, cacifosFesta, `Cacifos - ${anv} · ${formattedDate}`);
+        return;
+      }
+    }
     imprimirListaConvidados(
       { data: selectedDate },
       cacifos ?? [],
       `Cacifos - ${formattedDate}`
     );
-  }, [selectedDate, cacifos, formattedDate]);
+  }, [filtroFesta, festas, cacifos, selectedDate, formattedDate]);
 
   return (
     <div className="space-y-5">
@@ -709,13 +722,21 @@ export default function CacifosContent() {
                   )}
                 </>
               )}
-              {selectedCacifo.criancas && (
-                <DetailRow label="Crianças" value={selectedCacifo.criancas} />
-              )}
               {selectedCacifo.notas && (
                 <DetailRow label="Notas" value={selectedCacifo.notas} />
               )}
             </div>
+
+            {/* Editar crianças do cacifo: 1 nome OU várias (pills da festa).
+                Sem reserva (entrada livre) mantém a linha estática. */}
+            {(selectedCacifo.estado === "OCUPADO" || selectedCacifo.estado === "RESERVADO") &&
+            selectedCacifo.reserva ? (
+              <CacifoCriancasEditor cacifo={selectedCacifo} />
+            ) : (
+              selectedCacifo.criancas && (
+                <DetailRow label="Crianças" value={selectedCacifo.criancas} />
+              )
+            )}
 
             {/* Associar cacifo LIVRE a festa ou entrada livre */}
             {selectedCacifo.estado === "LIVRE" && (
@@ -815,6 +836,45 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gray-50">
       <span className="text-xs font-medium text-text-muted w-20 shrink-0">{label}</span>
       <span className="text-sm text-text-primary font-medium">{value}</span>
+    </div>
+  );
+}
+
+// ── Editor de crianças do cacifo individual ────────────────────────
+/** Pills dos aniversariantes da festa + input livre; gravação imediata. */
+function CacifoCriancasEditor({ cacifo }: { cacifo: Cacifo }) {
+  const actualizar = useActualizarCacifo();
+  const [nome, setNome] = useState(cacifo.criancas ?? "");
+
+  const handleCommit = useCallback(
+    (v: string | null) => {
+      if ((v ?? "") === (cacifo.criancas ?? "")) return;
+      actualizar.mutate({ id: cacifo.id, criancas: v });
+    },
+    [cacifo.criancas, cacifo.id, actualizar]
+  );
+
+  const opcoes = useMemo(
+    () =>
+      (cacifo.reserva?.aniversariantes ?? [])
+        .map((a) => a.aniversariante.nome)
+        .filter(Boolean),
+    [cacifo.reserva]
+  );
+
+  return (
+    <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+      <p className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
+        Crianças no cacifo #{cacifo.numero}
+      </p>
+      <div className="bg-white rounded-lg border border-border px-3 py-2">
+        <SeletorCriancas
+          value={nome}
+          opcoes={opcoes}
+          onChange={setNome}
+          onCommit={handleCommit}
+        />
+      </div>
     </div>
   );
 }

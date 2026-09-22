@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 import { Cake, Clock, DoorOpen, PartyPopper, Tv, Minimize2 } from "lucide-react";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { useTVMode } from "@/hooks/use-tv-mode";
 
 type FestaTV = {
@@ -48,13 +48,27 @@ async function fetchTVData(): Promise<TVData> {
   return res.json();
 }
 
-type AbaTV = "festas" | "entradas" | "lanches";
-
-const ABAS: { value: AbaTV; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: "festas", label: "FESTAS ACABAR", icon: PartyPopper },
-  { value: "entradas", label: "ENTRADAS LIVRES", icon: DoorOpen },
-  { value: "lanches", label: "LANCHES", icon: Cake },
+/** Secções fixas da vista TV (sem tabs - pedido do cliente, 21/09/2026). */
+const SECCOES: { label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { label: "FESTAS ACABAR", icon: PartyPopper },
+  { label: "ENTRADAS LIVRES", icon: DoorOpen },
+  { label: "LANCHES", icon: Cake },
 ];
+
+/** Relógio isolado no próprio componente: só ele re-renderiza a cada segundo. */
+function RelogioTV() {
+  const [agora, setAgora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAgora(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="flex items-center gap-3 text-3xl font-bold text-text-primary">
+      <Clock className="h-7 w-7 text-text-muted" />
+      {format(agora, "HH:mm")}
+    </div>
+  );
+}
 
 function FestaCard({ festa }: { festa: FestaTV }) {
   const cor = festa.cor || "#6366f1";
@@ -162,7 +176,6 @@ function Users({ className }: { className?: string }) {
 
 function FestasAcabarTVContentInner() {
   const { isTVMode, toggleTVMode } = useTVMode();
-  const [aba, setAba] = useState<AbaTV>("festas");
   const { data, isLoading } = useQuery<TVData>({
     queryKey: ["festas-acabar-tv"],
     queryFn: fetchTVData,
@@ -174,14 +187,21 @@ function FestasAcabarTVContentInner() {
   const entradas = data?.entradas ?? [];
   const lanches = data?.lanches ?? [];
 
+  const seccoes = [
+    { ...SECCOES[0], itens: festas, vazia: "Nenhuma festa a acabar nos próximos minutos" },
+    { ...SECCOES[1], itens: entradas, vazia: "Sem entradas livres a acabar" },
+    { ...SECCOES[2], itens: lanches, vazia: "Sem lanches a chegar nos próximos minutos" },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col p-8 gap-6 relative">
-      {/* Cabeçalho minimal: data + modo ecrã (título removido a pedido do cliente) */}
+      {/* Cabeçalho: data + relógio no topo + modo ecrã */}
       <div className="flex items-center justify-between shrink-0">
         <p className="text-2xl text-text-muted">
           {format(new Date(), "EEEE, d 'de' MMMM", { locale: pt })}
         </p>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
+          <RelogioTV />
           <button
             onClick={toggleTVMode}
             className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2 text-lg font-medium text-text-secondary hover:bg-brand-500/5 transition-colors"
@@ -193,64 +213,36 @@ function FestasAcabarTVContentInner() {
         </div>
       </div>
 
-      {/* Abas: FESTAS ACABAR | ENTRADAS LIVRES | LANCHES */}
-      <div className="flex items-center gap-3 shrink-0">
-        {ABAS.map((a) => {
-          const Icon = a.icon;
-          const ativa = aba === a.value;
-          return (
-            <button
-              key={a.value}
-              onClick={() => setAba(a.value)}
-              className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-2xl font-bold transition-all ${
-                ativa
-                  ? "bg-brand-500 text-white shadow-theme-lg"
-                  : "bg-surface text-text-secondary border-2 border-border hover:bg-gray-50"
-              }`}
-            >
-              <Icon className="h-7 w-7" />
-              {a.label}
-              {a.value === "festas" && festas.length > 0 && (
-                <span className={`px-3 py-0.5 rounded-full text-lg ${ativa ? "bg-white/20" : "bg-brand-50 text-brand-600"}`}>
-                  {festas.length}
-                </span>
-              )}
-              {a.value === "entradas" && entradas.length > 0 && (
-                <span className={`px-3 py-0.5 rounded-full text-lg ${ativa ? "bg-white/20" : "bg-brand-50 text-brand-600"}`}>
-                  {entradas.length}
-                </span>
-              )}
-              {a.value === "lanches" && lanches.length > 0 && (
-                <span className={`px-3 py-0.5 rounded-full text-lg ${ativa ? "bg-white/20" : "bg-accent-orange-50 text-accent-orange-600"}`}>
-                  {lanches.length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Conteúdo da aba ativa */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2 min-h-0">
+      {/* Listas fixas (sem tabs): Festas · Entradas Livres · Lanches */}
+      <div className="flex-1 overflow-y-auto space-y-8 pr-2 min-h-0">
         {isLoading && <p className="text-3xl text-text-muted text-center py-12">A carregar...</p>}
-        {!isLoading && aba === "festas" && festas.length === 0 && (
-          <p className="text-3xl text-text-muted text-center py-12">Nenhuma festa a acabar nos próximos minutos</p>
-        )}
-        {!isLoading && aba === "entradas" && entradas.length === 0 && (
-          <p className="text-3xl text-text-muted text-center py-12">Sem entradas livres a acabar</p>
-        )}
-        {!isLoading && aba === "lanches" && lanches.length === 0 && (
-          <p className="text-3xl text-text-muted text-center py-12">Sem lanches a chegar nos próximos minutos</p>
-        )}
-        {aba === "festas" && festas.map((festa) => <FestaCard key={festa.id} festa={festa} />)}
-        {aba === "entradas" && entradas.map((entrada) => <EntradaCard key={entrada.id} entrada={entrada} />)}
-        {aba === "lanches" && lanches.map((lanche) => <LancheCard key={lanche.id} lanche={lanche} />)}
-      </div>
-
-      {/* Relógio no fundo */}
-      <div className="flex items-center justify-end gap-2 text-2xl text-text-muted shrink-0">
-        <Clock className="h-6 w-6" />
-        {format(new Date(), "HH:mm")}
+        {!isLoading &&
+          seccoes.map(({ label, icon: Icon, itens, vazia }) => (
+            <section key={label} className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Icon className="h-7 w-7 text-text-secondary" />
+                <h2 className="text-2xl font-bold text-text-secondary">{label}</h2>
+                {itens.length > 0 && (
+                  <span className="px-3 py-0.5 rounded-full text-lg bg-brand-50 text-brand-600">
+                    {itens.length}
+                  </span>
+                )}
+              </div>
+              {itens.length === 0 ? (
+                <p className="text-2xl text-text-muted/70 py-4">{vazia}</p>
+              ) : (
+                itens.map((item) =>
+                  label === "FESTAS ACABAR" ? (
+                    <FestaCard key={item.id} festa={item as FestaTV} />
+                  ) : label === "ENTRADAS LIVRES" ? (
+                    <EntradaCard key={item.id} entrada={item as EntradaTV} />
+                  ) : (
+                    <LancheCard key={item.id} lanche={item as LancheTV} />
+                  )
+                )
+              )}
+            </section>
+          ))}
       </div>
     </div>
   );

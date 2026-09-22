@@ -331,7 +331,7 @@ export default function FestasAcabarContent() {
           (f.localNome ?? "").toLowerCase().includes(q)
         }
         pagination
-        pageSize={10}
+        pageSize={50}
         renderActions={(f) => (
           <div className="flex items-center justify-end gap-1">
             <Tooltip content="Histórico (participantes)" position="top" theme="dark">

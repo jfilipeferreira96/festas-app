@@ -27,23 +27,20 @@ function escapeHtml(text: string): string {
     .replace(/\x22/g, ENT_QUOT);
 }
 
-/**
- * Imprime a lista de bolos NOSSOS (1kg, 2kg, artístico) das festas dadas,
- * agrupada por tipo - pronta para a cozinha/pastelaria.
- */
-export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
-  const bolos = reservas.filter((r) => ehBoloNosso(r.bolo));
+/** Chave do dia (YYYY-MM-DD) para agrupamento - tolerante a date-only ou ISO completo. */
+function diaChave(r: ReservaBoloInfo): string {
+  return r.data ? String(r.data).slice(0, 10) : "";
+}
 
-  // Agrupar por tipo, mantendo a ordem definida em BOLOS_NOSSOS
+/** Secções por tipo de bolo (ordem BOLOS_NOSSOS) para o conjunto de festas dado. */
+function secoesPorTipo(bolos: ReservaBoloInfo[]): string {
   const grupos = BOLOS_NOSSOS.map((tipo) => ({
     tipo,
     label: BOLO_LABELS[tipo] ?? tipo,
     itens: bolos.filter((r) => r.bolo === tipo),
   })).filter((g) => g.itens.length > 0);
 
-  const dataTitulo = bolos[0]?.data ? formatDate(String(bolos[0].data)) : formatDate(new Date().toISOString());
-
-  const secoesHtml = grupos
+  return grupos
     .map((g) => {
       const linhas = g.itens
         .map((r) => {
@@ -75,12 +72,45 @@ export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
     </table>`;
     })
     .join("");
+}
+
+/**
+ * Imprime a lista de bolos NOSSOS (1kg, 2kg, artístico) das festas dadas,
+ * agrupada por tipo - pronta para a cozinha/pastelaria.
+ * Quando as festas cobrem vários dias (vista semanal), agrupa primeiro por dia.
+ */
+export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
+  const bolos = reservas.filter((r) => ehBoloNosso(r.bolo));
+
+  // Agrupar por dia (ordenado); um único dia mantém o formato original.
+  const dias = Array.from(new Set(bolos.map(diaChave))).sort();
+  const variosDias = dias.length > 1;
+
+  let corpo: string;
+  if (variosDias) {
+    corpo = dias
+      .map((dia) => {
+        const doDia = bolos.filter((r) => diaChave(r) === dia);
+        return `<h2 style="font-size:18px;margin:26px 0 4px;border-bottom:2px solid #ddd;padding-bottom:4px;">${escapeHtml(
+          formatDate(dia)
+        )} <span style="font-weight:400;color:#999;font-size:14px;">(${doDia.length})</span></h2>${secoesPorTipo(doDia)}`;
+      })
+      .join("");
+  } else {
+    corpo = secoesPorTipo(bolos);
+  }
+
+  const dataTitulo = bolos[0]?.data ? formatDate(String(bolos[0].data)) : formatDate(new Date().toISOString());
+  const tituloDoc = variosDias ? `Bolos - semana de ${escapeHtml(formatDate(dias[0]))} a ${escapeHtml(formatDate(dias[dias.length - 1]))}` : `Bolos - ${escapeHtml(dataTitulo)}`;
+  const info = variosDias
+    ? `Semana: ${escapeHtml(formatDate(dias[0]))} a ${escapeHtml(formatDate(dias[dias.length - 1]))} · Apenas bolos da casa (1kg, 2kg, artístico)`
+    : `Data: ${escapeHtml(dataTitulo)} · Apenas bolos da casa (1kg, 2kg, artístico)`;
 
   const html = `<!DOCTYPE html>
 <html lang="pt">
 <head>
   <meta charset="utf-8">
-  <title>Bolos - ${escapeHtml(dataTitulo)}</title>
+  <title>${tituloDoc}</title>
   <style>
     * { font-family: 'Inter', Arial, sans-serif; box-sizing: border-box; }
     body { padding: 30px; color: #1a1a1a; }
@@ -92,9 +122,9 @@ export function imprimirBolos(reservas: ReservaBoloInfo[]): void {
   </style>
 </head>
 <body>
-  <h1>Bolos do dia</h1>
-  <div class="info">Data: ${escapeHtml(dataTitulo)} · Apenas bolos da casa (1kg, 2kg, artístico)</div>
-  ${secoesHtml || `<p style="color:#999;padding:20px;text-align:center;">Sem bolos da casa neste dia</p>`}
+  <h1>${variosDias ? "Bolos da semana" : "Bolos do dia"}</h1>
+  <div class="info">${info}</div>
+  ${corpo || `<p style="color:#999;padding:20px;text-align:center;">Sem bolos da casa neste dia</p>`}
   <div class="footer">Total de bolos: ${bolos.length} · Gerado em ${new Date().toLocaleString("pt-PT")}</div>
   <script>window.onload = () => { window.print(); }</script>
 </body>
