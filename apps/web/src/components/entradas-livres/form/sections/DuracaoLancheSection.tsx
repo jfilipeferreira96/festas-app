@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Clock, Package } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
-import Checkbox from "@/components/form/input/Checkbox";
-import Switch from "@/components/form/switch/Switch";
 import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
 import { DURACAO_ENTRADA_OPTIONS, type EntradaLivreFormData } from "../entrada-livre-form.schema";
+import DuracaoLancheCartoes from "./variantes/DuracaoLancheCartoes";
+import DuracaoLancheDefinicoes from "./variantes/DuracaoLancheDefinicoes";
+import DuracaoLancheSelects from "./variantes/DuracaoLancheSelects";
 
 interface DuracaoLancheSectionProps {
   custoTempoPorPessoa: number;
@@ -17,6 +19,14 @@ interface DuracaoLancheSectionProps {
   precoMeias: number;
   cacifoOptions: { value: string; label: string }[];
 }
+
+type Variante = "cartoes" | "definicoes" | "selects";
+
+const VARIANTES: { id: Variante; label: string }[] = [
+  { id: "cartoes", label: "A · Cartões" },
+  { id: "definicoes", label: "B · Definições" },
+  { id: "selects", label: "C · Selects" },
+];
 
 export default function DuracaoLancheSection({
   custoTempoPorPessoa,
@@ -28,12 +38,36 @@ export default function DuracaoLancheSection({
   const { register, setValue, watch, formState: { errors } } = useFormContext<EntradaLivreFormData>();
   const duracao = watch("duracaoMinutos");
   const temLanche = watch("temLanche");
-  const numAdultos = watch("numAdultos") ?? 0;
   const cacifoId = watch("cacifoId");
-  const numMeias = watch("meiasQuantidade") ?? 0;
+  const numCriancas = (watch("criancas") ?? []).length;
+
+  // TEMPORÁRIO (pré-visualização): selector das 3 variantes visuais pedidas
+  // pelo cliente - fixar a escolhida e remover o selector quando decidir.
+  const [variante, setVariante] = useState<Variante>("cartoes");
+
+  const propsVariante = { precoLancheEntrada, precoAdulto, precoMeias, numCriancas };
 
   return (
     <div className="space-y-4">
+      {/* Selector de variantes - TEMPORÁRIO para escolha do cliente */}
+      <div className="flex items-center justify-end gap-1.5">
+        <span className="text-[10px] uppercase tracking-wider text-text-muted">Pré-visualização:</span>
+        {VARIANTES.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => setVariante(v.id)}
+            className={`px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors ${
+              variante === v.id
+                ? "bg-brand-500 text-white border-brand-500"
+                : "border-border text-text-muted hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-4">
         <div className="flex-1">
           <FieldLabel required className="flex items-center gap-1">
@@ -58,68 +92,17 @@ export default function DuracaoLancheSection({
         </div>
       </div>
 
-      {/* Lanche / Adulto / Meias numa única linha (pedido do cliente, 22/09/2026) */}
-      <div className="border-t border-border pt-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <Switch
-                checked={!!temLanche}
-                onChange={(checked) => setValue("temLanche", checked, { shouldDirty: true })}
-                label="Inclui lanche?"
-              />
-              <span className="text-xs text-text-muted">+{formatEuro(precoLancheEntrada)}/criança</span>
-            </div>
-            <p className="mt-1 text-[11px] text-text-muted">
-              Marcar por cada criança na secção acima.
-            </p>
-          </div>
-          <div>
-            <Checkbox
-              checked={numAdultos > 0}
-              onChange={(checked) => setValue("numAdultos", checked ? 1 : 0, { shouldDirty: true })}
-              label="Adulto acompanha e paga entrada"
-            />
-            {precoAdulto > 0 && (
-              <p className="ml-8 text-xs text-text-muted">+{formatEuro(precoAdulto)}/adulto</p>
-            )}
-          </div>
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <label className="text-sm font-medium text-text-primary">Meias</label>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setValue("meiasQuantidade", Math.max(0, (watch("meiasQuantidade") ?? 0) - 1), { shouldDirty: true })
-                  }
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
-                >
-                  −
-                </button>
-                <span className="w-10 text-center text-sm font-medium text-text-primary">{numMeias}</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setValue("meiasQuantidade", (watch("meiasQuantidade") ?? 0) + 1, { shouldDirty: true })
-                  }
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-text-secondary"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            <p className="text-xs text-text-muted">{formatEuro(precoMeias)}/par</p>
-          </div>
-        </div>
+      {/* Lanche / Adulto / Meias - variante visual escolhida na pré-visualização */}
+      {variante === "cartoes" && <DuracaoLancheCartoes {...propsVariante} />}
+      {variante === "definicoes" && <DuracaoLancheDefinicoes {...propsVariante} />}
+      {variante === "selects" && <DuracaoLancheSelects {...propsVariante} />}
 
-        {temLanche && (
-          <div className="w-40 mt-4">
-            <FieldLabel>Hora do lanche</FieldLabel>
-            <InputField type="time" {...register("horaLanche")} />
-          </div>
-        )}
-      </div>
+      {temLanche && (
+        <div className="w-40">
+          <FieldLabel>Hora do lanche</FieldLabel>
+          <InputField type="time" {...register("horaLanche")} />
+        </div>
+      )}
 
       {cacifoOptions.length > 1 && (
         <div className="space-y-2">

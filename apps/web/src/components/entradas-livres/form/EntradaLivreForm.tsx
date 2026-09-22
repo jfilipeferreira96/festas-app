@@ -28,6 +28,17 @@ import ExtrasEntradaSection from "./sections/ExtrasEntradaSection";
 import ObservacoesSection from "./sections/ObservacoesSection";
 import PagamentoEntradaSection from "./sections/PagamentoEntradaSection";
 
+/** Cabeçalho simples de secção do form: título uppercase + separador (igual ao FestaForm). */
+function SectionHeader({ titulo }: { titulo: string }) {
+  return (
+    <div className="pt-4 border-t border-border first:border-t-0 first:pt-0">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        {titulo}
+      </h3>
+    </div>
+  );
+}
+
 interface EntradaLivreFormProps {
   entrada?: EntradaLivre | null;
   onClose: () => void;
@@ -66,22 +77,28 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const meiasQuantidadeWatched = watch("meiasQuantidade");
   const { data: extrasData } = useExtras();
 
+  // Tarifário por escalão com fallbacks (6/10/5) - mesmo padrão dos restantes
+  // preços (precoAdulto, precoLanche, meias). NUNCA devolve 0 por falta de
+  // config: o custo da entrada é a componente principal do total e não pode
+  // desaparecer enquanto a configuração de preços ainda não carregou.
   const custoTempoPorPessoa = useMemo(() => {
-    if (!configPreco) return 0;
-    const preco1h = Number(configPreco.precoEntrada1h ?? 6);
-    const preco2h = Number(configPreco.precoEntrada2h ?? 10);
-    const precoHoraAdicional = Number(configPreco.precoEntradaHoraAdicional ?? 5);
+    const preco1h = Number(configPreco?.precoEntrada1h ?? 6);
+    const preco2h = Number(configPreco?.precoEntrada2h ?? 10);
+    const precoHoraAdicional = Number(configPreco?.precoEntradaHoraAdicional ?? 5);
     const dur = duracaoMinutos || 0;
     return dur <= 60 ? preco1h : dur <= 120 ? preco2h : preco2h + Math.ceil((dur - 120) / 60) * precoHoraAdicional;
   }, [configPreco, duracaoMinutos]);
 
   const custoComponentes = useMemo(() => {
-    const comNome = criancasWatched.filter((c) => c.nome.trim());
-    const totalPessoas = Math.max(comNome.length + numAdultos, 1); // extras "Por pessoa"
+    // Cada linha de criança conta (validação exige nome em todas ao gravar).
+    // A 1ª linha, ainda sem nome, já conta como criança: o total mostra logo
+    // o custo de entrada (ex.: 6,00 €) mal se abre a modal, não 0,00 €.
+    const totalCriancas = criancasWatched.length;
+    const totalPessoas = Math.max(totalCriancas + numAdultos, 1); // extras "Por pessoa"
     const precoAdulto = Number(configPreco?.precoAdulto ?? 6);
-    const custoTempo = +(custoTempoPorPessoa * comNome.length + precoAdulto * numAdultos).toFixed(2);
+    const custoTempo = +(custoTempoPorPessoa * totalCriancas + precoAdulto * numAdultos).toFixed(2);
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 3);
-    const criancasComLanche = temLanche ? comNome.filter((c) => c.querLanche).length : 0;
+    const criancasComLanche = temLanche ? criancasWatched.filter((c) => c.querLanche).length : 0;
     const custoLanche = precoLanche * criancasComLanche;
     const custoExtras = calcularCustoExtras(
       extrasIdsWatched.map((id) => ({ extraId: id, quantidade: extrasQuantidadesWatched[id] ?? 1 })),
@@ -224,6 +241,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               temLanche={temLanche}
               onOpenSearchCliente={() => setShowClienteSearch(true)}
             />
+            <SectionHeader titulo="Configuração da Entrada" />
             <DuracaoLancheSection
               custoTempoPorPessoa={custoTempoPorPessoa}
               precoLancheEntrada={Number(configPreco?.precoLancheEntrada ?? 3)}
@@ -231,7 +249,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
               precoMeias={Number(configPreco?.precoMeias ?? 1.5)}
               cacifoOptions={cacifoOptions}
             />
+            <SectionHeader titulo="Extras" />
             <ExtrasEntradaSection numPessoas={custoComponentes.totalPessoas} />
+            <SectionHeader titulo="Observações" />
             <ObservacoesSection />
             <PagamentoEntradaSection
               entrada={entrada}

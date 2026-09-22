@@ -80,7 +80,9 @@ export default function PessoasEntradaSection({
                     {idadeAlerta && <AlertTriangle size={13} />}
                   </span>
                 ) : null}
-                {temLanche && (
+                {/* Só faz sentido escolher por criança quando há mais de uma:
+                    com uma só criança o switch "Inclui lanche?" decide. */}
+                {temLanche && criancas.fields.length > 1 && (
                   <div className="pb-3">
                     <Checkbox
                       checked={watch(`criancas.${index}.querLanche`)}

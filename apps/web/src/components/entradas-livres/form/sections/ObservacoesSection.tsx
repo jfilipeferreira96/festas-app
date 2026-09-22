@@ -1,7 +1,6 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { MessageSquare } from "lucide-react";
 import TextArea from "@/components/form/input/TextArea";
 import type { EntradaLivreFormData } from "../entrada-livre-form.schema";
 
@@ -10,9 +9,6 @@ export default function ObservacoesSection() {
 
   return (
     <div className="space-y-3">
-      <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
-        <MessageSquare size={14} className="text-brand-500" /> Observações
-      </span>
       <div>
         <span className="text-xs font-medium text-text-secondary block mb-1">Observações gerais</span>
         <TextArea

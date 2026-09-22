@@ -54,7 +54,8 @@ export default function ExtrasEntradaSection({ numPessoas }: ExtrasEntradaSectio
     <div className="space-y-3">
       {/* Colapsável com seta (pedido do cliente, 19/09/2026): os extras só
           aparecem quando a seta é aberta. Abre automaticamente se já houver
-          extras selecionados (edição). */}
+          extras selecionados (edição). O título "Extras" vem do SectionHeader
+          do form - aqui fica só o controlo colapsável. */}
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}
@@ -65,7 +66,10 @@ export default function ExtrasEntradaSection({ numPessoas }: ExtrasEntradaSectio
         ) : (
           <ChevronRight size={14} className="text-text-muted" />
         )}
-        <Gift size={14} className="text-text-muted" /> Extras
+        <Gift size={14} className="text-text-muted" />
+        <span className="text-xs text-text-muted font-normal">
+          {aberto || extrasIds.length > 0 ? "Esconder" : "Mostrar"}
+        </span>
         {extrasIds.length > 0 && (
           <span className="px-1.5 py-0.5 rounded-full bg-brand-50 text-brand-600 text-[10px] font-semibold">
             {extrasIds.length}

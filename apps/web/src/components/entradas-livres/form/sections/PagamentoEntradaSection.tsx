@@ -38,6 +38,10 @@ export default function PagamentoEntradaSection({
 
   const duracao = watch("duracaoMinutos");
   const meias = watch("meiasQuantidade") ?? 0;
+  // Total vivo: o EntradaLivreForm preenche custoTotal quando a composição
+  // muda (efeito de recálculo). Sem alterações, mantém o valor acordado
+  // guardado na BD - nunca fica preso a uma prop stale com 0.00 antigo.
+  const custoTotalForm = watch("custoTotal");
   const duracaoLabel = DURACAO_ENTRADA_OPTIONS.find((o) => o.value === String(duracao))?.label ?? `${duracao}min`;
 
   const pagamentosForm = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
@@ -50,7 +54,7 @@ export default function PagamentoEntradaSection({
     nota: p.nota ?? null,
     createdAt: p.createdAt,
   }));
-  const devido = Number(entrada?.custoTotalFinal ?? entrada?.custoTotal ?? 0);
+  const devido = Number(custoTotalForm ?? entrada?.custoTotalFinal ?? entrada?.custoTotal ?? 0);
   const recebido = totalPago(pagamentosEntrada);
   const falta = faltaPagar(devido, pagamentosEntrada);
 
