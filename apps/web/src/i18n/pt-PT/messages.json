@@ -127,7 +127,9 @@
     "localRequired": "Local é obrigatório",
     "dataRequired": "A data é obrigatória",
     "horasInvalidas": "A hora de fim tem de ser superior à hora de início",
-    "monitorOverlap": "O monitor já tem uma alocação sobreposta neste horário"
+    "monitorOverlap": "O monitor já tem uma alocação sobreposta neste horário",
+    "dataFimInvalida": "A data final tem de ser igual ou posterior à data inicial",
+    "limiteDiasExcedido": "Só é possível repetir a alocação até 62 dias"
   },
   "extra": {
     "notFound": "Extra não encontrado",

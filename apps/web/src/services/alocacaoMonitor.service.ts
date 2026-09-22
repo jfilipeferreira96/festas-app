@@ -9,6 +9,22 @@ interface CreateAlocacaoData {
   observacoes?: string;
 }
 
+/** Lote: repete a alocação diariamente até dataFim (inclusive). */
+export interface CreateAlocacaoLoteData extends CreateAlocacaoData {
+  dataFim: string;
+}
+
+/** Limite de dias por lote (~2 meses) para evitar criações descontroladas. */
+const MAX_DIAS_LOTE = 62;
+
+type AlocacaoCompleta = Awaited<ReturnType<typeof prisma.alocacaoMonitor.create>>;
+
+export interface ResultadoCriacaoLote {
+  criadas: number;
+  ignoradas: number;
+  alocacoes: AlocacaoCompleta[];
+}
+
 interface UpdateAlocacaoData {
   data?: string;
   horaInicio?: number;
@@ -127,6 +143,59 @@ export const alocacaoMonitorService = {
         local: { select: { id: true, nome: true } },
       },
     });
+  },
+
+  /**
+   * Cria a alocação repetida diariamente de `data` até `dataFim` (inclusive).
+   * Dias com conflito horário do monitor são ignorados (não abortam o lote).
+   */
+  async createLote(data: CreateAlocacaoLoteData): Promise<ResultadoCriacaoLote> {
+    if (!data.monitorId) throw new Error("MONITOR_REQUIRED");
+    if (!data.localId) throw new Error("LOCAL_REQUIRED");
+    if (!data.data) throw new Error("DATA_REQUIRED");
+    if (data.horaFim <= data.horaInicio) throw new Error("HORAS_INVALIDAS");
+    if (data.dataFim < data.data) throw new Error("DATA_FIM_INVALIDA");
+
+    const dias: string[] = [];
+    const dia = new Date(data.data + "T00:00:00.000Z");
+    const fim = new Date(data.dataFim + "T00:00:00.000Z");
+    while (dia <= fim) {
+      dias.push(dia.toISOString().slice(0, 10));
+      dia.setDate(dia.getDate() + 1);
+    }
+    if (dias.length > MAX_DIAS_LOTE) throw new Error("LIMITE_DIAS_EXCEDIDO");
+
+    const alocacoes: AlocacaoCompleta[] = [];
+    let ignoradas = 0;
+    for (const diaStr of dias) {
+      const existeSobreposicao = await this.verificarSobreposicao(
+        diaStr,
+        data.horaInicio,
+        data.horaFim,
+        data.monitorId
+      );
+      if (existeSobreposicao) {
+        ignoradas++;
+        continue;
+      }
+      alocacoes.push(
+        await prisma.alocacaoMonitor.create({
+          data: {
+            data: new Date(diaStr + "T00:00:00.000Z"),
+            horaInicio: data.horaInicio,
+            horaFim: data.horaFim,
+            monitorId: data.monitorId,
+            localId: data.localId,
+            observacoes: data.observacoes || null,
+          },
+          include: {
+            monitor: { select: { id: true, nome: true, fotoUrl: true } },
+            local: { select: { id: true, nome: true } },
+          },
+        })
+      );
+    }
+    return { criadas: alocacoes.length, ignoradas, alocacoes };
   },
 
   async update(id: string, data: UpdateAlocacaoData) {

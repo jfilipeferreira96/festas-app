@@ -11,6 +11,8 @@ const handleError = createRouteErrorHandler({
     DATA_REQUIRED: "alocacao.dataRequired",
     HORAS_INVALIDAS: "alocacao.horasInvalidas",
     MONITOR_OVERLAP: "alocacao.monitorOverlap",
+    DATA_FIM_INVALIDA: "alocacao.dataFimInvalida",
+    LIMITE_DIAS_EXCEDIDO: "alocacao.limiteDiasExcedido",
   },
   statusMap: {
     NOT_FOUND: 404,
@@ -19,6 +21,8 @@ const handleError = createRouteErrorHandler({
     DATA_REQUIRED: 400,
     HORAS_INVALIDAS: 400,
     MONITOR_OVERLAP: 409,
+    DATA_FIM_INVALIDA: 400,
+    LIMITE_DIAS_EXCEDIDO: 400,
   },
   serviceName: "AlocacaoMonitor",
 });
@@ -58,16 +62,21 @@ export async function POST(request: NextRequest) {
     const denied = checkFuncao(auth.user, "ADMINISTRADOR");
     if (denied) return denied;
 
-    const { data, horaInicio, horaFim, monitorId, localId, observacoes } = await request.json();
-    const alocacao = await alocacaoMonitorService.create({
+    const { data, dataFim, horaInicio, horaFim, monitorId, localId, observacoes } =
+      await request.json();
+    const payload = {
       data,
       horaInicio: Number(horaInicio),
       horaFim: Number(horaFim),
       monitorId,
       localId,
       observacoes,
-    });
-    return NextResponse.json(alocacao, { status: 201 });
+    };
+    // Com dataFim: cria a alocação repetida diariamente (lote)
+    const resultado = dataFim
+      ? await alocacaoMonitorService.createLote({ ...payload, dataFim })
+      : await alocacaoMonitorService.create(payload);
+    return NextResponse.json(resultado, { status: 201 });
   } catch (error) {
     return handleError(error);
   }

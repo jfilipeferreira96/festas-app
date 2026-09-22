@@ -40,11 +40,28 @@ export interface AlocacaoFiltros {
 
 export interface CriarAlocacaoData {
   data: string;
+  /** Último dia (inclusive) para repetir a alocação diariamente. Opcional. */
+  dataFim?: string;
   horaInicio: number;
   horaFim: number;
   monitorId: string;
   localId: string;
   observacoes?: string;
+}
+
+/** Resposta do POST quando a alocação é repetida por vários dias. */
+export interface ResultadoCriacaoLote {
+  criadas: number;
+  /** Dias ignorados por conflito horário do monitor. */
+  ignoradas: number;
+  alocacoes: AlocacaoMonitor[];
+}
+
+export type RespostaCriarAlocacao = AlocacaoMonitor | ResultadoCriacaoLote;
+
+/** Type guard: a criação devolveu um lote (dataFim presente). */
+export function isResultadoLote(r: RespostaCriarAlocacao): r is ResultadoCriacaoLote {
+  return typeof (r as ResultadoCriacaoLote).criadas === "number";
 }
 
 export interface AtualizarAlocacaoData {
@@ -71,7 +88,7 @@ export const alocacaoMonitorApi = {
   getById: (id: string) => api<AlocacaoMonitor>(`/api/alocacoes-monitor/${id}`),
 
   create: (data: CriarAlocacaoData) =>
-    api<AlocacaoMonitor>("/api/alocacoes-monitor", {
+    api<RespostaCriarAlocacao>("/api/alocacoes-monitor", {
       method: "POST",
       body: JSON.stringify(data),
     }),

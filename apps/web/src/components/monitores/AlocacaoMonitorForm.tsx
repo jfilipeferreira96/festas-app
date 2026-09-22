@@ -14,6 +14,8 @@ import { useMonitores } from "@/hooks/use-monitores";
 import { useLocais } from "@/hooks/use-locais";
 import { useCreateAlocacao, useUpdateAlocacao } from "@/hooks/use-alocacoes-monitor";
 import { horaParaMinutos, minutosParaHora } from "@/lib/api/alocacaoMonitor";
+import { isResultadoLote } from "@/lib/api/alocacaoMonitor";
+import { useToast } from "@/hooks/use-toast";
 import { corPorId } from "@/lib/local-cores";
 import type { AlocacaoMonitor } from "@/lib/api/alocacaoMonitor";
 import { toLocalISODate } from "@/utils/date";
@@ -21,6 +23,8 @@ import { toLocalISODate } from "@/utils/date";
 const alocacaoSchema = z
   .object({
     data: z.string().min(1, "A data é obrigatória"),
+    /** Repetir a alocação diariamente até esta data (inclusive). Opcional. */
+    dataFim: z.string().optional(),
     monitorId: z.string().min(1, "Selecione um monitor"),
     localId: z.string().min(1, "Selecione um local"),
     horaInicioStr: z.string().min(1, "Indique a hora de início"),
@@ -30,6 +34,10 @@ const alocacaoSchema = z
   .refine((d) => horaParaMinutos(d.horaFimStr) > horaParaMinutos(d.horaInicioStr), {
     message: "A hora de fim tem de ser superior à hora de início",
     path: ["horaFimStr"],
+  })
+  .refine((d) => !d.dataFim || d.dataFim >= d.data, {
+    message: "A data final tem de ser igual ou posterior à data inicial",
+    path: ["dataFim"],
   });
 
 type AlocacaoFormData = z.infer<typeof alocacaoSchema>;
@@ -53,6 +61,7 @@ export default function AlocacaoMonitorForm({
   const { data: locais } = useLocais();
   const createAlocacao = useCreateAlocacao();
   const updateAlocacao = useUpdateAlocacao();
+  const toast = useToast();
 
   const isEditing = !!alocacao;
 
@@ -81,6 +90,7 @@ export default function AlocacaoMonitorForm({
     if (alocacao) {
       reset({
         data: alocacao.data?.split("T")[0] ?? data,
+        dataFim: "",
         monitorId: alocacao.monitorId,
         localId: alocacao.localId,
         horaInicioStr: minutosParaHora(alocacao.horaInicio),
@@ -90,6 +100,7 @@ export default function AlocacaoMonitorForm({
     } else {
       reset({
         data,
+        dataFim: "",
         monitorId: "",
         localId: "",
         horaInicioStr: "14:00",
@@ -120,6 +131,7 @@ export default function AlocacaoMonitorForm({
   );
 
   const localId = watch("localId");
+  const dataFim = watch("dataFim");
 
   // DatePicker de data - estável para não reiniciar o flatpickr a cada render.
   const handleDataChange = useCallback(
@@ -130,10 +142,26 @@ export default function AlocacaoMonitorForm({
     [setValue]
   );
 
+  const handleDataFimChange = useCallback(
+    ([date]: Date[]) => {
+      setValue("dataFim", date ? toLocalISODate(date) : "", { shouldValidate: true });
+    },
+    [setValue]
+  );
+
+  /** Nº de dias do lote (inclusive) - só faz sentido em criação. */
+  const diasLote = useMemo(() => {
+    if (isEditing || !dataFim || dataFim < watch("data")) return 1;
+    const inicio = new Date(watch("data") + "T00:00:00.000Z");
+    const fim = new Date(dataFim + "T00:00:00.000Z");
+    return Math.round((fim.getTime() - inicio.getTime()) / 86_400_000) + 1;
+  }, [isEditing, dataFim, watch]);
+
   const onSubmit = useCallback(
     async (formData: AlocacaoFormData) => {
       const payload = {
         data: formData.data,
+        ...(formData.dataFim ? { dataFim: formData.dataFim } : {}),
         monitorId: formData.monitorId,
         localId: formData.localId,
         horaInicio: horaParaMinutos(formData.horaInicioStr),
@@ -144,11 +172,16 @@ export default function AlocacaoMonitorForm({
       if (isEditing && alocacao) {
         await updateAlocacao.mutateAsync({ id: alocacao.id, data: payload });
       } else {
-        await createAlocacao.mutateAsync(payload);
+        const resultado = await createAlocacao.mutateAsync(payload);
+        if (isResultadoLote(resultado) && resultado.ignoradas > 0) {
+          toast.warning(
+            `${resultado.criadas} alocação(ões) criada(s); ${resultado.ignoradas} dia(s) ignorado(s) por conflito horário.`
+          );
+        }
       }
       onClose();
     },
-    [isEditing, alocacao, createAlocacao, updateAlocacao, onClose]
+    [isEditing, alocacao, createAlocacao, updateAlocacao, onClose, toast]
   );
 
   return (
@@ -158,16 +191,39 @@ export default function AlocacaoMonitorForm({
           {isEditing ? "Editar Alocação" : "Nova Alocação de Monitor"}
         </h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Data */}
-          <div>
-            <label className="block text-sm font-medium text-text-primary mb-1.5">Data</label>
-            <DatePicker
-              id="alocacao-data-picker"
-              defaultDate={watch("data")}
-              onChange={handleDataChange}
-            />
-            {errors.data && (
-              <p className="text-xs text-error-500 mt-1">{errors.data.message}</p>
+          {/* Data + Repetição */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-1.5">Data</label>
+              <DatePicker
+                id="alocacao-data-picker"
+                defaultDate={watch("data")}
+                onChange={handleDataChange}
+              />
+              {errors.data && (
+                <p className="text-xs text-error-500 mt-1">{errors.data.message}</p>
+              )}
+            </div>
+            {!isEditing && (
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1.5">
+                  Repetir até <span className="text-text-muted font-normal">(opcional)</span>
+                </label>
+                <DatePicker
+                  id="alocacao-datafim-picker"
+                  defaultDate={dataFim || undefined}
+                  onChange={handleDataFimChange}
+                />
+                {errors.dataFim ? (
+                  <p className="text-xs text-error-500 mt-1">{errors.dataFim.message}</p>
+                ) : (
+                  diasLote > 1 && (
+                    <p className="text-xs text-text-muted mt-1">
+                      Cria {diasLote} alocações (uma por dia); dias com conflito são ignorados.
+                    </p>
+                  )
+                )}
+              </div>
             )}
           </div>
 
