@@ -562,6 +562,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                   {hasBolo && (
                     <p className="text-sm text-text-primary flex items-center gap-1">
                       🎂 {BOLO_LABELS_SHORT[r.bolo!] ?? r.bolo}
+                      {(r.boloQuantidade ?? 1) > 1 && <span className="text-xs text-text-muted">×{r.boloQuantidade}</span>}
                       {r.boloTema && <span className="text-xs text-text-muted">· {r.boloTema}</span>}
                     </p>
                   )}
@@ -780,8 +781,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                 </button>
               </Tooltip>
             )}
-            {/* Quick action: Pagamento (todos os estados excepto CONCLUIDA/CANCELADA) */}
-            {r.estado !== "CONCLUIDA" && r.estado !== "CANCELADA" && (
+            {/* Quick action: Pagamento (todos os estados excepto CANCELADA) */}
+            {r.estado !== "CANCELADA" && (
               <Tooltip content="Gerir pagamento" position="top" theme="dark">
                 <button
                   onClick={() => setPagamentoReserva(r)}

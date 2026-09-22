@@ -6,7 +6,7 @@ import { entradaLivreApi, type CriarEntradaLivreDTO } from "@/lib/api/entradaLiv
 // ── Queries ───────────────────────────────────────
 
 export function useEntradasLivres(
-  filtros?: { estado?: string; localId?: string; data?: string; dataInicio?: string; dataFim?: string; dataConclusao?: string; pesquisa?: string },
+  filtros?: { estado?: string; data?: string; dataInicio?: string; dataFim?: string; dataConclusao?: string; pesquisa?: string },
   options?: { refetchInterval?: number | false },
 ) {
   return useQuery({

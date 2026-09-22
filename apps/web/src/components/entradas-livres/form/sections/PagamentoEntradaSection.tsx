@@ -1,8 +1,6 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import InputField from "@/components/form/input/InputField";
-import FieldLabel from "@/components/form/FieldLabel";
 import { formatEuro } from "@/lib/format";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
 import type { EntradaLivre } from "@/lib/api/entradaLivre";
@@ -16,6 +14,7 @@ interface CustoComponentes {
   criancasComLanche: number;
   custoTempo: number;
   custoLanche: number;
+  custoExtras: number;
   total: number;
 }
 
@@ -42,7 +41,6 @@ export default function PagamentoEntradaSection({
   const duracaoLabel = DURACAO_ENTRADA_OPTIONS.find((o) => o.value === String(duracao))?.label ?? `${duracao}min`;
 
   const pagamentosForm = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
-  const custo = watch("custoTotal") ?? custoCalculado;
 
   // Resumo em edição: estado do acerto visível sem abrir "Gerir pagamento".
   const pagamentosEntrada: PagamentoLedgerItem[] = (entrada?.pagamentos ?? []).map((p) => ({
@@ -80,31 +78,13 @@ export default function PagamentoEntradaSection({
         />
       ) : (
         <div className="space-y-3">
-          {/* Custo total: sempre visível, pré-preenchido com o cálculo e
-              apagável (vazio = segue o cálculo). Sem checkbox opcional. */}
-          <div>
-            <FieldLabel>Total a pagar (€)</FieldLabel>
-            <div className="flex items-center gap-2">
-              <InputField
-                type="number"
-                step={0.01}
-                min={0}
-                placeholder={custoCalculado > 0 ? custoCalculado.toFixed(2).replace(".", ",") : "0,00"}
-                autoComplete="off"
-                value={watch("custoTotal") != null ? String(watch("custoTotal")) : ""}
-                onChange={(e) =>
-                  setValue("custoTotal", e.target.value === "" ? undefined : Number(e.target.value), {
-                    shouldDirty: true,
-                  })
-                }
-              />
-              <span className="text-xs text-text-muted whitespace-nowrap">≈ {formatEuro(custoCalculado)}</span>
-            </div>
-          </div>
+          {/* Total sempre calculado (tarifário + extras), igual ao form de Festas:
+              não existe input livre - correcções formais ficam no "Gerir pagamento"
+              (ajustes) após criar a entrada. O custoTotal segue hidden no payload. */}
 
-          {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
+          {/* Ledger de pagamentos: adicionar (método obrigatório) até completar; pago derivado */}
           <PagamentosLedgerSection
-            totalDevido={custo}
+            totalDevido={custoCalculado}
             pagamentos={pagamentosForm}
             onAdd={(p) =>
               setValue(
@@ -131,7 +111,7 @@ export default function PagamentoEntradaSection({
       {!isEdit && (
         <BreakdownEntrada
           custoComponentes={custoComponentes}
-          custoFinal={custo}
+          custoFinal={custoCalculado}
           precoMeias={precoMeias}
           meias={meias}
           duracaoLabel={duracaoLabel}
@@ -174,6 +154,12 @@ function BreakdownEntrada({ custoComponentes, custoFinal, precoMeias, meias, dur
             Meias ({meias} {meias === 1 ? "par" : "pares"})
           </span>
           <span className="text-xs text-text-secondary">{formatEuro(meias * precoMeias)}</span>
+        </div>
+      )}
+      {custoComponentes.custoExtras > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-text-muted">Extras</span>
+          <span className="text-xs text-text-secondary">{formatEuro(custoComponentes.custoExtras)}</span>
         </div>
       )}
       <div className="flex items-center justify-between pt-1.5 border-t border-border/50">

@@ -135,7 +135,10 @@ export const entradaLivreApi = {
   cancelar: (id: string) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/cancelar`, { method: "PATCH" }),
 
-  atualizarPagamento: (id: string, data: { pagoExcesso?: boolean; pagamentos?: CriarPagamentoDTO[] | null }) =>
+  atualizarPagamento: (
+    id: string,
+    data: { custoTotalFinal?: number | null; pagoExcesso?: boolean; pagamentos?: CriarPagamentoDTO[] | null }
+  ) =>
     api<EntradaLivre>(`/api/entradas-livres/${id}/pagamento`, {
       method: "PATCH",
       body: JSON.stringify(data),

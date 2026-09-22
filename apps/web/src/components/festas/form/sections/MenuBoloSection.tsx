@@ -74,6 +74,7 @@ export default function MenuBoloSection({
     }
     setValue("bolo", valor, { shouldDirty: true, shouldValidate: true });
     setValue("boloQuantidade", undefined, { shouldDirty: true });
+    setValue("boloTema", "", { shouldDirty: true });
   };
 
   /** Escolher um bolo do catálogo: entra nos extras (faturação) e deriva o
@@ -86,6 +87,7 @@ export default function MenuBoloSection({
       setValue("extrasIds", restantes.filter((id) => id !== extra.id), { shouldDirty: true });
       setValue("bolo", undefined, { shouldDirty: true });
       setValue("boloQuantidade", undefined, { shouldDirty: true });
+      setValue("boloTema", "", { shouldDirty: true });
       return;
     }
     setValue("extrasIds", [...restantes, extra.id], { shouldDirty: true });
@@ -100,6 +102,7 @@ export default function MenuBoloSection({
   const limparBoloLegado = () => {
     setValue("bolo", undefined, { shouldDirty: true });
     setValue("boloQuantidade", undefined, { shouldDirty: true });
+    setValue("boloTema", "", { shouldDirty: true });
   };
 
   const alterarQuantidade = (valor: number) => {
