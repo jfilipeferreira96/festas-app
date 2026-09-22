@@ -113,7 +113,7 @@ export default function NewsletterPage() {
             searchPlaceholder="Pesquisar segmento..."
             searchableFields={["nome"]}
             pagination
-            pageSize={10}
+            pageSize={25}
             emptyState={{
               title: "Sem segmentos",
               description: "Sincronize os aniversariantes para criar o primeiro segmento.",

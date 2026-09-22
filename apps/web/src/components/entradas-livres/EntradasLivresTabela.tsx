@@ -312,7 +312,7 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
           );
         }}
         pagination
-        pageSize={10}
+        pageSize={25}
         renderActions={(r) => {
           // CACIFOS read-only: apenas "Ver detalhes"
           if (isCacifos) {

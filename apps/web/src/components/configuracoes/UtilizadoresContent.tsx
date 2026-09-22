@@ -355,7 +355,7 @@ export default function UtilizadoresContent({
         searchableFields={["name", "email"]}
         itemLabel="utilizadores"
         pagination
-        pageSize={10}
+        pageSize={25}
         onEdit={handleOpenEdit}
         onDelete={handleDeleteClick}
         canManage={true}

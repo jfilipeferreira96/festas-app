@@ -37,28 +37,14 @@ export default function ADecorrerContent() {
         ))}
       </div>
 
-      <p className="mt-4 text-xs text-text-muted">
-        Vista em tempo real - atualiza automaticamente a cada 30 segundos.
-      </p>
-
       <div className="mt-6 space-y-10">
         {(aba === "tudo" || aba === "festas") && (
           <section>
-            {aba === "tudo" && (
-              <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <PartyPopper size={14} className="text-brand-500" /> Festas
-              </h2>
-            )}
             <FestasContent />
           </section>
         )}
         {(aba === "tudo" || aba === "entradas") && (
           <section>
-            {aba === "tudo" && (
-              <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                <DoorOpen size={14} className="text-brand-500" /> Entradas Livres
-              </h2>
-            )}
             <EntradasAtivasContent />
           </section>
         )}

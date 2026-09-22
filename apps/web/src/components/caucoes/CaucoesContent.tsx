@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Shield } from "lucide-react";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, StatusBadge, Button } from "@/components/ui";
 import LoadingState from "@/components/ui/LoadingState";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
 import { useCaucoes } from "@/hooks/use-caucoes";
@@ -199,18 +198,13 @@ export default function CaucoesContent() {
             (r.aniversariantes?.some((a) => a.aniversariante.nome.toLowerCase().includes(q)) ?? false)
           }
           pagination
-          pageSize={10}
+          pageSize={25}
           emptyState={{
             title: "Sem cauções",
             description: "Não há cauções para o filtro selecionado.",
           }}
         />
       )}
-
-      <div className="flex items-center gap-1.5 mt-4 text-xs text-text-muted">
-        <Shield size={13} />
-        Cauções pagas são devolvidas ao cliente no final da festa (se tudo estiver em ordem).
-      </div>
     </div>
   );
 }

@@ -153,7 +153,7 @@ export default function LocaisContent() {
           searchableFields={["nome"]}
           itemLabel="locais"
           pagination
-          pageSize={10}
+          pageSize={25}
           onEdit={handleEdit}
           emptyState={{
             title: "Nenhum local encontrado",

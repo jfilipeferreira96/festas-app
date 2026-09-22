@@ -274,7 +274,7 @@ export default function ClientesContent() {
             searchableFields={["nome", "email", "telefone"]}
             itemLabel="clientes"
             pagination
-            pageSize={10}
+            pageSize={25}
             onEdit={canEdit ? handleEdit : undefined}
             onDelete={canEdit ? handleDelete : undefined}
             onView={handleView}

@@ -243,7 +243,7 @@ export default function ExtrasContent() {
           searchableFields={["nome"]}
           itemLabel="extras"
           pagination
-          pageSize={10}
+          pageSize={25}
           onEdit={handleEdit}
           onDelete={handleDelete}
           emptyState={{

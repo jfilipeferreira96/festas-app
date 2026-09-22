@@ -190,7 +190,7 @@ export default function EtapasFestaContent() {
           searchableFields={["nome"]}
           itemLabel="etapas"
           pagination
-          pageSize={10}
+          pageSize={25}
           onEdit={handleEdit}
           onDelete={handleDelete}
           emptyState={{

@@ -516,7 +516,7 @@ export default function LancheContent() {
             searchPlaceholder="Pesquisar por aniversariante..."
             searchFn={(f, q) => (f.nomeFesta ?? "").toLowerCase().includes(q)}
             pagination
-            pageSize={10}
+            pageSize={25}
             renderActions={(f) => (
               <div className="flex items-center justify-end gap-1 no-print">
                 <Tooltip content="Imprimir lista de crianças" position="top" theme="dark">
@@ -578,7 +578,7 @@ export default function LancheContent() {
             searchPlaceholder="Pesquisar por encarregado..."
             searchFn={(e, q) => (e.encarregadoNome ?? "").toLowerCase().includes(q)}
             pagination
-            pageSize={10}
+            pageSize={25}
           />
         </div>
         </>

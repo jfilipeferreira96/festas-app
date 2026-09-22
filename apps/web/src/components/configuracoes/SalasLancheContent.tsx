@@ -147,7 +147,7 @@ export default function SalasLancheContent() {
           searchableFields={["nome"]}
           itemLabel="salas"
           pagination
-          pageSize={10}
+          pageSize={25}
           onEdit={handleEdit}
           onDelete={handleDelete}
           emptyState={{

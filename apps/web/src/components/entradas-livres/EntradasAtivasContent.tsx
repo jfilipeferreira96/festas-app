@@ -156,11 +156,6 @@ export default function EntradasAtivasContent() {
         />
       </div>
 
-      <p className="mt-4 text-xs text-text-muted">
-        Alertas: a piscar a laranja, entrada nos últimos 15 min · a vermelho, tempo
-        excedido (aguarda conclusão e pagamento).
-      </p>
-
       {/* Concluir Resumo Modal */}
       {confirmConcluir && (
         <ConcluirResumoModal

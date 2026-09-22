@@ -344,7 +344,7 @@ export default function MonitoresContent() {
           searchableFields={["nome", "contacto"]}
           itemLabel="monitores"
           pagination
-          pageSize={10}
+          pageSize={25}
           onEdit={isAdmin ? undefined : handleEdit}
           onDelete={handleDelete}
           {...(isAdmin

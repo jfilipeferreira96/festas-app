@@ -121,7 +121,7 @@ const mainNavItems: NavItem[] = [
 // Grupo "Páginas Funcionários" (21/09/2026): Cacifos, Lanche, Monitores e
 // Festas a Acabar agrupados no fundo do menu.
 const funcionariosItems: NavItem = {
-  name: "Páginas Funcionários",
+  name: "Pág. Funcionários",
   icon: <UserCog className="w-5 h-5" />,
   subItems: [
     { name: "Cacifos", path: "/cacifos", icon: <Package className="w-4 h-4" />, modulo: "cacifos" },
@@ -322,7 +322,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
                       <span className={`${isFuncOpen || funcionariosActivo ? "menu-item-icon-soft-active" : "menu-item-icon-inactive"}`}>
                         {funcionariosItems.icon}
                       </span>
-                      {showExpanded && <span className="menu-item-text">Páginas Funcionários</span>}
+                      {showExpanded && <span className="menu-item-text">Pág. Funcionários</span>}
                     </div>
                     <ChevronDown
                       className={`menu-item-arrow w-4 h-4 transition-all duration-200 ${
