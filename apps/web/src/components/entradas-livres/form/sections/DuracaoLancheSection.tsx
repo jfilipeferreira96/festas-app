@@ -61,29 +61,32 @@ export default function DuracaoLancheSection({
       {/* Lanche / Adulto / Meias numa única linha (pedido do cliente, 22/09/2026) */}
       <div className="border-t border-border pt-3">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="space-y-1.5">
+          <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-text-primary">Inclui lanche?</span>
               <Switch
                 checked={!!temLanche}
                 onChange={(checked) => setValue("temLanche", checked, { shouldDirty: true })}
+                label="Inclui lanche?"
               />
+              <span className="text-xs text-text-muted">+{formatEuro(precoLancheEntrada)}/criança</span>
             </div>
-            <p className="text-xs text-text-muted">
-              +{formatEuro(precoLancheEntrada)}/criança (marcar por criança acima)
+            <p className="mt-1 text-[11px] text-text-muted">
+              Marcar por cada criança na secção acima.
             </p>
           </div>
-          <div className="space-y-1.5">
+          <div>
             <Checkbox
               checked={numAdultos > 0}
               onChange={(checked) => setValue("numAdultos", checked ? 1 : 0, { shouldDirty: true })}
               label="Adulto acompanha e paga entrada"
             />
-            <p className="text-xs text-text-muted ml-8">+{formatEuro(precoAdulto)}/adulto</p>
+            {precoAdulto > 0 && (
+              <p className="ml-8 text-xs text-text-muted">+{formatEuro(precoAdulto)}/adulto</p>
+            )}
           </div>
-          <div className="space-y-1.5">
+          <div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-medium text-text-primary">Meias</span>
+              <label className="text-sm font-medium text-text-primary">Meias</label>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
