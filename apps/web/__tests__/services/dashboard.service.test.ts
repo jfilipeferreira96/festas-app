@@ -148,7 +148,6 @@ describe("Dashboard Service", () => {
           meiasQuantidade: 10,
           meiasPrecoUnit: 2, // 20€ de meias - NÃO se soma à parte
           clienteId: TEST_IDS.CLIENTE_1,
-          localId: TEST_IDS.LOCAL_1,
         },
       });
 
@@ -220,7 +219,6 @@ describe("Dashboard Service", () => {
             ],
           },
           clienteId: TEST_IDS.CLIENTE_1,
-          localId: TEST_IDS.LOCAL_1,
         },
       });
 
@@ -246,7 +244,6 @@ describe("Dashboard Service", () => {
           pago: false,
           pagamentos: { create: [{ valor: 999, metodo: "DINHEIRO" }] }, // não deve contar
           clienteId: TEST_IDS.CLIENTE_1,
-          localId: TEST_IDS.LOCAL_1,
         },
       });
 
@@ -272,7 +269,6 @@ describe("Dashboard Service", () => {
           numCriancas: 8,
           estado: "CONCLUIDA",
           clienteId: TEST_IDS.CLIENTE_1,
-          localId: TEST_IDS.LOCAL_1,
         },
       });
 
@@ -296,11 +292,11 @@ describe("Dashboard Service", () => {
       expect(festas[0]!.estado).toBe("EM_CURSO");
     });
 
-    it("should include relations (local, aniversariante, monitores, cacifos, etapas)", async () => {
+    it("should include relations (salaLanche, aniversariante, monitores, cacifos, etapas)", async () => {
       const festas = await dashboardService.getFestasEmCurso();
       if (festas.length > 0) {
         const festa = festas[0]!;
-        expect(festa).toHaveProperty("local");
+        expect(festa).toHaveProperty("salaLanche");
         expect(festa).toHaveProperty("aniversariantes");
       }
     });

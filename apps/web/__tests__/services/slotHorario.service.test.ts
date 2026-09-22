@@ -364,7 +364,6 @@ describe("SlotHorario Service", () => {
           estado: "CONFIRMADO",
           cor: "#FF0000",
           clienteId: "test-cliente-001",
-          localId: "test-local-001",
         },
       });
 
@@ -379,7 +378,6 @@ describe("SlotHorario Service", () => {
           estado: "RESERVA",
           cor: "#00FF00",
           clienteId: "test-cliente-001",
-          localId: "test-local-001",
         },
       });
 
@@ -394,7 +392,6 @@ describe("SlotHorario Service", () => {
           estado: "CANCELADA",
           cor: "#0000FF",
           clienteId: "test-cliente-001",
-          localId: "test-local-001",
         },
       });
     }, 60000);

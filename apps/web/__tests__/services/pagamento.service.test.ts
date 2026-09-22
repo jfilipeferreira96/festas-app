@@ -39,7 +39,6 @@ describe("pagamentoService (ledger de pagamentos)", () => {
         data: new Date(),
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         valorTotal: 100,
       },
@@ -221,7 +220,6 @@ describe("pagamentoService (ledger de pagamentos)", () => {
         data: futuro.toISOString().split("T")[0]!,
         horario: "15:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [
           {
             nome: "Criança Ledger Integração",

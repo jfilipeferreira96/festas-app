@@ -84,7 +84,6 @@ describe("Extras - quantidade e cobrança por pessoa", () => {
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         extrasIds: [TEST_IDS.EXTRA_1, TEST_IDS.EXTRA_2],
         extrasQuantidades: { [TEST_IDS.EXTRA_1]: 3 },
@@ -101,7 +100,6 @@ describe("Extras - quantidade e cobrança por pessoa", () => {
         data: futureStr,
         horario: "12:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         extrasIds: [TEST_IDS.EXTRA_1],
       });
@@ -121,7 +119,6 @@ describe("Extras - quantidade e cobrança por pessoa", () => {
         data: futureStr,
         horario: "16:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         bolo: "NOSSO_1KG",
       });
@@ -134,7 +131,6 @@ describe("Extras - quantidade e cobrança por pessoa", () => {
        
         horario: "20:30",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         bolo: "PAIS_TRAZEM",
         boloQuantidade: 3,
@@ -147,7 +143,6 @@ describe("Extras - quantidade e cobrança por pessoa", () => {
         data: futureStr,
         horario: "18:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         bolo: "A_DECIDIR",
       });

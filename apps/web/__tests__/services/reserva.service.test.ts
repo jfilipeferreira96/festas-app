@@ -49,7 +49,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "16:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 15,
         notas: "Teste de criação",
@@ -58,7 +57,6 @@ describe("Reserva Service", () => {
       expect(reserva).toBeDefined();
       expect(reserva.aniversariantes.length).toBeGreaterThan(0);
       expect(reserva.estado).toBe("RESERVA");
-      expect(reserva.local.id).toBe(TEST_IDS.LOCAL_1);
 
       // Cleanup (create() já não pré-reserva cacifos - materialização é no dia)
       await testPrisma.reservaAniversariante.deleteMany({ where: { reservaId: reserva.id } });
@@ -70,7 +68,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "15:30",
         duracaoMinutos: 90,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });
@@ -86,7 +83,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "21:30",
         duracaoMinutos: 90,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
         valorTotal: 150,
@@ -113,7 +109,6 @@ describe("Reserva Service", () => {
           data: "",
           horario: "16:00",
           duracaoMinutos: 120,
-          localId: TEST_IDS.LOCAL_1,
         })
       ).rejects.toThrow("DATA_REQUIRED");
     });
@@ -125,56 +120,29 @@ describe("Reserva Service", () => {
           data: tomorrowStr,
           horario: "",
           duracaoMinutos: 120,
-          localId: TEST_IDS.LOCAL_1,
         })
       ).rejects.toThrow("HORARIO_REQUIRED");
     });
 
-    it("should throw LOCAL_REQUIRED if missing", async () => {
-      await expect(
-        reservaService.create({
-          clienteId: TEST_IDS.CLIENTE_1,
-          data: tomorrowStr,
-          horario: "16:00",
-          duracaoMinutos: 120,
-          localId: "",
-        })
-      ).rejects.toThrow("LOCAL_REQUIRED");
-    });
-
-    it("should throw LOCAL_NOT_FOUND for non-existent local", async () => {
-      await expect(
-        reservaService.create({
-          clienteId: TEST_IDS.CLIENTE_1,
-          data: tomorrowStr,
-          horario: "16:00",
-          duracaoMinutos: 120,
-          localId: "non-existent-local",
-        })
-      ).rejects.toThrow("LOCAL_NOT_FOUND");
-    });
-
     it("should throw SLOT_OCCUPIED for exact same horario (slot já ocupado)", async () => {
-      // RESERVA_CONFIRMADA do seed está hoje às 10:00 no LOCAL_1
+      // RESERVA_CONFIRMADA do seed está hoje às 10:00
       await expect(
         reservaService.create({
           clienteId: TEST_IDS.CLIENTE_1,
           data: todayStr,
           horario: "10:00",
           duracaoMinutos: 120,
-          localId: TEST_IDS.LOCAL_2,
         })
       ).rejects.toThrow("SLOT_OCCUPIED");
     });
 
-    it("deve permitir criar festas com horários diferentes sobrepostos no MESMO local (grelha desfasada)", async () => {
-      // Grelha diária: entradas desfasadas coexistem no parque (Local é informativo)
+    it("deve permitir criar festas com horários diferentes sobrepostos (grelha desfasada)", async () => {
+      // Grelha diária: entradas desfasadas coexistem no parque (a festa não tem sala)
       const primeira = await reservaService.create({
         clienteId: TEST_IDS.CLIENTE_1,
         data: tomorrowStr,
         horario: "14:00",
         duracaoMinutos: 135,
-        localId: TEST_IDS.LOCAL_1,
         numCriancas: 10,
       });
 
@@ -182,8 +150,7 @@ describe("Reserva Service", () => {
         clienteId: TEST_IDS.CLIENTE_1,
         data: tomorrowStr,
         horario: "14:15",
-        duracaoMinutos: 135,
-        localId: TEST_IDS.LOCAL_1, // mesmo local, sobreposição temporal
+        duracaoMinutos: 135, // sobreposição temporal
         numCriancas: 10,
       });
 
@@ -200,7 +167,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "09:30",
         duracaoMinutos: 135,
-        localId: TEST_IDS.LOCAL_1,
         numCriancas: 10,
       });
       const b = await reservaService.create({
@@ -208,7 +174,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "09:45",
         duracaoMinutos: 135,
-        localId: TEST_IDS.LOCAL_2,
         numCriancas: 10,
       });
 
@@ -226,7 +191,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "10:15",
         duracaoMinutos: 135,
-        localId: TEST_IDS.LOCAL_2,
         numCriancas: 10,
         numAdultos: 3,
       });
@@ -245,7 +209,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "17:00",
         duracaoMinutos: 90,
-        localId: TEST_IDS.LOCAL_1,
         extrasIds: [TEST_IDS.EXTRA_1],
       });
 
@@ -270,11 +233,6 @@ describe("Reserva Service", () => {
       expect(result.items.length).toBeGreaterThanOrEqual(1);
       expect(result.items.every((r: { estado: string }) => r.estado === "CONFIRMADO")).toBe(true);
     });
-
-    it("should filter by localId", async () => {
-      const result = await reservaService.list({ localId: TEST_IDS.LOCAL_1 });
-      expect(result.items.every((r: { localId: string }) => r.localId === TEST_IDS.LOCAL_1)).toBe(true);
-    });
   });
 
   // ── getById ───────────────────────────────────────────────────
@@ -283,7 +241,6 @@ describe("Reserva Service", () => {
       const reserva = await reservaService.getById(TEST_IDS.RESERVA_CONFIRMADA);
       expect(reserva).toBeDefined();
       expect(reserva.id).toBe(TEST_IDS.RESERVA_CONFIRMADA);
-      expect(reserva.local).toBeDefined();
       expect(reserva.cliente).toBeDefined();
     });
 
@@ -330,7 +287,6 @@ describe("Reserva Service", () => {
           duracaoMinutos: 60,
           numCriancas: 5,
           estado: "CONCLUIDA",
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -353,7 +309,6 @@ describe("Reserva Service", () => {
           duracaoMinutos: 60,
           numCriancas: 5,
           estado: "RESERVA",
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -379,7 +334,6 @@ describe("Reserva Service", () => {
           fimPrevisto: new Date(agora.getTime() + 90 * 60_000),
           valorTotal: 100,
           pago: true,
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
           pagamentos: { create: [{ valor: 100, metodo: "DINHEIRO" }] },
         },
@@ -423,7 +377,6 @@ describe("Reserva Service", () => {
           duracaoMinutos: 60,
           numCriancas: 5,
           estado: "RESERVA",
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -443,7 +396,6 @@ describe("Reserva Service", () => {
           numCriancas: 5,
           estado: "CONFIRMADO",
           inicioEm: new Date(),
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -471,7 +423,6 @@ describe("Reserva Service", () => {
           estado: "EM_CURSO",
           inicioEm: inicio,
           fimPrevisto: fim,
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -521,7 +472,6 @@ describe("Reserva Service", () => {
           fimPrevisto,
           valorTotal: 100,
           pago: true,
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -554,7 +504,6 @@ describe("Reserva Service", () => {
           fimPrevisto,
           valorTotal: 100,
           pago: true,
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -585,7 +534,6 @@ describe("Reserva Service", () => {
           fimPrevisto,
           valorTotal: 100,
           pago: true,
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -614,7 +562,6 @@ describe("Reserva Service", () => {
           fimPrevisto,
           valorTotal: 100,
           pago: true,
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
         },
       });
@@ -713,7 +660,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "18:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_2,
         clienteId: TEST_IDS.CLIENTE_2,
         numCriancas: 10,
         monitoresIds: [TEST_IDS.MONITOR_1, TEST_IDS.MONITOR_2],
@@ -826,7 +772,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
       });
       expect(result.disponivel).toBe(true);
       expect(result.conflitos.length).toBe(0);
@@ -838,7 +783,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });
@@ -848,7 +792,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "11:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
       });
       expect(result.disponivel).toBe(false);
       expect(result.conflitos.length).toBeGreaterThanOrEqual(1);
@@ -863,7 +806,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });
@@ -873,7 +815,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "12:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
       });
       expect(result.disponivel).toBe(true);
       expect(result.conflitos.length).toBe(0);
@@ -882,26 +823,25 @@ describe("Reserva Service", () => {
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
 
-    it("should NOT conflict when same time but different room", async () => {
-      // Create a reserva on LOCAL_1 at 10:00–12:00
+    it("should detect conflict regardless of sala (a festa não tem local)", async () => {
+      // A disponibilidade é puramente temporal: outra festa no mesmo dia/horário
+      // é conflito, independentemente de "salas" (que já não existem na festa).
       const reserva = await reservaService.create({
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });
 
-      // Check LOCAL_2 at 10:00–12:00 → different room, no conflict
+      // Check 10:00–12:00 (mesma hora) → conflito temporal
       const result = await reservaService.checkDisponibilidade({
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_2,
       });
-      expect(result.disponivel).toBe(true);
-      expect(result.conflitos.length).toBe(0);
+      expect(result.disponivel).toBe(false);
+      expect(result.conflitos.length).toBeGreaterThanOrEqual(1);
 
       // Cleanup
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
@@ -913,7 +853,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });
@@ -923,7 +862,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         excludeId: reserva.id,
       });
       expect(result.disponivel).toBe(true);
@@ -940,7 +878,6 @@ describe("Reserva Service", () => {
           data: new Date(futureStr),
           horario: "10:00",
           duracaoMinutos: 120,
-          localId: TEST_IDS.LOCAL_1,
           clienteId: TEST_IDS.CLIENTE_1,
           numCriancas: 10,
           estado: "CONCLUIDA",
@@ -952,7 +889,6 @@ describe("Reserva Service", () => {
         data: futureStr,
         horario: "10:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
       });
       expect(result.disponivel).toBe(true);
       expect(result.conflitos.length).toBe(0);
@@ -967,20 +903,8 @@ describe("Reserva Service", () => {
           data: "",
           horario: "10:00",
           duracaoMinutos: 120,
-          localId: TEST_IDS.LOCAL_1,
         }),
       ).rejects.toThrow("DATA_REQUIRED");
-    });
-
-    it("should throw LOCAL_REQUIRED if localId is empty", async () => {
-      await expect(
-        reservaService.checkDisponibilidade({
-          data: futureStr,
-          horario: "10:00",
-          duracaoMinutos: 120,
-          localId: "",
-        }),
-      ).rejects.toThrow("LOCAL_REQUIRED");
     });
   });
 
@@ -1009,7 +933,6 @@ describe("Reserva Service", () => {
           data: bloqueadoStr,
           horario: "14:00",
           duracaoMinutos: 120,
-          localId: TEST_IDS.LOCAL_2,
           aniversariantes: [TEST_ANIVERSARIANTE],
           numCriancas: 10,
         }),
@@ -1030,7 +953,6 @@ describe("Reserva Service", () => {
         data: futuroStr,
         horario: "15:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 12,
         meiasQuantidade: 12,
@@ -1084,7 +1006,6 @@ describe("Reserva Service", () => {
         data: futuroStr,
         horario: "13:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 10,
         salaLancheId: salaIdRef.current,
@@ -1124,7 +1045,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "17:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 5,
       });
@@ -1151,7 +1071,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "18:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 4,
       });
@@ -1183,7 +1102,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "19:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 3,
       });
@@ -1215,7 +1133,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "20:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 3,
       });
@@ -1245,7 +1162,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "21:00",
         duracaoMinutos: 120,
-        localId: TEST_IDS.LOCAL_1,
         aniversariantes: [TEST_ANIVERSARIANTE],
         numCriancas: 2,
       });
@@ -1365,7 +1281,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "08:00",
         duracaoMinutos: 90,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });
@@ -1398,7 +1313,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "08:30",
         duracaoMinutos: 90,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });
@@ -1433,7 +1347,6 @@ describe("Reserva Service", () => {
         data: tomorrowStr,
         horario: "07:00",
         duracaoMinutos: 90,
-        localId: TEST_IDS.LOCAL_1,
         clienteId: TEST_IDS.CLIENTE_1,
         numCriancas: 10,
       });

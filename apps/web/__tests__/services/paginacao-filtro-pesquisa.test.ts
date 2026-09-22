@@ -31,10 +31,10 @@ describe("Reserva Service - Filtragem", () => {
       expect(result.items.length).toBeGreaterThanOrEqual(3);
     });
 
-    it("deve incluir relações (local, cliente, aniversariantes)", async () => {
+    it("deve incluir relações (salaLanche, cliente, aniversariantes)", async () => {
       const result = await reservaService.list();
       const r = result.items[0];
-      expect(r).toHaveProperty("local");
+      expect(r).toHaveProperty("salaLanche");
       expect(r).toHaveProperty("cliente");
       expect(r).toHaveProperty("aniversariantes");
     });
@@ -71,30 +71,15 @@ describe("Reserva Service - Filtragem", () => {
     });
   });
 
-  describe("list() - filtro por localId", () => {
-    it("deve retornar reservas apenas do local especificado", async () => {
-      const result = await reservaService.list({ localId: "test-local-001" });
-      expect(result.items.length).toBeGreaterThanOrEqual(1);
-      expect(result.items.every((r) => r.localId === "test-local-001")).toBe(true);
-    });
-
-    it("deve retornar items vazio para localId inexistente", async () => {
-      const result = await reservaService.list({ localId: "local-inexistente" });
-      expect(result.items).toEqual([]);
-    });
-  });
-
   describe("list() - filtros combinados", () => {
-    it("deve filtrar por estado E localId simultaneamente", async () => {
+    it("deve filtrar por estado E data simultaneamente", async () => {
       const today = new Date().toISOString().split("T")[0];
       const result = await reservaService.list({
         estado: "CONFIRMADO",
-        localId: "test-local-001",
         data: today,
       });
       expect(result.items.length).toBeGreaterThanOrEqual(1);
       expect(result.items.every((r) => r.estado === "CONFIRMADO")).toBe(true);
-      expect(result.items.every((r) => r.localId === "test-local-001")).toBe(true);
     });
   });
 });

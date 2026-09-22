@@ -217,7 +217,6 @@ export async function seedTestData(): Promise<void> {
       notas: "Reserva de teste confirmada",
       estado: "CONFIRMADO",
       clienteId: TEST_IDS.CLIENTE_1,
-      localId: TEST_IDS.LOCAL_1,
       // Bolo
       bolo: "NOSSO_1KG",
       boloTema: "Frozen",
@@ -263,7 +262,6 @@ export async function seedTestData(): Promise<void> {
       notas: "Reserva pendente de teste",
       estado: "RESERVA",
       clienteId: TEST_IDS.CLIENTE_2,
-      localId: TEST_IDS.LOCAL_2,
       // Bolo - pais trazem (tema e quantidade não se aplicam)
       bolo: "PAIS_TRAZEM",
       // Notas por equipa
@@ -296,7 +294,6 @@ export async function seedTestData(): Promise<void> {
       inicioEm: inicio,
       fimPrevisto: fim,
       clienteId: TEST_IDS.CLIENTE_1,
-      localId: TEST_IDS.LOCAL_2,
     },
   });
   await testPrisma.reservaAniversariante.upsert({

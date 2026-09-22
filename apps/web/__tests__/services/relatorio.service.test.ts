@@ -157,7 +157,6 @@ describe("Relatório Service", () => {
             ],
           },
           clienteId: "test-cliente-001",
-          localId: "test-local-001",
         },
       });
 
@@ -187,7 +186,6 @@ describe("Relatório Service", () => {
           caucao: "PAGA",
           valorCaucao: 40,
           clienteId: "test-cliente-001",
-          localId: "test-local-001",
         },
       });
 
@@ -219,7 +217,6 @@ describe("Relatório Service", () => {
           custoExcesso: 15,
           pagoExcesso: true,
           clienteId: "test-cliente-001",
-          localId: "test-local-001",
         },
       });
 

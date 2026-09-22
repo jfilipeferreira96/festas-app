@@ -113,8 +113,8 @@ describe("Local Service", () => {
 
   // ── delete (soft delete) ──────────────────────────────────────
   describe("delete()", () => {
-    it("should soft delete a local without active reservas", async () => {
-      // Create a local with no reservas
+    it("should soft delete a local sem alocações", async () => {
+      // Create a local with no alocações
       const local = await testPrisma.local.create({
         data: { id: "test-local-delete", nome: "Para Apagar" },
       });
@@ -123,11 +123,25 @@ describe("Local Service", () => {
       expect(deleted.activo).toBe(false);
     });
 
-    it("should throw HAS_ACTIVE_RESERVAS if local has active reservas", async () => {
-      // LOCAL_2 has RESERVA_EM_CURSO which is active
+    it("should throw HAS_ACTIVE_RESERVAS if local tem alocação de monitor", async () => {
+      // O guard de eliminação passou a ser sobre alocações de monitores
+      // (Reserva deixou de ter localId)
+      const alocacao = await testPrisma.alocacaoMonitor.create({
+        data: {
+          data: new Date(),
+          horaInicio: 600,
+          horaFim: 720,
+          observacoes: "",
+          monitorId: TEST_IDS.MONITOR_1,
+          localId: TEST_IDS.LOCAL_2,
+        },
+      });
+
       await expect(localService.delete(TEST_IDS.LOCAL_2)).rejects.toThrow(
         "HAS_ACTIVE_RESERVAS"
       );
+
+      await testPrisma.alocacaoMonitor.delete({ where: { id: alocacao.id } });
     });
   });
 
