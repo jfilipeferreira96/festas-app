@@ -322,7 +322,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ user }) => {
                       <span className={`${isFuncOpen || funcionariosActivo ? "menu-item-icon-soft-active" : "menu-item-icon-inactive"}`}>
                         {funcionariosItems.icon}
                       </span>
-                      {showExpanded && <span className="menu-item-text">Pág. Funcionários</span>}
+                      {showExpanded && <span className="menu-item-text">P. Funcionários</span>}
                     </div>
                     <ChevronDown
                       className={`menu-item-arrow w-4 h-4 transition-all duration-200 ${
