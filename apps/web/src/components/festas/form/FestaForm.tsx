@@ -7,7 +7,6 @@ import { Button } from "@/components/ui";
 import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateReserva, useUpdateReserva, useCheckDisponibilidade, useReserva } from "@/hooks/use-reservas";
-import { useLocaisAtivos } from "@/hooks/use-locais";
 import { useSalasLanche } from "@/hooks/use-salas-lanche";
 import { useExtras } from "@/hooks/use-extras";
 import { useConfigPreco } from "@/hooks/use-precos";
@@ -44,6 +43,17 @@ export type { FestaFormInitialValues } from "./festa-form.schema";
 /** Extras identificados como Almoço/Jantar pelo nome ficam na secção do Menu. */
 const EXTRAS_SUPLEMENTO_MENU_RE = /almo[çc]o|jant[ae]/i;
 
+/** Cabeçalho simples de secção do form: título uppercase + separador. */
+function SectionHeader({ titulo }: { titulo: string }) {
+  return (
+    <div className="pt-4 border-t border-border first:border-t-0 first:pt-0">
+      <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-muted">
+        {titulo}
+      </h3>
+    </div>
+  );
+}
+
 interface FestaFormProps {
   reserva?: Reserva | null;
   onClose: () => void;
@@ -55,7 +65,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const toast = useToast();
   const createReserva = useCreateReserva();
   const updateReserva = useUpdateReserva();
-  const { data: locais } = useLocaisAtivos();
   const { data: salasLanche } = useSalasLanche();
   const { data: extras } = useExtras();
   const { data: configPreco } = useConfigPreco();
@@ -77,7 +86,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
   const watchedData = watch("data");
   const watchedHorario = watch("horario");
   const watchedDuracao = watch("duracaoMinutos");
-  const watchedLocalId = watch("localId");
   const watchedSalaLancheId = watch("salaLancheId");
   const watchedMenuId = watch("menuId");
   const previsaoCriancas = watch("previsaoCriancas");
@@ -115,17 +123,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     () => (extras ?? []).filter((e) => e.activo && ehSubcategoriaBolos(e.subcategoria)),
     [extras]
   );
-  // Locais = zonas de brincadeira onde a festa decorre. A "Sala do Lanche"
-  // (plano diário) é OUTRA coisa (SalaLanche) e vem bloqueada do slot.
-  const salaOptions = useMemo(() => {
-    const options = (locais ?? []).map((l) => ({ value: l.id, label: l.nome }));
-    const atual = defaultValues.localId;
-    if (atual && !options.some((o) => o.value === atual)) {
-      options.unshift({ value: atual, label: reserva?.local?.nome ?? atual });
-    }
-    return options;
-  }, [locais, defaultValues.localId, reserva?.local?.nome]);
-
   /** Sala de lanche assumida do slot (só display - definida na config de slots). */
   const salaLancheNome = useMemo(() => {
     if (watchedSalaLancheId) {
@@ -133,6 +130,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     }
     return reserva?.salaLanche?.nome ?? null;
   }, [watchedSalaLancheId, salasLanche, reserva]);
+
   const menuOptions = useMemo(
     () => [{ value: "NONE", label: "Sem menu" }, ...menuExtras.map((m) => ({ value: m.id, label: m.nome }))],
     [menuExtras]
@@ -157,7 +155,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     data: watchedData || undefined,
     horario: watchedHorario || undefined,
     duracaoMinutos: watchedDuracao || undefined,
-    localId: watchedLocalId || undefined,
     excludeId: reserva?.id,
   });
 
@@ -243,14 +240,6 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
       setValue("cor", CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value))?.value ?? "");
     }
   }, [reserva, coresEmUso, setValue, getValues]);
-
-  // Escolha manual do Local (zona de brincadeira) da festa.
-  const handleLocalChange = useCallback(
-    (localIdVal: string) => {
-      setValue("localId", localIdVal, { shouldDirty: true, shouldValidate: true });
-    },
-    [setValue]
-  );
 
   const estimativaFesta = useMemo(
     () =>
@@ -395,10 +384,9 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               dataFesta={watchedData}
               onOpenSearchCliente={() => setShowClienteSearch(true)}
             />
+            <SectionHeader titulo="Configuração da Festa" />
             <AgendamentoSection
               slotOptions={slotOptions}
-              salaOptions={salaOptions}
-              onLocalChange={handleLocalChange}
               salaLancheNome={salaLancheNome}
               horarioCustom={horarioCustom}
               onToggleHorarioCustom={setHorarioCustom}
@@ -423,6 +411,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
                 </span>
               </div>
             )}
+            <SectionHeader titulo="Extras & Bolo" />
             <MenuBoloSection
               menuOptions={menuOptions}
               menuWarning={menuWarning}
@@ -435,6 +424,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               numPessoas={numPessoasExtras}
               excluirIds={bolosCatalogo.map((b) => b.id)}
             />
+            <SectionHeader titulo="Pagamentos" />
             <PagamentoSection
               reserva={reserva}
               onOpenPagamento={() => setShowPagamentoModal(true)}

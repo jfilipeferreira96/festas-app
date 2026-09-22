@@ -34,13 +34,11 @@ export default function MenuBoloSection({
   bolosCatalogo,
   numPessoas,
 }: MenuBoloSectionProps) {
-  const { register, setValue, watch, formState: { errors } } = useFormContext<FestaFormData>();
+  const { register, setValue, watch } = useFormContext<FestaFormData>();
   const bolo = watch("bolo");
-  const boloTema = watch("boloTema");
   const boloQuantidade = watch("boloQuantidade");
   const extrasIds = watch("extrasIds");
   const extrasQuantidades = watch("extrasQuantidades");
-  const extrasTexto = watch("extrasTexto");
 
   const boloExtraSeleccionado = bolosCatalogo.find((e) => extrasIds.includes(e.id));
   const ehEstado = bolo === "PAIS_TRAZEM" || bolo === "A_DECIDIR";
@@ -48,7 +46,12 @@ export default function MenuBoloSection({
   // antes da migração) - exibido como chip removível para não se perder.
   const boloLegado =
     bolo && !ehEstado && !boloExtraSeleccionado ? (bolo as string) : null;
-  const bloqueiaTema = !boloExtraSeleccionado && !boloLegado;
+  // Quantidade só faz sentido com um bolo escolhido (catálogo ou legado);
+  // independe do flag "requerTexto".
+  const bloqueiaQuantidade = !boloExtraSeleccionado && !boloLegado;
+  // "Permitir texto personalizado" (Config → Menus & Extras) abre o campo
+  // Tema do Bolo - é o valor que a cozinha/página de Bolos consome.
+  const mostraTema = boloExtraSeleccionado?.requerTexto === true;
   const quantidadeBolo = boloQuantidade ?? 1;
 
   const toggleSuplemento = (id: string) => {
@@ -233,88 +236,29 @@ export default function MenuBoloSection({
             </div>
           )}
 
-          <div className="flex gap-4">
-            <div className="flex-1">
+          {/* Tema do Bolo: só quando o extra seleccionado tem
+              "Permitir texto personalizado" (ex.: Bolo Artístico). */}
+          {mostraTema && (
+            <div>
               <FieldLabel>Tema do Bolo</FieldLabel>
               <InputField
                 {...register("boloTema")}
-                placeholder="Ex: Frozen, Cars, Princesas..."
-                disabled={bloqueiaTema}
+                placeholder="Ex: Frozen, Cars, Princesas, cores, mensagem na hóstia..."
               />
             </div>
-            <div className="w-28">
-              <FieldLabel>Quantidade</FieldLabel>
-              <InputField
-                type="number"
-                min={1}
-                value={quantidadeBolo}
-                onChange={(e) => alterarQuantidade(e.target.valueAsNumber)}
-                placeholder="1"
-                disabled={bloqueiaTema}
-              />
-            </div>
+          )}
+
+          <div className="w-28">
+            <FieldLabel>Quantidade</FieldLabel>
+            <InputField
+              type="number"
+              min={1}
+              value={quantidadeBolo}
+              onChange={(e) => alterarQuantidade(e.target.valueAsNumber)}
+              placeholder="1"
+              disabled={bloqueiaQuantidade}
+            />
           </div>
-
-          {/* "Requer texto personalizado" do extra (ex.: Bolo Artístico) */}
-          {boloExtraSeleccionado?.requerTexto && (
-            <div>
-              <FieldLabel>{`Detalhes — ${boloExtraSeleccionado.nome}`}</FieldLabel>
-              <InputField
-                value={extrasTexto[boloExtraSeleccionado.id] ?? ""}
-                onChange={(e) =>
-                  setValue(
-                    "extrasTexto",
-                    { ...extrasTexto, [boloExtraSeleccionado.id]: e.target.value },
-                    { shouldDirty: true }
-                  )
-                }
-                placeholder="Ex: tema, cores, mensagem na hóstia..."
-              />
-            </div>
-          )}
-
-          {boloExtraSeleccionado && (
-            <p className="text-xs text-text-secondary">
-              <span className="font-semibold">
-                {formatEuro(Number(boloExtraSeleccionado.precoUnitario) * quantidadeBolo)}
-              </span>{" "}
-              - cobrado no dia ({BOLO_LABELS[bolo as string] ?? "sem tipo interno na cozinha"})
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <FieldLabel required>Nº Crianças Previstas</FieldLabel>
-          <InputField
-            type="number"
-            min={1}
-            max={100}
-            {...register("previsaoCriancas", { valueAsNumber: true })}
-            error={!!errors.previsaoCriancas}
-            hint={errors.previsaoCriancas?.message}
-          />
-        </div>
-        <div className="flex-1">
-          <FieldLabel>Nº Confirmadas</FieldLabel>
-          <InputField
-            type="number"
-            min={0}
-            max={100}
-            placeholder="Opcional"
-            {...register("numCriancasConfirmadas", { valueAsNumber: true })}
-          />
-        </div>
-        <div className="flex-1">
-          <FieldLabel>Total de Crianças</FieldLabel>
-          <InputField
-            type="number"
-            min={1}
-            max={100}
-            placeholder="Opcional"
-            {...register("numCriancasTotal", { valueAsNumber: true })}
-          />
         </div>
       </div>
     </div>

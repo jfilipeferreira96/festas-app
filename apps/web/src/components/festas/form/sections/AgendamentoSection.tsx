@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Utensils } from "lucide-react";
+import { Utensils } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
@@ -12,10 +12,6 @@ import { DURACAO_FESTA_OPTIONS, type FestaFormData } from "../festa-form.schema"
 
 interface AgendamentoSectionProps {
   slotOptions: { value: string; label: string; disabled?: boolean }[];
-  /** Locais (zonas de brincadeira) onde a festa decorre. */
-  salaOptions: { value: string; label: string }[];
-  /** Escolha manual do Local. */
-  onLocalChange: (localId: string) => void;
   /** Sala de lanche assumida do slot (SalaLanche) - só display. */
   salaLancheNome: string | null;
   horarioCustom: boolean;
@@ -29,8 +25,6 @@ interface AgendamentoSectionProps {
 
 export default function AgendamentoSection({
   slotOptions,
-  salaOptions,
-  onLocalChange,
   salaLancheNome,
   horarioCustom,
   onToggleHorarioCustom,
@@ -40,22 +34,20 @@ export default function AgendamentoSection({
   planoTexto,
 }: AgendamentoSectionProps) {
   const { register, setValue, watch, formState: { errors } } = useFormContext<FestaFormData>();
-  const data = watch("data");
   const horario = watch("horario");
   const duracao = watch("duracaoMinutos");
-  const localId = watch("localId");
-
   // Hora fora dos slots (festa criada em modo personalizado): para não-admins
   // o valor é mostrado read-only em vez do select de slots - a hora guardada
   // nunca se perde, mas também não pode ser alterada por quem não é admin.
   const foraDosSlots = !!horario && !horarioCustom && !slotOptions.some((o) => o.value === horario);
   const mostraHoraManual = horarioCustom || foraDosSlots;
-  // Hora do lanche e sala: definidas pelo slot e BLOQUEADAS (21/09/2026) -
+  // Hora do lanche e sala do lanche: definidas pelo slot e BLOQUEADAS (21/09/2026) -
   // mexe-se na configuração do slot, não na festa.
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Linha única: Data | Horário | Hora do Lanche | Sala do Lanche */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <FieldLabel required>Data</FieldLabel>
           <DatePicker
@@ -96,6 +88,22 @@ export default function AgendamentoSection({
             </p>
           )}
         </div>
+        <div>
+          <FieldLabel>Hora do Lanche</FieldLabel>
+          <InputField
+            type="time"
+            {...register("horaLanche")}
+            readOnly
+            hint="Definida pelo slot configurado"
+          />
+        </div>
+        <div>
+          <FieldLabel className="flex items-center gap-1">
+            <Utensils size={12} /> Sala do Lanche
+          </FieldLabel>
+          <InputField value={salaLancheNome ?? ""} placeholder="-" readOnly />
+          <p className="mt-1 text-[11px] text-text-muted">Definida pelo slot configurado.</p>
+        </div>
         {mostraHoraManual && (
           <div>
             <FieldLabel required>Duração</FieldLabel>
@@ -108,34 +116,40 @@ export default function AgendamentoSection({
             />
           </div>
         )}
+      </div>
+
+      {/* Pessoas: Nº Previstas | Nº Confirmadas | Total de Crianças */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
-          <FieldLabel>Hora do Lanche</FieldLabel>
+          <FieldLabel required>Nº Crianças Previstas</FieldLabel>
           <InputField
-            type="time"
-            {...register("horaLanche")}
-            readOnly
-            hint="Definida pelo slot configurado"
+            type="number"
+            min={1}
+            max={100}
+            {...register("previsaoCriancas", { valueAsNumber: true })}
+            error={!!errors.previsaoCriancas}
+            hint={errors.previsaoCriancas?.message}
           />
         </div>
         <div>
-          <FieldLabel required className="flex items-center gap-1">
-            <MapPin size={12} /> Local
-          </FieldLabel>
-          <Select
-            options={salaOptions}
-            placeholder="Seleccionar zona"
-            value={localId}
-            onChange={onLocalChange}
-            error={!!errors.localId}
+          <FieldLabel>Nº Confirmadas</FieldLabel>
+          <InputField
+            type="number"
+            min={0}
+            max={100}
+            placeholder="Opcional"
+            {...register("numCriancasConfirmadas", { valueAsNumber: true })}
           />
-          {errors.localId && <p className="mt-1 text-xs text-error-500">{errors.localId.message}</p>}
         </div>
         <div>
-          <FieldLabel className="flex items-center gap-1">
-            <Utensils size={12} /> Sala do Lanche
-          </FieldLabel>
-          <InputField value={salaLancheNome ?? ""} placeholder="-" readOnly />
-          <p className="mt-1 text-[11px] text-text-muted">Definida pelo slot configurado.</p>
+          <FieldLabel>Total de Crianças</FieldLabel>
+          <InputField
+            type="number"
+            min={1}
+            max={100}
+            placeholder="Opcional"
+            {...register("numCriancasTotal", { valueAsNumber: true })}
+          />
         </div>
       </div>
 
