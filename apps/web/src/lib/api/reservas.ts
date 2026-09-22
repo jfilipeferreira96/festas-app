@@ -1,13 +1,12 @@
 import { api } from "./utils";
 import type { Reserva as ReservaBase, EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo } from "@saas/shared-types";
-import type { Local, Extra, Menu, Pagamento, CriarPagamentoDTO } from "@saas/shared-types";
+import type { Extra, Menu, Pagamento, CriarPagamentoDTO } from "@saas/shared-types";
 
 // Re-export base types
 export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo };
 
 // API response type (base + relations from API)
 export interface Reserva extends ReservaBase {
-  local: Local;
   // Estado do lanche (NAO_INICIADO | A_DECORRER | TERMINADO) - devolvido pela API
   estadoLanche?: string;
   salaLanche?: { id: string; nome: string } | null;
@@ -54,10 +53,9 @@ export interface CreateReservaData {
   idadeAnos: number;
   data: string;
   horario: string;
-  horaLanche?: string;
-  duracaoMinutos: number;
-  localId: string;
-  salaLancheId?: string;
+   horaLanche?: string;
+   duracaoMinutos: number;
+   salaLancheId?: string;
   numCriancas?: number;
   previsaoCriancas?: number;
   extrasIds?: string[];
@@ -124,13 +122,12 @@ export interface DisponibilidadeResult {
 
 // API calls
 export const reservasApi = {
-  list: (filtros?: { estado?: EstadoReserva; data?: string; dataInicio?: string; dataFim?: string; localId?: string; page?: number; pageSize?: number }) => {
+  list: (filtros?: { estado?: EstadoReserva; data?: string; dataInicio?: string; dataFim?: string; page?: number; pageSize?: number }) => {
     const params = new URLSearchParams();
     if (filtros?.estado) params.set("estado", filtros.estado);
     if (filtros?.data) params.set("data", filtros.data);
     if (filtros?.dataInicio) params.set("dataInicio", filtros.dataInicio);
     if (filtros?.dataFim) params.set("dataFim", filtros.dataFim);
-    if (filtros?.localId) params.set("localId", filtros.localId);
     if (filtros?.page) params.set("page", String(filtros.page));
     if (filtros?.pageSize) params.set("pageSize", String(filtros.pageSize));
     const query = params.toString();
@@ -152,14 +149,12 @@ export const reservasApi = {
     data: string;
     horario: string;
     duracaoMinutos: number;
-    localId: string;
     excludeId?: string;
   }) => {
     const qs = new URLSearchParams({
       data: params.data,
       horario: params.horario,
       duracaoMinutos: String(params.duracaoMinutos),
-      localId: params.localId,
     });
     if (params.excludeId) qs.set("excludeId", params.excludeId);
     return api<DisponibilidadeResult>(`/api/reservas/disponibilidade?${qs.toString()}`);

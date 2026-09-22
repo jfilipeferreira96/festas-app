@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { reservasApi } from "@/lib/api/reservas";
 import type { CreateReservaData, UpdateReservaData, EstadoReserva, DisponibilidadeResult } from "@/lib/api/reservas";
 
-export function useReservas(filtros?: { estado?: EstadoReserva; data?: string; dataInicio?: string; dataFim?: string; localId?: string; page?: number; pageSize?: number }) {
+export function useReservas(filtros?: { estado?: EstadoReserva; data?: string; dataInicio?: string; dataFim?: string; page?: number; pageSize?: number }) {
   return useQuery({
     queryKey: ["reservas", filtros],
     queryFn: () => reservasApi.list(filtros),
@@ -209,18 +209,17 @@ export function useReservasConcluidas(data?: string) {
 }
 
 /**
- * Verifica a disponibilidade de uma sala (sobreposição temporal).
- * Só executa quando data, horário, duração e sala estão preenchidos.
+ * Verifica a disponibilidade (sobreposição temporal com festas activas do dia).
+ * Só executa quando data, horário e duração estão preenchidos.
  * Aviso apenas - não bloqueia a submissão.
  */
 export function useCheckDisponibilidade(params: {
   data?: string;
   horario?: string;
   duracaoMinutos?: number;
-  localId?: string;
   excludeId?: string;
 }) {
-  const enabled = !!(params.data && params.horario && params.duracaoMinutos && params.localId);
+  const enabled = !!(params.data && params.horario && params.duracaoMinutos);
   return useQuery<DisponibilidadeResult>({
     queryKey: ["reservas", "disponibilidade", params],
     queryFn: () =>
@@ -228,7 +227,6 @@ export function useCheckDisponibilidade(params: {
         data: params.data!,
         horario: params.horario!,
         duracaoMinutos: params.duracaoMinutos!,
-        localId: params.localId!,
         excludeId: params.excludeId,
       }),
     enabled,

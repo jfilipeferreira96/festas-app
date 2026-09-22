@@ -31,11 +31,10 @@ interface AniversarianteInput {
 interface CreateReservaData {
   data: string;
   horario: string;
-  horaLanche?: string;
-  salaLancheId?: string;
-  duracaoMinutos: number;
-  localId: string;
-  clienteId?: string;
+   horaLanche?: string;
+   salaLancheId?: string;
+   duracaoMinutos: number;
+   clienteId?: string;
   numCriancas?: number;
   notas?: string;
   menuId?: string | null;
@@ -92,11 +91,10 @@ interface CreateReservaData {
 interface UpdateReservaData {
   data?: string;
   horario?: string;
-  horaLanche?: string;
-  salaLancheId?: string;
-  duracaoMinutos?: number;
-  localId?: string;
-  clienteId?: string;
+   horaLanche?: string;
+   salaLancheId?: string;
+   duracaoMinutos?: number;
+   clienteId?: string;
   numCriancas?: number;
   notas?: string;
   menuId?: string | null;
@@ -235,14 +233,13 @@ function horarioParaMinutos(horario: string): number {
 
 /**
  * Procura reservas que se sobrepõem no tempo (considerando a duração)
- * para um dado local + data. Duas reservas conflituam se os seus
+ * para uma dada data. Duas reservas conflituam se os seus
  * intervalos [início, fim] se intercetam.
  */
 async function findConflitos(params: {
   data: string | Date;
   horario: string;
   duracaoMinutos: number;
-  localId: string;
   excludeId?: string;
 }): Promise<ConflitoInfo[]> {
   const reservaDate = typeof params.data === "string" ? new Date(params.data) : params.data;
@@ -251,7 +248,6 @@ async function findConflitos(params: {
 
   const candidatos = await prisma.reserva.findMany({
     where: {
-      localId: params.localId,
       data: { gte: reservaDate, lt: nextDay },
       estado: { in: ["RESERVA", "CONFIRMADO", "EM_CURSO"] },
       ...(params.excludeId ? { NOT: { id: params.excludeId } } : {}),
@@ -313,7 +309,7 @@ async function verificarSlotOcupado(params: {
 }
 
 export const reservaService = {
-  async list(filters?: { estado?: string; data?: string; dataInicio?: string; dataFim?: string; localId?: string; pesquisa?: string; page?: number; pageSize?: number }) {
+  async list(filters?: { estado?: string; data?: string; dataInicio?: string; dataFim?: string; pesquisa?: string; page?: number; pageSize?: number }) {
     const where: Record<string, unknown> = {};
     if (filters?.estado) where.estado = filters.estado;
     if (filters?.data) {
@@ -331,7 +327,6 @@ export const reservaService = {
       }
       where.data = range;
     }
-    if (filters?.localId) where.localId = filters.localId;
     if (filters?.pesquisa) {
       where.OR = [
         { aniversariantes: { some: { aniversariante: { nome: { contains: filters.pesquisa } } } } },
@@ -351,7 +346,7 @@ export const reservaService = {
         skip,
         take: pageSize,
         include: {
-          local: true,
+          salaLanche: true,
           cliente: true,
           aniversariantes: { include: { aniversariante: true } },
           extras: { include: { extra: true } },
@@ -369,7 +364,6 @@ export const reservaService = {
     const reserva = await prisma.reserva.findUnique({
       where: { id },
       include: {
-        local: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: { include: { cliente: true } } } },
         extras: { include: { extra: true } },
@@ -385,20 +379,18 @@ export const reservaService = {
   },
 
   /**
-   * Verifica a disponibilidade de um local para uma data/horário/duração,
-   * considerando sobreposição temporal (não apenas match exato de horário).
+   * Verifica a disponibilidade para uma data/horário/duração,
+   * considerando sobreposição temporal com festas activas do dia.
    * Não bloqueia - serve apenas para alertar o utilizador antes de gravar.
    */
   async checkDisponibilidade(params: {
     data: string;
     horario: string;
     duracaoMinutos: number;
-    localId: string;
     excludeId?: string;
   }): Promise<DisponibilidadeResult> {
     if (!params.data) throw new Error("DATA_REQUIRED");
     if (!params.horario) throw new Error("HORARIO_REQUIRED");
-    if (!params.localId) throw new Error("LOCAL_REQUIRED");
     if (!params.duracaoMinutos) throw new Error("DURACAO_REQUIRED");
 
     const conflitos = await findConflitos(params);
@@ -408,7 +400,6 @@ export const reservaService = {
   async create(data: CreateReservaData) {
     if (!data.data) throw new Error("DATA_REQUIRED");
     if (!data.horario) throw new Error("HORARIO_REQUIRED");
-    if (!data.localId) throw new Error("LOCAL_REQUIRED");
 
     // Verificar dia bloqueado no calendário
     const bloqueado = await excecaoCalendarioService.isBloqueado(new Date(data.data));
@@ -453,10 +444,6 @@ export const reservaService = {
 
     if (!clienteId) throw new Error("CLIENTE_REQUIRED");
 
-    const local = await prisma.local.findUnique({ where: { id: data.localId } });
-    if (!local) throw new Error("LOCAL_NOT_FOUND");
-    if (!local.activo) throw new Error("LOCAL_INACTIVE");
-
     // ── Cálculo de preço por criança (com mínimos por aniversariante) ──
     const numAniversariantes = aniversarianteIds.length;
     const calculo = await configuracaoPrecoService.calcularPrecoFesta(
@@ -480,7 +467,6 @@ export const reservaService = {
         data: new Date(data.data),
         horario: data.horario,
         duracaoMinutos: data.duracaoMinutos,
-        localId: data.localId,
         clienteId,
         numCriancas: data.numCriancas || 0,
         precoCriancaAplicado: calculo.precoCrianca,
@@ -543,7 +529,6 @@ export const reservaService = {
           : undefined,
       },
       include: {
-        local: true,
         salaLanche: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
@@ -653,7 +638,6 @@ export const reservaService = {
         horaLanche: data.horaLanche,
         salaLancheId: data.salaLancheId,
         duracaoMinutos: data.duracaoMinutos,
-        localId: data.localId,
         clienteId: data.clienteId,
         numCriancas: data.numCriancas,
         notas: data.notas,
@@ -714,7 +698,6 @@ export const reservaService = {
           : undefined,
       },
       include: {
-        local: true,
         salaLanche: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
@@ -873,7 +856,6 @@ export const reservaService = {
         etapas: etapasData,
       },
       include: {
-        local: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
         monitores: { include: { monitor: true } },
@@ -976,7 +958,6 @@ export const reservaService = {
           }),
         },
         include: {
-          local: true,
           cliente: true,
           aniversariantes: { include: { aniversariante: true } },
           monitores: { include: { monitor: true } },
@@ -1026,7 +1007,6 @@ export const reservaService = {
     return prisma.reserva.findMany({
       where: { estado: "EM_CURSO" },
       include: {
-        local: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
         extras: { include: { extra: true } },
@@ -1051,7 +1031,6 @@ export const reservaService = {
     return prisma.reserva.findMany({
       where,
       include: {
-        local: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
         extras: { include: { extra: true } },
@@ -1127,7 +1106,6 @@ export const reservaService = {
         ...(options.concluido !== undefined ? { cacifosConcluido: options.concluido } : {}),
       },
       include: {
-        local: true,
         cliente: true,
         aniversariantes: { include: { aniversariante: true } },
         cacifos: true,

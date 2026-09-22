@@ -3,9 +3,6 @@ import { createRouteErrorHandler } from "@/lib/route-error";
 export const handleError = createRouteErrorHandler({
   errorMap: {
     NOT_FOUND: "reserva.notFound",
-    LOCAL_NOT_FOUND: "local.notFound",
-    LOCAL_INACTIVE: "local.inactive",
-    LOCAL_NOT_AVAILABLE: "reserva.localNotAvailable",
     SLOT_OCCUPIED: "reserva.slotOccupied",
     DAY_BLOCKED: "reserva.dayBlocked",
     CAPACITY_EXCEEDED: "reserva.capacityExceeded",
@@ -23,13 +20,9 @@ export const handleError = createRouteErrorHandler({
     DATA_NASCIMENTO_REQUIRED: "reserva.dataNascimentoRequired",
     DATA_REQUIRED: "reserva.dataRequired",
     HORARIO_REQUIRED: "reserva.horarioRequired",
-    LOCAL_REQUIRED: "reserva.localRequired",
   },
   statusMap: {
     NOT_FOUND: 404,
-    LOCAL_NOT_FOUND: 404,
-    LOCAL_INACTIVE: 400,
-    LOCAL_NOT_AVAILABLE: 409,
     SLOT_OCCUPIED: 409,
     DAY_BLOCKED: 409,
     CAPACITY_EXCEEDED: 409,
@@ -47,7 +40,6 @@ export const handleError = createRouteErrorHandler({
     DATA_NASCIMENTO_REQUIRED: 400,
     DATA_REQUIRED: 400,
     HORARIO_REQUIRED: 400,
-    LOCAL_REQUIRED: 400,
   },
   serviceName: "Reserva",
 });

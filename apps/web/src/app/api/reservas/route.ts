@@ -7,9 +7,6 @@ import { createRouteErrorHandler } from "@/lib/route-error";
 const handleError = createRouteErrorHandler({
   errorMap: {
     NOT_FOUND: "reserva.notFound",
-    LOCAL_NOT_FOUND: "local.notFound",
-    LOCAL_INACTIVE: "local.inactive",
-    LOCAL_NOT_AVAILABLE: "reserva.localNotAvailable",
     DAY_BLOCKED: "reserva.dayBlocked",
     CAPACITY_EXCEEDED: "reserva.capacityExceeded",
     INVALID_STATUS: "reserva.invalidStatus",
@@ -26,13 +23,9 @@ const handleError = createRouteErrorHandler({
     DATA_NASCIMENTO_REQUIRED: "reserva.dataNascimentoRequired",
     DATA_REQUIRED: "reserva.dataRequired",
     HORARIO_REQUIRED: "reserva.horarioRequired",
-    LOCAL_REQUIRED: "reserva.localRequired",
   },
   statusMap: {
     NOT_FOUND: 404,
-    LOCAL_NOT_FOUND: 404,
-    LOCAL_INACTIVE: 400,
-    LOCAL_NOT_AVAILABLE: 409,
     DAY_BLOCKED: 409,
     CAPACITY_EXCEEDED: 409,
     INVALID_STATUS: 400,
@@ -49,12 +42,11 @@ const handleError = createRouteErrorHandler({
     DATA_NASCIMENTO_REQUIRED: 400,
     DATA_REQUIRED: 400,
     HORARIO_REQUIRED: 400,
-    LOCAL_REQUIRED: 400,
   },
   serviceName: "Reserva",
 });
 
-// GET /api/reservas[?estado=&data=&localId=&pesquisa=&page=&pageSize=]
+// GET /api/reservas[?estado=&data=&pesquisa=&page=&pageSize=]
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
@@ -66,7 +58,6 @@ export async function GET(request: NextRequest) {
       data: searchParams.get("data") || undefined,
       dataInicio: searchParams.get("dataInicio") || undefined,
       dataFim: searchParams.get("dataFim") || undefined,
-      localId: searchParams.get("localId") || undefined,
       pesquisa: searchParams.get("pesquisa") || undefined,
       page: searchParams.get("page") ? parseInt(searchParams.get("page") as string) : undefined,
       pageSize: searchParams.get("pageSize")
@@ -92,7 +83,6 @@ export async function POST(request: NextRequest) {
       horaLanche,
       salaLancheId,
       duracaoMinutos,
-      localId,
       clienteId,
       numCriancas,
       notas,
@@ -140,7 +130,6 @@ export async function POST(request: NextRequest) {
       horaLanche,
       salaLancheId,
       duracaoMinutos,
-      localId,
       clienteId,
       numCriancas,
       notas,

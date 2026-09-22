@@ -29,8 +29,6 @@
     "dataNascimentoRequired": "A data de nascimento do aniversariante é obrigatória",
     "dataRequired": "Data da reserva é obrigatória",
     "horarioRequired": "Horário da reserva é obrigatório",
-    "localRequired": "Local é obrigatório",
-    "localNotAvailable": "O local selecionado não está disponível neste horário",
     "slotOccupied": "Já existe uma festa neste horário. Escolha outro slot.",
     "localInactive": "O local selecionado está inactivo",
     "clienteRequired": "Cliente é obrigatório",
