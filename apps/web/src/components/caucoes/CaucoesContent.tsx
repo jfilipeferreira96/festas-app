@@ -18,10 +18,9 @@ const CAUCAO_LABELS: Record<string, string> = {
 };
 
 const FILTER_OPTIONS = [
-  { value: "", label: "Todas" },
-  { value: "PAGA", label: "Pagas" },
-  { value: "PAGA_NO_DIA", label: "Paga no dia" },
   { value: "NAO_PAGA", label: "Por pagar" },
+  { value: "PAGA", label: "Pagas" },
+  { value: "", label: "Todas" },
 ];
 
 function formatDate(iso: string): string {
@@ -29,7 +28,8 @@ function formatDate(iso: string): string {
 }
 
 export default function CaucoesContent() {
-  const [filtro, setFiltro] = useState("");
+  // Tab inicial: Por pagar (pedido do cliente, 22/09/2026)
+  const [filtro, setFiltro] = useState("NAO_PAGA");
   const { data: caucoes, isLoading } = useCaucoes(
     filtro ? { estadoCaucao: filtro } : undefined
   );
