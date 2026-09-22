@@ -1,5 +1,5 @@
 import prisma from "@festas/db";
-import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo } from "@saas/shared-types";
+import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo, EstadoReserva } from "@saas/shared-types";
 import logger from "@/lib/logger";
 import { enfileirarEmailConfirmacaoReserva } from "@/services/email.service";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
@@ -145,6 +145,19 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   CONCLUIDA: [],
   CANCELADA: [],
 };
+
+/**
+ * Caução 100% paga promove a festa de RESERVA para CONFIRMADO (estado
+ * seguinte; pedido do cliente, 22/09/2026). Nunca des-promove: PAGA_NO_DIA
+ * e NAO_PAGA não alteram o estado, e estados posteriores mantêm-se.
+ */
+function estadoAposCaucao(
+  estadoActual: string,
+  caucaoResultante: string | undefined | null
+): EstadoReserva {
+  if (estadoActual === "RESERVA" && caucaoResultante === "PAGA") return "CONFIRMADO";
+  return estadoActual as EstadoReserva;
+}
 
 const BOLO_SEM_QUANTIDADE: readonly string[] = ["PAIS_TRAZEM", "A_DECIDIR"];
 
@@ -498,7 +511,8 @@ export const reservaService = {
         descontoMotivo: data.descontoMotivo,
         meiasQuantidade: data.meiasQuantidade,
         meiasPrecoUnit,
-        estado: "RESERVA",
+        // Caução já paga na criação → nasce directamente CONFIRMADA
+        estado: data.caucao === "PAGA" ? "CONFIRMADO" : "RESERVA",
         extras: data.extrasIds
           ? {
               create: data.extrasIds.map((extraId) => ({
@@ -662,6 +676,7 @@ export const reservaService = {
         valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
         pago: data.pago,
         caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+        estado: estadoAposCaucao(reserva.estado as string, data.caucao as string | undefined),
         valorCaucao: data.valorCaucao,
         metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
         descontoPercentagem: data.descontoPercentagem,
@@ -765,6 +780,7 @@ export const reservaService = {
           where: { id },
           data: {
             caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+            estado: estadoAposCaucao(reserva.estado as string, data.caucao as string | undefined),
             valorCaucao: data.valorCaucao,
             metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
             descontoPercentagem: data.descontoPercentagem,
@@ -778,6 +794,7 @@ export const reservaService = {
           data: {
             valorTotal: data.valorTotal,
             caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+            estado: estadoAposCaucao(reserva.estado as string, data.caucao as string | undefined),
             valorCaucao: data.valorCaucao,
             metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
             descontoPercentagem: data.descontoPercentagem,
@@ -796,6 +813,7 @@ export const reservaService = {
         data: {
           valorTotal: data.valorTotal === undefined ? undefined : data.valorTotal,
           caucao: data.caucao as "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA" | undefined,
+          estado: estadoAposCaucao(reserva.estado as string, data.caucao as string | undefined),
           valorCaucao: data.valorCaucao,
           metodoCaucao: data.metodoCaucao as MetodoPagamento | undefined,
           descontoPercentagem: data.descontoPercentagem,

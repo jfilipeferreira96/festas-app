@@ -678,6 +678,66 @@ describe("Reserva Service", () => {
     });
   });
 
+  // ── Promoção por caução paga (22/09/2026) ─────────────────────
+  describe("caução paga → CONFIRMADO", () => {
+    it("nasce CONFIRMADO quando a caução já está paga na criação", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "20:30",
+        duracaoMinutos: 90,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+        caucao: "PAGA",
+        valorCaucao: 50,
+        metodoCaucao: "DINHEIRO",
+      });
+
+      expect(reserva.estado).toBe("CONFIRMADO");
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("mantém RESERVA quando a caução é PAGA_NO_DIA (ainda não cobrada)", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "20:45",
+        duracaoMinutos: 90,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+        caucao: "PAGA_NO_DIA",
+      });
+
+      expect(reserva.estado).toBe("RESERVA");
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("promove RESERVA → CONFIRMADO ao marcar a caução paga (atualizarPagamento)", async () => {
+      const reserva = await reservaService.create({
+        data: tomorrowStr,
+        horario: "21:00",
+        duracaoMinutos: 90,
+        clienteId: TEST_IDS.CLIENTE_1,
+        numCriancas: 10,
+      });
+      expect(reserva.estado).toBe("RESERVA");
+
+      const actualizada = await reservaService.atualizarPagamento(reserva.id, {
+        caucao: "PAGA",
+        valorCaucao: 50,
+        metodoCaucao: "MBWAY",
+      });
+      expect(actualizada.estado).toBe("CONFIRMADO");
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("não des-promove: EM_CURSO com caução paga mantém EM_CURSO", async () => {
+      const actualizada = await reservaService.atualizarPagamento(TEST_IDS.RESERVA_EM_CURSO, {
+        caucao: "PAGA",
+      });
+      expect(actualizada.estado).toBe("EM_CURSO");
+    });
+  });
+
   // ── removerEtapa ──────────────────────────────────────────────
   describe("removerEtapa()", () => {
     it("should remove an etapa from a reserva", async () => {
