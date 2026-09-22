@@ -36,6 +36,7 @@ import type { EntradaLivre } from "@/lib/api/entradaLivre";
 import type { AlocacaoMonitor } from "@/lib/api/alocacaoMonitor";
 import { formatarIntervalo, minutosParaHora } from "@/lib/api/alocacaoMonitor";
 import { corPorId } from "@/lib/local-cores";
+import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import type { StatusType } from "@/components/ui";
 
 type ViewMode = "mes" | "semana" | "dia";
@@ -95,7 +96,9 @@ interface CalendarEvent {
   titulo: string;
   subtitulo: string;
   className: string; // classes tailwind (bg/text)
-  hex?: string; // cor inline (monitores - por local)
+  hex?: string; // cor inline (monitores - por local; festas - pulseira)
+  /** Cor da pulseira (só festas) - dot no painel do dia. */
+  cor?: string;
   estado?: string; // para badge (festas/entradas)
   raw: Reserva | EntradaLivre | AlocacaoMonitor;
 }
@@ -116,6 +119,9 @@ function reservaToEvent(r: Reserva): CalendarEvent {
     titulo: getAniversarianteNome(r),
     subtitulo: `${r.numCriancas} crianças`,
     className: ESTADO_COLORS[r.estado] ?? "bg-gray-100 text-gray-600",
+    // Pulseira da festa: chip pintado com a cor (dot branco embutido)
+    hex: r.cor ?? undefined,
+    cor: r.cor,
     estado: r.estado,
     raw: r,
   };
@@ -423,11 +429,14 @@ function EventRow({ event, onClick }: { event: CalendarEvent; onClick: (e: Calen
         </div>
       </div>
       {event.estado ? (
-        <StatusBadge status={event.estado as StatusType}>
-          {event.tipo === "festas"
-            ? ESTADO_LABELS[event.estado] ?? event.estado
-            : ENTRADA_ESTADO_LABELS[event.estado] ?? event.estado}
-        </StatusBadge>
+        <span className="flex items-center gap-2 shrink-0">
+          {event.tipo === "festas" && <FestaColorDot color={event.cor} />}
+          <StatusBadge status={event.estado as StatusType}>
+            {event.tipo === "festas"
+              ? ESTADO_LABELS[event.estado] ?? event.estado
+              : ENTRADA_ESTADO_LABELS[event.estado] ?? event.estado}
+          </StatusBadge>
+        </span>
       ) : event.hex ? (
         <span
           className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded-full text-white"

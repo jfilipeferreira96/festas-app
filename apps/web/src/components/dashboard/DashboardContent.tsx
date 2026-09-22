@@ -16,6 +16,7 @@ import {
   MailWarning,
 } from "lucide-react";
 import { StatusBadge } from "@/components/ui";
+import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import {
   useDashboardKPIs,
   useFestasEmCurso,
@@ -287,9 +288,12 @@ const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: 
     <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-text-secondary w-12">{horaInicio}</span>
-        <div>
-          <p className="text-sm font-semibold text-text-primary">{aniversarianteNome}</p>
-          <p className="text-xs text-text-muted">{nomeSala} · {festa.numCriancas ?? 0} crianças</p>
+        <div className="flex items-center gap-2">
+          <FestaColorDot color={festa.cor} />
+          <div>
+            <p className="text-sm font-semibold text-text-primary">{aniversarianteNome}</p>
+            <p className="text-xs text-text-muted">{nomeSala} · {festa.numCriancas ?? 0} crianças</p>
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -343,9 +347,12 @@ const ProximaFestaRow = React.memo(function ProximaFestaRow({ festa }: { festa: 
     <div className="flex items-center justify-between py-3 border-b border-border last:border-0">
       <div className="flex items-center gap-3">
         <span className="text-sm font-medium text-text-secondary w-12">{festa.horario}</span>
-        <div>
-          <p className="text-sm font-semibold text-text-primary">{aniversarianteNome}</p>
-          <p className="text-xs text-text-muted">{nomeSala} · {festa.numCriancas} crianças</p>
+        <div className="flex items-center gap-2">
+          <FestaColorDot color={festa.cor} />
+          <div>
+            <p className="text-sm font-semibold text-text-primary">{aniversarianteNome}</p>
+            <p className="text-xs text-text-muted">{nomeSala} · {festa.numCriancas} crianças</p>
+          </div>
         </div>
       </div>
       <StatusBadge status="A_COMECAR">

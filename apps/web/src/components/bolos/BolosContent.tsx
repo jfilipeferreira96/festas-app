@@ -6,6 +6,7 @@ import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { pt } from "date-fns/locale";
 import { PageHeader, Button } from "@/components/ui";
 import LoadingState from "@/components/ui/LoadingState";
+import { FestaColorDot } from "@/components/ui/FestaColorPicker";
 import DatePicker from "@/components/form/date-picker";
 import { useReservas } from "@/hooks/use-reservas";
 import { imprimirBolos } from "@/utils/print-bolos";
@@ -177,7 +178,12 @@ export default function BolosContent() {
                       <tbody className="divide-y divide-border bg-surface">
                         {dia.bolos.map((r: Reserva) => (
                           <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                            <td className="px-4 py-2.5 font-semibold text-text-primary whitespace-nowrap">{r.horario}</td>
+                            <td className="px-4 py-2.5 font-semibold text-text-primary whitespace-nowrap">
+                              <span className="flex items-center gap-2">
+                                <FestaColorDot color={r.cor} />
+                                {r.horario}
+                              </span>
+                            </td>
                             <td className="px-4 py-2.5 text-text-primary">
                               {r.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || "-"}
                             </td>

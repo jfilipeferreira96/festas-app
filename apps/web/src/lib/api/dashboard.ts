@@ -27,6 +27,8 @@ export interface ReservaEmCurso {
   numCriancas: number;
   horario: string;
   duracaoMinutos: number;
+  /** Cor da pulseira da festa (identificação visual para a equipa). */
+  cor?: string | null;
   aniversariantes: { aniversariante: { id: string; nome: string } }[];
   cliente: { id: string; nome: string } | null;
   salaLanche?: { id: string; nome: string } | null;
@@ -42,6 +44,8 @@ export interface ProximaFesta {
   horario: string;
   numCriancas: number;
   estado: EstadoReserva;
+  /** Cor da pulseira da festa (identificação visual para a equipa). */
+  cor?: string | null;
   salaLanche?: { id: string; nome: string } | null;
 }
 
