@@ -74,6 +74,7 @@ export default function CacifosContent() {
   const [selectedReservaId, setSelectedReservaId] = useState<string | null>(null);
   const [preselectedCacifoId, setPreselectedCacifoId] = useState<string | null>(null);
   const [pendingEntradaId, setPendingEntradaId] = useState<string | null>(null);
+  const [showPrintOptions, setShowPrintOptions] = useState(false);
 
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -280,6 +281,21 @@ export default function CacifosContent() {
     );
   }, [filtroFesta, festas, cacifos, selectedDate, formattedDate]);
 
+  // Imprime só os cacifos das festas actualmente EM_CURSO.
+  const handleImprimirEmCurso = useCallback(() => {
+    const emCursoIds = new Set(
+      festas.filter((f) => f.estado === "EM_CURSO").map((f) => f.id)
+    );
+    const cacifosEmCurso = (cacifos ?? []).filter(
+      (c) => c.reservaId && emCursoIds.has(c.reservaId)
+    );
+    imprimirListaConvidados(
+      { data: selectedDate },
+      cacifosEmCurso,
+      `Cacifos - Festas em curso · ${formattedDate}`
+    );
+  }, [festas, cacifos, selectedDate, formattedDate]);
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -396,13 +412,41 @@ export default function CacifosContent() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleImprimir}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
-            >
-              <Printer size={16} />
-              <span>Imprimir</span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowPrintOptions((v) => !v)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
+              >
+                <Printer size={16} />
+                <span>Imprimir</span>
+              </button>
+              {showPrintOptions && (
+                <>
+                  {/* Click-away */}
+                  <div className="fixed inset-0 z-10" onClick={() => setShowPrintOptions(false)} />
+                  <div className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-border bg-white shadow-theme-lg z-20 py-1">
+                    <button
+                      onClick={() => {
+                        setShowPrintOptions(false);
+                        handleImprimir();
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:bg-gray-50 hover:text-text-primary transition-colors"
+                    >
+                      Imprimir todas
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowPrintOptions(false);
+                        handleImprimirEmCurso();
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-text-secondary hover:bg-gray-50 hover:text-text-primary transition-colors"
+                    >
+                      Imprimir festas em curso
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
             <button
               onClick={() => handleExportCSV()}
               className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg border border-border text-text-secondary hover:text-text-primary hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-theme-xs"
