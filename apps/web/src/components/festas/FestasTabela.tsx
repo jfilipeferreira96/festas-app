@@ -781,8 +781,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                 </button>
               </Tooltip>
             )}
-            {/* Quick action: Pagamento (todos os estados excepto CONCLUIDA/CANCELADA) */}
-            {r.estado !== "CONCLUIDA" && r.estado !== "CANCELADA" && (
+            {/* Quick action: Pagamento (todos os estados excepto CANCELADA) */}
+            {r.estado !== "CANCELADA" && (
               <Tooltip content="Gerir pagamento" position="top" theme="dark">
                 <button
                   onClick={() => setPagamentoReserva(r)}

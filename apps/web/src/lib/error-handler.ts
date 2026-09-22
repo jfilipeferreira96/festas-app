@@ -4,6 +4,7 @@ import Logger from "@/lib/logger";
 /** Códigos de serviço conhecidos → mensagem PT + status HTTP. */
 const KNOWN_ERRORS: Record<string, { message: string; status: number }> = {
   NOT_FOUND: { message: "Registo não encontrado.", status: 404 },
+  VALOR_INVALIDO: { message: "Valor inválido.", status: 400 },
   CANNOT_DELETE_ACTIVE: {
     message: "Não é possível eliminar uma entrada em curso. Conclua ou cancele primeiro.",
     status: 409,

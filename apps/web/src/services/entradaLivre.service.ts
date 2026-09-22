@@ -471,22 +471,45 @@ export const entradaLivreService = {
   },
 
   // ── Atualizar pagamento ─────────────────────────
-  async atualizarPagamento(id: string, data: { pagoExcesso?: boolean; pagamentos?: CriarPagamentoDTO[] | null }) {
+  async atualizarPagamento(
+    id: string,
+    data: { custoTotalFinal?: number | null; pagoExcesso?: boolean; pagamentos?: CriarPagamentoDTO[] | null }
+  ) {
     const entrada = await prisma.entradaLivre.findUnique({ where: { id } });
     if (!entrada) throw new Error("NOT_FOUND");
+
+    // Total devido editável (igual ao `valorTotal` da reserva): undefined =
+    // sem alteração; null = limpar o final e voltar a seguir o custo calculado.
+    let totalFinal: number | null | undefined;
+    if (data.custoTotalFinal !== undefined) {
+      if (data.custoTotalFinal === null) {
+        totalFinal = null;
+      } else {
+        const valor = Number(data.custoTotalFinal);
+        if (!Number.isFinite(valor) || valor < 0) throw new Error("VALOR_INVALIDO");
+        totalFinal = Math.round(valor * 100) / 100;
+      }
+    }
 
     // ── Ledger de pagamentos (replace-all); undefined = sem alterações ──
     const lista = data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : undefined;
 
-    if (lista !== undefined) {
-      // O estado `pago` é derivado (soma >= custoTotalFinal ?? custoTotal)
-      const auxiliares: { pagoExcesso?: boolean } = {};
+    if (lista !== undefined || totalFinal !== undefined) {
+      // Auxiliares escritos ANTES do sync: a derivação de `pago` usa o novo total.
+      const auxiliares: { custoTotalFinal?: number | null; pagoExcesso?: boolean } = {};
+      if (totalFinal !== undefined) auxiliares.custoTotalFinal = totalFinal;
       if (data.pagoExcesso !== undefined) auxiliares.pagoExcesso = data.pagoExcesso;
       await prisma.$transaction(async (tx) => {
         if (Object.keys(auxiliares).length > 0) {
           await tx.entradaLivre.update({ where: { id }, data: auxiliares });
         }
-        await sincronizarPagamentosEntradaLivre(tx, id, lista);
+        if (lista !== undefined) {
+          // O estado `pago` é derivado (soma >= custoTotalFinal ?? custoTotal)
+          await sincronizarPagamentosEntradaLivre(tx, id, lista);
+        } else {
+          // Só mudou o total/excesso → re-derivar o pago contra o ledger persistido
+          await rederivarPagoEntradaLivre(tx, id);
+        }
       });
       return this.getById(id);
     }
