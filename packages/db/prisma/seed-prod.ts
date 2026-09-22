@@ -148,8 +148,8 @@ async function seedExtras() {
     // ─── Menus (5) ─────────────────────────────────────────────
     { id: "extra-menu-basy-semana", nome: "Menu Basy (Semana)", precoUnitario: 14.5, descricao: "Menu de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: false },
     { id: "extra-menu-basy-fimsemana", nome: "Menu Basy (Fim de semana)", precoUnitario: 15.9, descricao: "Menu de fim-de-semana e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: true },
-    { id: "extra-menu-landy-semana", nome: "Menu Landy * MAIS PROCURADO (Semana)", precoUnitario: 16.5, descricao: "Menu mais procurado, de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: false },
-    { id: "extra-menu-landy-fimsemana", nome: "Menu Landy * MAIS PROCURADO (Fim de semana)", precoUnitario: 17.9, descricao: "Menu mais procurado, de fim-de-semana e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: true },
+    { id: "extra-menu-landy-semana", nome: "Menu Landy (Semana)", precoUnitario: 16.5, descricao: "Menu mais procurado, de dia de semana (exclui feriados).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: false },
+    { id: "extra-menu-landy-fimsemana", nome: "Menu Landy (Fim de semana)", precoUnitario: 17.9, descricao: "Menu mais procurado, de fim-de-semana e feriados.", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false, fimDeSemana: true },
     { id: "extra-menu-almoco-jantar", nome: "Almoço/Jantar (Suplemento)", precoUnitario: 3.5, descricao: "Pizza, fruta e nuggets. Suplemento a acrescentar ao menu base (almoço/jantar).", categoria: "MENU", subcategoria: "BasyLandy", requerTexto: false },
     // ─── Extras ao lanche (9) ─────────────────────────────────
     { id: "extra-lanche-bolachas", nome: "Bolachas", precoUnitario: 1.0, descricao: "Extras ao lanche", categoria: "EXTRA", subcategoria: "Extras ao lanche", requerTexto: false },
