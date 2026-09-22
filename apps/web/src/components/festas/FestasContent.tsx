@@ -141,7 +141,6 @@ export default function FestasContent() {
           numCriancasPresentesInicial={confirmFinalizar.numCriancasPresentes}
           titulo="Finalizar Festa"
           entidadeNome={getAniversarianteNome(confirmFinalizar)}
-          localNome={confirmFinalizar.local?.nome}
           inicioEm={confirmFinalizar.inicioEm}
           fimPrevisto={confirmFinalizar.fimPrevisto}
           duracaoMinutos={confirmFinalizar.duracaoMinutos}
@@ -496,8 +495,6 @@ function FestaCard({
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-text-muted mt-1">
-          <span>{festa.local?.nome ?? "-"}</span>
-          <span>·</span>
           <span>{festa.horario}</span>
           <span>·</span>
           <span>{festa.duracaoMinutos} min</span>

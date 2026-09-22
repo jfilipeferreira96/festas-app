@@ -41,7 +41,6 @@ export const lancheService = {
           menu: { isNot: null },
         },
         include: {
-          local: true,
           salaLanche: true,
           aniversariantes: { include: { aniversariante: true } },
           menu: true,
@@ -98,7 +97,6 @@ export const lancheService = {
         data: r.data.toISOString(),
         horario: r.horario,
         horaLanche: r.horaLanche ?? undefined,
-        localNome: r.local?.nome ?? "-",
         salaLancheNome: r.salaLanche?.nome ?? undefined,
         cor: r.cor ?? undefined,
         numCriancas: r.numCriancas,
@@ -147,7 +145,6 @@ export const lancheService = {
     const reserva = await prisma.reserva.findUnique({
       where: { id: reservaId },
       include: {
-        local: true,
         salaLanche: true,
         aniversariantes: { include: { aniversariante: true } },
         menu: true,
@@ -184,7 +181,6 @@ export const lancheService = {
       data: reserva.data.toISOString(),
       horario: reserva.horario,
       horaLanche: reserva.horaLanche ?? undefined,
-      localNome: reserva.local?.nome ?? "-",
       salaLancheNome: reserva.salaLanche?.nome ?? undefined,
       cor: reserva.cor ?? undefined,
       numCriancas: reserva.numCriancas,

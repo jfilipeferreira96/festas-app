@@ -33,7 +33,6 @@ export const festasAcabarService = {
           fimPrevisto: { lte: limiteSuperior },
         },
         include: {
-          local: true,
           aniversariantes: { include: { aniversariante: true } },
         },
         orderBy: { fimPrevisto: "asc" },
@@ -79,7 +78,6 @@ export const festasAcabarService = {
         numCriancas: r.numCriancas,
         inicioEm: r.inicioEm?.toISOString() ?? null,
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
-        localNome: r.local?.nome ?? "-",
         estado: r.estado,
       };
     });
@@ -128,7 +126,6 @@ export const festasAcabarService = {
     const festas = await prisma.reserva.findMany({
       where: { estado: "EM_CURSO" },
       include: {
-        local: true,
         aniversariantes: { include: { aniversariante: true } },
         cacifos: true,
         extras: { include: { extra: true } },
@@ -165,7 +162,6 @@ export const festasAcabarService = {
         numCriancas: r.numCriancas,
         inicioEm: r.inicioEm?.toISOString() ?? null,
         fimPrevisto: r.fimPrevisto?.toISOString() ?? null,
-        localNome: r.local?.nome ?? "-",
         pago: r.pago,
         // Total acordado (fallback: soma do ledger)
         valorPago:

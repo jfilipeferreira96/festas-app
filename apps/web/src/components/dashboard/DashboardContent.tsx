@@ -275,7 +275,7 @@ const KPIGrid = React.memo(function KPIGrid() {
 const FestaEmCursoRow = React.memo(function FestaEmCursoRow({ festa }: { festa: ReservaEmCurso }) {
   const inicio = new Date(festa.inicioEm);
   const horaInicio = inicio.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-  const nomeSala = festa.local?.nome ?? "-";
+  const nomeSala = festa.salaLanche?.nome ?? "-";
   const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "-";
 
   // Find the next pending etapa (first one not concluded, ordered by ordem)
@@ -328,7 +328,7 @@ const FestasEmCursoSection = React.memo(function FestasEmCursoSection() {
 });
 
 const ProximaFestaRow = React.memo(function ProximaFestaRow({ festa }: { festa: ProximaFesta }) {
-  const nomeSala = festa.local?.nome ?? "-";
+  const nomeSala = festa.salaLanche?.nome ?? "-";
   const aniversarianteNome = festa.aniversariantes?.[0]?.aniversariante?.nome ?? "-";
 
   const minutosAteInicio = React.useMemo(() => {

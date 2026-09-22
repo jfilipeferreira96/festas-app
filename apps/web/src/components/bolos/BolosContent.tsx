@@ -171,7 +171,7 @@ export default function BolosContent() {
                           <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-muted">Bolo</th>
                           <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-muted">Tema</th>
                           <th className="text-center px-4 py-2.5 text-xs font-semibold text-text-muted">Qtd</th>
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-muted">Sala</th>
+                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-text-muted">Sala do Lanche</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border bg-surface">
@@ -186,7 +186,7 @@ export default function BolosContent() {
                             <td className="px-4 py-2.5 text-center font-semibold text-text-primary">
                               {r.boloQuantidade ?? 1}
                             </td>
-                            <td className="px-4 py-2.5 text-text-secondary">{r.local?.nome ?? "-"}</td>
+                            <td className="px-4 py-2.5 text-text-secondary">{r.salaLanche?.nome ?? "-"}</td>
                           </tr>
                         ))}
                       </tbody>

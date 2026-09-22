@@ -16,7 +16,6 @@ export interface FestaAcabar {
   numCriancas: number;
   inicioEm: string | null;
   fimPrevisto: string | null;
-  localNome: string;
   pago: boolean;
   valorPago: number | null;
   extras: FestaAcabarExtra[];

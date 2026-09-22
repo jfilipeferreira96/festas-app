@@ -29,7 +29,7 @@ export interface ReservaEmCurso {
   duracaoMinutos: number;
   aniversariantes: { aniversariante: { id: string; nome: string } }[];
   cliente: { id: string; nome: string } | null;
-  local: { id: string; nome: string } | null;
+  salaLanche?: { id: string; nome: string } | null;
   monitores: { monitor: { id: string; nome: string } }[];
   cacifos: { id: string; numero: number; estado: string }[];
   etapas: { id: string; concluida: boolean; etapa: { id: string; nome: string } }[];
@@ -42,7 +42,7 @@ export interface ProximaFesta {
   horario: string;
   numCriancas: number;
   estado: EstadoReserva;
-  local: { id: string; nome: string } | null;
+  salaLanche?: { id: string; nome: string } | null;
 }
 
 export interface AniversarioProximo {

@@ -86,7 +86,6 @@ export const clienteService = {
           where: { estado: { not: "CANCELADA" } },
           orderBy: { data: "desc" },
           include: {
-            local: true,
             pagamentos: { select: { valor: true, metodo: true } },
           },
         },

@@ -201,7 +201,6 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
         <div className="grid grid-cols-2 gap-3">
           <DetailRow icon={<Calendar size={13} />} label="Data" value={formatDate(reserva.data)} />
           <DetailRow icon={<Clock size={13} />} label="Horário" value={`${reserva.horario} (${formatDuration(reserva.duracaoMinutos)})`} />
-          <DetailRow icon={<MapPin size={13} />} label="Local" value={reserva.local?.nome ?? "-"} />
           {reserva.horaLanche && (
             <DetailRow icon={<Clock size={13} />} label="Hora Lanche" value={reserva.horaLanche} />
           )}

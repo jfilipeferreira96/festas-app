@@ -29,7 +29,6 @@ export interface Cliente {
     /** Ledger de pagamentos (fonte única do recebido). */
     pagamentos?: Array<{ valor: number; metodo: string }>;
     pago: boolean;
-    local?: { id: string; nome: string } | null;
   }>;
 }
 

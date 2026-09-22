@@ -90,7 +90,7 @@ export default function CaucoesContent() {
             <p className="text-sm text-text-primary whitespace-nowrap">
               {formatDate(r.data)} · {r.horario}
             </p>
-            <p className="text-xs text-text-muted">{r.local?.nome ?? "-"}</p>
+            <p className="text-xs text-text-muted">{r.salaLanche?.nome ?? "-"}</p>
           </div>
         ),
       },

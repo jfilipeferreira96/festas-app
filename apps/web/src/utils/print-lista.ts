@@ -8,7 +8,7 @@ interface ReservaPrintInfo {
   aniversariantes?: Array<{ aniversariante: { nome: string } }>;
   data?: string | Date;
   horario?: string;
-  local?: { nome?: string } | null;
+  salaLanche?: { nome?: string } | null;
   notasCacifos?: string | null;
 }
 
@@ -168,7 +168,7 @@ export function imprimirListaConvidados(
 <body>
   <h1>${escapeHtml(tituloFinal)}</h1>
   <div class="info">
-    Data: ${escapeHtml(data)} · Horário: ${escapeHtml(reserva.horario ?? "-")} · Sala: ${escapeHtml(reserva.local?.nome ?? "-")}
+    Data: ${escapeHtml(data)} · Horário: ${escapeHtml(reserva.horario ?? "-")} · Sala do Lanche: ${escapeHtml(reserva.salaLanche?.nome ?? "-")}
   </div>
   <table>
     <thead>

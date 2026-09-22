@@ -495,7 +495,7 @@ export default function CacifosContent() {
                     )}
                     <span className="font-medium">{anvNome}</span>
                     <span className={`text-xs ${isFiltered ? "text-white/70" : "text-text-muted"}`}>
-                      {festa.horario} · {festa.local?.nome ?? ""}
+                      {festa.horario}
                     </span>
                   </button>
                   {/* Botão Preencher cacifos - indisponível na vista de planeamento */}
@@ -757,7 +757,7 @@ export default function CacifosContent() {
               {selectedCacifo.reserva && (
                 <>
                   <DetailRow label="Aniversariante" value={selectedCacifo.reserva.aniversariantes?.map(a => a.aniversariante.nome).join(", ") || selectedCacifo.reserva.cliente?.nome || "-"} />
-                  <DetailRow label="Sala" value={selectedCacifo.reserva.local?.nome ?? "-"} />
+                  <DetailRow label="Sala do Lanche" value={selectedCacifo.reserva.salaLanche?.nome ?? "-"} />
                   {selectedCacifo.reserva.notasCacifos && (
                     <div className="px-3 py-2.5 rounded-lg bg-accent-orange-50 border border-accent-orange-200">
                       <p className="text-[10px] font-semibold text-accent-orange-700 uppercase tracking-wider mb-0.5">Notas Cacifos (Reserva)</p>

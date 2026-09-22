@@ -114,7 +114,7 @@ function reservaToEvent(r: Reserva): CalendarEvent {
     horario: r.horario,
     duracaoMinutos: r.duracaoMinutos,
     titulo: getAniversarianteNome(r),
-    subtitulo: `${r.local?.nome ?? ""} · ${r.numCriancas} crianças`,
+    subtitulo: `${r.numCriancas} crianças`,
     className: ESTADO_COLORS[r.estado] ?? "bg-gray-100 text-gray-600",
     estado: r.estado,
     raw: r,
@@ -681,7 +681,7 @@ function FestaDetail({ r }: { r: Reserva }) {
           r.duracaoMinutos % 60 > 0 ? (r.duracaoMinutos % 60).toString().padStart(2, "0") : ""
         })`}
       />
-      <DetailRow label="Sala" value={r.local?.nome ?? "-"} />
+      <DetailRow label="Sala do Lanche" value={r.salaLanche?.nome ?? "-"} />
       <DetailRow label="Crianças" value={String(r.numCriancas)} />
       <div className="flex items-center gap-2">
         <span className="text-xs text-text-muted w-28 shrink-0">Estado:</span>

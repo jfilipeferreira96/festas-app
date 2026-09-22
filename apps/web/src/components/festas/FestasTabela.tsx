@@ -449,13 +449,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             },
           },
           {
-            key: "local",
-            label: "Local",
-            render: (_v, r) => (
-              <span className="text-sm text-text-secondary">{r.local?.nome ?? "-"}</span>
-            ),
-          },
-          {
             key: "lanche",
             label: "Lanche",
             render: (_v, r) => {
@@ -906,7 +899,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
           numCriancasPresentesInicial={finalizarModal.numCriancasPresentes}
           titulo="Finalizar Festa"
           entidadeNome={getAniversarianteNome(finalizarModal)}
-          localNome={finalizarModal.local?.nome}
           inicioEm={finalizarModal.inicioEm}
           fimPrevisto={finalizarModal.fimPrevisto}
           duracaoMinutos={finalizarModal.duracaoMinutos}
@@ -937,8 +929,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                 <span className="text-text-primary">{iniciarFestaReserva.cliente?.nome ?? "-"}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-text-muted">Sala</span>
-                <span className="text-text-primary">{iniciarFestaReserva.local?.nome ?? "-"}</span>
+                <span className="text-text-muted">Sala do Lanche</span>
+                <span className="text-text-primary">{iniciarFestaReserva.salaLanche?.nome ?? "-"}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">Nº Crianças</span>

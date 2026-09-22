@@ -43,7 +43,7 @@ export const caucaoService = {
       where,
       include: {
         cliente: { select: { id: true, nome: true, telefone: true } },
-        local: { select: { id: true, nome: true } },
+        salaLanche: { select: { id: true, nome: true } },
         aniversariantes: { include: { aniversariante: { select: { id: true, nome: true } } } },
       },
       orderBy: { data: "desc" },
@@ -60,7 +60,7 @@ export const caucaoService = {
       valorTotal: r.valorTotal != null ? Number(r.valorTotal) : null,
       pago: r.pago,
       cliente: r.cliente,
-      local: r.local,
+      salaLanche: r.salaLanche,
       aniversariantes: r.aniversariantes,
     }));
   },

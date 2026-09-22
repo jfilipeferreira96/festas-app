@@ -3,7 +3,7 @@
 import React from "react";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
-import { Calendar, Users, MapPin, Euro } from "lucide-react";
+import { Calendar, Users, Euro } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { useCliente } from "@/hooks/use-clientes";
 
@@ -77,17 +77,9 @@ export default function HistoricoFestasModal({
                     </div>
                   </div>
 
-                  {/* Sala */}
-                  <div className="flex items-center gap-1.5 sm:flex-1 min-w-0">
-                    <MapPin size={14} className="text-text-muted shrink-0" />
-                    <span className="text-sm text-text-secondary truncate">
-                      {festa.local?.nome ?? "-"}
-                    </span>
-                  </div>
-
                   {/* Crianças */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Users size={14} className="text-text-muted" />
+                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <Users size={14} className="text-text-muted shrink-0" />
                     <span className="text-sm text-text-secondary">{festa.numCriancas}</span>
                   </div>
 

@@ -83,11 +83,6 @@ export default function HistoricoModal({ reserva, onClose }: HistoricoModalProps
         {/* Info Grid */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <InfoItem
-            icon={<MapPin size={14} />}
-            label="Local"
-            value={reserva.local?.nome ?? "-"}
-          />
-          <InfoItem
             icon={<Clock size={14} />}
             label="Horário"
             value={`${reserva.horario} · ${reserva.duracaoMinutos} min`}

@@ -14,7 +14,6 @@ type FestaTV = {
   numCriancas: number | null;
   inicioEm: string | null;
   fimPrevisto: string | null;
-  localNome: string;
   estado: string;
 };
 
@@ -94,9 +93,8 @@ function FestaCard({ festa }: { festa: FestaTV }) {
           {festa.nomeFesta}
         </p>
         <div className="flex items-center gap-4 mt-2">
-          <span className="text-2xl text-text-muted">{festa.localNome}</span>
           {festa.numCriancas != null && festa.numCriancas > 0 && (
-            <span className="text-2xl text-text-muted">· {festa.numCriancas} crianças</span>
+            <span className="text-2xl text-text-muted">{festa.numCriancas} crianças</span>
           )}
         </div>
       </div>

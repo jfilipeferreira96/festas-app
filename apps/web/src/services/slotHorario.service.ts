@@ -42,7 +42,6 @@ export interface SlotDiaFesta {
   cor: string | null;
   numCriancas: number;
   estado: string;
-  localNome: string | null;
   horario: string;
   duracaoMinutos: number;
 }
@@ -207,7 +206,6 @@ export const slotHorarioService = {
               cor: festa.cor ?? null,
               numCriancas: festa.numCriancas ?? 0,
               estado: festa.estado,
-              localNome: festa.local?.nome ?? null,
               horario: festa.horario,
               duracaoMinutos: festa.duracaoMinutos,
             }
@@ -228,7 +226,6 @@ export const slotHorarioService = {
         cor: f.cor ?? null,
         numCriancas: f.numCriancas ?? 0,
         estado: f.estado,
-        localNome: f.local?.nome ?? null,
         horario: f.horario,
         duracaoMinutos: f.duracaoMinutos,
       }));

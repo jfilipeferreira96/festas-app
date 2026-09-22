@@ -14,7 +14,7 @@ export interface Cacifo {
   reserva?: {
     id: string;
     cliente: { id: string; nome: string } | null;
-    local: { id: string; nome: string } | null;
+    salaLanche?: { id: string; nome: string } | null;
     notasCacifos?: string | null;
     aniversariantes?: { aniversariante: { nome: string } }[];
   };

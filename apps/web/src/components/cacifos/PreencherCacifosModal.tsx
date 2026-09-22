@@ -308,7 +308,8 @@ function ModalHeader({ reserva }: { reserva: ReturnType<typeof useReserva>["data
       <div className="flex-1">
         <h2 className="text-lg font-semibold text-text-primary">{anvNomes}</h2>
         <p className="text-sm text-text-muted">
-          {formatDate(reserva.data)} · {reserva.horario} · {reserva.local?.nome ?? "-"}
+          {formatDate(reserva.data)} · {reserva.horario}
+          {reserva.salaLanche?.nome ? ` · ${reserva.salaLanche.nome}` : ""}
         </p>
       </div>
     </div>

@@ -37,7 +37,7 @@ type ReservaParaEmail = {
   boloTema: string | null;
   numCriancas: number;
   numCriancasConfirmadas: number | null;
-  local: { nome: string } | null;
+  salaLanche: { nome: string } | null;
   cliente: { nome: string } | null;
   aniversariantes: { aniversariante: { nome: string } }[];
   extras: { extra: { nome: string }; quantidade: number }[];
@@ -66,7 +66,7 @@ export function buildReservaConfirmacaoHtml(
         reserva.duracaoMinutos % 60
       ).padStart(2, "0")})`
     ),
-    linha("Sala", escapeHtmlEmail(reserva.local?.nome ?? "-")),
+    linha("Sala do Lanche", escapeHtmlEmail(reserva.salaLanche?.nome ?? "-")),
     linha(
       "Aniversariante(s)",
       escapeHtmlEmail(reserva.aniversariantes.map((a) => a.aniversariante.nome).join(", ") || "-")
@@ -138,7 +138,7 @@ async function carregarReserva(reservaId: string) {
   const reserva = await prisma.reserva.findUnique({
     where: { id: reservaId },
     include: {
-      local: { select: { nome: true } },
+      salaLanche: { select: { nome: true } },
       cliente: true,
       aniversariantes: { include: { aniversariante: { select: { nome: true } } } },
       extras: { include: { extra: { select: { nome: true } } } },

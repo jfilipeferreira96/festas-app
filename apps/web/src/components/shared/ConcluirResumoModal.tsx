@@ -8,7 +8,6 @@ import {
   Euro,
   CheckCircle2,
   Calendar,
-  MapPin,
   User,
 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
@@ -63,8 +62,6 @@ interface ConcluirResumoModalProps {
   titulo: string;
   /** Entity name - aniversariante (festa) or first criança (entrada livre) */
   entidadeNome: string;
-  /** Local / sala name */
-  localNome?: string;
 
   /** ISO string - when the festa/entrada started */
   inicioEm?: string;
@@ -97,7 +94,6 @@ export default function ConcluirResumoModal({
   numCriancasPresentesInicial = null,
   titulo,
   entidadeNome,
-  localNome,
   inicioEm,
   fimPrevisto,
   duracaoMinutos,
@@ -197,12 +193,6 @@ export default function ConcluirResumoModal({
             <User className="w-4 h-4 text-text-muted" />
             {entidadeNome}
           </span>
-          {localNome && (
-            <span className="flex items-center gap-1.5 text-text-secondary">
-              <MapPin className="w-4 h-4 text-text-muted" />
-              {localNome}
-            </span>
-          )}
         </div>
 
         {/* Time summary */}

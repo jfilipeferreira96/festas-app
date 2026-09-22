@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Clock, Plus, Users, MapPin, Eye, Pencil, CheckCircle2, Play, SquareCheck, UserCheck, History, XCircle, Trash2 } from "lucide-react";
+import { Clock, Plus, Users, Eye, Pencil, CheckCircle2, Play, SquareCheck, UserCheck, History, XCircle, Trash2 } from "lucide-react";
 import { useSlotsDia } from "@/hooks/use-slots-horario";
 import type { SlotDia, FestaSemSlot } from "@/lib/api/slotsHorario";
 import { coresEmConflito, corDisponivel, type FestaComIntervalo } from "@/lib/cores";
@@ -162,12 +162,6 @@ const SlotCard = React.memo(function SlotCard({
               <Users size={12} />
               {f.numCriancas} crianças
             </span>
-            {f.localNome && (
-              <span className="flex items-center gap-1">
-                <MapPin size={12} />
-                {f.localNome}
-              </span>
-            )}
           </div>
         </div>
         {onAction && (
@@ -236,12 +230,6 @@ const FestaSemSlotCard = React.memo(function FestaSemSlotCard({
             <Users size={12} />
             {festa.numCriancas} crianças
           </span>
-          {festa.localNome && (
-            <span className="flex items-center gap-1">
-              <MapPin size={12} />
-              {festa.localNome}
-            </span>
-          )}
         </div>
       </div>
       {onAction && (

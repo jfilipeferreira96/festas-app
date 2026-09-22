@@ -12,7 +12,7 @@ export interface CaucaoItem {
   valorTotal: number | null;
   pago: boolean;
   cliente: { id: string; nome: string; telefone: string };
-  local: { id: string; nome: string } | null;
+  salaLanche: { id: string; nome: string } | null;
   aniversariantes: { aniversariante: { id: string; nome: string } }[];
 }
 

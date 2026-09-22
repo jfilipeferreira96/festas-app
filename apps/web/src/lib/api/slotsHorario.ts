@@ -13,7 +13,6 @@ export interface FestaSlotInfo {
   cor: string | null;
   numCriancas: number;
   estado: string;
-  localNome: string | null;
   horario: string;
   duracaoMinutos: number;
 }

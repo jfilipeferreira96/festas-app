@@ -43,15 +43,13 @@ export const localService = {
   },
 
   async delete(id: string) {
-    // Check for active reservas
-    const reservasCount = await prisma.reserva.count({
-      where: {
-        localId: id,
-        estado: { in: ["RESERVA", "CONFIRMADO", "EM_CURSO"] },
-      },
+    // Check for alocações de monitores activas (o local serve alocação/extras,
+    // já não festas - Reserva deixou de ter localId)
+    const alocacoesCount = await prisma.alocacaoMonitor.count({
+      where: { localId: id },
     });
 
-    if (reservasCount > 0) throw new Error("HAS_ACTIVE_RESERVAS");
+    if (alocacoesCount > 0) throw new Error("HAS_ACTIVE_RESERVAS");
 
     // Soft delete by setting activo = false
     return prisma.local.update({

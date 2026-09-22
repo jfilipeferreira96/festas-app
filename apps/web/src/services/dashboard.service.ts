@@ -172,7 +172,7 @@ export const dashboardService = {
     return prisma.reserva.findMany({
       where: { estado: "EM_CURSO" },
       include: {
-        local: true,
+        salaLanche: true,
         aniversariantes: { include: { aniversariante: true } },
         cliente: true,
         monitores: { include: { monitor: true } },
@@ -196,7 +196,7 @@ export const dashboardService = {
         horario: { gt: horarioAtual },
         estado: { in: ["CONFIRMADO"] },
       },
-      include: { local: true, aniversariantes: { include: { aniversariante: true } } },
+      include: { salaLanche: true, aniversariantes: { include: { aniversariante: true } } },
       orderBy: { horario: "asc" },
       take: 5,
     });
@@ -215,7 +215,7 @@ export const dashboardService = {
         horario: { gt: horarioAtual },
         estado: { in: ["CONFIRMADO"] },
       },
-      include: { local: true, aniversariantes: { include: { aniversariante: true } } },
+      include: { salaLanche: true, aniversariantes: { include: { aniversariante: true } } },
       orderBy: { horario: "asc" },
     });
 

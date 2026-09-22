@@ -40,7 +40,7 @@ export const cacifoService = {
     const cacifo = await prisma.cacifo.findUnique({
       where: { id },
       include: {
-        reserva: { include: { cliente: true, aniversariantes: { include: { aniversariante: true } }, local: true } },
+        reserva: { include: { cliente: true, aniversariantes: { include: { aniversariante: true } }, salaLanche: true } },
       },
     });
     if (!cacifo) throw new Error("NOT_FOUND");

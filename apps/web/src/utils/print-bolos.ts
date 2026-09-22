@@ -7,7 +7,7 @@ interface ReservaBoloInfo {
   aniversariantes?: Array<{ aniversariante: { nome: string } }>;
   data?: string | Date;
   horario?: string;
-  local?: { nome?: string } | null;
+  salaLanche?: { nome?: string } | null;
   bolo?: string | null;
   boloTema?: string | null;
   numCriancas?: number | null;
@@ -51,7 +51,7 @@ function secoesPorTipo(bolos: ReservaBoloInfo[]): string {
         <td style="border:1px solid #bbb;padding:8px 12px;font-size:15px;">${escapeHtml(anv)}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#444;">${escapeHtml(r.boloTema ?? "")}</td>
         <td style="border:1px solid #bbb;padding:8px 12px;text-align:center;width:90px;">${escapeHtml(String(pessoas))}</td>
-        <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#666;">${escapeHtml(r.local?.nome ?? "-")}</td>
+        <td style="border:1px solid #bbb;padding:8px 12px;font-size:13px;color:#666;">${escapeHtml(r.salaLanche?.nome ?? "-")}</td>
       </tr>`;
         })
         .join("");
@@ -65,7 +65,7 @@ function secoesPorTipo(bolos: ReservaBoloInfo[]): string {
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Aniversariante(s)</th>
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Tema</th>
           <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:center;">Pessoas</th>
-          <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Sala</th>
+          <th style="border:1px solid #bbb;padding:8px 12px;background:#f5f5f5;font-size:12px;font-weight:600;color:#666;text-align:left;">Sala do Lanche</th>
         </tr>
       </thead>
       <tbody>${linhas}</tbody>

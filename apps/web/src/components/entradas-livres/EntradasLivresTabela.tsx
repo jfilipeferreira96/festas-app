@@ -464,7 +464,6 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
           isConfirming={concluir.isPending}
           titulo="Concluir Entrada"
           entidadeNome={concluirModal.criancas?.[0]?.nome ?? concluirModal.encarregadoNome}
-          localNome="Parque (Entrada Livre)"
           inicioEm={concluirModal.inicioEm}
           fimPrevisto={concluirModal.fimPrevisto}
           duracaoMinutos={concluirModal.duracaoMinutos}

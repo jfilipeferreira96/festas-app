@@ -131,13 +131,6 @@ export default function FestasAcabarContent() {
       ),
     },
     {
-      key: "localNome",
-      label: "Sala",
-      render: (_v, f) => (
-        <span className="text-sm text-text-secondary">{f.localNome || "-"}</span>
-      ),
-    },
-    {
       key: "numCriancas",
       label: "Crianças",
       sortable: true,
@@ -325,10 +318,9 @@ export default function FestasAcabarContent() {
         loading={isLoading}
         defaultSort={{ key: "fimPrevisto", direction: "asc" }}
         searchable
-        searchPlaceholder="Pesquisar por aniversariante, sala..."
+        searchPlaceholder="Pesquisar por aniversariante..."
         searchFn={(f, q) =>
-          (f.nomeFesta ?? "").toLowerCase().includes(q) ||
-          (f.localNome ?? "").toLowerCase().includes(q)
+          (f.nomeFesta ?? "").toLowerCase().includes(q)
         }
         pagination
         pageSize={50}
