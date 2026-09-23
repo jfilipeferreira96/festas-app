@@ -3,49 +3,11 @@ import { reservaService } from "@/services/reserva.service";
 // (auth.user é passado ao service para auditoria dos ajustes iniciais)
 import { menuService } from "@/services/menu.service";
 import { requireAuth } from "@/lib/auth-server";
-import { createRouteErrorHandler } from "@/lib/route-error";
-
-const handleError = createRouteErrorHandler({
-  errorMap: {
-    NOT_FOUND: "reserva.notFound",
-    DAY_BLOCKED: "reserva.dayBlocked",
-    CAPACITY_EXCEEDED: "reserva.capacityExceeded",
-    INVALID_STATUS: "reserva.invalidStatus",
-    CANNOT_MODIFY_IN_PROGRESS: "reserva.cannotModifyInProgress",
-    CANNOT_DELETE_IN_PROGRESS: "reserva.cannotDeleteInProgress",
-    RESERVA_NOT_CONFIRMED: "reserva.notConfirmed",
-    ALREADY_IN_PROGRESS: "reserva.alreadyInProgress",
-    NOT_IN_PROGRESS: "reserva.notInProgress",
-    MONITOR_NOT_FOUND: "monitor.notFound",
-    MONITOR_INACTIVE: "monitor.inactive",
-    ETAPA_NOT_FOUND: "reserva.etapaNotFound",
-    CLIENTE_REQUIRED: "reserva.clienteRequired",
-    ANIVERSARIANTE_REQUIRED: "reserva.aniversarianteRequired",
-    DATA_NASCIMENTO_REQUIRED: "reserva.dataNascimentoRequired",
-    DATA_REQUIRED: "reserva.dataRequired",
-    HORARIO_REQUIRED: "reserva.horarioRequired",
-  },
-  statusMap: {
-    NOT_FOUND: 404,
-    DAY_BLOCKED: 409,
-    CAPACITY_EXCEEDED: 409,
-    INVALID_STATUS: 400,
-    CANNOT_MODIFY_IN_PROGRESS: 400,
-    CANNOT_DELETE_IN_PROGRESS: 400,
-    RESERVA_NOT_CONFIRMED: 400,
-    ALREADY_IN_PROGRESS: 409,
-    NOT_IN_PROGRESS: 400,
-    MONITOR_NOT_FOUND: 404,
-    MONITOR_INACTIVE: 400,
-    ETAPA_NOT_FOUND: 404,
-    CLIENTE_REQUIRED: 400,
-    ANIVERSARIANTE_REQUIRED: 400,
-    DATA_NASCIMENTO_REQUIRED: 400,
-    DATA_REQUIRED: 400,
-    HORARIO_REQUIRED: 400,
-  },
-  serviceName: "Reserva",
-});
+// Handler partilhado com [id]route.ts: inclui SLOT_OCCUPIED, MENU_NOT_FOUND,
+// PAGAMENTO_* e tradução de erros Prisma (o mapa inline antigo não tinha
+// SLOT_OCCUPIED e devolvia 500 "Erro interno" em vez de 409 ao criar numa
+// slot já ocupada).
+import { handleError } from "./error-handler";
 
 // GET /api/reservas[?estado=&data=&pesquisa=&page=&pageSize=]
 export async function GET(request: NextRequest) {
@@ -120,6 +82,7 @@ export async function POST(request: NextRequest) {
       clienteEmail,
       clienteCodigoPostal,
       adicionarCliente,
+      enviarEmail,
       menuId,
       menuNome,
       menuPreco,
@@ -166,7 +129,9 @@ export async function POST(request: NextRequest) {
       clienteEmail,
       clienteCodigoPostal,
       adicionarCliente,
-      menuId: menuId || undefined,
+      enviarEmail,
+      // "NONE" é um valor só de UI ("Sem menu"); nunca é um ID real de Extra.
+      menuId: menuId === "NONE" ? undefined : menuId || undefined,
       ajustes: ajustes || undefined,
     }, auth.user);
 

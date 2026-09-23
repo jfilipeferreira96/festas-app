@@ -234,6 +234,12 @@
     "forbidden": "Acesso proibido",
     "badRequest": "Pedido inválido",
     "conflict": "Conflito - recurso já existe",
+    "registoDuplicado": "Já existe um registo com estes dados (ex.: email já associado a outro cliente).",
+    "registoAssociadoInvalido": "Um dos registos associados já não existe. Recarregue a página e tente novamente.",
     "tooManyRequests": "Demasiados pedidos. Tente novamente mais tarde."
+  },
+  "pagamento": {
+    "valorInvalido": "Valor de pagamento inválido",
+    "metodoObrigatorio": "Método de pagamento inválido"
   }
 }

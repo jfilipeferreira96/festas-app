@@ -60,24 +60,43 @@ async function findOrCreateCliente(
   email?: string,
   codigoPostal?: string
 ): Promise<string> {
+  const emailLimpo = email?.trim() || undefined;
+  const telefoneLimpo = telefone?.trim() || "";
+
   // 1. Procurar por email (se fornecido) - email é @unique
-  if (email && email.trim()) {
-    const byEmail = await prisma.cliente.findFirst({ where: { email: email.trim() } });
+  if (emailLimpo) {
+    const byEmail = await prisma.cliente.findFirst({ where: { email: emailLimpo } });
     if (byEmail) return byEmail.id;
   }
   // 2. Procurar por telefone
-  const byTel = await prisma.cliente.findFirst({ where: { telefone } });
-  if (byTel) return byTel.id;
-  // 3. Criar novo cliente
-  const novo = await prisma.cliente.create({
-    data: {
-      nome,
-      telefone,
-      email: email && email.trim() ? email.trim() : null,
-      codigoPostal: codigoPostal && codigoPostal.trim() ? codigoPostal.trim() : null,
-    },
-  });
-  return novo.id;
+  if (telefoneLimpo) {
+    const byTel = await prisma.cliente.findFirst({ where: { telefone: telefoneLimpo } });
+    if (byTel) return byTel.id;
+  }
+  // 3. Criar novo cliente (email undefined → coluna NULL, nunca "")
+  try {
+    const novo = await prisma.cliente.create({
+      data: {
+        nome,
+        telefone: telefoneLimpo,
+        email: emailLimpo,
+        codigoPostal: codigoPostal && codigoPostal.trim() ? codigoPostal.trim() : null,
+      },
+    });
+    return novo.id;
+  } catch (err) {
+    // Corrida: outro pedido criou o mesmo cliente entretanto (P2002 unique).
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const existente = emailLimpo
+        ? await prisma.cliente.findFirst({ where: { email: emailLimpo } })
+        : null;
+      const porTel = existente ?? (telefoneLimpo
+        ? await prisma.cliente.findFirst({ where: { telefone: telefoneLimpo } })
+        : null);
+      if (porTel) return porTel.id;
+    }
+    throw err;
+  }
 }
 
 /**
@@ -258,9 +277,36 @@ export const entradaLivreService = {
       throw new Error("PAGAMENTO_OBRIGATORIO");
     }
 
+    // ── Guards de tipo: o corpo chega cru de request.json() - payloads
+    // inválidos têm de falhar 400 (VALOR_INVALIDO), nunca no Prisma (500).
+    if (!Array.isArray(data.criancas) || data.criancas.length === 0) {
+      throw new Error("VALOR_INVALIDO");
+    }
+    if (!Number.isFinite(data.duracaoMinutos) || data.duracaoMinutos <= 0) {
+      throw new Error("VALOR_INVALIDO");
+    }
+    if (!data.encarregadoNome?.trim() || !data.encarregadoTelefone?.trim()) {
+      throw new Error("VALOR_INVALIDO");
+    }
 
-    // encarregadoCodigoPostal é extraído antes do ...rest (não é coluna da entrada)
-    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, pagamentos: pagamentosInput, encarregadoCodigoPostal, ajustes: ajustesInput, ...rest } = data;
+    const { criancas, duracaoMinutos, extrasIds, extrasQuantidades, cacifoId, custoTotal: custoTotalInput, pagamentos: pagamentosInput, encarregadoCodigoPostal, ajustes: ajustesInput, ..._ignorado } = data;
+
+    // ── Whitelist de colunas: o corpo cru NUNCA entra por spread no Prisma
+    // (campo desconhecido = "Unknown argument" 500; campos sensíveis como
+    // estado/custoTotalFinal/inicioEm nunca devem ser escritos daqui).
+    const camposEntrada = {
+      encarregadoNome: data.encarregadoNome.trim(),
+      encarregadoTelefone: data.encarregadoTelefone.trim(),
+      encarregadoEmail: data.encarregadoEmail?.trim() || null,
+      observacoes: data.observacoes,
+      observacoesLesoes: data.observacoesLesoes,
+      temLanche: data.temLanche,
+      horaLanche: data.horaLanche ?? null,
+      numAdultos: data.numAdultos,
+      meiasQuantidade: data.meiasQuantidade,
+      meiasPrecoUnit: data.meiasPrecoUnit,
+      pago: data.pago,
+    };
 
     // ── Ledger de pagamentos (fonte única do recebido); [] = sem pagamentos ──
     const listaPagamentos: PagamentoInput[] =
@@ -321,7 +367,7 @@ export const entradaLivreService = {
         fimPrevisto,
         cacifoId: cacifoId || null,
         clienteId,
-        ...rest,
+        ...camposEntrada,
         pagamentos: listaPagamentos.length > 0
           ? {
               create: listaPagamentos.map((p) => ({
@@ -574,6 +620,7 @@ export const entradaLivreService = {
       observacoesLesoes?: string;
       // Lanche
       temLanche?: boolean;
+      horaLanche?: string | null;
       // Adultos
       numAdultos?: number;
       // Meias (compra obrigatória)
@@ -597,9 +644,34 @@ export const entradaLivreService = {
       extrasIds,
       extrasQuantidades,
       custoTotal: custoTotalInput,
-      encarregadoCodigoPostal,
-      ...rest
+      ..._ignorado // encarregadoCodigoPostal e afins: extraídos apenas para não passarem ao Prisma
     } = data;
+
+    // Guard de tipo: corpo cru de request.json() - array inválida não pode
+    // chegar ao Prisma nem ao cálculo de custos.
+    if (criancas !== undefined && !Array.isArray(criancas)) {
+      throw new Error("VALOR_INVALIDO");
+    }
+    if (duracaoMinutos !== undefined && (!Number.isFinite(duracaoMinutos) || duracaoMinutos <= 0)) {
+      throw new Error("VALOR_INVALIDO");
+    }
+
+    // ── Whitelist de colunas (Prisma ignora undefined): o corpo cru NUNCA
+    // entra por spread - caso contrário qualquer campo desconhecido do JSON
+    // rebentava com "Unknown argument" e campos como estado eram writable.
+    const camposEntrada = {
+      encarregadoNome: data.encarregadoNome,
+      encarregadoTelefone: data.encarregadoTelefone,
+      encarregadoEmail: data.encarregadoEmail,
+      observacoes: data.observacoes,
+      observacoesLesoes: data.observacoesLesoes,
+      temLanche: data.temLanche,
+      horaLanche: data.horaLanche,
+      numAdultos: data.numAdultos,
+      meiasQuantidade: data.meiasQuantidade,
+      meiasPrecoUnit: data.meiasPrecoUnit,
+      pago: data.pago,
+    };
 
     // Decisão do custoTotal:
     // - Se o utilizador forneceu um valor manual, esse prevalece.
@@ -708,7 +780,7 @@ export const entradaLivreService = {
       }
     }
 
-    const updateData: Record<string, unknown> = { ...rest };
+    const updateData: Record<string, unknown> = { ...camposEntrada };
     if (criancas !== undefined) updateData.criancas = criancas as unknown as Prisma.InputJsonValue;
     if (duracaoMinutos !== undefined) updateData.duracaoMinutos = duracaoMinutos;
     if (cacifoId !== undefined) updateData.cacifoId = cacifoId || null;

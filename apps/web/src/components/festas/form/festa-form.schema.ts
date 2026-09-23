@@ -230,8 +230,12 @@ export function buildFestaPayload(
   const menuId = opts.isEdit
     ? opts.reservaTemMenu && !opts.menuExtrasCarregados
       ? undefined
-      : data.menuId || null
-    : data.menuId || undefined;
+      : data.menuId === "NONE"
+        ? null
+        : data.menuId || undefined
+    : data.menuId === "NONE"
+      ? undefined
+      : data.menuId || undefined;
 
   return {
     aniversarianteNome: primeiro?.nome ?? "",
@@ -253,7 +257,7 @@ export function buildFestaPayload(
     salaLancheId: data.salaLancheId || undefined,
     numCriancas: data.numCriancasTotal ?? data.previsaoCriancas,
     numCriancasConfirmadas: data.numCriancasConfirmadas || undefined,
-    extrasIds: data.extrasIds.length > 0 ? data.extrasIds : undefined,
+    extrasIds: opts.isEdit || data.extrasIds.length > 0 ? data.extrasIds : undefined,
     extrasTexto: Object.fromEntries(Object.entries(data.extrasTexto).filter(([, v]) => v.trim())),
     extrasQuantidades:
       data.extrasIds.length > 0

@@ -1,4 +1,5 @@
 import prisma from "@festas/db";
+import { Prisma } from "@prisma/client";
 import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo, EstadoReserva } from "@saas/shared-types";
 import logger from "@/lib/logger";
 import { enfileirarEmailConfirmacaoReserva } from "@/services/email.service";
@@ -180,33 +181,84 @@ function normalizarBoloQuantidade(bolo: TipoBolo | undefined, quantidade: number
   return quantidade && quantidade > 0 ? Math.round(quantidade) : 1;
 }
 
+/** Converte "YYYY-MM-DD" (ou ISO) em Date; erro do cliente se inválida. */
+function parseDataObrigatoria(valor: string | undefined | null, codigo: string): Date {
+  const d = new Date(valor ?? "");
+  if (!valor || Number.isNaN(d.getTime())) throw new Error(codigo);
+  return d;
+}
+
 async function findOrCreateCliente(input: AniversarianteInput): Promise<string> {
-  if (!input.encarregadoEmail && !input.encarregadoTelefone) {
+  const email = input.encarregadoEmail?.trim() || undefined;
+  const telefone = input.encarregadoTelefone?.trim() || "";
+  if (!email && !telefone) {
     throw new Error("CLIENTE_REQUIRED");
   }
 
   // Try to find existing client by email or telefone
-  const existing = await prisma.cliente.findFirst({
-    where: {
-      OR: [
-        ...(input.encarregadoEmail ? [{ email: input.encarregadoEmail }] : []),
-        ...(input.encarregadoTelefone ? [{ telefone: input.encarregadoTelefone }] : []),
-      ],
-    },
-  });
+  const where = {
+    OR: [
+      ...(email ? [{ email }] : []),
+      ...(telefone ? [{ telefone }] : []),
+    ],
+  };
+  const existing = await prisma.cliente.findFirst({ where });
 
   if (existing) return existing.id;
 
-  const cliente = await prisma.cliente.create({
-    data: {
-      nome: input.encarregadoNome,
-      email: input.encarregadoEmail,
-      telefone: input.encarregadoTelefone ?? "",
-      contribuinte: input.encarregadoContribuinte,
-      codigoPostal: input.encarregadoCodigoPostal,
-    },
+  try {
+    // email undefined → coluna NULL (nunca ""), para não esgotar o unique
+    // com vários clientes "sem email".
+    const cliente = await prisma.cliente.create({
+      data: {
+        nome: input.encarregadoNome,
+        email,
+        telefone,
+        contribuinte: input.encarregadoContribuinte,
+        codigoPostal: input.encarregadoCodigoPostal,
+      },
+    });
+    return cliente.id;
+  } catch (err) {
+    // Corrida: outro pedido criou o mesmo cliente entretanto (P2002 unique).
+    // Resolve re-procurando - o resultado para o utilizador é o mesmo.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      const cliente = await prisma.cliente.findFirst({ where });
+      if (cliente) return cliente.id;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Reutiliza a criança (Aniversariante) já registada do cliente com o mesmo
+ * nome; só cria nova se não existir. Sem isto, cada criar/editar festa
+ * duplicava os filhos na tabela (e o form de entrada já deduplicava por nome).
+ */
+async function obterOuCriarAniversariante(
+  clienteId: string,
+  nome: string,
+  dataNascimento: Date
+): Promise<string> {
+  const nomeLimpo = nome.trim();
+  const existente = await prisma.aniversariante.findFirst({
+    where: { clienteId, nome: nomeLimpo },
+    select: { id: true, dataNascimento: true },
   });
-  return cliente.id;
+  if (existente) {
+    // Completar a data em falta (registos antigos de entradas livres vêm sem ela)
+    if (!existente.dataNascimento) {
+      await prisma.aniversariante.update({
+        where: { id: existente.id },
+        data: { dataNascimento },
+      });
+    }
+    return existente.id;
+  }
+  const anv = await prisma.aniversariante.create({
+    data: { nome: nomeLimpo, dataNascimento, clienteId },
+  });
+  return anv.id;
 }
 
 /**
@@ -420,17 +472,18 @@ export const reservaService = {
   },
 
   async create(data: CreateReservaData, user?: SessionUser) {
-    if (!data.data) throw new Error("DATA_REQUIRED");
+    // Datas inválidas são erro do cliente (400), não do Prisma (500)
+    const dataFesta = parseDataObrigatoria(data.data, "DATA_REQUIRED");
     if (!data.horario) throw new Error("HORARIO_REQUIRED");
 
     // Verificar dia bloqueado no calendário
-    const bloqueado = await excecaoCalendarioService.isBloqueado(new Date(data.data));
+    const bloqueado = await excecaoCalendarioService.isBloqueado(dataFesta);
     if (bloqueado) throw new Error("DAY_BLOCKED");
 
     // Capacidade: um slot (horário exacto) só pode ter uma festa activa.
     // Corre ANTES de criar clientes/aniversariantes para não deixar órfãos
     // quando o pedido é rejeitado.
-    await verificarSlotOcupado({ data: data.data, horario: data.horario });
+    await verificarSlotOcupado({ data: dataFesta, horario: data.horario });
 
     let clienteId = data.clienteId;
 
@@ -438,7 +491,7 @@ export const reservaService = {
     const aniversarianteIds: string[] = [];
     if (data.aniversariantes && data.aniversariantes.length > 0) {
       for (const anvInput of data.aniversariantes) {
-        if (!anvInput.dataNascimento) throw new Error("DATA_NASCIMENTO_REQUIRED");
+        const dataNascimento = parseDataObrigatoria(anvInput.dataNascimento, "DATA_NASCIMENTO_REQUIRED");
 
         const anvComEncarregado: AniversarianteInput = {
           ...anvInput,
@@ -452,15 +505,13 @@ export const reservaService = {
         const cId = await findOrCreateCliente(anvComEncarregado);
         if (!clienteId) clienteId = cId;
 
-        // Create aniversariante
-        const anv = await prisma.aniversariante.create({
-          data: {
-            nome: anvInput.nome,
-            dataNascimento: new Date(anvInput.dataNascimento),
-            clienteId: cId,
-          },
-        });
-        aniversarianteIds.push(anv.id);
+        // Reutilizar filho já registado (evita duplicados por nome)
+        const anvId = await obterOuCriarAniversariante(
+          cId,
+          anvInput.nome ?? "",
+          dataNascimento
+        );
+        aniversarianteIds.push(anvId);
       }
     }
 
@@ -469,7 +520,7 @@ export const reservaService = {
     // ── Cálculo de preço por criança (com mínimos por aniversariante) ──
     const numAniversariantes = aniversarianteIds.length;
     const calculo = await configuracaoPrecoService.calcularPrecoFesta(
-      new Date(data.data),
+      dataFesta,
       data.numCriancas || 0,
       numAniversariantes
     );
@@ -486,7 +537,7 @@ export const reservaService = {
 
     const created = await prisma.reserva.create({
       data: {
-        data: new Date(data.data),
+        data: dataFesta,
         horario: data.horario,
         duracaoMinutos: data.duracaoMinutos,
         clienteId,
@@ -618,7 +669,7 @@ export const reservaService = {
     const aniversarianteIds: string[] = [];
     if (data.aniversariantes && data.aniversariantes.length > 0) {
       for (const anvInput of data.aniversariantes) {
-        if (!anvInput.dataNascimento) throw new Error("DATA_NASCIMENTO_REQUIRED");
+        const dataNascimento = parseDataObrigatoria(anvInput.dataNascimento, "DATA_NASCIMENTO_REQUIRED");
 
         const anvComEncarregado: AniversarianteInput = {
           ...anvInput,
@@ -628,20 +679,20 @@ export const reservaService = {
           encarregadoCodigoPostal: data.clienteCodigoPostal ?? anvInput.encarregadoCodigoPostal,
         };
         const cId = await findOrCreateCliente(anvComEncarregado);
-        const anv = await prisma.aniversariante.create({
-          data: {
-            nome: anvInput.nome,
-            dataNascimento: new Date(anvInput.dataNascimento),
-            clienteId: cId,
-          },
-        });
-        aniversarianteIds.push(anv.id);
+        // Reutilizar filho já registado (evita duplicados em cada gravação)
+        const anvId = await obterOuCriarAniversariante(
+          cId,
+          anvInput.nome ?? "",
+          dataNascimento
+        );
+        aniversarianteIds.push(anvId);
       }
     }
 
     // Verificar dia bloqueado se a data foi alterada
     if (data.data) {
-      const bloqueado = await excecaoCalendarioService.isBloqueado(new Date(data.data));
+      const dataFesta = parseDataObrigatoria(data.data, "DATA_REQUIRED");
+      const bloqueado = await excecaoCalendarioService.isBloqueado(dataFesta);
       if (bloqueado) throw new Error("DAY_BLOCKED");
     }
 
