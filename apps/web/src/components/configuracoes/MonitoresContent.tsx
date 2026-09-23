@@ -343,8 +343,7 @@ export default function MonitoresContent() {
           searchPlaceholder="Pesquisar monitores..."
           searchableFields={["nome", "contacto"]}
           itemLabel="monitores"
-          pagination
-          pageSize={25}
+          pagination={false}
           onEdit={isAdmin ? undefined : handleEdit}
           onDelete={handleDelete}
           {...(isAdmin

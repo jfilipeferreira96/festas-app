@@ -134,8 +134,7 @@ export default function LocaisContent() {
           searchPlaceholder="Pesquisar locais..."
           searchableFields={["nome"]}
           itemLabel="locais"
-          pagination
-          pageSize={25}
+          pagination={false}
           onEdit={handleEdit}
           emptyState={{
             title: "Nenhum local encontrado",

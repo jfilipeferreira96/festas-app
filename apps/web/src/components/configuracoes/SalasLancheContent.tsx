@@ -146,8 +146,7 @@ export default function SalasLancheContent() {
           searchPlaceholder="Pesquisar salas de lanche..."
           searchableFields={["nome"]}
           itemLabel="salas"
-          pagination
-          pageSize={25}
+          pagination={false}
           onEdit={handleEdit}
           onDelete={handleDelete}
           emptyState={{

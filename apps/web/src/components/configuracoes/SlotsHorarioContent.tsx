@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useCallback, useMemo } from "react";
 import { Clock, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -134,9 +133,17 @@ export default function SlotsHorarioContent() {
     [salasLanche]
   );
 
-  // Ordenar por horário (ordem cronológica - sem campo explícito de ordem)
+
+  // Ordenar por Aplicação (Todos os dias → Semana → Fim-de-semana) e, dentro de cada grupo, por hora
+  const APLICACAO_ORDEM: Record<Aplicabilidade, number> = { TODOS: 0, SEMANA: 1, FDS: 2 };
   const sortedSlots = useMemo(
-    () => [...(slots ?? [])].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio)),
+    () =>
+      [...(slots ?? [])].sort((a, b) => {
+        const appA = APLICACAO_ORDEM[aplicabilidadeDeSlot(a.fimDeSemana)];
+        const appB = APLICACAO_ORDEM[aplicabilidadeDeSlot(b.fimDeSemana)];
+        if (appA !== appB) return appA - appB;
+        return a.horaInicio.localeCompare(b.horaInicio);
+      }),
     [slots]
   );
 
@@ -306,6 +313,7 @@ export default function SlotsHorarioContent() {
           data={sortedSlots}
           columns={columns}
           loading={isLoading}
+          pagination={false}
           searchable
           searchPlaceholder="Pesquisar slots..."
           searchableFields={["horaInicio"]}

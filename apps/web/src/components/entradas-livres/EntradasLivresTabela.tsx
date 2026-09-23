@@ -76,6 +76,8 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
     return undefined;
   }, [filtro]);
 
+  const paginacaoActiva = filtro === "" || filtro === "CONCLUIDA";
+
   const { data: entradas, isLoading } = useEntradasLivres(filtros);
 
   // Total de crianças (somatório de todas as entradas visíveis)
@@ -311,8 +313,7 @@ export default function EntradasLivresTabela({ mode = "full" }: { mode?: "full" 
             (r.encarregadoEmail?.toLowerCase()?.includes(q) ?? false)
           );
         }}
-        pagination
-        pageSize={25}
+        pagination={paginacaoActiva}
         renderActions={(r) => {
           // CACIFOS read-only: apenas "Ver detalhes"
           if (isCacifos) {

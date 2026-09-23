@@ -354,8 +354,7 @@ export default function UtilizadoresContent({
         searchPlaceholder="Pesquisar por nome, email ou função..."
         searchableFields={["name", "email"]}
         itemLabel="utilizadores"
-        pagination
-        pageSize={25}
+        pagination={false}
         onEdit={handleOpenEdit}
         onDelete={handleDeleteClick}
         canManage={true}

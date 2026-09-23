@@ -144,6 +144,8 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
     }
   }, [tab, dataSelecionada, toLocalISO, tomorrowISO]);
 
+  const paginacaoActiva = tab === "todos" || tab === "concluidos";
+
   const { data: reservas, isLoading } = useReservas(filtros);
   // Relógio partilhado - alerta de festas a acabar (≤15 min) na tabela
   const now = useNow(30_000);
@@ -361,7 +363,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         tab={tab}
         onTabChange={handleTabChange}
         showTabs={isGlobalAdmin}
-        onCreate={!isCacifos ? handleCreate : undefined}
+        onCreate={!isCacifos && tab !== "todos" ? handleCreate : undefined}
       />
 
       {/* Slots vazios do dia (apenas em vista de dia único, não-CACIFOS) */}
@@ -686,8 +688,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
             email.toLowerCase().includes(q)
           );
         }}
-        pagination
-        pageSize={25}
+        pagination={paginacaoActiva}
         onView={handleView}
         onEdit={handleEdit}
         renderActions={(r) => {
@@ -826,7 +827,7 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
         emptyState={{
           title: "Nenhuma festa encontrada",
           description: isCacifos ? "Não há festas para mostrar." : "Comece por criar uma nova festa.",
-          action: isCacifos ? undefined : (
+          action: isCacifos || tab === "todos" ? undefined : (
             <Button onClick={handleCreate} className="flex items-center gap-2">
               <Plus size={16} />
               Nova Festa

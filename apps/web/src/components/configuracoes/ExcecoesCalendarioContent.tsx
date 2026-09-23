@@ -231,6 +231,7 @@ export default function ExcecoesCalendarioContent() {
           data={sortedExcecoes}
           columns={columns}
           loading={isLoading}
+          pagination={false}
           searchable
           searchPlaceholder="Pesquisar exceções..."
           searchableFields={["nome", "data"]}
