@@ -156,6 +156,7 @@ export const reservasApi = {
     horario: string;
     duracaoMinutos: number;
     excludeId?: string;
+    salaLancheId?: string | null;
   }) => {
     const qs = new URLSearchParams({
       data: params.data,
@@ -163,6 +164,7 @@ export const reservasApi = {
       duracaoMinutos: String(params.duracaoMinutos),
     });
     if (params.excludeId) qs.set("excludeId", params.excludeId);
+    if (params.salaLancheId) qs.set("salaLancheId", params.salaLancheId);
     return api<DisponibilidadeResult>(`/api/reservas/disponibilidade?${qs.toString()}`);
   },
 

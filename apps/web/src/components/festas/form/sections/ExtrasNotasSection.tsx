@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { Baby, Coins, FileText } from "lucide-react";
+import { Baby, Coins, FileText, Lock } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
@@ -17,6 +17,8 @@ interface ExtrasNotasSectionProps {
   numPessoas: number;
   /** IDs a excluir da sincronização com numPessoas (ex.: bolos - quantidade própria). */
   excluirIds?: string[];
+  /** IDs de Extra exigidos pelo slot seleccionado (não podem ser desmarcados). */
+  extrasObrigatoriosIds?: string[];
 }
 
 function groupBySubcategoria(items: Extra[]) {
@@ -37,11 +39,13 @@ export default function ExtrasNotasSection({
   extraItems,
   numPessoas,
   excluirIds,
+  extrasObrigatoriosIds = [],
 }: ExtrasNotasSectionProps) {
   const { watch, setValue } = useFormContext<FestaFormData>();
   const extrasIds = watch("extrasIds");
   const extrasTexto = watch("extrasTexto");
   const extrasQuantidades = watch("extrasQuantidades");
+  const obrigatorios = useMemo(() => new Set(extrasObrigatoriosIds), [extrasObrigatoriosIds]);
 
   // ── Separação por cobrança (21/09/2026) ──
   // POR_PESSOA → paga por criança (quantidade = nº de crianças)
@@ -84,6 +88,7 @@ export default function ExtrasNotasSection({
   );
 
   const toggleExtra = (id: string) => {
+    if (extrasIds.includes(id) && obrigatorios.has(id)) return; // exigido pelo slot
     setValue(
       "extrasIds",
       extrasIds.includes(id) ? extrasIds.filter((x) => x !== id) : [...extrasIds, id],
@@ -102,20 +107,32 @@ export default function ExtrasNotasSection({
   const renderChip = (item: Extra) => {
     const isSelected = extrasIds.includes(item.id);
     const ehPorPessoa = item.baseCobranca === "POR_PESSOA";
+    const obrigatorio = obrigatorios.has(item.id) && isSelected;
     return (
       <div key={item.id} className="flex flex-col gap-1.5">
         <button
           type="button"
           onClick={() => toggleExtra(item.id)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors cursor-pointer ${
-            isSelected ? "border-primary-300 bg-primary-50/50" : "border-border hover:border-gray-300"
+          disabled={obrigatorio}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-colors ${
+            obrigatorio
+              ? "cursor-not-allowed border-primary-300 bg-primary-50/50"
+              : isSelected
+                ? "cursor-pointer border-primary-300 bg-primary-50/50"
+                : "cursor-pointer border-border hover:border-gray-300"
           }`}
         >
+          {obrigatorio && <Lock size={13} className="text-brand-600 shrink-0" />}
           <span className="text-sm text-text-primary">{item.nome}</span>
           <span className="text-xs font-medium text-text-secondary">
             +{formatEuro(Number(item.precoUnitario))}
             {ehPorPessoa ? "/criança" : " (total)"}
           </span>
+          {obrigatorio && (
+            <span className="text-[10px] font-semibold uppercase text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded">
+              obrigatório
+            </span>
+          )}
         </button>
         {isSelected && item.requerTexto && (
           <InputField

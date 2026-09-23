@@ -156,6 +156,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     horario: watchedHorario || undefined,
     duracaoMinutos: watchedDuracao || undefined,
     excludeId: reserva?.id,
+    salaLancheId: watchedSalaLancheId,
   });
 
   // Todas as festas activas do dia (em slots + custom), sem a festa em edição.
@@ -208,31 +209,64 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     setHorarioCustom(!slotsHorario.some((s) => s.horaInicio === horarioVal) && isGlobalAdmin);
   }, [slotsHorario, reserva?.horario, initialValues?.horario, isGlobalAdmin]);
 
+  // Slot actualmente seleccionado no form (hora + sala): identifica a opção do
+  // select e fornece os extras obrigatórios às secções de Extras/Menu.
+  const slotSelecionado = useMemo(() => {
+    if (!watchedHorario) return null;
+    const candidatos = (slotsHorario ?? []).filter((s) => s.horaInicio === watchedHorario);
+    if (candidatos.length === 0) return null;
+    return (
+      candidatos.find((s) => (s.salaLancheId ?? null) === (watchedSalaLancheId ?? null)) ??
+      candidatos[0]!
+    );
+  }, [slotsHorario, watchedHorario, watchedSalaLancheId]);
+
   const slotOptions = useMemo(() => {
-    const ocupados = new Set((slotsDia?.slots ?? []).filter((s) => s.ocupado).map((s) => s.horaInicio));
+    // Ocupação POR SLOT (pares à mesma hora em salas distintas podem coexistir).
+    const ocupados = new Set(
+      (slotsDia?.slots ?? []).filter((s) => s.ocupado).map((s) => s.slotId)
+    );
     return (slotsHorario ?? []).map((s) => {
       const fim = addMinutosToTime(s.horaInicio, s.duracaoMin);
-      const isOcupado = ocupados.has(s.horaInicio) && s.horaInicio !== reserva?.horario;
+      const isOcupado = ocupados.has(s.id) && s.horaInicio !== reserva?.horario;
+      const sala = s.salaLancheNome ? ` · ${s.salaLancheNome}` : "";
       return {
-        value: s.horaInicio,
-        label: `${s.horaInicio}–${fim}${isOcupado ? " · ocupado" : ""}`,
+        value: s.id,
+        label: `${s.horaInicio}–${fim}${sala}${isOcupado ? " · ocupado" : ""}`,
+        horaInicio: s.horaInicio,
         disabled: isOcupado,
       };
     });
   }, [slotsHorario, slotsDia, reserva?.horario]);
 
   const handleSelectSlot = useCallback(
-    (horaInicio: string) => {
-      const slot = slotsHorario?.find((s) => s.horaInicio === horaInicio);
-      setValue("horario", horaInicio, { shouldDirty: true, shouldValidate: true });
+    (slotId: string) => {
+      const slot = slotsHorario?.find((s) => s.id === slotId);
       if (!slot) return;
+      const slotAnterior = slotSelecionado;
+      setValue("horario", slot.horaInicio, { shouldDirty: true, shouldValidate: true });
       setValue("duracaoMinutos", slot.duracaoMin, { shouldDirty: true, shouldValidate: true });
       if (slot.horaLancheDefault) setValue("horaLanche", slot.horaLancheDefault, { shouldDirty: true });
       if (slot.salaLancheId) setValue("salaLancheId", slot.salaLancheId, { shouldDirty: true, shouldValidate: true });
-      const conflito = coresEmConflito(festasDoDia, horaInicio, slot.duracaoMin);
+      const conflito = coresEmConflito(festasDoDia, slot.horaInicio, slot.duracaoMin);
       setValue("cor", corDisponivel(conflito, slot.corDefault), { shouldDirty: true, shouldValidate: true });
+
+      // ── Extras obrigatórios do slot ──
+      // Union dos obrigatórios do slot novo; remove os do slot anterior que
+      // deixaram de ser obrigatórios (se o utilizador os tinha, eram forçados).
+      const obrigatorios = (slot.extrasObrigatorios ?? []) as string[];
+      const obrigatoriosAnteriores = ((slotAnterior?.extrasObrigatorios ?? []) as string[]).filter(
+        (id) => !obrigatorios.includes(id)
+      );
+      if (obrigatorios.length === 0 && obrigatoriosAnteriores.length === 0) return;
+      const extrasAtuais = getValues("extrasIds");
+      const semForcados = extrasAtuais.filter((id) => !obrigatoriosAnteriores.includes(id));
+      const novos = Array.from(new Set([...semForcados, ...obrigatorios]));
+      setValue("extrasIds", novos, { shouldDirty: true });
+      // Quantidade dos obrigatórios fica a cargo do efeito de sync (MenuBoloSection/
+      // ExtrasNotasSection) que força quantidade = total de crianças nos POR_PESSOA.
     },
-    [slotsHorario, festasDoDia, setValue]
+    [slotsHorario, slotSelecionado, festasDoDia, setValue, getValues]
   );
 
   useEffect(() => {
@@ -242,6 +276,17 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
       setValue("cor", CORES_PREDEFINIDAS.find((c) => !coresEmUso.includes(c.value))?.value ?? "");
     }
   }, [reserva, coresEmUso, setValue, getValues]);
+
+  // Extras obrigatórios do slot estão SEMPRE nos extrasIds (mesmo ao abrir em
+  // edição uma festa antiga criada antes da regra; o servidor re-força também).
+  useEffect(() => {
+    if (!slotSelecionado) return;
+    const obrigatorios = (slotSelecionado.extrasObrigatorios ?? []) as string[];
+    if (obrigatorios.length === 0) return;
+    const atuais = getValues("extrasIds");
+    if (obrigatorios.every((id) => atuais.includes(id))) return;
+    setValue("extrasIds", Array.from(new Set([...atuais, ...obrigatorios])), { shouldDirty: true });
+  }, [slotSelecionado, getValues, setValue]);
 
   // Menu selecionado: o preço do menu DEFINE o preço por criança (o tarifário
   // da data só se aplica "Sem menu") - escolher Landy etc. atualiza o total.
@@ -397,6 +442,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
             <SectionHeader titulo="Configuração da Festa" />
             <AgendamentoSection
               slotOptions={slotOptions}
+              slotSelecionadoId={slotSelecionado?.id}
               salaLancheNome={salaLancheNome}
               horarioCustom={horarioCustom}
               onToggleHorarioCustom={setHorarioCustom}
@@ -428,11 +474,13 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               suplementosMenu={suplementosMenu}
               bolosCatalogo={bolosCatalogo}
               numPessoas={numPessoasExtras}
+              extrasObrigatoriosIds={((slotSelecionado?.extrasObrigatorios ?? []) as string[])}
             />
             <ExtrasNotasSection
               extraItems={extraItems}
               numPessoas={numPessoasExtras}
               excluirIds={bolosCatalogo.map((b) => b.id)}
+              extrasObrigatoriosIds={((slotSelecionado?.extrasObrigatorios ?? []) as string[])}
             />
             <SectionHeader titulo="Pagamentos" />
             <PagamentoSection

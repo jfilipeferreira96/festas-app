@@ -5,8 +5,16 @@ import { createRouteErrorHandler } from "@/lib/route-error";
 import { t } from "@/lib/i18n-server";
 
 const handleError = createRouteErrorHandler({
-  errorMap: { NOT_FOUND: "slotHorario.notFound" },
-  statusMap: { NOT_FOUND: 404 },
+  errorMap: {
+    NOT_FOUND: "slotHorario.notFound",
+    EXTRA_NOT_FOUND: "slotHorario.extraNotFound",
+    EXTRAS_OBRIGATORIOS_INVALID: "slotHorario.extrasInvalid",
+  },
+  statusMap: {
+    NOT_FOUND: 404,
+    EXTRA_NOT_FOUND: 400,
+    EXTRAS_OBRIGATORIOS_INVALID: 400,
+  },
   serviceName: "SlotHorario",
 });
 

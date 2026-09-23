@@ -308,12 +308,14 @@ function horarioParaMinutos(horario: string): number {
 /**
  * Procura reservas que se sobrepõem no tempo (considerando a duração)
  * para uma dada data. Duas reservas conflituam se os seus
- * intervalos [início, fim] se intercetam.
+ * intervalos [início, fim] se intercetam E partilham a sala de lanche
+ * (pares da grelha à mesma hora em salas distintas são legítimos - sem aviso).
  */
 async function findConflitos(params: {
   data: string | Date;
   horario: string;
   duracaoMinutos: number;
+  salaLancheId?: string | null;
   excludeId?: string;
 }): Promise<ConflitoInfo[]> {
   const reservaDate = typeof params.data === "string" ? new Date(params.data) : params.data;
@@ -333,6 +335,7 @@ async function findConflitos(params: {
 
   const novoInicio = horarioParaMinutos(params.horario);
   const novoFim = novoInicio + (params.duracaoMinutos || 0);
+  const novaSala = params.salaLancheId ?? null;
 
   const conflitos: ConflitoInfo[] = [];
   for (const r of candidatos) {
@@ -340,6 +343,9 @@ async function findConflitos(params: {
     const existFim = existInicio + (r.duracaoMinutos || 0);
     // Sobreposição temporal: novoInicio < existFim && existInicio < novoFim
     if (novoInicio < existFim && existInicio < novoFim) {
+      const salaExistente = r.salaLancheId ?? null;
+      // Salas distintas e ambas conhecidas → não é conflito (grelha por pares).
+      if (salaExistente !== null && novaSala !== null && salaExistente !== novaSala) continue;
       conflitos.push({
         id: r.id,
         horario: r.horario,
@@ -354,32 +360,91 @@ async function findConflitos(params: {
 }
 
 /**
- * Guard de capacidade: a grelha diária de slots define a capacidade do dia
- * (uma festa por horário/slot). Verifica se já existe uma festa activa
- * (RESERVA/CONFIRMADO/EM_CURSO) no mesmo dia com o MESMO horário (match
- * exacto). A regra antiga "sem sobreposição por Local" deixou de bloquear -
- * o Local é informativo; sobreposições de horários diferentes são permitidas
- * (o form mostra apenas um aviso não-bloqueante via /disponibilidade).
+ * Guard de capacidade por (horário, sala): a grelha diária define a capacidade
+ * do dia. Um horário só pode ter uma festa activa POR SALA de lanche; festa
+ * sem sala conflita com qualquer festa no mesmo horário (regra conservadora -
+ * mantém cada horário limitado a máx. 2 festas, 1 por sala).
  */
 async function verificarSlotOcupado(params: {
   data: string | Date;
   horario: string;
+  salaLancheId?: string | null;
   excludeId?: string;
 }): Promise<void> {
   const reservaDate = typeof params.data === "string" ? new Date(params.data) : params.data;
   const nextDay = new Date(reservaDate);
   nextDay.setDate(nextDay.getDate() + 1);
 
-  const existente = await prisma.reserva.findFirst({
+  const existentes = await prisma.reserva.findMany({
     where: {
       data: { gte: reservaDate, lt: nextDay },
       horario: params.horario,
       estado: { in: ["RESERVA", "CONFIRMADO", "EM_CURSO"] },
       ...(params.excludeId ? { NOT: { id: params.excludeId } } : {}),
     },
-    select: { id: true },
+    select: { id: true, salaLancheId: true },
   });
-  if (existente) throw new Error("SLOT_OCCUPIED");
+
+  const novaSala = params.salaLancheId ?? null;
+  const conflito = existentes.some((r) => {
+    const salaExistente = r.salaLancheId ?? null;
+    return salaExistente === null || novaSala === null || salaExistente === novaSala;
+  });
+  if (conflito) throw new Error("SLOT_OCCUPIED");
+}
+
+/**
+ * IDs de Extra obrigatórios para um (dia, horário): slots activos com esse
+ * `horaInicio` exacto que se aplicam ao tipo de dia (fimDeSemana null = ambos).
+ */
+async function extrasObrigatoriosDoSlot(dataFesta: Date, horario: string): Promise<string[]> {
+  const fdsOuFeriado =
+    dataFesta.getDay() === 0 ||
+    dataFesta.getDay() === 6 ||
+    (await excecaoCalendarioService.isFeriado(dataFesta).catch(() => false));
+  const slots = await prisma.slotHorario.findMany({
+    where: { horaInicio: horario, activo: true },
+    select: { fimDeSemana: true, extrasObrigatorios: true },
+  });
+  const ids = slots
+    .filter((s) => s.fimDeSemana === null || s.fimDeSemana === fdsOuFeriado)
+    .flatMap((s) =>
+      Array.isArray(s.extrasObrigatorios)
+        ? s.extrasObrigatorios.filter((x): x is string => typeof x === "string")
+        : []
+    );
+  return Array.from(new Set(ids));
+}
+
+/**
+ * Junta os extras obrigatórios do slot aos extras do payload. Quantidade:
+ * já informada no payload → mantém; senão total de crianças se o extra é
+ * POR_PESSOA → senão 1. Devolve null quando não há nada a acrescentar.
+ */
+async function mergeExtrasObrigatorios(
+  idsObrigatorios: string[],
+  extrasIds: string[] | undefined,
+  extrasQuantidades: Record<string, number> | undefined,
+  numCriancas: number | undefined
+): Promise<{ ids: string[]; quantidades: Record<string, number> } | null> {
+  if (idsObrigatorios.length === 0) return null;
+  const extras = await prisma.extra.findMany({
+    where: { id: { in: idsObrigatorios } },
+    select: { id: true, baseCobranca: true },
+  });
+  const baseCobrancaDe = new Map(extras.map((e) => [e.id, e.baseCobranca]));
+  const ids = [...(extrasIds ?? [])];
+  const quantidades = { ...(extrasQuantidades ?? {}) };
+  for (const id of idsObrigatorios) {
+    if (!ids.includes(id)) ids.push(id);
+    if (quantidades[id] === undefined) {
+      quantidades[id] =
+        baseCobrancaDe.get(id) === "POR_PESSOA" && numCriancas && numCriancas > 0
+          ? numCriancas
+          : 1;
+    }
+  }
+  return { ids, quantidades };
 }
 
 export const reservaService = {
@@ -461,6 +526,7 @@ export const reservaService = {
     data: string;
     horario: string;
     duracaoMinutos: number;
+    salaLancheId?: string | null;
     excludeId?: string;
   }): Promise<DisponibilidadeResult> {
     if (!params.data) throw new Error("DATA_REQUIRED");
@@ -480,10 +546,15 @@ export const reservaService = {
     const bloqueado = await excecaoCalendarioService.isBloqueado(dataFesta);
     if (bloqueado) throw new Error("DAY_BLOCKED");
 
-    // Capacidade: um slot (horário exacto) só pode ter uma festa activa.
+    // Capacidade: um slot (horário exacto) só pode ter uma festa activa POR
+    // SALA; sem sala → conservador (conflita com tudo no mesmo horário).
     // Corre ANTES de criar clientes/aniversariantes para não deixar órfãos
     // quando o pedido é rejeitado.
-    await verificarSlotOcupado({ data: dataFesta, horario: data.horario });
+    await verificarSlotOcupado({
+      data: dataFesta,
+      horario: data.horario,
+      salaLancheId: data.salaLancheId,
+    });
 
     let clienteId = data.clienteId;
 
@@ -539,6 +610,17 @@ export const reservaService = {
       precoCriancaMenu
     );
 
+    // ── Extras obrigatórios do slot: merge no payload (o servidor é a fonte
+    // de verdade - o FestaForm também força, mas não é obrigatório passar) ──
+    const mergedExtras = await mergeExtrasObrigatorios(
+      await extrasObrigatoriosDoSlot(dataFesta, data.horario),
+      data.extrasIds,
+      data.extrasQuantidades,
+      data.numCriancas
+    );
+    const extrasIdsFinais = mergedExtras?.ids ?? data.extrasIds;
+    const extrasQuantidadesFinais = mergedExtras?.quantidades ?? data.extrasQuantidades;
+
     // ── Cálculo de custo de meias (auto-preencher preço unitário do tarifário) ──
     let meiasPrecoUnit = data.meiasPrecoUnit;
     if (data.meiasQuantidade && meiasPrecoUnit === undefined) {
@@ -587,11 +669,11 @@ export const reservaService = {
         meiasPrecoUnit,
         // Caução já paga na criação → nasce directamente CONFIRMADA
         estado: data.caucao === "PAGA" ? "CONFIRMADO" : "RESERVA",
-        extras: data.extrasIds
+        extras: extrasIdsFinais
           ? {
-              create: data.extrasIds.map((extraId) => ({
+              create: extrasIdsFinais.map((extraId) => ({
                 extraId,
-                quantidade: quantidadeDeExtra(data.extrasQuantidades, extraId),
+                quantidade: quantidadeDeExtra(extrasQuantidadesFinais, extraId),
                 textoPersonalizado: data.extrasTexto?.[extraId],
               })),
             }
@@ -710,11 +792,12 @@ export const reservaService = {
       if (bloqueado) throw new Error("DAY_BLOCKED");
     }
 
-    if (data.data || data.horario) {
-      // Capacidade: um slot (horário exacto) só pode ter uma festa activa.
+    if (data.data || data.horario || data.salaLancheId !== undefined) {
+      // Capacidade: um horário só pode ter uma festa activa POR SALA.
       await verificarSlotOcupado({
         data: data.data ?? reserva.data,
         horario: data.horario ?? reserva.horario,
+        salaLancheId: data.salaLancheId ?? reserva.salaLancheId,
         excludeId: id,
       });
     }
@@ -726,7 +809,24 @@ export const reservaService = {
       await prisma.pagamento.deleteMany({ where: { reservaId: id } });
     }
 
-    if (data.extrasIds) {
+    // ── Extras obrigatórios do slot ──
+    // Com extrasIds no payload → merge nos arrays. Sem → garantir os extras
+    // obrigatórios em falta nos extras JÁ existentes da reserva.
+    const dataFestaUpdate = data.data ? parseDataObrigatoria(data.data, "DATA_REQUIRED") : reserva.data;
+    const horarioUpdate = data.horario ?? reserva.horario;
+    const mergedExtrasUpdate =
+      data.extrasIds !== undefined
+        ? await mergeExtrasObrigatorios(
+            await extrasObrigatoriosDoSlot(dataFestaUpdate, horarioUpdate),
+            data.extrasIds,
+            data.extrasQuantidades,
+            data.numCriancas ?? reserva.numCriancas ?? undefined
+          )
+        : null;
+    const extrasIdsUpdate = mergedExtrasUpdate?.ids ?? data.extrasIds;
+    const extrasQuantidadesUpdate = mergedExtrasUpdate?.quantidades ?? data.extrasQuantidades;
+
+    if (extrasIdsUpdate) {
       await prisma.reservaExtra.deleteMany({ where: { reservaId: id } });
     }
     if (data.monitoresIds) {
@@ -779,11 +879,11 @@ export const reservaService = {
         descontoMotivo: data.descontoMotivo,
         meiasQuantidade: data.meiasQuantidade,
         meiasPrecoUnit: data.meiasPrecoUnit,
-        extras: data.extrasIds
+        extras: extrasIdsUpdate
           ? {
-              create: data.extrasIds.map((extraId) => ({
+              create: extrasIdsUpdate.map((extraId) => ({
                 extraId,
-                quantidade: quantidadeDeExtra(data.extrasQuantidades, extraId),
+                quantidade: quantidadeDeExtra(extrasQuantidadesUpdate, extraId),
                 textoPersonalizado: data.extrasTexto?.[extraId],
               })),
             }
@@ -823,6 +923,37 @@ export const reservaService = {
     // `pago` tem de ser re-derivado (mesma classe de bug fechada nos acertos)
     if (data.valorTotal !== undefined && data.pago === undefined) {
       await rederivarPagoReserva(prisma, id);
+    }
+
+    // Sem extrasIds no payload: adicionar aos extras existentes os obrigatórios
+    // do slot em falta (festa antiga criada antes da regra → ao editar, o
+    // servidor garante o extra; quantidade = crianças se POR_PESSOA).
+    if (data.extrasIds === undefined) {
+      const obrig = await extrasObrigatoriosDoSlot(dataFestaUpdate, horarioUpdate);
+      if (obrig.length > 0) {
+        const existentes = await prisma.reservaExtra.findMany({
+          where: { reservaId: id },
+          select: { extraId: true },
+        });
+        const emFalta = obrig.filter((x) => !existentes.some((e) => e.extraId === x));
+        if (emFalta.length > 0) {
+          const extrasInfo = await prisma.extra.findMany({
+            where: { id: { in: emFalta } },
+            select: { id: true, baseCobranca: true },
+          });
+          await prisma.reservaExtra.createMany({
+            data: emFalta.map((extraId) => ({
+              reservaId: id,
+              extraId,
+              quantidade:
+                extrasInfo.find((e) => e.id === extraId)?.baseCobranca === "POR_PESSOA" &&
+                (data.numCriancas ?? reserva.numCriancas ?? 0) > 0
+                  ? (data.numCriancas ?? reserva.numCriancas as number)
+                  : 1,
+            })),
+          });
+        }
+      }
     }
 
     if (data.menuId !== undefined) {

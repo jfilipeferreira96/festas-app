@@ -33,6 +33,7 @@ export interface SlotDia {
   horaLancheDefault?: string | null;
   salaLancheId?: string | null;
   salaLancheNome?: string | null;
+  extrasObrigatorios?: string[];
 }
 
 /** Plano do dia (grelha aplicável) - espelha PlanoDia do serviço. */

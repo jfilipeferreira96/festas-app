@@ -1,4 +1,5 @@
 import prisma from "@festas/db";
+import { Prisma } from "@prisma/client";
 import type { CriarSlotHorarioDTO } from "@saas/shared-types";
 import { reservaService } from "./reserva.service";
 import { excecaoCalendarioService } from "./excecaoCalendario.service";
@@ -58,6 +59,7 @@ export interface SlotDiaItem {
   horaLancheDefault?: string | null;
   salaLancheId?: string | null;
   salaLancheNome?: string | null;
+  extrasObrigatorios?: string[];
 }
 
 // Festa com horário custom: herdada de SlotDiaFesta (horario/duracaoMinutos
@@ -92,6 +94,34 @@ function mapSlot<T extends { salaLanche?: { nome: string } | null }>(
     ...rest,
     salaLancheNome: salaLanche?.nome ?? null,
   };
+}
+
+/**
+ * Valida `extrasObrigatorios` do payload: null/[] = limpar (SQL NULL);
+ * senão TODOS os ids têm de existir no catálogo de Extras.
+ * (undefined = "não alterar" é tratado pelos chamadores com spread condicional.)
+ */
+async function validarExtrasObrigatorios(
+  valor: string[] | null,
+): Promise<Prisma.NullableJsonNullValueInput | string[]> {
+  if (valor === null || (Array.isArray(valor) && valor.length === 0)) return Prisma.DbNull;
+  if (!Array.isArray(valor) || valor.some((id) => typeof id !== "string")) {
+    throw new Error("EXTRAS_OBRIGATORIOS_INVALID");
+  }
+  const unicos = Array.from(new Set(valor));
+  const encontrados = await prisma.extra.findMany({
+    where: { id: { in: unicos } },
+    select: { id: true },
+  });
+  if (encontrados.length !== unicos.length) throw new Error("EXTRA_NOT_FOUND");
+  return unicos;
+}
+
+/** Lê o array de ids de extras obrigatórios de um slot (Json → string[]). */
+function extrasObrigatoriosDeSlot(slot: { extrasObrigatorios?: unknown }): string[] {
+  return Array.isArray(slot.extrasObrigatorios)
+    ? slot.extrasObrigatorios.filter((id): id is string => typeof id === "string")
+    : [];
 }
 
 export const slotHorarioService = {
@@ -146,13 +176,17 @@ export const slotHorarioService = {
     const slotToFestaId = new Map<string, string>();
     const festasComSlot = new Set<string>();
 
-    // Pass 1: match exacto de horaInicio (prioridade máxima)
-    // Garante que uma festa às 16:30 vá para o slot das 16:30 e não para o das 14:00
+    // Pass 1: match exacto — prioridade (horaInicio + salaLancheId), com pares
+    // de slots à MESMA hora (sala 1 + sala 2) cada festa vai ao slot da sua sala.
     for (const f of festasAtivas) {
       if (festasComSlot.has(f.id)) continue;
-      const slot = slots.find(
-        (s) => s.horaInicio === f.horario && !slotToFestaId.has(s.id),
-      );
+      const slot =
+        slots.find(
+          (s) =>
+            s.horaInicio === f.horario &&
+            (s.salaLancheId ?? null) === (f.salaLancheId ?? null) &&
+            !slotToFestaId.has(s.id),
+        ) ?? slots.find((s) => s.horaInicio === f.horario && !slotToFestaId.has(s.id));
       if (slot) {
         slotToFestaId.set(slot.id, f.id);
         festasComSlot.add(f.id);
@@ -195,6 +229,7 @@ export const slotHorarioService = {
         horaLancheDefault: slot.horaLancheDefault,
         salaLancheId: slot.salaLancheId,
         salaLancheNome: slot.salaLancheNome ?? null,
+        extrasObrigatorios: extrasObrigatoriosDeSlot(slot),
         festa: festa
           ? {
               id: festa.id,
@@ -272,6 +307,9 @@ export const slotHorarioService = {
         corDefault: data.corDefault ?? null,
         horaLancheDefault: data.horaLancheDefault ?? null,
         salaLancheId: data.salaLancheId ?? null,
+        ...(data.extrasObrigatorios !== undefined && {
+          extrasObrigatorios: await validarExtrasObrigatorios(data.extrasObrigatorios),
+        }),
       },
       include: { salaLanche: true },
     });
@@ -290,6 +328,9 @@ export const slotHorarioService = {
         ...(data.corDefault !== undefined && { corDefault: data.corDefault }),
         ...(data.horaLancheDefault !== undefined && { horaLancheDefault: data.horaLancheDefault }),
         ...(data.salaLancheId !== undefined && { salaLancheId: data.salaLancheId }),
+        ...(data.extrasObrigatorios !== undefined && {
+          extrasObrigatorios: await validarExtrasObrigatorios(data.extrasObrigatorios),
+        }),
       },
       include: { salaLanche: true },
     });

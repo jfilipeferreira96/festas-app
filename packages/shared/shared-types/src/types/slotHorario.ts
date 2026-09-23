@@ -16,6 +16,7 @@ export interface SlotHorario {
   horaLancheDefault?: string | null; // HH:MM - hora sugerida do lanche
   salaLancheId?: string | null; // FK opcional para SalaLanche
   salaLancheNome?: string | null; // Nome da sala de lanche (denormalizado para UI)
+  extrasObrigatorios?: string[] | null; // IDs de Extra obrigatórios neste slot
   createdAt: string;
   updatedAt: string;
 }
@@ -29,4 +30,5 @@ export interface CriarSlotHorarioDTO {
   corDefault?: string | null;
   horaLancheDefault?: string | null;
   salaLancheId?: string | null;
+  extrasObrigatorios?: string[] | null; // null limpa
 }

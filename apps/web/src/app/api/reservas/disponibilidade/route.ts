@@ -17,7 +17,7 @@ const handleError = createRouteErrorHandler({
   serviceName: "Reserva",
 });
 
-// GET /api/reservas/disponibilidade?data=&horario=&duracaoMinutos=&excludeId=
+// GET /api/reservas/disponibilidade?data=&horario=&duracaoMinutos=&excludeId=&salaLancheId=
 // Verifica sobreposição temporal (duração) - aviso apenas, não bloqueia.
 export async function GET(request: NextRequest) {
   try {
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const horario = searchParams.get("horario") || undefined;
     const duracaoMinutos = searchParams.get("duracaoMinutos");
     const excludeId = searchParams.get("excludeId") || undefined;
+    const salaLancheId = searchParams.get("salaLancheId") || undefined;
 
     // Se faltar algum campo, considera disponível (ainda não há slot definido)
     if (!data || !horario || !duracaoMinutos) {
@@ -39,7 +40,8 @@ export async function GET(request: NextRequest) {
       data,
       horario,
       duracaoMinutos: Number(duracaoMinutos),
-      excludeId: excludeId || undefined,
+      excludeId,
+      salaLancheId,
     });
 
     return NextResponse.json(resultado);

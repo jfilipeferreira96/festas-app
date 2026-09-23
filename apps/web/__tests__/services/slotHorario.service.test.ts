@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import testPrisma from "../helpers/test-prisma";
-import { seedTestData, cleanTestData } from "../helpers/seed";
+import { seedTestData, cleanTestData, TEST_IDS } from "../helpers/seed";
 
 vi.mock("@festas/db", () => ({
   default: testPrisma,
@@ -451,6 +451,196 @@ describe("SlotHorario Service", () => {
       );
       expect(slotsComEstaFesta.length).toBe(1);
       expect(slotsComEstaFesta[0]!.horaInicio).toBe("11:00");
+    });
+  });
+
+  // ── Extras obrigatórios do slot ─────────────────────────────────
+  describe("extrasObrigatorios (create/update/list)", () => {
+    it("create() persiste o array de ids de extras obrigatórios", async () => {
+      const slot = await slotHorarioService.create({
+        horaInicio: "04:10",
+        duracaoMin: 135,
+        extrasObrigatorios: [TEST_IDS.EXTRA_1, TEST_IDS.EXTRA_2],
+      });
+
+      expect(slot.extrasObrigatorios).toEqual([TEST_IDS.EXTRA_1, TEST_IDS.EXTRA_2]);
+
+      // list()/getById devolvem o campo
+      const lista = await slotHorarioService.list();
+      const daLista = lista.find((s: { id: string }) => s.id === slot.id);
+      expect(daLista?.extrasObrigatorios).toEqual([TEST_IDS.EXTRA_1, TEST_IDS.EXTRA_2]);
+
+      await slotHorarioService.delete(slot.id);
+    });
+
+    it("create() sem o campo grava vazio (SQL NULL)", async () => {
+      const slot = await slotHorarioService.create({ horaInicio: "04:15" });
+      expect(slot.extrasObrigatorios ?? null).toBeNull();
+      await slotHorarioService.delete(slot.id);
+    });
+
+    it("update() com null limpa os extras obrigatórios", async () => {
+      const slot = await slotHorarioService.create({
+        horaInicio: "04:20",
+        extrasObrigatorios: [TEST_IDS.EXTRA_1],
+      });
+      expect(slot.extrasObrigatorios).toEqual([TEST_IDS.EXTRA_1]);
+
+      const limpo = await slotHorarioService.update(slot.id, { extrasObrigatorios: null });
+      expect(limpo.extrasObrigatorios ?? null).toBeNull();
+
+      await slotHorarioService.delete(slot.id);
+    });
+
+    it("update() com array vazio também limpa", async () => {
+      const slot = await slotHorarioService.create({
+        horaInicio: "04:25",
+        extrasObrigatorios: [TEST_IDS.EXTRA_1],
+      });
+
+      const limpo = await slotHorarioService.update(slot.id, { extrasObrigatorios: [] });
+      expect(limpo.extrasObrigatorios ?? null).toBeNull();
+
+      await slotHorarioService.delete(slot.id);
+    });
+
+    it("update() substitui a lista mantendo o resto intacto", async () => {
+      const slot = await slotHorarioService.create({
+        horaInicio: "04:30",
+        duracaoMin: 120,
+        extrasObrigatorios: [TEST_IDS.EXTRA_1],
+      });
+
+      const trocado = await slotHorarioService.update(slot.id, {
+        extrasObrigatorios: [TEST_IDS.EXTRA_2],
+      });
+      expect(trocado.extrasObrigatorios).toEqual([TEST_IDS.EXTRA_2]);
+      expect(trocado.duracaoMin).toBe(120); // não mexido
+
+      await slotHorarioService.delete(slot.id);
+    });
+
+    it("rejeita ids de extra inexistentes com EXTRA_NOT_FOUND (create e update)", async () => {
+      await expect(
+        slotHorarioService.create({
+          horaInicio: "04:35",
+          extrasObrigatorios: ["extra-inexistente-xyz"],
+        })
+      ).rejects.toThrow("EXTRA_NOT_FOUND");
+
+      const slot = await slotHorarioService.create({ horaInicio: "04:40" });
+      await expect(
+        slotHorarioService.update(slot.id, { extrasObrigatorios: ["extra-inexistente-xyz"] })
+      ).rejects.toThrow("EXTRA_NOT_FOUND");
+      await slotHorarioService.delete(slot.id);
+    });
+
+    it("rejeita payload não-array com EXTRAS_OBRIGATORIOS_INVALID", async () => {
+      await expect(
+        slotHorarioService.create({
+          horaInicio: "04:45",
+          // @ts-expect-error payload inválido a propósito (teste de robustez)
+          extrasObrigatorios: "extra-menu-almoco-jantar",
+        })
+      ).rejects.toThrow("EXTRAS_OBRIGATORIOS_INVALID");
+    });
+  });
+
+  // ── getSlotsDia: pares à mesma hora em salas distintas ──────────
+  describe("getSlotsDia() - 2 slots à mesma hora (salas distintas) ficam ambos ocupados", () => {
+    const DIA_PARES = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 130);
+      return d.toISOString().split("T")[0]!;
+    })();
+
+    const ids = {
+      sala1: "",
+      sala2: "",
+      slot1: "",
+      slot2: "",
+      festas: ["reserva-par-s1", "reserva-par-s2"],
+    };
+
+    beforeAll(async () => {
+      const s1 = await testPrisma.salaLanche.create({ data: { nome: "Sala Par T1" } });
+      const s2 = await testPrisma.salaLanche.create({ data: { nome: "Sala Par T2" } });
+      ids.sala1 = s1.id;
+      ids.sala2 = s2.id;
+
+      const slot1 = await testPrisma.slotHorario.create({
+        data: {
+          horaInicio: "03:30",
+          duracaoMin: 60,
+          fimDeSemana: null,
+          salaLancheId: ids.sala1,
+          extrasObrigatorios: [TEST_IDS.EXTRA_1],
+        },
+      });
+      const slot2 = await testPrisma.slotHorario.create({
+        data: {
+          horaInicio: "03:30",
+          duracaoMin: 60,
+          fimDeSemana: null,
+          salaLancheId: ids.sala2,
+        },
+      });
+      ids.slot1 = slot1.id;
+      ids.slot2 = slot2.id;
+
+      const dataObj = new Date(DIA_PARES);
+      await testPrisma.reserva.create({
+        data: {
+          id: ids.festas[0],
+          data: dataObj,
+          horario: "03:30",
+          duracaoMinutos: 60,
+          numCriancas: 10,
+          estado: "CONFIRMADO",
+          cor: "#123456",
+          salaLancheId: ids.sala1,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+      await testPrisma.reserva.create({
+        data: {
+          id: ids.festas[1],
+          data: dataObj,
+          horario: "03:30",
+          duracaoMinutos: 60,
+          numCriancas: 12,
+          estado: "RESERVA",
+          cor: "#654321",
+          salaLancheId: ids.sala2,
+          clienteId: TEST_IDS.CLIENTE_1,
+        },
+      });
+    }, 60000);
+
+    afterAll(async () => {
+      await testPrisma.reserva.deleteMany({ where: { id: { in: ids.festas } } });
+      await testPrisma.slotHorario.deleteMany({
+        where: { id: { in: [ids.slot1, ids.slot2] } },
+      });
+      await testPrisma.salaLanche.deleteMany({
+        where: { id: { in: [ids.sala1, ids.sala2] } },
+      });
+    });
+
+    it("cada festa vai ao slot da SUA sala e ambos os slots ficam ocupados", async () => {
+      const dia = await slotHorarioService.getSlotsDia(DIA_PARES);
+
+      const slotS1 = dia.slots.find((s) => s.slotId === ids.slot1);
+      const slotS2 = dia.slots.find((s) => s.slotId === ids.slot2);
+
+      expect(slotS1!.ocupado).toBe(true);
+      expect(slotS1!.festa!.id).toBe(ids.festas[0]);
+      expect(slotS2!.ocupado).toBe(true);
+      expect(slotS2!.festa!.id).toBe(ids.festas[1]);
+
+      // Campo novo exposto no SlotDiaItem (null é normalizado para [])
+      expect(slotS1!.extrasObrigatorios).toEqual([TEST_IDS.EXTRA_1]);
+      expect(slotS2!.extrasObrigatorios).toEqual([]);
     });
   });
 });

@@ -9,12 +9,14 @@ import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
 import InputField from "@/components/form/input/InputField";
 import Switch from "@/components/form/switch/Switch";
+import MultiSelect from "@/components/form/MultiSelect";
 import { Select } from "@/components/ui/select";
 import { FestaColorPicker, FestaColorDot } from "@/components/ui/FestaColorPicker";
 import DataTable from "@/components/ui/table/DataTable";
 import type { Column } from "@/components/ui/table/DataTable";
 import { useSlotsHorario, useCreateSlotHorario, useUpdateSlotHorario, useDeleteSlotHorario } from "@/hooks/use-slots-horario";
 import { useSalasLanche } from "@/hooks/use-salas-lanche";
+import { useExtras } from "@/hooks/use-extras";
 import type { SlotHorario } from "@saas/shared-types";
 import type { StatusType } from "@/components/ui";
 
@@ -31,6 +33,7 @@ const slotSchema = z
     corDefault: z.string().nullable().optional(),
     horaLancheDefault: z.string().nullable().optional(),
     salaLancheId: z.string().nullable().optional(),
+    extrasObrigatorios: z.array(z.string()),
   })
   .refine(
     (data) => {
@@ -89,6 +92,7 @@ function timeDiffMin(horaInicio: string, horaFim: string): number {
 export default function SlotsHorarioContent() {
   const { data: slots, isLoading } = useSlotsHorario();
   const { data: salasLanche } = useSalasLanche();
+  const { data: extras } = useExtras();
   const createSlot = useCreateSlotHorario();
   const updateSlot = useUpdateSlotHorario();
   const deleteSlot = useDeleteSlotHorario();
@@ -114,6 +118,7 @@ export default function SlotsHorarioContent() {
      corDefault: null,
      horaLancheDefault: null,
      salaLancheId: null,
+     extrasObrigatorios: [],
    },
   });
 
@@ -123,6 +128,21 @@ export default function SlotsHorarioContent() {
   const watchedHoraLanche = watch("horaLancheDefault");
   const watchedHoraInicio = watch("horaInicio");
   const watchedHoraFim = watch("horaFim");
+  const watchedExtrasObrigatorios = watch("extrasObrigatorios");
+
+  // Catálogo de menus (categoria MENU) candidatos a extras obrigatórios
+  // (ex.: "Almoço/Jantar (Suplemento)").
+  const menuExtrasOptions = useMemo(
+    () =>
+      (extras ?? [])
+        .filter((e) => e.categoria === "MENU" && e.activo)
+        .map((e) => ({ value: e.id, text: e.nome, selected: false })),
+    [extras]
+  );
+  const nomeExtra = useMemo(() => {
+    const mapa = new Map((extras ?? []).map((e) => [e.id, e.nome]));
+    return (id: string) => mapa.get(id) ?? id;
+  }, [extras]);
 
   // Opções de salas de lanche para o Select
   const salaLancheOptions = useMemo(
@@ -201,6 +221,27 @@ export default function SlotsHorarioContent() {
         ),
       },
       {
+        key: "extrasObrigatorios",
+        label: "Extras Obrigatórios",
+        sortable: false,
+        render: (_value, s) => {
+          const ids = Array.isArray(s.extrasObrigatorios) ? s.extrasObrigatorios : [];
+          if (ids.length === 0) return <span className="text-sm text-text-muted">-</span>;
+          return (
+            <div className="flex flex-wrap gap-1">
+              {ids.map((id) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-accent-orange-50 text-accent-orange-700"
+                >
+                  {nomeExtra(id)}
+                </span>
+              ))}
+            </div>
+          );
+        },
+      },
+      {
         key: "fimDeSemana",
         label: "Aplicação",
         sortable: false,
@@ -224,7 +265,7 @@ export default function SlotsHorarioContent() {
         ),
       },
     ],
-    []
+    [nomeExtra]
   );
 
   const handleCreate = useCallback(() => {
@@ -237,6 +278,7 @@ export default function SlotsHorarioContent() {
       corDefault: null,
       horaLancheDefault: null,
       salaLancheId: null,
+      extrasObrigatorios: [],
     });
     setShowForm(true);
   }, [reset]);
@@ -252,6 +294,7 @@ export default function SlotsHorarioContent() {
         corDefault: slot.corDefault ?? null,
         horaLancheDefault: slot.horaLancheDefault ?? null,
         salaLancheId: slot.salaLancheId ?? null,
+        extrasObrigatorios: Array.isArray(slot.extrasObrigatorios) ? slot.extrasObrigatorios : [],
       });
       setShowForm(true);
     },
@@ -272,6 +315,8 @@ export default function SlotsHorarioContent() {
         corDefault: data.corDefault || undefined,
         horaLancheDefault: data.horaLancheDefault || undefined,
         salaLancheId: data.salaLancheId || undefined,
+        // [] → null = limpar (o serviço grava SQL NULL)
+        extrasObrigatorios: data.extrasObrigatorios.length > 0 ? data.extrasObrigatorios : null,
       };
       if (editingSlot) {
         await updateSlot.mutateAsync({ id: editingSlot.id, data: payload });
@@ -444,6 +489,25 @@ export default function SlotsHorarioContent() {
                     onChange={(val) => setValue("salaLancheId", val || null)}
                     placeholder="Selecione uma sala..."
                   />
+                </div>
+
+                {/* Extras obrigatórios (ex.: Almoço/Jantar no slot 11:00 FDS) */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                    Extras obrigatórios (opcional)
+                  </label>
+                  <MultiSelect
+                    label=""
+                    options={menuExtrasOptions}
+                    defaultSelected={watchedExtrasObrigatorios}
+                    onChange={(selected) => setValue("extrasObrigatorios", selected, { shouldDirty: true })}
+                    placeholder="Sem extras obrigatórios"
+                  />
+                  <p className="text-xs text-text-muted mt-1">
+                    Ao criar uma festa neste slot, estes extras são seleccionados
+                    automaticamente e não podem ser desmarcados (o servidor também os
+                    garante).
+                  </p>
                 </div>
               </div>
 

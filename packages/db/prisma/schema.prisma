@@ -779,11 +779,14 @@ model SlotHorario {
   // null = todos os dias · true = só fim-de-semana/feriados · false = só dias de semana
   fimDeSemana       Boolean?
   // ── Defaults aplicados ao criar uma festa neste slot ──
-  corDefault        String?  // Cor sugerida para a festa (paleta FESTA_COLORS em @saas/shared-defaults)
-  horaLancheDefault String?  // HH:MM - hora sugerida do lanche
-  salaLancheId      String?  // FK opcional para SalaLanche
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  corDefault          String?  // Cor sugerida para a festa (paleta FESTA_COLORS em @saas/shared-defaults)
+  horaLancheDefault   String?  // HH:MM - hora sugerida do lanche
+  salaLancheId        String?  // FK opcional para SalaLanche
+  // Extras obrigatórios neste slot (ex.: "Almoço/Jantar (Suplemento)" no slot
+  // das 11:00 de FDS): array JSON de IDs de Extra do catálogo.
+  extrasObrigatorios  Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   // Sala do lanche sugerida para festas neste slot
   salaLanche        SalaLanche? @relation(fields: [salaLancheId], references: [id])

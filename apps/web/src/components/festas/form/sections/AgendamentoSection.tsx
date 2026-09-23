@@ -10,14 +10,23 @@ import FieldLabel from "@/components/form/FieldLabel";
 import { toISODate } from "@/lib/format";
 import { DURACAO_FESTA_OPTIONS, type FestaFormData } from "../festa-form.schema";
 
+interface SlotOption {
+  value: string;
+  label: string;
+  horaInicio: string;
+  disabled?: boolean;
+}
+
 interface AgendamentoSectionProps {
-  slotOptions: { value: string; label: string; disabled?: boolean }[];
+  slotOptions: SlotOption[];
+  /** Id do slot actualmente seleccionado (opção do select; pares partilham a hora). */
+  slotSelecionadoId?: string;
   /** Sala de lanche assumida do slot (SalaLanche) - só display. */
   salaLancheNome: string | null;
   horarioCustom: boolean;
   onToggleHorarioCustom: (v: boolean) => void;
   isAdmin: boolean;
-  onSelectSlot: (horaInicio: string) => void;
+  onSelectSlot: (slotId: string) => void;
   dataInicial: string;
   /** Plano do dia (semana vs fim-de-semana) para o chip de capacidade. */
   planoTexto: string | null;
@@ -25,6 +34,7 @@ interface AgendamentoSectionProps {
 
 export default function AgendamentoSection({
   slotOptions,
+  slotSelecionadoId,
   salaLancheNome,
   horarioCustom,
   onToggleHorarioCustom,
@@ -39,7 +49,7 @@ export default function AgendamentoSection({
   // Hora fora dos slots (festa criada em modo personalizado): para não-admins
   // o valor é mostrado read-only em vez do select de slots - a hora guardada
   // nunca se perde, mas também não pode ser alterada por quem não é admin.
-  const foraDosSlots = !!horario && !horarioCustom && !slotOptions.some((o) => o.value === horario);
+  const foraDosSlots = !!horario && !horarioCustom && !slotOptions.some((o) => o.horaInicio === horario);
   const mostraHoraManual = horarioCustom || foraDosSlots;
   // Hora do lanche e sala do lanche: definidas pelo slot e BLOQUEADAS (21/09/2026) -
   // mexe-se na configuração do slot, não na festa.
@@ -74,7 +84,7 @@ export default function AgendamentoSection({
             <Select
               options={slotOptions}
               placeholder="Seleccionar slot"
-              value={horario}
+              value={slotSelecionadoId ?? ""}
               onChange={onSelectSlot}
               error={!!errors.horario}
             />

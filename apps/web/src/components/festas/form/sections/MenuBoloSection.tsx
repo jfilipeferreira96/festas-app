@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, Cake, Utensils } from "lucide-react";
+import { AlertTriangle, Cake, Lock, Utensils } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
@@ -21,6 +21,8 @@ interface MenuBoloSectionProps {
   bolosCatalogo: Extra[];
   /** Total de crianças (confirmadas ?? previstas ?? 1) - base dos suplementos. */
   numPessoas: number;
+  /** IDs de Extra exigidos pelo slot seleccionado (não podem ser desmarcados). */
+  extrasObrigatoriosIds?: string[];
 }
 
 const ESTADOS_BOLO: { value: "PAIS_TRAZEM" | "A_DECIDIR"; label: string }[] = [
@@ -34,12 +36,15 @@ export default function MenuBoloSection({
   suplementosMenu,
   bolosCatalogo,
   numPessoas,
+  extrasObrigatoriosIds = [],
 }: MenuBoloSectionProps) {
   const { register, setValue, watch } = useFormContext<FestaFormData>();
   const bolo = watch("bolo");
   const boloQuantidade = watch("boloQuantidade");
   const extrasIds = watch("extrasIds");
   const extrasQuantidades = watch("extrasQuantidades");
+
+  const obrigatorios = new Set(extrasObrigatoriosIds);
 
   const boloExtraSeleccionado = bolosCatalogo.find((e) => extrasIds.includes(e.id));
   const ehEstado = bolo === "PAIS_TRAZEM" || bolo === "A_DECIDIR";
@@ -78,6 +83,7 @@ export default function MenuBoloSection({
 
   const toggleSuplemento = (id: string) => {
     if (extrasIds.includes(id)) {
+      if (obrigatorios.has(id)) return; // exigido pelo slot - não desmarcável
       setValue("extrasIds", extrasIds.filter((x) => x !== id), { shouldDirty: true });
       const restantesQuantidades = { ...extrasQuantidades };
       delete restantesQuantidades[id];
@@ -182,17 +188,27 @@ export default function MenuBoloSection({
           <div className="flex flex-wrap gap-3">
             {suplementosMenu.map((item) => {
               const isSelected = extrasIds.includes(item.id);
+              const obrigatorio = obrigatorios.has(item.id) && isSelected;
               return (
                 <div key={item.id} className="flex flex-col gap-1.5">
                   <button
                     type="button"
                     onClick={() => toggleSuplemento(item.id)}
-                    className={chipClasses(isSelected)}
+                    disabled={obrigatorio}
+                    className={`${chipClasses(isSelected)} ${
+                      obrigatorio ? "opacity-90 cursor-not-allowed" : ""
+                    }`}
                   >
+                    {obrigatorio && <Lock size={13} className="text-brand-600 shrink-0" />}
                     <span className="text-sm text-text-primary">{item.nome}</span>
                     <span className="text-xs font-medium text-text-secondary">
                       +{formatEuro(Number(item.precoUnitario))}
                     </span>
+                    {obrigatorio && (
+                      <span className="text-[10px] font-semibold uppercase text-brand-600 bg-brand-50 px-1.5 py-0.5 rounded">
+                        obrigatório
+                      </span>
+                    )}
                   </button>
                   {isSelected && (
                     <ExtrasQuantidadeStepper

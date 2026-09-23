@@ -24,6 +24,7 @@ const MP = (s: string) => s as "DINHEIRO" | "MULTIBANCO" | "MBWAY" | "TRANSFEREN
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { config } from "dotenv";
+import { Prisma } from "@prisma/client";
 import { FESTA_COLORS } from "@saas/shared-defaults";
 import { getSeedUsers } from "./seed-roles";
 import { createPrismaClient } from "../src/mariadb-adapter";
@@ -414,42 +415,61 @@ const COR = {
   CINZENTA: corDaPaleta("Cinzento"),
 } as const;
 
-// ─── Grelhas por tipo de dia (plano diário BaseLandia) ─────────
-// FDS (15 slots): 6 manhã 09h15-10h45 + 9 tarde 14h00-17h45, lanche = entrada+1h30
-//   (excepção oficial: slot 1 lanche às 10:30, 30 min mais cedo).
-// Semana (6 slots): 15h30-18h00, lanche = entrada+1h, brincar final 45 min.
-// Salas alternadas 1/2; cores em rotação (sem coexistência no parque);
-// 17:15 e 17:45 existem nas DUAS grelhas - filtrar sempre por tipo de dia.
+// ─── Grelhas por tipo de dia (grelha oficial BaseLandia 2026, JSON do cliente) ─────────
+// FDS (24 slots): 8 manhã 09h15-11h00 + 16 tarde 14h00-18h15, pares com MESMA hora
+//   (sala 1 + sala 2), lanche = entrada+1h (30 min).
+// Semana (10 slots): 15h30-17h50 em pares; durações 135/135/140/140/145 (a grelha
+//   oficial da semana usa 140/145 min nos últimos pares - não é bug).
+// Extras obrigatórios: slots com extrasObrigatorios exigem o extra (o FestaForm
+//   força-o e o servidor re-força no create/update).
+const EXTRA_ALMOCO_JANTAR = "extra-menu-almoco-jantar";
+
 const GRELHA_SLOTS: {
   horaInicio: string;
   horaLanche: string;
   salaLancheId: string;
   cor: string;
   fds: boolean;
+  duracaoMin?: number; // default 135
+  extrasObrigatorios?: string[];
 }[] = [
-  // ── Fim-de-semana (15) ──
-  { horaInicio: "09:15", horaLanche: "10:30", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: true }, // 1  Azul (lanche 30 min mais cedo - excepção oficial)
-  { horaInicio: "09:30", horaLanche: "11:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: true }, // 2  Verde
-  { horaInicio: "09:45", horaLanche: "11:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: true }, // 3  Amarela
-  { horaInicio: "10:15", horaLanche: "11:45", salaLancheId: "sala-lanche-2", cor: COR.LARANJA, fds: true }, // 4  Laranja
-  { horaInicio: "10:30", horaLanche: "12:00", salaLancheId: "sala-lanche-1", cor: COR.ROSA, fds: true }, // 5  Rosa
-  { horaInicio: "10:45", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA, fds: true }, // 6  Turquesa
-  { horaInicio: "14:00", horaLanche: "15:30", salaLancheId: "sala-lanche-1", cor: COR.ROXA, fds: true }, // 7  Roxa
-  { horaInicio: "14:15", horaLanche: "15:45", salaLancheId: "sala-lanche-2", cor: COR.AZUL, fds: true }, // 8  Azul
-  { horaInicio: "14:45", horaLanche: "16:15", salaLancheId: "sala-lanche-1", cor: COR.VERDE, fds: true }, // 9  Verde
-  { horaInicio: "15:15", horaLanche: "16:45", salaLancheId: "sala-lanche-2", cor: COR.AMARELA, fds: true }, // 10 Amarela
-  { horaInicio: "15:45", horaLanche: "17:15", salaLancheId: "sala-lanche-1", cor: COR.LARANJA, fds: true }, // 11 Laranja
-  { horaInicio: "16:00", horaLanche: "17:30", salaLancheId: "sala-lanche-2", cor: COR.ROSA, fds: true }, // 12 Rosa
-  { horaInicio: "16:45", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.TURQUESA, fds: true }, // 13 Turquesa
-  { horaInicio: "17:15", horaLanche: "18:45", salaLancheId: "sala-lanche-2", cor: COR.ROXA, fds: true }, // 14 Roxa
-  { horaInicio: "17:45", horaLanche: "19:15", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: true }, // 15 Azul
-  // ── Semana (6) - lanche = entrada+1h, salas alternadas ──
+  // ── Fim-de-semana (24): manhã ──
+  { horaInicio: "09:15", horaLanche: "10:15", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: true }, // 1  Azul
+  { horaInicio: "09:15", horaLanche: "10:15", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: true }, // 2  Verde
+  { horaInicio: "09:50", horaLanche: "10:55", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: true }, // 3  Amarela
+  { horaInicio: "09:50", horaLanche: "10:55", salaLancheId: "sala-lanche-2", cor: COR.LARANJA, fds: true }, // 4  Laranja
+  { horaInicio: "10:20", horaLanche: "11:35", salaLancheId: "sala-lanche-1", cor: COR.ROSA, fds: true }, // 5  Rosa
+  { horaInicio: "10:20", horaLanche: "11:35", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA, fds: true }, // 6  Turquesa
+  { horaInicio: "11:00", horaLanche: "12:15", salaLancheId: "sala-lanche-1", cor: COR.ROXA, fds: true, extrasObrigatorios: [EXTRA_ALMOCO_JANTAR] }, // 7  Roxa + almoço/jantar
+  { horaInicio: "11:00", horaLanche: "12:15", salaLancheId: "sala-lanche-2", cor: COR.AZUL, fds: true, extrasObrigatorios: [EXTRA_ALMOCO_JANTAR] }, // 8  Azul + almoço/jantar
+  // ── Fim-de-semana (16): tarde ──
+  { horaInicio: "14:00", horaLanche: "15:00", salaLancheId: "sala-lanche-1", cor: COR.VERDE, fds: true }, // 9  Verde
+  { horaInicio: "14:00", horaLanche: "15:00", salaLancheId: "sala-lanche-2", cor: COR.AMARELA, fds: true }, // 10 Amarela
+  { horaInicio: "14:35", horaLanche: "15:40", salaLancheId: "sala-lanche-1", cor: COR.LARANJA, fds: true }, // 11 Laranja
+  { horaInicio: "14:35", horaLanche: "15:40", salaLancheId: "sala-lanche-2", cor: COR.ROSA, fds: true }, // 12 Rosa
+  { horaInicio: "15:10", horaLanche: "16:20", salaLancheId: "sala-lanche-1", cor: COR.TURQUESA, fds: true }, // 13 Turquesa
+  { horaInicio: "15:10", horaLanche: "16:20", salaLancheId: "sala-lanche-2", cor: COR.ROXA, fds: true }, // 14 Roxa
+  { horaInicio: "15:45", horaLanche: "17:00", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: true }, // 15 Azul
+  { horaInicio: "15:45", horaLanche: "17:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: true }, // 16 Verde
+  { horaInicio: "16:20", horaLanche: "17:40", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: true }, // 17 Amarela
+  { horaInicio: "16:20", horaLanche: "17:40", salaLancheId: "sala-lanche-2", cor: COR.LARANJA, fds: true }, // 18 Laranja
+  { horaInicio: "16:55", horaLanche: "18:20", salaLancheId: "sala-lanche-1", cor: COR.ROSA, fds: true }, // 19 Rosa
+  { horaInicio: "16:55", horaLanche: "18:20", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA, fds: true }, // 20 Turquesa
+  { horaInicio: "17:30", horaLanche: "19:00", salaLancheId: "sala-lanche-1", cor: COR.ROXA, fds: true }, // 21 Roxa
+  { horaInicio: "17:30", horaLanche: "19:00", salaLancheId: "sala-lanche-2", cor: COR.AZUL, fds: true }, // 22 Azul
+  { horaInicio: "18:15", horaLanche: "19:40", salaLancheId: "sala-lanche-1", cor: COR.VERDE, fds: true, extrasObrigatorios: [EXTRA_ALMOCO_JANTAR] }, // 23 Verde + almoço/jantar
+  { horaInicio: "18:15", horaLanche: "19:40", salaLancheId: "sala-lanche-2", cor: COR.AMARELA, fds: true, extrasObrigatorios: [EXTRA_ALMOCO_JANTAR] }, // 24 Amarela + almoço/jantar
+  // ── Semana (10) - durações 135/135/140/140/145 ──
   { horaInicio: "15:30", horaLanche: "16:30", salaLancheId: "sala-lanche-1", cor: COR.AZUL, fds: false }, // S1 Azul
-  { horaInicio: "16:00", horaLanche: "17:00", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: false }, // S2 Verde
-  { horaInicio: "17:15", horaLanche: "18:15", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: false }, // S3 Amarela
-  { horaInicio: "17:30", horaLanche: "18:30", salaLancheId: "sala-lanche-2", cor: COR.LARANJA, fds: false }, // S4 Laranja
-  { horaInicio: "17:45", horaLanche: "18:45", salaLancheId: "sala-lanche-1", cor: COR.ROSA, fds: false }, // S5 Rosa
-  { horaInicio: "18:00", horaLanche: "19:00", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA, fds: false }, // S6 Turquesa
+  { horaInicio: "15:30", horaLanche: "16:30", salaLancheId: "sala-lanche-2", cor: COR.VERDE, fds: false }, // S2 Verde
+  { horaInicio: "16:05", horaLanche: "17:10", salaLancheId: "sala-lanche-1", cor: COR.AMARELA, fds: false }, // S3 Amarela
+  { horaInicio: "16:05", horaLanche: "17:10", salaLancheId: "sala-lanche-2", cor: COR.LARANJA, fds: false }, // S4 Laranja
+  { horaInicio: "16:40", horaLanche: "17:50", salaLancheId: "sala-lanche-1", cor: COR.ROSA, fds: false, duracaoMin: 140 }, // S5 Rosa
+  { horaInicio: "16:40", horaLanche: "17:50", salaLancheId: "sala-lanche-2", cor: COR.TURQUESA, fds: false, duracaoMin: 140 }, // S6 Turquesa
+  { horaInicio: "17:15", horaLanche: "18:30", salaLancheId: "sala-lanche-1", cor: COR.ROXA, fds: false, duracaoMin: 140 }, // S7 Roxa
+  { horaInicio: "17:15", horaLanche: "18:30", salaLancheId: "sala-lanche-2", cor: COR.AZUL, fds: false, duracaoMin: 140 }, // S8 Azul
+  { horaInicio: "17:50", horaLanche: "19:10", salaLancheId: "sala-lanche-1", cor: COR.VERDE, fds: false, duracaoMin: 145, extrasObrigatorios: [EXTRA_ALMOCO_JANTAR] }, // S9 Verde + almoço/jantar
+  { horaInicio: "17:50", horaLanche: "19:10", salaLancheId: "sala-lanche-2", cor: COR.AMARELA, fds: false, duracaoMin: 145, extrasObrigatorios: [EXTRA_ALMOCO_JANTAR] }, // S10 Amarela + almoço/jantar
 ];
 
 /** Slot da grelha para um horário, conforme o tipo de dia (FDS vs semana). */
@@ -457,24 +477,30 @@ function slotDaGrelha(horario: string | null | undefined, eFds: boolean) {
   return GRELHA_SLOTS.find((s) => s.fds === eFds && s.horaInicio === horario);
 }
 
-// ─── Slots Horários (grelhas FDS 15 + semana 6, 2h15m + defaults cor/lanche/sala) ──
+// ─── Slots Horários (grelhas FDS 24 + semana 10 + defaults cor/lanche/sala/extras) ──
 async function seedSlotsHorario() {
   console.log("  Creating time slots...");
 
   for (const [i, s] of GRELHA_SLOTS.entries()) {
     const data = {
       horaInicio: s.horaInicio,
-      duracaoMin: 135,
+      duracaoMin: s.duracaoMin ?? 135,
       ordem: i + 1,
       fimDeSemana: s.fds,
       corDefault: s.cor,
       horaLancheDefault: s.horaLanche,
       salaLancheId: s.salaLancheId,
+      extrasObrigatorios: s.extrasObrigatorios ?? Prisma.DbNull,
     };
-    // 17:15/17:45 existem nas duas grelhas: match por hora + tipo de dia
-    const existing = await prisma.slotHorario.findFirst({
-      where: { horaInicio: s.horaInicio, fimDeSemana: s.fds },
-    });
+    // Pares com a MESMA hora (sala 1 + sala 2): match por hora + tipo de dia + sala.
+    // Fallback para slots antigos com fimDeSemana NULL (adopta-os e corrige a flag).
+    const existing =
+      (await prisma.slotHorario.findFirst({
+        where: { horaInicio: s.horaInicio, fimDeSemana: s.fds, salaLancheId: s.salaLancheId },
+      })) ??
+      (await prisma.slotHorario.findFirst({
+        where: { horaInicio: s.horaInicio, fimDeSemana: null, salaLancheId: s.salaLancheId },
+      }));
     if (existing) {
       // Actualizar defaults caso já exista
       await prisma.slotHorario.update({

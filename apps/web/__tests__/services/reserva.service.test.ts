@@ -1482,4 +1482,250 @@ describe("Reserva Service", () => {
       }
     });
   });
+
+  // ── Guard de capacidade por (horário, sala) + extras obrigatórios do slot ──
+  describe("Guard por sala + extras obrigatórios do slot", () => {
+    const sala1Ref = { current: "" };
+    const sala2Ref = { current: "" };
+    const slotObrigRef = { current: "" };
+    const HORAS = {
+      par: "02:10", // pares da grelha: mesma hora, sala 1 + sala 2
+      semSala: "02:20",
+      origemUpdate: "02:30", // festa criada fora do slot e depois movida
+      slotExtra: "02:40", // slot com extra obrigatório (fimDeSemana null = todos os dias)
+      disponibilidade: "02:50",
+    };
+
+    /** Data futura sem colisões com outros testes (+120 dias). */
+    const DIA = (() => {
+      const d = new Date();
+      d.setDate(d.getDate() + 120);
+      return d.toISOString().split("T")[0]!;
+    })();
+
+    /** Apaga as festas de um horário (e filhos) - isola cada teste. */
+    async function limparHorario(...horarios: string[]) {
+      const onde = { data: new Date(DIA), horario: { in: horarios } };
+      await testPrisma.reservaExtra.deleteMany({ where: { reserva: { ...onde } } });
+      await testPrisma.reservaAniversariante.deleteMany({ where: { reserva: { ...onde } } });
+      await testPrisma.pagamento.deleteMany({ where: { reserva: { ...onde } } });
+      await testPrisma.reserva.deleteMany({ where: { ...onde } });
+    }
+
+    beforeAll(async () => {
+      const s1 = await testPrisma.salaLanche.create({ data: { nome: "Sala Guard T1" } });
+      const s2 = await testPrisma.salaLanche.create({ data: { nome: "Sala Guard T2" } });
+      sala1Ref.current = s1.id;
+      sala2Ref.current = s2.id;
+
+      // Slot com extra obrigatório: EXTRA_2 é POR_PESSOA (quantidade = crianças)
+      const slot = await testPrisma.slotHorario.create({
+        data: {
+          horaInicio: HORAS.slotExtra,
+          duracaoMin: 135,
+          fimDeSemana: null,
+          extrasObrigatorios: [TEST_IDS.EXTRA_2],
+        },
+      });
+      slotObrigRef.current = slot.id;
+    }, 60000);
+
+    afterAll(async () => {
+      await limparHorario(...Object.values(HORAS));
+      if (slotObrigRef.current) {
+        await testPrisma.slotHorario.delete({ where: { id: slotObrigRef.current } }).catch(() => {});
+      }
+      for (const id of [sala1Ref.current, sala2Ref.current]) {
+        if (id) await testPrisma.salaLanche.delete({ where: { id } }).catch(() => {});
+      }
+    });
+
+    it("mesma hora + salas distintas → cria OK (par da grelha)", async () => {
+      const a = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: DIA,
+        horario: HORAS.par,
+        duracaoMinutos: 135,
+        numCriancas: 10,
+        salaLancheId: sala1Ref.current,
+      });
+      const b = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: DIA,
+        horario: HORAS.par,
+        duracaoMinutos: 135,
+        numCriancas: 10,
+        salaLancheId: sala2Ref.current,
+      });
+      expect(a).toBeDefined();
+      expect(b).toBeDefined();
+    });
+
+    it("mesma hora + mesma sala → SLOT_OCCUPIED", async () => {
+      await expect(
+        reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: DIA,
+          horario: HORAS.par,
+          duracaoMinutos: 135,
+          numCriancas: 10,
+          salaLancheId: sala1Ref.current,
+        })
+      ).rejects.toThrow("SLOT_OCCUPIED");
+    });
+
+    it("sem sala vs com sala no mesmo horário → SLOT_OCCUPIED (conservador)", async () => {
+      // Já existem festas nas salas 1 e 2 às 02:10; sem sala conflita com ambas
+      await expect(
+        reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: DIA,
+          horario: HORAS.par,
+          duracaoMinutos: 135,
+          numCriancas: 10,
+        })
+      ).rejects.toThrow("SLOT_OCCUPIED");
+    });
+
+    it("sem sala vs sem sala no mesmo horário → SLOT_OCCUPIED", async () => {
+      try {
+        await reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: DIA,
+          horario: HORAS.semSala,
+          duracaoMinutos: 135,
+          numCriancas: 10,
+        });
+        await expect(
+          reservaService.create({
+            clienteId: TEST_IDS.CLIENTE_1,
+            data: DIA,
+            horario: HORAS.semSala,
+            duracaoMinutos: 135,
+            numCriancas: 10,
+          })
+        ).rejects.toThrow("SLOT_OCCUPIED");
+      } finally {
+        await limparHorario(HORAS.semSala);
+      }
+    });
+
+    it("create sem o extra obrigatório do slot → é auto-adicionado (POR_PESSOA = nº crianças)", async () => {
+      try {
+        const reserva = await reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: DIA,
+          horario: HORAS.slotExtra,
+          duracaoMinutos: 135,
+          numCriancas: 10,
+        });
+
+        const extra = reserva.extras.find((e) => e.extraId === TEST_IDS.EXTRA_2);
+        expect(extra).toBeDefined();
+        expect(extra!.quantidade).toBe(10);
+      } finally {
+        await limparHorario(HORAS.slotExtra);
+      }
+    });
+
+    it("create mantém a quantidade informada no payload para o extra obrigatório", async () => {
+      try {
+        const reserva = await reservaService.create({
+          clienteId: TEST_IDS.CLIENTE_1,
+          data: DIA,
+          horario: HORAS.slotExtra,
+          duracaoMinutos: 135,
+          numCriancas: 10,
+          extrasIds: [TEST_IDS.EXTRA_1],
+          extrasQuantidades: { [TEST_IDS.EXTRA_2]: 4 },
+        });
+
+        const obrigatorio = reserva.extras.find((e) => e.extraId === TEST_IDS.EXTRA_2);
+        expect(obrigatorio).toBeDefined();
+        expect(obrigatorio!.quantidade).toBe(4);
+        const manual = reserva.extras.find((e) => e.extraId === TEST_IDS.EXTRA_1);
+        expect(manual).toBeDefined();
+      } finally {
+        await limparHorario(HORAS.slotExtra);
+      }
+    });
+
+    it("update com extrasIds faz merge dos obrigatórios em falta", async () => {
+      const reserva = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: DIA,
+        horario: HORAS.origemUpdate,
+        duracaoMinutos: 135,
+        numCriancas: 10,
+        extrasIds: [TEST_IDS.EXTRA_1],
+      });
+      try {
+        expect(reserva.extras.find((e) => e.extraId === TEST_IDS.EXTRA_2)).toBeUndefined();
+
+        // Mover a festa para o slot com extra obrigatório, COM extrasIds no payload
+        const atualizada = await reservaService.update(reserva.id, {
+          horario: HORAS.slotExtra,
+          extrasIds: [TEST_IDS.EXTRA_1],
+          extrasQuantidades: { [TEST_IDS.EXTRA_1]: 1 },
+        });
+
+        const obrigatorio = atualizada.extras.find((e) => e.extraId === TEST_IDS.EXTRA_2);
+        expect(obrigatorio).toBeDefined();
+        expect(obrigatorio!.quantidade).toBe(10); // POR_PESSOA → nº crianças
+        const manual = atualizada.extras.find((e) => e.extraId === TEST_IDS.EXTRA_1);
+        expect(manual).toBeDefined();
+      } finally {
+        await limparHorario(HORAS.origemUpdate, HORAS.slotExtra);
+      }
+    });
+
+    it("update SEM extrasIds adiciona os obrigatórios em falta aos extras existentes", async () => {
+      const reserva = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: DIA,
+        horario: HORAS.origemUpdate,
+        duracaoMinutos: 135,
+        numCriancas: 8,
+      });
+      try {
+        // Mover para o slot obrigatório SEM enviar extrasIds
+        const atualizada = await reservaService.update(reserva.id, {
+          horario: HORAS.slotExtra,
+        });
+
+        const obrigatorio = atualizada.extras.find((e) => e.extraId === TEST_IDS.EXTRA_2);
+        expect(obrigatorio).toBeDefined();
+        expect(obrigatorio!.quantidade).toBe(8);
+      } finally {
+        await limparHorario(HORAS.origemUpdate, HORAS.slotExtra);
+      }
+    });
+
+    it("checkDisponibilidade ignora sobreposição em sala DISTINTA e avisa na MESMA sala", async () => {
+      // Festa sala 1 às 02:10 (135min → acaba 04:25) existe do 1.º teste;
+      // remover a da sala 2 para isolar o cenário de sobreposição.
+      await testPrisma.reserva.deleteMany({
+        where: { data: new Date(DIA), horario: HORAS.par, salaLancheId: sala2Ref.current },
+      });
+
+      // Sobreposição às 02:50 na sala 2 → sem conflito (grelha por pares).
+      const outraSala = await reservaService.checkDisponibilidade({
+        data: DIA,
+        horario: HORAS.disponibilidade,
+        duracaoMinutos: 135,
+        salaLancheId: sala2Ref.current,
+      });
+      expect(outraSala.conflitos).toHaveLength(0);
+
+      // Na sala 1 → avisa (sobreposição na mesma sala)
+      const mesmaSala = await reservaService.checkDisponibilidade({
+        data: DIA,
+        horario: HORAS.disponibilidade,
+        duracaoMinutos: 135,
+        salaLancheId: sala1Ref.current,
+      });
+      expect(mesmaSala.conflitos.length).toBeGreaterThan(0);
+      expect(mesmaSala.conflitos.some((c) => c.horario === HORAS.par)).toBe(true);
+    });
+  });
 });

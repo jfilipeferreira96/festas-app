@@ -218,6 +218,7 @@ export function useCheckDisponibilidade(params: {
   horario?: string;
   duracaoMinutos?: number;
   excludeId?: string;
+  salaLancheId?: string | null;
 }) {
   const enabled = !!(params.data && params.horario && params.duracaoMinutos);
   return useQuery<DisponibilidadeResult>({
@@ -228,6 +229,7 @@ export function useCheckDisponibilidade(params: {
         horario: params.horario!,
         duracaoMinutos: params.duracaoMinutos!,
         excludeId: params.excludeId,
+        salaLancheId: params.salaLancheId,
       }),
     enabled,
   });

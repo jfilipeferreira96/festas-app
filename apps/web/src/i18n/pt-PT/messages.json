@@ -56,7 +56,9 @@
   },
   "slotHorario": {
     "notFound": "Slot de horário não encontrado",
-    "deleted": "Slot de horário eliminado com sucesso"
+    "deleted": "Slot de horário eliminado com sucesso",
+    "extraNotFound": "Extra obrigatório inválido: um dos extras selecionados não existe",
+    "extrasInvalid": "Formato inválido para extras obrigatórios"
   },
   "cacifo": {
     "notFound": "Cacifo não encontrado",
