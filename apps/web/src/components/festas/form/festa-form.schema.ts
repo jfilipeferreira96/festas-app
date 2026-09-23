@@ -308,20 +308,29 @@ interface EstimativaConfig {
  * Estimativa do total da festa: preço por criança × nº de crianças faturadas
  * (respeitando o mínimo aplicável por nº de aniversariantes) + adultos
  * acompanhantes × preço de adulto (ConfiguracaoPreco.precoAdulto).
+ * `precoCriancaOverride` (preço do menu selecionado) sobrepõe o tarifário da
+ * data quando definido e positivo - o menu define o preço por criança.
  */
 export function calcularEstimativaFesta(
   config: EstimativaConfig | null | undefined,
   dataFesta: string | undefined,
   previsaoCriancas: number | undefined,
   numAniversariantes: number,
-  numAdultos = 0
+  numAdultos = 0,
+  precoCriancaOverride?: number
 ): EstimativaFestaInfo {
   if (!config || !dataFesta) {
     return { estimativa: 0, precoCrianca: 0, criancasFaturadas: 0, minimoAplicavel: 0 };
   }
-  const precoCrianca = isFimDeSemana(dataFesta)
+  const precoTarifario = isFimDeSemana(dataFesta)
     ? Number(config.precoCriancaFimSemana)
     : Number(config.precoCriancaSemana);
+  const precoCrianca =
+    precoCriancaOverride !== undefined &&
+    Number.isFinite(precoCriancaOverride) &&
+    precoCriancaOverride > 0
+      ? precoCriancaOverride
+      : precoTarifario;
   const numAniv = numAniversariantes || 1;
   const minimoAplicavel =
     (config.minimosCriancasPorAniversariante ?? [])

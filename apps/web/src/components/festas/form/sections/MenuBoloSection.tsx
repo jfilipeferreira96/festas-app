@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { AlertTriangle, Cake, Utensils } from "lucide-react";
 import { useFormContext } from "react-hook-form";
 import { Select } from "@/components/ui/select";
@@ -54,10 +55,39 @@ export default function MenuBoloSection({
   const mostraTema = boloExtraSeleccionado?.requerTexto === true;
   const quantidadeBolo = boloQuantidade ?? 1;
 
-  const toggleSuplemento = (id: string) => {
+  // Suplementos de menu são SEMPRE cobrados pelo total de crianças (regra do
+  // cliente, 23/09/2026): a quantidade gravada acompanha o nº de crianças -
+  // sem isto o stepper mostrava "3 € × 10 crianças = 30 €" mas o total só
+  // somava 1 unidade (3 €).
+  useEffect(() => {
+    const seleccionados = suplementosMenu.filter((s) => extrasIds.includes(s.id));
+    if (seleccionados.length === 0) return;
+    const dessincronizado = seleccionados.some(
+      (s) => (extrasQuantidades[s.id] ?? 1) !== numPessoas
+    );
+    if (!dessincronizado) return;
     setValue(
-      "extrasIds",
-      extrasIds.includes(id) ? extrasIds.filter((x) => x !== id) : [...extrasIds, id],
+      "extrasQuantidades",
+      {
+        ...extrasQuantidades,
+        ...Object.fromEntries(seleccionados.map((s) => [s.id, numPessoas])),
+      },
+      { shouldDirty: true }
+    );
+  }, [suplementosMenu, extrasIds, extrasQuantidades, numPessoas, setValue]);
+
+  const toggleSuplemento = (id: string) => {
+    if (extrasIds.includes(id)) {
+      setValue("extrasIds", extrasIds.filter((x) => x !== id), { shouldDirty: true });
+      const restantesQuantidades = { ...extrasQuantidades };
+      delete restantesQuantidades[id];
+      setValue("extrasQuantidades", restantesQuantidades, { shouldDirty: true });
+      return;
+    }
+    setValue("extrasIds", [...extrasIds, id], { shouldDirty: true });
+    setValue(
+      "extrasQuantidades",
+      { ...extrasQuantidades, [id]: numPessoas },
       { shouldDirty: true }
     );
   };

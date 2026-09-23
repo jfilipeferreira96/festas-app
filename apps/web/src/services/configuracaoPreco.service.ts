@@ -146,23 +146,32 @@ export const configuracaoPrecoService = {
    * Calcula o preço de uma festa.
    *
    * 1. Feriado → tarifa fim-semana; senão fim-semana/semana
-   * 2. minimo = minimosCriancasPorAniversariante[numAniv]
-   * 3. criancasFaturadas = max(numCriancas, minimo)
-   * 4. valor = precoCrianca × criancasFaturadas
+   * 2. precoCriancaOverride (preço do menu selecionado) sobrepõe o tarifário
+   *    da data quando definido e positivo
+   * 3. minimo = minimosCriancasPorAniversariante[numAniv]
+   * 4. criancasFaturadas = max(numCriancas, minimo)
+   * 5. valor = precoCrianca × criancasFaturadas
    *
    * Retorna { precoCrianca, minimoCriancas, criancasFaturadas, total }
    */
   async calcularPrecoFesta(
     data: Date,
     numCriancas: number,
-    numAniversariantes: number
+    numAniversariantes: number,
+    precoCriancaOverride?: number
   ): Promise<{
     precoCrianca: number;
     minimoCriancas: number;
     criancasFaturadas: number;
     total: number;
   }> {
-    const precoCrianca = await this.getPrecoCrianca(data);
+    const precoTarifario = await this.getPrecoCrianca(data);
+    const precoCrianca =
+      precoCriancaOverride !== undefined &&
+      Number.isFinite(precoCriancaOverride) &&
+      precoCriancaOverride > 0
+        ? precoCriancaOverride
+        : precoTarifario;
     const minimoCriancas = await this.getMinimoCriancas(numAniversariantes);
     const criancasFaturadas = Math.max(numCriancas, minimoCriancas);
     const total = +(precoCrianca * criancasFaturadas).toFixed(2);

@@ -22,6 +22,7 @@ export const TEST_IDS = {
   EXTRA_LANCHE_1: "test-extra-lanche-001",
   EXTRA_LANCHE_2: "test-extra-lanche-002",
   EXTRA_LANCHE_3: "test-extra-lanche-003",
+  EXTRA_MENU_1: "test-extra-menu-001",
 
   // Cacifos (created by number, not ID)
   CACIFO_1: 1,
@@ -118,6 +119,13 @@ export async function seedTestData(): Promise<void> {
     where: { id: TEST_IDS.EXTRA_LANCHE_3 },
     update: {},
     create: { id: TEST_IDS.EXTRA_LANCHE_3, nome: "Sumo Natural", precoUnitario: 3.5, icone: "juice-bottle", categoria: "EXTRA", subcategoria: "Lanche" },
+  });
+
+  // ── Extra (MENU category - menu selecionável no form de festas) ──
+  await testPrisma.extra.upsert({
+    where: { id: TEST_IDS.EXTRA_MENU_1 },
+    update: {},
+    create: { id: TEST_IDS.EXTRA_MENU_1, nome: "Menu Landy Teste", precoUnitario: 16.5, categoria: "MENU", fimDeSemana: false },
   });
 
   // ── Extra-Local associations ────────────────────────────────

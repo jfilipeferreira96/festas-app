@@ -243,6 +243,13 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     }
   }, [reserva, coresEmUso, setValue, getValues]);
 
+  // Menu selecionado: o preço do menu DEFINE o preço por criança (o tarifário
+  // da data só se aplica "Sem menu") - escolher Landy etc. atualiza o total.
+  const menuSelecionado = useMemo(
+    () => menuExtras.find((m) => m.id === watchedMenuId) ?? null,
+    [menuExtras, watchedMenuId]
+  );
+
   const estimativaFesta = useMemo(
     () =>
       calcularEstimativaFesta(
@@ -250,9 +257,10 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
         watchedData,
         previsaoCriancas,
         aniversariantes.filter((a) => a.nome.trim()).length,
-        watchedNumAdultos
+        watchedNumAdultos,
+        menuSelecionado ? Number(menuSelecionado.precoUnitario) : undefined
       ),
-    [configPreco, watchedData, previsaoCriancas, aniversariantes, watchedNumAdultos]
+    [configPreco, watchedData, previsaoCriancas, aniversariantes, watchedNumAdultos, menuSelecionado]
   );
 
   // Total CALCULADO (sem input livre): tarifário (crianças faturadas × preço

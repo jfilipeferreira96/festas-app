@@ -188,6 +188,29 @@ describe("ConfiguracaoPreco Service", () => {
       expect(result.criancasFaturadas).toBe(20);
       expect(result.total).toBe(300);
     });
+
+    it("should use the menu override as per-child price when provided", async () => {
+      // Menu selecionado (ex.: Landy 16,50€) sobrepõe o tarifário da data
+      const quarta = new Date("2025-01-15T00:00:00");
+      const result = await configuracaoPrecoService.calcularPrecoFesta(quarta, 12, 1, 16.5);
+      expect(result.precoCrianca).toBe(16.5);
+      expect(result.criancasFaturadas).toBe(12);
+      expect(result.total).toBe(198);
+    });
+
+    it("should still bill the minimum with a menu override (5 crianças → min 10)", async () => {
+      const quarta = new Date("2025-01-15T00:00:00");
+      const result = await configuracaoPrecoService.calcularPrecoFesta(quarta, 5, 1, 16.5);
+      expect(result.precoCrianca).toBe(16.5);
+      expect(result.criancasFaturadas).toBe(10);
+      expect(result.total).toBe(165);
+    });
+
+    it("should ignore an invalid override (0) and use the date tariff", async () => {
+      const quarta = new Date("2025-01-15T00:00:00");
+      const result = await configuracaoPrecoService.calcularPrecoFesta(quarta, 12, 1, 0);
+      expect(result.precoCrianca).toBe(15);
+    });
   });
 
   // ── getPrecoCrianca / getMinimoCriancas ───────────────────────

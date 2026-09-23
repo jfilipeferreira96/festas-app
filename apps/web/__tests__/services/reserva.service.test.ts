@@ -218,6 +218,47 @@ describe("Reserva Service", () => {
       await testPrisma.reservaExtra.deleteMany({ where: { reservaId: reserva.id } });
       await testPrisma.reserva.delete({ where: { id: reserva.id } });
     });
+
+    it("deve usar o preço do menu selecionado como preço por criança (e gravar o Menu)", async () => {
+      // Menu Landy Teste (16,50€) sobrepõe o tarifário da data
+      const reserva = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "23:00",
+        duracaoMinutos: 90,
+        numCriancas: 12,
+        menuId: TEST_IDS.EXTRA_MENU_1,
+      });
+
+      // precoCriancaAplicado = preço do menu (16,5), não o tarifário da data
+      expect(Number(reserva.precoCriancaAplicado)).toBe(16.5);
+      expect(reserva.minimoCriancas).toBe(10);
+      expect(reserva.numCriancas).toBe(12);
+
+      // Menu da reserva gravado a partir do Extra (nome + preço)
+      const menu = await testPrisma.menu.findUnique({ where: { reservaId: reserva.id } });
+      expect(menu).toBeDefined();
+      expect(menu?.nome).toBe("Menu Landy Teste");
+      expect(Number(menu?.preco)).toBe(16.5);
+
+      await testPrisma.menu.deleteMany({ where: { reservaId: reserva.id } });
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
+
+    it("deve usar o tarifário da data quando não há menu (Sem menu)", async () => {
+      const reserva = await reservaService.create({
+        clienteId: TEST_IDS.CLIENTE_1,
+        data: tomorrowStr,
+        horario: "23:30",
+        duracaoMinutos: 90,
+        numCriancas: 12,
+      });
+
+      // Sem menu → tarifário da ConfiguracaoPreco (15€ semana no seed de teste)
+      expect(Number(reserva.precoCriancaAplicado)).toBe(15);
+
+      await testPrisma.reserva.delete({ where: { id: reserva.id } });
+    });
   });
 
   // ── list ──────────────────────────────────────────────────────

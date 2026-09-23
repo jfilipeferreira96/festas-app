@@ -518,11 +518,25 @@ export const reservaService = {
     if (!clienteId) throw new Error("CLIENTE_REQUIRED");
 
     // ── Cálculo de preço por criança (com mínimos por aniversariante) ──
+    // O menu selecionado DEFINE o preço por criança (o tarifário da data só
+    // se aplica "Sem menu"); o menu Basy por defeito coincide com o tarifário,
+    // menus mais caros (ex.: Landy) sobrepõem-no.
+    let precoCriancaMenu: number | undefined;
+    if (data.menuId) {
+      const menuExtra = await prisma.extra.findUnique({
+        where: { id: data.menuId },
+        select: { id: true, categoria: true, precoUnitario: true },
+      });
+      if (menuExtra && menuExtra.categoria === "MENU") {
+        precoCriancaMenu = Number(menuExtra.precoUnitario);
+      }
+    }
     const numAniversariantes = aniversarianteIds.length;
     const calculo = await configuracaoPrecoService.calcularPrecoFesta(
       dataFesta,
       data.numCriancas || 0,
-      numAniversariantes
+      numAniversariantes,
+      precoCriancaMenu
     );
 
     // ── Cálculo de custo de meias (auto-preencher preço unitário do tarifário) ──
