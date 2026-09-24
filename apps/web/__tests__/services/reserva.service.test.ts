@@ -246,9 +246,16 @@ describe("Reserva Service", () => {
     });
 
     it("deve usar o tarifário da data quando não há menu (Sem menu)", async () => {
+      // Garantir dia de SEMANA: amanhã pode cair ao fim-de-semana e o teste
+      // receberia a tarifa de FDS (flake de calendário)
+      const dataSemana = new Date();
+      do {
+        dataSemana.setDate(dataSemana.getDate() + 1);
+      } while (dataSemana.getDay() === 0 || dataSemana.getDay() === 6);
+
       const reserva = await reservaService.create({
         clienteId: TEST_IDS.CLIENTE_1,
-        data: tomorrowStr,
+        data: dataSemana.toISOString().split("T")[0],
         horario: "23:30",
         duracaoMinutos: 90,
         numCriancas: 12,
