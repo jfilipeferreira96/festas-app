@@ -197,4 +197,53 @@ describe("Caução no ledger à criação da festa", () => {
     expect(Number(entradaCaucao[0]!.valor)).toBe(50);
     expect(entradaCaucao[0]!.metodo).toBe("DINHEIRO");
   });
+
+  it("replace-all sem a linha 'Caução' re-materializa a caução paga (atualizarPagamento)", async () => {
+    const festa = await reservaService.create(
+      payload(`cl-ledger-8-${Date.now()}@teste.pt`, "18:45", {
+        caucao: "PAGA",
+        valorCaucao: 50,
+        metodoCaucao: "MBWAY",
+      }) as never
+    );
+
+    // Chamada API direta (ou cliente defeituoso) envia o ledger SEM a caução
+    await reservaService.atualizarPagamento(festa.id, {
+      pagamentos: [{ valor: 150, metodo: "DINHEIRO" }],
+    });
+
+    const apos = await testPrisma.reserva.findUnique({
+      where: { id: festa.id },
+      include: { pagamentos: true },
+    });
+    const caucaoRows = apos?.pagamentos.filter((p) => p.nota === "Caução") ?? [];
+    expect(caucaoRows).toHaveLength(1);
+    expect(Number(caucaoRows[0]!.valor)).toBe(50);
+    const soma = (apos?.pagamentos ?? []).reduce((s, p) => s + Number(p.valor), 0);
+    expect(soma).toBe(200);
+    expect(apos?.pago).toBe(true);
+  });
+
+  it("replace-all via update sem a linha 'Caução' também re-materializa", async () => {
+    const festa = await reservaService.create(
+      payload(`cl-ledger-9-${Date.now()}@teste.pt`, "19:00", {
+        caucao: "PAGA",
+        valorCaucao: 40,
+        metodoCaucao: "DINHEIRO",
+      }) as never
+    );
+
+    await reservaService.update(festa.id, {
+      pagamentos: [{ valor: 160, metodo: "MULTIBANCO" }],
+    });
+
+    const apos = await testPrisma.reserva.findUnique({
+      where: { id: festa.id },
+      include: { pagamentos: true },
+    });
+    expect(apos?.pagamentos.filter((p) => p.nota === "Caução")).toHaveLength(1);
+    const soma = (apos?.pagamentos ?? []).reduce((s, p) => s + Number(p.valor), 0);
+    expect(soma).toBe(200);
+    expect(apos?.pago).toBe(true);
+  });
 });

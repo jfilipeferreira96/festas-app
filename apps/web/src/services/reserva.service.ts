@@ -991,6 +991,13 @@ export const reservaService = {
       await rederivarPagoReserva(prisma, id);
     }
 
+    // Hardening: caução paga tem SEMPRE linha no ledger - um replace-all sem
+    // a linha "Caução" não a pode apagar (idempotente; a transição
+    // NAO_PAGA→PAGA é materializada mais abaixo por promoverPorCaucao).
+    if (listaPagamentos !== undefined && reserva.caucao === "PAGA") {
+      await this.registarCaucaoNoLedgerInterna(reserva);
+    }
+
     // Sem extrasIds no payload: adicionar aos extras existentes os obrigatórios
     // do slot em falta (festa antiga criada antes da regra → ao editar, o
     // servidor garante o extra; quantidade = crianças se POR_PESSOA).
@@ -1128,6 +1135,16 @@ export const reservaService = {
       await sincronizarPagamentosReserva(tx, id, lista);
     });
 
+    // Hardening: caução paga tem SEMPRE linha no ledger - um replace-all sem
+    // a linha "Caução" (ex.: chamada API direta) não a pode apagar.
+    const aposLedger = await prisma.reserva.findUnique({
+      where: { id },
+      select: { id: true, caucao: true, valorCaucao: true, metodoCaucao: true },
+    });
+    if (aposLedger?.caucao === "PAGA") {
+      await this.registarCaucaoNoLedgerInterna(aposLedger);
+    }
+
     // Pagar a caução por aqui também materializa a preparação (e auto-inicia
     // se a hora marcada já passou).
     if (data.caucao === "PAGA" && reserva.caucao !== "PAGA") {
@@ -1205,6 +1222,12 @@ export const reservaService = {
         etapas: etapasData,
       },
     });
+
+    // Hardening: festa com caução paga arranca SEMPRE com a linha "Caução" no
+    // ledger (idempotente - cobre o auto-início de festas antigas sem a linha).
+    if (reserva.caucao === "PAGA") {
+      await this.registarCaucaoNoLedgerInterna(reserva);
+    }
 
     await this.materializarCacifosInterna(reserva);
 
