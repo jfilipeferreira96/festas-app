@@ -65,11 +65,15 @@ const fromName = process.env.EMAIL_FROM_NAME || "Baselandia - Festas";
 const PARA = process.env.TESTE_EMAIL_PARA || process.env.EMAIL_FROM_ADDRESS || smtpUser;
 
 if (!DRY_RUN && (!smtpHost || !smtpUser || !smtpPass)) {
-  console.error("[x] SMTP não configurado — faltam SMTP_HOST/SMTP_USER/SMTP_PASS.");
-  console.error("    O .env carregado não tem essas variáveis (ou não foi encontrado).");
-  console.error("    Para ver que variáveis existem (só os NOMES, sem valores):");
-  console.error('      grep -oE "^[A-Z_]+" ~/app.baselandia.pt/apps/web/.env | sort');
-  console.error("    E/ou define-as inline: SMTP_HOST=... SMTP_USER=... SMTP_PASS=... TESTE_EMAIL_PARA=... node scripts/envio-teste-convites.mjs");
+  const emFalta = [
+    !smtpHost && "SMTP_HOST",
+    !smtpUser && "SMTP_USER",
+    !smtpPass && "SMTP_PASS",
+  ].filter(Boolean);
+  console.error(`[x] SMTP não configurado — em falta: ${emFalta.join(", ")}`);
+  console.error("    (se as variáveis existem no .env, o valor pode estar vazio ou mal formatado)");
+  console.error("    Solução imediata — passa-as inline no comando:");
+  console.error("      SMTP_HOST=... SMTP_PORT=465 SMTP_USER='...' SMTP_PASS='...' TESTE_EMAIL_PARA='...' node scripts/envio-teste-convites.mjs");
   process.exit(1);
 }
 if (!DRY_RUN && !PARA) {
@@ -143,9 +147,23 @@ function construirSvg(nomes, dataFesta, horarioInicio, duracaoMinutos, template)
 }
 
 let wasmPronto = false;
+let pastaAssetsCache = null;
+
+// Localiza a pasta de assets (dev, standalone e Passenger têm cwd diferentes).
+function pastaAssets() {
+  if (pastaAssetsCache) return pastaAssetsCache;
+  const candidatos = [
+    process.env.CONVITE_ASSETS_DIR,
+    path.join(process.cwd(), "assets", "convite"),
+    path.join(process.cwd(), "apps", "web", "assets", "convite"),
+  ].filter(Boolean);
+  pastaAssetsCache = candidatos.find((p) => existsSync(path.join(p, "convite.jpeg")))
+    ?? path.join(process.cwd(), "assets", "convite");
+  return pastaAssetsCache;
+}
 
 async function gerarConviteJPEG(nomes, { dataFesta, horarioInicio, duracaoMinutos }) {
-  const pasta = path.join(process.cwd(), "assets", "convite");
+  const pasta = pastaAssets();
   const [template, font] = await Promise.all([
     readFile(path.join(pasta, "convite.jpeg")),
     readFile(path.join(pasta, "fonts", FONTE.ttf)),

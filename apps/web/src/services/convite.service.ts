@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
@@ -124,7 +125,16 @@ let wasmInit: Promise<void> | null = null;
 async function carregarAssets(): Promise<AssetsConvite> {
   if (cacheAssets) return cacheAssets;
 
-  const pasta = path.join(process.cwd(), "assets", "convite");
+  // Localiza a pasta de assets (dev, standalone e Passenger têm cwd diferentes):
+  //   CONVITE_ASSETS_DIR (env) · <cwd>/assets/convite · <cwd>/apps/web/assets/convite
+  const candidatos = [
+    process.env.CONVITE_ASSETS_DIR,
+    path.join(process.cwd(), "assets", "convite"),
+    path.join(process.cwd(), "apps", "web", "assets", "convite"),
+  ].filter((p): p is string => Boolean(p));
+  const pasta = candidatos.find((p) => existsSync(path.join(p, "convite.jpeg")))
+    ?? path.join(process.cwd(), "assets", "convite");
+
   const [template, font, wasm] = await Promise.all([
     readFile(path.join(pasta, "convite.jpeg")),
     readFile(path.join(pasta, "fonts", FONTE.ttf)),
