@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Banknote, CheckCircle2, Plus, Trash2, Wallet } from "lucide-react";
+import { Banknote, CheckCircle2, Plus, ShieldCheck, Trash2, Wallet } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import InputField from "@/components/form/input/InputField";
 import { formatEuro } from "@/lib/format";
@@ -115,15 +115,24 @@ export const PagamentosLedgerSection = React.memo(function PagamentosLedgerSecti
                   <span className="text-xs font-semibold text-accent-green-600">
                     +{formatEuro(p.valor)}
                   </span>
-                  {!readOnly && (
-                    <button
-                      type="button"
-                      onClick={() => onRemove(p.id)}
-                      className="p-0.5 rounded text-text-muted hover:text-accent-red-500 transition-colors"
-                      aria-label={`Remover pagamento de ${metodoPagamentoLabel(p.metodo)}`}
+                  {p.fixa ? (
+                    <span
+                      className="p-0.5 rounded text-accent-green-600"
+                      title={`${metodoPagamentoLabel(p.metodo)}${p.nota ? ` · ${p.nota}` : ""} (já pago, não removível)`}
                     >
-                      <Trash2 size={13} />
-                    </button>
+                      <ShieldCheck size={13} />
+                    </span>
+                  ) : (
+                    !readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(p.id)}
+                        className="p-0.5 rounded text-text-muted hover:text-accent-red-500 transition-colors"
+                        aria-label={`Remover pagamento de ${metodoPagamentoLabel(p.metodo)}`}
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )
                   )}
                 </span>
               </li>

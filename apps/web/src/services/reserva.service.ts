@@ -668,6 +668,16 @@ export const reservaService = {
     const listaPagamentos: PagamentoInput[] =
       data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : [];
 
+   
+    const valorCaucaoCriacao = data.caucao === "PAGA" ? Number(data.valorCaucao) || 0 : 0;
+    if (valorCaucaoCriacao > 0 && !listaPagamentos.some((p) => p.nota === "Caução")) {
+      listaPagamentos.push({
+        valor: valorCaucaoCriacao,
+        metodo: (data.metodoCaucao as MetodoPagamento) ?? "DINHEIRO",
+        nota: "Caução",
+      });
+    }
+
     const created = await prisma.reserva.create({
       data: {
         data: dataFesta,

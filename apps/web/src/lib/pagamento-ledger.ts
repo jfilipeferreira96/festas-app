@@ -34,6 +34,8 @@ export interface PagamentoLedgerItem {
   nota?: string | null;
   /** ISO string - quando o pagamento foi recebido. */
   createdAt: string;
+  /** Só UI: linha fixa (ex.: caução paga) - não removível no ledger. */
+  fixa?: boolean;
 }
 
 /** Ajuste manual ao total (acréscimo/desconto) - "edição" do valor acordado. */
@@ -82,6 +84,23 @@ export const CAUCAO_LABELS: Record<EstadoCaucaoValor, string> = {
   PAGA: "Paga",
   PAGA_NO_DIA: "Paga no dia",
 };
+
+export function comCaucaoNoLedger(
+  pagamentos: PagamentoLedgerItem[],
+  caucao: { estado?: string | null; valor: unknown; metodo?: string | null },
+  createdAt: string
+): PagamentoLedgerItem[] {
+  const valor = Number(caucao.valor) || 0;
+  if (caucao.estado !== "PAGA" || valor <= 0 || pagamentos.some((p) => p.nota === "Caução")) {
+    return pagamentos;
+  }
+  const metodo =
+    !caucao.metodo || caucao.metodo === "NONE" ? "DINHEIRO" : (caucao.metodo as MetodoPagamentoValor);
+  return [
+    ...pagamentos,
+    { id: "caucao-fixa", valor, metodo, nota: "Caução", createdAt, fixa: true },
+  ];
+}
 
 /** Resumo de um ledger para exibição: total recebido + rótulos dos métodos. */
 export function resumoLedger(

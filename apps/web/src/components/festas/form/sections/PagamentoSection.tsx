@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { ArrowUpDown, CreditCard } from "lucide-react";
 import { Select } from "@/components/ui/select";
@@ -13,7 +14,13 @@ import { PagamentosLedgerSection } from "@/components/shared/pagamento/Pagamento
 import InlineTabs from "@/components/shared/pagamento/InlineTabs";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import AcertosLocaisSection, { type AcertoLocal } from "@/components/shared/pagamento/AcertosLocaisSection";
-import { totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
+import {
+  EPS,
+  faltaPagar,
+  totalPago,
+  comCaucaoNoLedger,
+  type PagamentoLedgerItem,
+} from "@/lib/pagamento-ledger";
 import {
   CAUCAO_OPTIONS,
   type EstimativaFestaInfo,
@@ -37,6 +44,8 @@ export default function PagamentoSection({
   extrasTotal,
 }: PagamentoSectionProps) {
   const { setValue, watch } = useFormContext<FestaFormData>();
+  // Data estável para a linha sintetizada da caução (criação).
+  const [caucaoNoLedgerEm] = useState(() => new Date().toISOString());
 
   if (reserva) {
     const caucaoLabel = CAUCAO_OPTIONS.find((o) => o.value === reserva.caucao)?.label ?? "Não paga";
@@ -48,6 +57,11 @@ export default function PagamentoSection({
       pagamentos.length > 0
         ? pagamentos.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
         : "-";
+    // Mesma matemática da modal de pagamento: `pago` derivado da soma do
+    // ledger (que inclui a linha "Caução") contra o total acordado.
+    const totalAcordado = Number(reserva.valorTotal ?? 0);
+    const falta = faltaPagar(totalAcordado, pagamentos);
+    const liquidado = falta <= EPS && totalAcordado > 0;
 
     return (
       <PagamentoCard acao={<BotaoGerirPagamento onClick={onOpenPagamento} />}>
@@ -65,14 +79,14 @@ export default function PagamentoSection({
                       { label: "Caução", value: `${caucaoLabel}${caucaoValor}${caucaoMetodo}` },
                       {
                         label: "Estado",
-                        value: reserva.pago ? "Pago" : "Por pagar",
-                        tone: reserva.pago ? "verde" : "laranja",
+                        value: liquidado ? "Pago" : "Por pagar",
+                        tone: liquidado ? "verde" : "laranja",
                       },
-                      { label: "Total", value: formatEuro(Number(reserva.valorTotal ?? 0)) },
-                      {
-                        label: "Valor pago",
-                        value: pagamentos.length > 0 ? formatEuro(totalPago(pagamentos)) : "-",
-                      },
+                      { label: "Total a pagar", value: formatEuro(totalAcordado) },
+                      { label: "Valor pago", value: formatEuro(totalPago(pagamentos)) },
+                      ...(falta > 0
+                        ? [{ label: "Falta", value: formatEuro(falta), tone: "laranja" as const }]
+                        : []),
                       { label: "Método", value: metodos },
                     ]}
                   />
@@ -111,6 +125,17 @@ export default function PagamentoSection({
   // correções formais ficam nos Ajustes de pagamento após criar a reserva.
   const total = watch("totalAPagar");
   const pagamentos = (watch("pagamentos") ?? []) as PagamentoLedgerItem[];
+  // Caução paga na criação = linha fixa no ledger (desconta a falta),
+  // igual à modal de pagamento; o backend persiste-a sem duplicar.
+  const ledgerEfetivo = comCaucaoNoLedger(
+    pagamentos,
+    {
+      estado: watch("caucao"),
+      valor: watch("valorCaucao") ?? 0,
+      metodo: watch("metodoCaucao"),
+    },
+    caucaoNoLedgerEm
+  );
   const totalDevido = +(total ?? (estimativa?.estimativa ?? 0) + extrasTotal).toFixed(2);
   // Acertos locais (criação): array no payload - o backend grava-os após criar
   // a reserva, com write-through no valorTotal e auditoria do autor.
@@ -162,7 +187,7 @@ export default function PagamentoSection({
           </div>
         </div>
         <p className="text-[11px] text-text-muted mt-2">
-          A caução marca-se na reserva da festa - o pagamento entra depois, no livro de pagamentos.
+          Se a caução estiver marcada como paga, entra automaticamente no livro de pagamentos e desconta o que falta.
         </p>
       </PagamentoCard>
 
@@ -216,7 +241,7 @@ export default function PagamentoSection({
                   {/* Ledger de pagamentos: adicionar até completar o total; pago é derivado */}
                   <PagamentosLedgerSection
                     totalDevido={totalFinal}
-                    pagamentos={pagamentos}
+                    pagamentos={ledgerEfetivo}
                     onAdd={(p) =>
                       setValue(
                         "pagamentos",

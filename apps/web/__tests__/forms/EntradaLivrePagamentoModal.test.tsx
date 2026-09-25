@@ -40,7 +40,8 @@ const onClose = vi.fn();
 async function montarModal() {
   vi.mocked(entradaLivreApi.atualizarPagamento).mockResolvedValue(entradaPagamentoFixture);
   renderWithQuery(<EntradaLivrePagamentoModal entrada={entradaPagamentoFixture} onClose={onClose} />);
-  await screen.findByText("Total a pagar (€)");
+  // O total é só-leitura (sem input): a caixa acordado é o marco da tab
+  await screen.findByText(/Valor acordado da entrada/);
 }
 
 beforeEach(() => {
@@ -52,6 +53,13 @@ afterEach(() => {
 });
 
 describe("EntradaLivrePagamentoModal", () => {
+  it("não tem input de total: o total acordado é só-leitura", async () => {
+    await montarModal();
+
+    expect(screen.queryByText("Total a pagar (€)")).not.toBeInTheDocument();
+    expect(screen.getByText(/Valor acordado da entrada/)).toBeInTheDocument();
+  });
+
   it("estado inicial: total 20 €, recebido 10 €, falta 10 €; sugerido inclui +5 € de excesso", async () => {
     await montarModal();
 
@@ -63,16 +71,13 @@ describe("EntradaLivrePagamentoModal", () => {
     expect(screen.getByText(/Sugerido/)).toBeInTheDocument();
   });
 
-  it("total editável e 'Usar sugerido' (25 €) actualizam a falta", async () => {
+  it("'Usar sugerido' (25 €) actualiza a falta", async () => {
     const user = userEvent.setup();
     await montarModal();
 
-    fireEvent.change(screen.getByDisplayValue("20"), { target: { value: "30" } });
-    expect(screen.getByText(/Falta liquidar 20,00\s€/)).toBeInTheDocument();
-
     await user.click(screen.getByText("Usar sugerido"));
-    expect(screen.getByDisplayValue("25.00")).toBeInTheDocument();
     expect(screen.getByText(/Falta liquidar 15,00\s€/)).toBeInTheDocument();
+    expect(screen.getByText(/10,00\s€ de 25,00\s€/)).toBeInTheDocument();
   });
 
   it("pagamento que liquida muda o badge para 'Pago'", async () => {

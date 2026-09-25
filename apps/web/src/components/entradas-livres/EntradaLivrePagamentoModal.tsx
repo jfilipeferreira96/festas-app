@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { ArrowUpDown, Calculator, CreditCard, Printer } from "lucide-react";
+import { ArrowUpDown, Calculator, CreditCard, Printer, Wallet } from "lucide-react";
 import { Button } from "@/components/ui";
-import InputField from "@/components/form/input/InputField";
-import FieldLabel from "@/components/form/FieldLabel";
 import { imprimirTalaoEntrada } from "@/utils/print-talao";
 import { useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useToast } from "@/hooks/use-toast";
@@ -70,10 +68,14 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
   const toast = useToast();
   const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
 
-  // Total a pagar (editável) - o valor acordado (final ?? calculado)
-  const [valorTotal, setValorTotal] = useState<string>(
-    String(Number(entrada.custoTotalFinal ?? entrada.custoTotal ?? 0) || "")
-  );
+  // Total a pagar (só-leitura) - o valor acordado (final ?? calculado); muda
+  // via "Usar sugerido" ou tab "Acertos", nunca por input livre.
+  const [valorTotal, setValorTotal] = useState<string>(() => {
+    const acordado = Number(entrada.custoTotalFinal ?? entrada.custoTotal ?? 0) || 0;
+    if (acordado > 0) return String(acordado);
+    const sugerido = Number(entrada.custoTotal ?? 0) + (entrada.custoExcesso ?? 0);
+    return sugerido > 0 ? String(sugerido) : "";
+  });
   // Ledger de pagamentos (fonte única do recebido)
   const [pagamentos, setPagamentos] = useState<PagamentoLedgerItem[]>(() =>
     (entrada.pagamentos ?? []).map((p) => ({
@@ -152,17 +154,19 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
       icon: CreditCard,
       content: (
         <div className="space-y-4">
-          {/* Total a pagar (editável) */}
-          <div>
-            <FieldLabel required>Total a pagar (€)</FieldLabel>
-            <InputField
-              type="number"
-              step={0.01}
-              min={0}
-              value={valorTotal}
-              onChange={(e) => setValorTotal(e.target.value)}
-              placeholder="0,00"
-            />
+          {/* Total acordado (só-leitura): muda via "Usar sugerido" ou tab Acertos */}
+          <div className="rounded-lg border border-border bg-gray-50/50 p-3 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                <Wallet size={14} className="text-text-muted" /> Total a pagar
+              </span>
+              <span className="text-sm font-bold text-text-primary tabular-nums">
+                {fmtEuro.format(totalDevido)}
+              </span>
+            </div>
+            <p className="text-[11px] text-text-muted">
+              Valor acordado da entrada. Para alterar: "Usar sugerido" em baixo ou tab "Acertos".
+            </p>
           </div>
 
           {/* Ledger de pagamentos: adicionar (método obrigatório) até completar; pago derivado */}

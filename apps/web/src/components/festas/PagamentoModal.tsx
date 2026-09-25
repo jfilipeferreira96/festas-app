@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
-import { ArrowUpDown, CreditCard, Shield } from "lucide-react";
-import InputField from "@/components/form/input/InputField";
-import FieldLabel from "@/components/form/FieldLabel";
+import React, { useMemo, useState, useCallback } from "react";
+import { ArrowUpDown, CreditCard, Shield, Wallet } from "lucide-react";
 import { useUpdatePagamento } from "@/hooks/use-reservas";
 import { useToast } from "@/hooks/use-toast";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
@@ -13,7 +11,13 @@ import PagamentoCaucaoDescontoTab from "./PagamentoCaucaoDescontoTab";
 import PagamentoSugeridoBox, { calcularSugeridoFesta } from "./PagamentoSugeridoBox";
 import type { Reserva } from "@/lib/api/reservas";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
-import { EPS, faltaPagar, totalPago, type PagamentoLedgerItem } from "@/lib/pagamento-ledger";
+import {
+  EPS,
+  faltaPagar,
+  totalPago,
+  comCaucaoNoLedger,
+  type PagamentoLedgerItem,
+} from "@/lib/pagamento-ledger";
 
 const fmtEuro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
 
@@ -26,11 +30,17 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   const toast = useToast();
   const updatePagamento = useUpdatePagamento();
 
-  // Total a pagar (editável) - o valor acordado
-  const [valorTotal, setValorTotal] = useState<string>(
-    String(Number(reserva.valorTotal ?? 0) || "")
-  );
-  // Ledger de pagamentos (fonte única do recebido)
+  // Total a pagar (só-leitura) - o valor acordado; muda via "Usar sugerido"
+  // ou tab "Acertos" (com auditoria), nunca por input livre.
+  const descontoInicial = Number(reserva.descontoPercentagem) || 0;
+  const totalAcordado = Number(reserva.valorTotal ?? 0) || 0;
+  const [valorTotal, setValorTotal] = useState<string>(() => {
+    if (totalAcordado > 0) return String(totalAcordado);
+    const sugerido = calcularSugeridoFesta(reserva, descontoInicial)?.sugerido ?? 0;
+    return sugerido > 0 ? String(sugerido) : "";
+  });
+  // Ledger manual (linhas da BD + adições do utilizador). Linhas "Caução" são
+  // fixas: a caução paga é imutável (CAUCAO_BLOQUEADA no backend).
   const [pagamentos, setPagamentos] = useState<PagamentoLedgerItem[]>(() =>
     (reserva.pagamentos ?? []).map((p) => ({
       id: p.id,
@@ -38,7 +48,12 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       metodo: p.metodo,
       nota: p.nota ?? null,
       createdAt: p.createdAt,
+      fixa: p.nota === "Caução",
     }))
+  );
+  // Data estável para a linha sintetizada da caução (evita saltos na ordenação).
+  const [caucaoSintetizadaEm] = useState(
+    () => reserva.pagamentos?.[0]?.createdAt ?? new Date().toISOString()
   );
   const [caucao, setCaucao] = useState<string>(reserva.caucao ?? "NAO_PAGA");
   const [valorCaucao, setValorCaucao] = useState<string>(reserva.valorCaucao ? String(reserva.valorCaucao) : "");
@@ -48,8 +63,22 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   );
   const [descontoMotivo, setDescontoMotivo] = useState(reserva.descontoMotivo ?? "");
 
+  // Caução paga = linha fixa no ledger (já foi recebida e desconta a falta).
+  // Sintetizada quando não existe linha "Caução" - desconta logo ao marcar
+  // como paga na tab e é persistida no guardar (o backend não duplica).
+  const valorCaucaoNum = caucao === "PAGA" ? Number(valorCaucao) || 0 : 0;
+  const ledgerEfetivo = useMemo(
+    () =>
+      comCaucaoNoLedger(
+        pagamentos,
+        { estado: caucao, valor: valorCaucaoNum, metodo: metodoCaucao },
+        caucaoSintetizadaEm
+      ),
+    [pagamentos, caucao, valorCaucaoNum, metodoCaucao, caucaoSintetizadaEm]
+  );
+
   const totalDevido = Number(valorTotal) || 0;
-  const falta = faltaPagar(totalDevido, pagamentos);
+  const falta = faltaPagar(totalDevido, ledgerEfetivo);
   const liquidado = falta <= EPS && totalDevido > 0;
 
   // Acertos (tab "Acertos") aplicam write-through ao total devido no backend -
@@ -67,8 +96,9 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
         id: reserva.id,
         data: {
           valorTotal: valorTotal === "" ? null : Number(valorTotal),
-          // Replace-all do ledger; o estado `pago` é derivado no backend
-          pagamentos: pagamentos.map((p) => ({
+          // Replace-all do ledger (inclui a linha fixa da caução); o estado
+          // `pago` é derivado no backend
+          pagamentos: ledgerEfetivo.map((p) => ({
             valor: p.valor,
             metodo: p.metodo,
             nota: p.nota ?? undefined,
@@ -89,7 +119,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     updatePagamento,
     reserva.id,
     valorTotal,
-    pagamentos,
+    ledgerEfetivo,
     caucao,
     valorCaucao,
     metodoCaucao,
@@ -101,8 +131,8 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
 
   const anvNome = reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || reserva.cliente?.nome || "-";
   const metodoLabel =
-    pagamentos.length > 0
-      ? pagamentos.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
+    ledgerEfetivo.length > 0
+      ? ledgerEfetivo.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
       : undefined;
 
   const cacifoNotas = (reserva.cacifos ?? []).filter((c) => c.notas?.trim());
@@ -150,7 +180,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     totalDevido > 0 ? (
       <>
         A pagar <span className="font-semibold text-text-secondary">{fmtEuro.format(totalDevido)}</span>
-        {" · "}Recebido <span className="font-semibold text-text-secondary">{fmtEuro.format(totalPago(pagamentos))}</span>
+        {" · "}Recebido <span className="font-semibold text-text-secondary">{fmtEuro.format(totalPago(ledgerEfetivo))}</span>
         {" · "}
         {liquidado ? (
           <span className="text-accent-green-600 font-semibold">Liquidado</span>
@@ -193,23 +223,25 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       icon: CreditCard,
       content: (
         <div className="space-y-4">
-          {/* Total a pagar (editável) */}
-          <div>
-            <FieldLabel required>Total a pagar (€)</FieldLabel>
-            <InputField
-              type="number"
-              step={0.01}
-              min={0}
-              value={valorTotal}
-              onChange={(e) => setValorTotal(e.target.value)}
-              placeholder="0,00"
-            />
+          {/* Total acordado (só-leitura): muda via "Usar sugerido" ou tab Acertos */}
+          <div className="rounded-lg border border-border bg-gray-50/50 p-3 space-y-1">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-text-primary">
+                <Wallet size={14} className="text-text-muted" /> Total a pagar
+              </span>
+              <span className="text-sm font-bold text-text-primary tabular-nums">
+                {fmtEuro.format(totalDevido)}
+              </span>
+            </div>
+            <p className="text-[11px] text-text-muted">
+              Valor acordado da festa. Para alterar: "Usar sugerido" em baixo ou tab "Acertos".
+            </p>
           </div>
 
           {/* Ledger de pagamentos: adicionar (método obrigatório) até completar; pago derivado */}
           <PagamentosLedgerSection
             totalDevido={totalDevido}
-            pagamentos={pagamentos}
+            pagamentos={ledgerEfetivo}
             onAdd={(p) =>
               setPagamentos((prev) => [
                 ...prev,

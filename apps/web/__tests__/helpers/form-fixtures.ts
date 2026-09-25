@@ -315,6 +315,19 @@ export const reservaPagamentoFixture: Reserva = {
   extras: [],
 } as unknown as Reserva;
 
+/**
+ * Reserva antiga com caução PAGA (50 €) sem linha no ledger - caso legado que
+ * a modal corrige: sintetiza a linha fixa e desconta a falta (148 − 50 = 98 €).
+ */
+export const reservaPagamentoCaucaoPagaFixture: Reserva = {
+  ...reservaPagamentoFixture,
+  id: "reserva-pagamento-caucao-1",
+  caucao: "PAGA",
+  valorCaucao: 50,
+  metodoCaucao: "MBWAY",
+  pagamentos: [],
+} as unknown as Reserva;
+
 // ── Entradas livres ──────────────────────────────────────────────
 /** Entrada para a modal de pagamento: 20 € acordados + 5 € de excesso, 10 € pagos. */
 export const entradaPagamentoFixture: EntradaLivre = {
