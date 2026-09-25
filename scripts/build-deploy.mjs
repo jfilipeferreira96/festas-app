@@ -773,6 +773,14 @@ ok("scripts/db.js (launcher de BD) copiado.");
 cpSync(join(__dirname, "diagnose.js"), join(DEPLOY, "scripts", "diagnose.js"));
 ok("scripts/diagnose.js (diagnóstico de deployment) copiado.");
 
+// Script de teste de envio dos convites (standalone, sem dependência da app):
+// valida o SMTP e a geração dos JPEGs no próprio servidor (TESTE_EMAIL_PARA=...).
+const CONVITE_TEST_SRC = join(ROOT, "apps", "web", "__scripts__", "envio-teste-convites.mjs");
+if (existsSync(CONVITE_TEST_SRC)) {
+  cpSync(CONVITE_TEST_SRC, join(DEPLOY, "scripts", "envio-teste-convites.mjs"));
+  ok("scripts/envio-teste-convites.mjs (teste de envio de convites) copiado.");
+}
+
 // deploy-festas.sh - script de deploy no servidor (Terminal do cPanel).
 // Vai na raiz do bundle com LF garantido: bash falha com CRLF ("$'\r': command not found").
 const deployShSource = join(__dirname, "deploy-festas.sh");
