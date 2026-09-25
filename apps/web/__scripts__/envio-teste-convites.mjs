@@ -29,12 +29,7 @@ const DRY_RUN = process.env.DRY_RUN === "1";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 (() => {
   const appRoot = path.resolve(__dirname, "..");
-  const candidatos = [
-    process.env.ENV_PATH,
-    path.join(appRoot, "apps", "web", ".env"),
-    path.join(appRoot, ".env"),
-    path.join(process.cwd(), ".env"),
-  ].filter(Boolean);
+  const candidatos = [process.env.ENV_PATH, path.join(appRoot, "apps", "web", ".env"), path.join(appRoot, ".env"), path.join(process.cwd(), ".env")].filter(Boolean);
 
   const carregados = [];
   for (const envPath of candidatos) {
@@ -65,11 +60,7 @@ const fromName = process.env.EMAIL_FROM_NAME || "Baselandia - Festas";
 const PARA = process.env.TESTE_EMAIL_PARA || process.env.EMAIL_FROM_ADDRESS || smtpUser;
 
 if (!DRY_RUN && (!smtpHost || !smtpUser || !smtpPass)) {
-  const emFalta = [
-    !smtpHost && "SMTP_HOST",
-    !smtpUser && "SMTP_USER",
-    !smtpPass && "SMTP_PASS",
-  ].filter(Boolean);
+  const emFalta = [!smtpHost && "SMTP_HOST", !smtpUser && "SMTP_USER", !smtpPass && "SMTP_PASS"].filter(Boolean);
   console.error(`[x] SMTP não configurado — em falta: ${emFalta.join(", ")}`);
   console.error("    (se as variáveis existem no .env, o valor pode estar vazio ou mal formatado)");
   console.error("    Solução imediata — passa-as inline no comando:");
@@ -82,13 +73,13 @@ if (!DRY_RUN && !PARA) {
 }
 
 // ── Constantes do convite (espelham src/services/convite.service.ts) ────
-const FONTE = { fontFamily: "Baloo 2", fontWeight: 700, cor: "#3a3b7a", ttf: "Baloo2-Bold.ttf" };
+const FONTE = { fontFamily: "Baloo 2", fontWeight: 700, cor: "#1f3962", ttf: "Baloo2-Bold.ttf" };
 const IMG_W = 1600;
 const IMG_H = 1131;
 const BANNER_LARGURA = 690;
 const CONVITE_DIAS_LIMITE = 2;
 const CONVITE_TELEFONE = "+351 927 104 432";
-const MESES_PT = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const MESES_PT = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 const LAYOUT = {
   nome: { x: 790, y: 208, size: 64 },
   diaFesta: { x: 655, y: 492, size: 44 },
@@ -101,11 +92,21 @@ const LAYOUT = {
 };
 
 // ── Helpers (espelham o serviço) ────────────────────────────────────────
-const escapeXml = (t) => String(t).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&apos;");
-const juntarNomes = (nomes) => nomes.map((n) => (n ?? "").trim()).filter((n) => n.length > 0).join(" e ");
+const escapeXml = (t) => String(t).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
+const juntarNomes = (nomes) =>
+  nomes
+    .map((n) => (n ?? "").trim())
+    .filter((n) => n.length > 0)
+    .join(" e ");
 const tamanhoFonteNome = (nome) => Math.round(Math.min(LAYOUT.nome.size, Math.max(34, BANNER_LARGURA / (Math.max(1, nome.length) * 0.52))));
 const formatarTelefoneConvite = () => CONVITE_TELEFONE.replace(/^\+351\s?/, "(+351) ");
-const slugNome = (nome) => nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "convite";
+const slugNome = (nome) =>
+  nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "convite";
 
 function formatarDiaMes(data) {
   const d = new Date(data);
@@ -119,7 +120,7 @@ function calcularDataLimite(dataFesta) {
 }
 function calcularHoraFim(horarioInicio, duracaoMinutos) {
   const [h, m] = horarioInicio.split(":").map(Number);
-  const total = (((h || 0) * 60 + (m || 0) + duracaoMinutos) % 1440 + 1440) % 1440;
+  const total = ((((h || 0) * 60 + (m || 0) + duracaoMinutos) % 1440) + 1440) % 1440;
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 const texto = (campo, conteudo) =>
@@ -152,22 +153,14 @@ let pastaAssetsCache = null;
 // Localiza a pasta de assets (dev, standalone e Passenger têm cwd diferentes).
 function pastaAssets() {
   if (pastaAssetsCache) return pastaAssetsCache;
-  const candidatos = [
-    process.env.CONVITE_ASSETS_DIR,
-    path.join(process.cwd(), "assets", "convite"),
-    path.join(process.cwd(), "apps", "web", "assets", "convite"),
-  ].filter(Boolean);
-  pastaAssetsCache = candidatos.find((p) => existsSync(path.join(p, "convite.jpeg")))
-    ?? path.join(process.cwd(), "assets", "convite");
+  const candidatos = [process.env.CONVITE_ASSETS_DIR, path.join(process.cwd(), "assets", "convite"), path.join(process.cwd(), "apps", "web", "assets", "convite")].filter(Boolean);
+  pastaAssetsCache = candidatos.find((p) => existsSync(path.join(p, "convite.jpeg"))) ?? path.join(process.cwd(), "assets", "convite");
   return pastaAssetsCache;
 }
 
 async function gerarConviteJPEG(nomes, { dataFesta, horarioInicio, duracaoMinutos }) {
   const pasta = pastaAssets();
-  const [template, font] = await Promise.all([
-    readFile(path.join(pasta, "convite.jpeg")),
-    readFile(path.join(pasta, "fonts", FONTE.ttf)),
-  ]);
+  const [template, font] = await Promise.all([readFile(path.join(pasta, "convite.jpeg")), readFile(path.join(pasta, "fonts", FONTE.ttf))]);
   if (!wasmPronto) {
     await initWasm(await readFile(path.join(pasta, "resvg.wasm")));
     wasmPronto = true;

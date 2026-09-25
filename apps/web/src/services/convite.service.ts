@@ -37,7 +37,7 @@ export interface ConviteGerado {
 }
 
 /** Fonte arredondada do design original (TTF commitado em assets/convite/fonts). */
-const FONTE = { fontFamily: "Baloo 2", fontWeight: 700, cor: "#3a3b7a", ttf: "Baloo2-Bold.ttf" } as const;
+const FONTE = { fontFamily: "Baloo 2", fontWeight: 700, cor: "#1f3962", ttf: "Baloo2-Bold.ttf" } as const;
 
 /** Dimensões do template convite.jpeg. */
 const IMG_W = 1600;
