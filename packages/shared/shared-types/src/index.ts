@@ -6,7 +6,7 @@
 export type { FuncaoUtilizador, Utilizador } from "./types/utilizador";
 export type { Cliente, CriarClienteDTO, ClienteWithAniversariantes } from "./types/cliente";
 export type { Aniversariante } from "./types/aniversariante";
-export type { EstadoReserva, MetodoPagamento, EstadoCaucao, TipoBolo, Reserva, ReservaExtra, ReservaMonitor, ReservaEtapa, ReservaAniversariante, CriarReservaDTO, CacifoHistoricoEntry } from "./types/reserva";
+export type { EstadoReserva, MetodoPagamento, EstadoCaucao, TipoBolo, ModoConvite, Reserva, ReservaExtra, ReservaMonitor, ReservaEtapa, ReservaAniversariante, CriarReservaDTO, CacifoHistoricoEntry } from "./types/reserva";
 export type { Pagamento, CriarPagamentoDTO } from "./types/pagamento";
 export type { EstadoCacifo, Cacifo, ConfiguracaoCacifo, UpdateConfiguracaoCacifoDTO } from "./types/cacifo";
 export type { CategoriaItem, Menu } from "./types/menu";

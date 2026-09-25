@@ -1,4 +1,4 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import nodemailer, { type SendMailOptions, type Transporter } from "nodemailer";
 
 /**
  * Envio de email via SMTP do alojamento (cPanel) - ex.: mail.baselandia.pt:465.
@@ -33,14 +33,15 @@ function getTransporter(): Transporter {
   return transporter;
 }
 
-interface SendEmailOptions {
+export interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  attachments?: SendMailOptions["attachments"];
 }
 
-export async function sendEmail({ to, subject, html, text }: SendEmailOptions): Promise<void> {
+export async function sendEmail({ to, subject, html, text, attachments }: SendEmailOptions): Promise<void> {
   if (!isEmailConfigurado()) {
     // Sem credenciais (dev): não rebenta - registar e sair.
     console.warn("[email] SMTP não configurado - email não enviado para", to);
@@ -53,6 +54,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailOptions): 
     subject,
     html,
     text: text || "",
+    attachments,
   });
 
   if (info.rejected && info.rejected.length > 0) {

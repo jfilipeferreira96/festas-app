@@ -5,8 +5,15 @@ const nextConfig: NextConfig = {
   // Produce a self-contained .next/standalone build for cPanel/Phusion Passenger
   output: "standalone",
   // Keep Prisma/auth workspace packages external on the server (not bundled)
-  serverExternalPackages: ["@festas/db", "@festas/auth", "@prisma/client"],
+  serverExternalPackages: ["@festas/db", "@festas/auth", "@prisma/client", "sharp", "@resvg/resvg-js"],
   typedRoutes: true,
+  // Assets lidos via fs no runtime do servidor (convite preenchido anexado ao
+  // email de confirmação) - incluídos no build standalone para o cPanel.
+  outputFileTracingIncludes: {
+    "/api/reservas": [path.join(__dirname, "assets", "convite", "**", "*")],
+    "/api/reservas/[id]/convite": [path.join(__dirname, "assets", "convite", "**", "*")],
+    "/api/emails/reprocessar": [path.join(__dirname, "assets", "convite", "**", "*")],
+  },
   compiler: {
     styledComponents: true,
   },

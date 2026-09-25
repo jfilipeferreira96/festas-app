@@ -1,6 +1,6 @@
 import prisma from "@festas/db";
 import { Prisma } from "@prisma/client";
-import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo, EstadoReserva } from "@saas/shared-types";
+import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo, EstadoReserva, ModoConvite } from "@saas/shared-types";
 import logger from "@/lib/logger";
 import { toLocalISODate } from "@/utils/date";
 import { enfileirarEmailConfirmacaoReserva } from "@/services/email.service";
@@ -57,11 +57,11 @@ interface CreateReservaData {
   bolo?: TipoBolo;
   boloTema?: string;
   numCriancasConfirmadas?: number;
-  /** Nº total de crianças que apareceram na festa (receção/conclusão). */
-  numCriancasPresentes?: number | null;
   /** Enviar email de confirmação ao cliente na criação (default true; o backend
    *  respeita sempre o optOut global do cliente). */
   enviarEmail?: boolean;
+  /** Modo dos convites (JUNTO/SEPARADO) - só relevante com múltiplos aniversariantes. */
+  modoConvite?: ModoConvite | null;
   notasCacifos?: string;
   notasLanche?: string;
   // Observações
@@ -117,6 +117,8 @@ interface UpdateReservaData {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  /** Modo dos convites (JUNTO/SEPARADO) - só relevante com múltiplos aniversariantes. */
+  modoConvite?: ModoConvite | null;
   /** Nº total de crianças que apareceram na festa (receção/conclusão). */
   numCriancasPresentes?: number | null;
   notasCacifos?: string;
@@ -684,6 +686,7 @@ export const reservaService = {
         boloTema: data.boloTema,
         boloQuantidade: normalizarBoloQuantidade(data.bolo, data.boloQuantidade),
         numCriancasConfirmadas: data.numCriancasConfirmadas,
+        modoConvite: data.modoConvite ?? "JUNTO",
         notasCacifos: data.notasCacifos,
         notasLanche: data.notasLanche,
         horaLanche: data.horaLanche,
@@ -915,6 +918,7 @@ export const reservaService = {
             : data.boloQuantidade,
         numCriancasConfirmadas: data.numCriancasConfirmadas,
         ...(data.numCriancasPresentes !== undefined && { numCriancasPresentes: data.numCriancasPresentes }),
+        ...(data.modoConvite !== undefined && { modoConvite: data.modoConvite }),
         notasCacifos: data.notasCacifos,
         notasLanche: data.notasLanche,
         observacoesGerais: data.observacoesGerais,

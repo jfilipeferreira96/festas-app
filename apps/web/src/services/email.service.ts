@@ -1,8 +1,9 @@
 import prisma from "@festas/db";
 import logger from "@/lib/logger";
-import { emailShell, escapeHtmlEmail, isEmailConfigurado, sendEmail } from "@/lib/email";
+import { emailShell, escapeHtmlEmail, isEmailConfigurado, sendEmail, type SendEmailOptions } from "@/lib/email";
 import { BOLO_LABELS } from "@/lib/constants/bolo";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
+import { gerarConvites, type ConviteGerado } from "@/services/convite.service";
 
 /**
  * Emails transacionais do app (SMTP do cPanel) com FILA simples (FASE 9):
@@ -37,6 +38,7 @@ type ReservaParaEmail = {
   boloTema: string | null;
   numCriancas: number;
   numCriancasConfirmadas: number | null;
+  modoConvite?: string | null;
   salaLanche: { nome: string } | null;
   cliente: { nome: string } | null;
   aniversariantes: { aniversariante: { nome: string } }[];
@@ -150,12 +152,68 @@ async function carregarReserva(reservaId: string) {
   return reserva;
 }
 
-/** Envia o conteúdo de um item da fila. Lança em falha (o caller marca FALHADO). */
-async function enviarItem(item: { para: string; assunto: string; html: string }): Promise<void> {
-  await sendEmail({ to: item.para, subject: item.assunto, html: item.html });
+/**
+ * Devolve um convite JPEG da reserva (preview/download na rota admin).
+ * `indice` escolhe a criança quando o modo é SEPARADO (0-based).
+ */
+export async function gerarConviteDaReserva(
+  reservaId: string,
+  indice = 0
+): Promise<ConviteGerado> {
+  const reserva = await carregarReserva(reservaId);
+  const nomes = reserva.aniversariantes
+    .map((a) => a.aniversariante.nome)
+    .filter((n) => n && n.trim().length > 0);
+  if (nomes.length === 0) throw new Error("SEM_ANIVERSARIANTE");
+
+  const modo = reserva.modoConvite === "SEPARADO" ? "SEPARADO" : "JUNTO";
+  const convites = await gerarConvites({
+    nomes,
+    dataFesta: reserva.data,
+    horarioInicio: reserva.horario,
+    duracaoMinutos: reserva.duracaoMinutos,
+    modo,
+  });
+
+  const escolhido = convites[indice] as ConviteGerado | undefined;
+  if (!escolhido) throw new Error("CONVITE_INDICE_INVALIDO");
+  return escolhido;
 }
 
-/** Enfileira o email de confirmação da reserva e tenta enviar imediatamente. */
+/** Envia o conteúdo de um item da fila. Lança em falha (o caller marca FALHADO). */
+async function enviarItem(
+  item: { para: string; assunto: string; html: string },
+  attachments?: SendEmailOptions["attachments"]
+): Promise<void> {
+  await sendEmail({ to: item.para, subject: item.assunto, html: item.html, attachments });
+}
+
+/**
+ * Anexo(s) do convite: JUNTO → 1 convite com todos os nomes; SEPARADO →
+ * um convite por criança. Lista vazia se não houver aniversariante.
+ */
+async function gerarAnexosConvite(reserva: ReservaParaEmail): Promise<SendEmailOptions["attachments"]> {
+  const nomes = reserva.aniversariantes
+    .map((a) => a.aniversariante.nome)
+    .filter((n) => n && n.trim().length > 0);
+  if (nomes.length === 0) return [];
+
+  const modo = reserva.modoConvite === "SEPARADO" ? "SEPARADO" : "JUNTO";
+  const convites = await gerarConvites({
+    nomes,
+    dataFesta: reserva.data,
+    horarioInicio: reserva.horario,
+    duracaoMinutos: reserva.duracaoMinutos,
+    modo,
+  });
+  return convites.map(({ filename, content, contentType }) => ({ filename, content, contentType }));
+}
+
+/**
+ * Enfileira o email de confirmação da reserva e tenta enviar imediatamente.
+ * O convite preenchido (convite.jpeg) vai como anexo; falha na geração do
+ * convite NUNCA impede o envio do email (segue sem anexo).
+ */
 export async function enfileirarEmailConfirmacaoReserva(reservaId: string): Promise<void> {
   if (!isEmailConfigurado()) {
     logger.info("Email de confirmação ignorado - SMTP não configurado", { reservaId });
@@ -172,12 +230,22 @@ export async function enfileirarEmailConfirmacaoReserva(reservaId: string): Prom
   const config = await configuracaoPrecoService.getConfig();
   const { assunto, html } = buildReservaConfirmacaoHtml(reserva, config?.dadosPagamento ?? "");
 
+  let attachments: SendEmailOptions["attachments"];
+  try {
+    attachments = (await gerarAnexosConvite(reserva)) || undefined;
+  } catch (err) {
+    logger.warn("Convite(s) não gerado(s) - email de confirmação segue sem anexo", {
+      reservaId,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
+
   const item = await prisma.envioEmail.create({
     data: { para: email, assunto, tipo: "RESERVA_CONFIRMACAO", reservaId },
   });
 
   try {
-    await enviarItem({ para: email, assunto, html });
+    await enviarItem({ para: email, assunto, html }, attachments);
     await prisma.envioEmail.update({
       where: { id: item.id },
       data: { estado: "ENVIADO", tentativas: { increment: 1 } },
@@ -220,10 +288,20 @@ export async function reprocessarFilaEmails(): Promise<number> {
   for (const item of pendentes) {
     try {
       let html = "";
+      let attachments: SendEmailOptions["attachments"];
       if (item.tipo === "RESERVA_CONFIRMACAO" && item.reservaId) {
         const reserva = await carregarReserva(item.reservaId);
         const config = await configuracaoPrecoService.getConfig();
         html = buildReservaConfirmacaoHtml(reserva, config?.dadosPagamento ?? "").html;
+        // O anexo é regenerado a cada tentativa (nada persistido em BD).
+        try {
+          attachments = (await gerarAnexosConvite(reserva)) || undefined;
+        } catch (err) {
+          logger.warn("Convite(s) não regenerado(s) no retry - email segue sem anexo", {
+            reservaId: item.reservaId,
+            err: err instanceof Error ? err.message : String(err),
+          });
+        }
       }
       if (!html) {
         // Sem conteúdo reconstrutível (ex.: reserva apagada) - marcar como enviado
@@ -233,7 +311,7 @@ export async function reprocessarFilaEmails(): Promise<number> {
         });
         continue;
       }
-      await enviarItem({ para: item.para, assunto: item.assunto, html });
+      await enviarItem({ para: item.para, assunto: item.assunto, html }, attachments);
       await prisma.envioEmail.update({
         where: { id: item.id },
         data: { estado: "ENVIADO", tentativas: { increment: 1 }, ultimoErro: null },

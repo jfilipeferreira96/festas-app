@@ -1,10 +1,9 @@
 import { api } from "./utils";
-import type { Reserva as ReservaBase, EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo } from "@saas/shared-types";
+import type { Reserva as ReservaBase, EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo, ModoConvite } from "@saas/shared-types";
 import type { Extra, Menu, Pagamento, CriarPagamentoDTO } from "@saas/shared-types";
 import type { CriarAjusteDTO } from "./ajustes-pagamento";
 
-// Re-export base types
-export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo };
+export type { EstadoReserva, ReservaExtra, MetodoPagamento, TipoBolo, ModoConvite };
 
 // API response type (base + relations from API)
 export interface Reserva extends ReservaBase {
@@ -80,6 +79,8 @@ export interface CreateReservaData {
   boloTema?: string;
   boloQuantidade?: number;
   numCriancasConfirmadas?: number;
+  /** Modo dos convites (JUNTO/SEPARADO) - só relevante com múltiplos aniversariantes. */
+  modoConvite?: ModoConvite;
   /** Nº total de crianças que apareceram na festa (receção/conclusão). */
   numCriancasPresentes?: number | null;
   numAdultos?: number;

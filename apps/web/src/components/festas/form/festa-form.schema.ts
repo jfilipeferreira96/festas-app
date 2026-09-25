@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CreateReservaData, Reserva } from "@/lib/api/reservas";
+import type { ModoConvite } from "@saas/shared-types";
 import { FESTA_COLORS } from "@/components/ui/FestaColorPicker";
 import { calcIdade, isFimDeSemana, toISODate } from "@/lib/format";
 import { BOLOS_NOSSOS } from "@/lib/constants/bolo";
@@ -33,6 +34,8 @@ const METODOS_PAGAMENTO = ["DINHEIRO", "MULTIBANCO", "MBWAY", "TRANSFERENCIA", "
 // Lista completa de tipos: chaves fixas + bolos da casa (fonte única)
 const TIPOS_BOLO = ["PAIS_TRAZEM", "A_DECIDIR", ...BOLOS_NOSSOS] as const;
 const CAUCOES = ["NAO_PAGA", "PAGA", "PAGA_NO_DIA"] as const;
+// Convites com múltiplos aniversariantes: escolha dos pais
+const MODOS_CONVITE = ["JUNTO", "SEPARADO"] as const;
 
 /** Número opcional tolerante: "" / NaN (valueAsNumber em input vazio) → undefined. */
 const numeroOpcional = (min = 0) => z.number().min(min).optional().catch(undefined);
@@ -68,6 +71,8 @@ export const festaFormSchema = z.object({
   numCriancasConfirmadas: numeroOpcional(0),
   /** Total de crianças da festa (gravado em Reserva.numCriancas). */
   numCriancasTotal: numeroOpcional(0),
+  /** Convite(s): JUNTO (um com todos os nomes) ou SEPARADO (um por criança). */
+  modoConvite: z.enum(MODOS_CONVITE),
   extrasIds: z.array(z.string()),
   extrasTexto: z.record(z.string(), z.string()),
   extrasQuantidades: z.record(z.string(), z.number()),
@@ -138,6 +143,11 @@ export const CAUCAO_OPTIONS: { value: FestaFormCaucao; label: string }[] = [
   { value: "PAGA_NO_DIA", label: "Paga no dia" },
 ];
 
+export const MODO_CONVITE_OPTIONS: { value: ModoConvite; label: string }[] = [
+  { value: "JUNTO", label: "Junto - um convite com todos os nomes" },
+  { value: "SEPARADO", label: "Separado - um convite por criança" },
+];
+
 export const CORES_PREDEFINIDAS = FESTA_COLORS.map((c) => ({ value: c.value, label: c.name }));
 
 export const BOLO_BLOQUEIA_TEMA: readonly string[] = ["PAIS_TRAZEM", "A_DECIDIR"];
@@ -178,6 +188,7 @@ export function buildFestaDefaults(
     numAdultos: reserva?.numAdultos ?? undefined,
     numCriancasConfirmadas: reserva?.numCriancasConfirmadas ?? undefined,
     numCriancasTotal: reserva?.numCriancas ?? undefined,
+    modoConvite: (reserva?.modoConvite as ModoConvite | null) ?? "JUNTO",
     extrasIds: reserva?.extras?.map((e) => e.extra.id) ?? [],
     extrasTexto: Object.fromEntries(
       (reserva?.extras ?? []).map((e) => [e.extra.id, e.textoPersonalizado ?? ""])
@@ -257,6 +268,8 @@ export function buildFestaPayload(
     salaLancheId: data.salaLancheId || undefined,
     numCriancas: data.numCriancasTotal ?? data.previsaoCriancas,
     numCriancasConfirmadas: data.numCriancasConfirmadas || undefined,
+    modoConvite:
+      data.aniversariantes.length > 1 ? data.modoConvite : "JUNTO",
     extrasIds: opts.isEdit || data.extrasIds.length > 0 ? data.extrasIds : undefined,
     extrasTexto: Object.fromEntries(Object.entries(data.extrasTexto).filter(([, v]) => v.trim())),
     extrasQuantidades:

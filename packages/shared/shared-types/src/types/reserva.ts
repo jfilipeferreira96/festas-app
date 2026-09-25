@@ -16,6 +16,13 @@ export type EstadoCaucao = "PAGA" | "NAO_PAGA" | "PAGA_NO_DIA";
  */
 export type TipoBolo = string;
 
+/**
+ * Modo dos convites de festa com múltiplos aniversariantes:
+ * JUNTO = um convite com todos os nomes; SEPARADO = um convite por criança.
+ * null/undefined equivale a JUNTO.
+ */
+export type ModoConvite = "JUNTO" | "SEPARADO";
+
 export interface Reserva {
   id: string;
   data: string;
@@ -52,6 +59,9 @@ export interface Reserva {
   /** Nº total de crianças que efetivamente apareceram na festa (receção/conclusão). */
   numCriancasPresentes?: number | null;
   numAdultos?: number;
+
+  // Convite (anexo do email de confirmação; só relevante com >1 aniversariante)
+  modoConvite?: ModoConvite | null;
 
   // Notas por equipa
   notasCacifos?: string;

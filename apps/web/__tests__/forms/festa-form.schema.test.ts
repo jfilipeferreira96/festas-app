@@ -34,6 +34,7 @@ function formValido(overrides?: Partial<FestaFormData>): FestaFormData {
     numAdultos: undefined,
     numCriancasConfirmadas: undefined,
     numCriancasTotal: 10,
+    modoConvite: "JUNTO",
     extrasIds: [extraAlmocoJantar.id],
     extrasTexto: { [extraAlmocoJantar.id]: "Sem glúten" },
     extrasQuantidades: { [extraAlmocoJantar.id]: 10 },

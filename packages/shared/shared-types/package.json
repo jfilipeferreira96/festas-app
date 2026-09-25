@@ -5,11 +5,11 @@
   "description": "Shared TypeScript types for the Festas platform",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
     "./*": {
-      "types": "./dist/*.d.ts",
+      "types": "./src/*.ts",
       "default": "./src/*.ts"
     }
   },

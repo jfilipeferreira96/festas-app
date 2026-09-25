@@ -458,6 +458,11 @@ model Reserva {
   observacoesBrindesPais String?  @db.Text
   outrosExtras         String?  @db.Text
 
+  // ── Convite (anexo do email de confirmação) ──
+  // "JUNTO" (um convite com todos os nomes) | "SEPARADO" (um convite por
+  // criança); null equivale a JUNTO. Só relevante com múltiplos aniversariantes.
+  modoConvite          String?
+
   // ── Lanche ──
   estadoLanche         EstadoLanche  @default(NAO_INICIADO)
   horaLanche           String?       // HH:MM - hora planeada do lanche

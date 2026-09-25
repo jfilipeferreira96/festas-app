@@ -15,6 +15,10 @@
     "verificationSent": "Email de verificação enviado",
     "verificationSuccess": "Email verificado com sucesso"
   },
+  "convite": {
+    "semAniversariante": "Não é possível gerar o convite sem aniversariante",
+    "indiceInvalido": "Índice de convite inexistente para esta festa"
+  },
   "reserva": {
     "notFound": "Reserva não encontrada",
     "createdSuccessfully": "Reserva criada com sucesso",

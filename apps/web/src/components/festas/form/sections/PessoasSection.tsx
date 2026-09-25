@@ -2,13 +2,15 @@
 
 import { useMemo } from "react";
 import { useFormContext, type UseFieldArrayReturn } from "react-hook-form";
-import { AlertTriangle, Cake, Plus, Search, Trash2, User } from "lucide-react";
+import { AlertTriangle, Cake, Gift, Plus, Search, Trash2, User } from "lucide-react";
 import InputField from "@/components/form/input/InputField";
 import Checkbox from "@/components/form/input/Checkbox";
 import DatePicker from "@/components/form/date-picker";
+import { Select } from "@/components/ui/select";
+import FieldLabel from "@/components/form/FieldLabel";
 import { calcIdade, toISODate } from "@/lib/format";
 import { IDADE_MAX_CRIANCA, IDADE_MIN_CRIANCA, idadeForaIntervalo } from "@/lib/constantes";
-import { DATA_NASCIMENTO_DEFAULT, type FestaFormData } from "../festa-form.schema";
+import { DATA_NASCIMENTO_DEFAULT, MODO_CONVITE_OPTIONS, type FestaFormData } from "../festa-form.schema";
 
 interface PessoasSectionProps {
   aniversariantes: UseFieldArrayReturn<FestaFormData, "aniversariantes", "id">;
@@ -99,6 +101,24 @@ export default function PessoasSection({
           </div>
           );
         })}
+        {/* Só com múltiplos aniversariantes: escolha do modo dos convites
+            (JUNTO = um com todos os nomes; SEPARADO = um por criança). */}
+        {aniversariantes.fields.length > 1 && (
+          <div className="max-w-md">
+            <FieldLabel>
+              <span className="flex items-center gap-1.5">
+                <Gift size={13} className="text-brand-500" /> Convite
+              </span>
+            </FieldLabel>
+            <Select
+              options={MODO_CONVITE_OPTIONS}
+              value={watch("modoConvite") || "JUNTO"}
+              onChange={(val) =>
+                setValue("modoConvite", val === "SEPARADO" ? "SEPARADO" : "JUNTO", { shouldDirty: true })
+              }
+            />
+          </div>
+        )}
       </div>
 
       {/* Adultos acompanhantes removido a pedido do cliente (19/09/2026):
