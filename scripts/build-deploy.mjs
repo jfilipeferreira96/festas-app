@@ -65,7 +65,7 @@
  */
 
 import { execSync, spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, renameSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync, createWriteStream } from "node:fs";
+import { cpSync, existsSync, mkdirSync, renameSync, rmSync, symlinkSync, writeFileSync, readFileSync, readdirSync, statSync, createWriteStream } from "node:fs";
 import { createConnection } from "node:net";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -448,6 +448,17 @@ log("A renomear node_modules -> node_modules_deps (compatibilidade CloudLinux)..
   }
 }
 ok("node_modules renomeado para node_modules_deps.");
+
+// Symlink node_modules -> node_modules_deps: para além do NODE_PATH (que só o
+// Passenger/app.js define), módulos ESM (import) resolvem por node_modules de
+// verdade a subir a árvore - sem isto, scripts standalone (ex.: envio-teste-convites.mjs)
+// falham com ERR_MODULE_NOT_FOUND quando corridos diretamente com node.
+try {
+  symlinkSync("node_modules_deps", join(DEPLOY, "node_modules"), "dir");
+  ok("symlink node_modules -> node_modules_deps criado (resolução ESM em scripts).");
+} catch (e) {
+  console.warn("⚠️  Não foi possível criar o symlink node_modules:", e instanceof Error ? e.message : e);
+}
 
 // 2a2. Substituir package.json raiz por um minimalista --------------------
 // O package.json que vem do standalone é o do monorepo (com "workspaces").
