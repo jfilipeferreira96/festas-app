@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import PagamentoModalShell, { type PagamentoTabConfig } from "@/components/shared/pagamento/PagamentoModalShell";
 import { PagamentosLedgerSection } from "@/components/shared/pagamento/PagamentosLedgerSection";
-import PagamentoCaucaoDescontoTab from "./PagamentoCaucaoDescontoTab";
+import PagamentoCaucaoTab from "./PagamentoCaucaoTab";
 import PagamentoSugeridoBox, { calcularSugeridoFesta } from "./PagamentoSugeridoBox";
 import type { Reserva } from "@/lib/api/reservas";
 import { metodoPagamentoLabel } from "@/lib/metodo-pagamento";
@@ -31,12 +31,13 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   const updatePagamento = useUpdatePagamento();
 
   // Total a pagar (só-leitura) - o valor acordado; muda via "Usar sugerido"
-  // ou tab "Acertos" (com auditoria), nunca por input livre.
-  const descontoInicial = Number(reserva.descontoPercentagem) || 0;
+  // ou tab "Acertos" (com auditoria), nunca por input livre. Descontos
+  // percentuais existentes na reserva (legado) continuam no sugerido.
+  const descontoReserva = Number(reserva.descontoPercentagem) || 0;
   const totalAcordado = Number(reserva.valorTotal ?? 0) || 0;
   const [valorTotal, setValorTotal] = useState<string>(() => {
     if (totalAcordado > 0) return String(totalAcordado);
-    const sugerido = calcularSugeridoFesta(reserva, descontoInicial)?.sugerido ?? 0;
+    const sugerido = calcularSugeridoFesta(reserva, descontoReserva)?.sugerido ?? 0;
     return sugerido > 0 ? String(sugerido) : "";
   });
   // Ledger manual (linhas da BD + adições do utilizador). Linhas "Caução" são
@@ -58,10 +59,6 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   const [caucao, setCaucao] = useState<string>(reserva.caucao ?? "NAO_PAGA");
   const [valorCaucao, setValorCaucao] = useState<string>(reserva.valorCaucao ? String(reserva.valorCaucao) : "");
   const [metodoCaucao, setMetodoCaucao] = useState<string>(reserva.metodoCaucao ?? "NONE");
-  const [descontoPercentagem, setDescontoPercentagem] = useState<string>(
-    reserva.descontoPercentagem ? String(reserva.descontoPercentagem) : ""
-  );
-  const [descontoMotivo, setDescontoMotivo] = useState(reserva.descontoMotivo ?? "");
 
   // Caução paga = linha fixa no ledger (já foi recebida e desconta a falta).
   // Sintetizada quando não existe linha "Caução" - desconta logo ao marcar
@@ -97,7 +94,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
         data: {
           valorTotal: valorTotal === "" ? null : Number(valorTotal),
           // Replace-all do ledger (inclui a linha fixa da caução); o estado
-          // `pago` é derivado no backend
+          // `pago` é derivado no backend. Descontos ficam na tab "Acertos".
           pagamentos: ledgerEfetivo.map((p) => ({
             valor: p.valor,
             metodo: p.metodo,
@@ -106,8 +103,6 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           caucao: caucao || undefined,
           valorCaucao: valorCaucao === "" ? undefined : Number(valorCaucao),
           metodoCaucao: metodoCaucao === "NONE" ? undefined : metodoCaucao || undefined,
-          descontoPercentagem: descontoPercentagem === "" ? undefined : Number(descontoPercentagem),
-          descontoMotivo: descontoMotivo || undefined,
         },
       });
       toast.success("Pagamento atualizado com sucesso.");
@@ -123,8 +118,6 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     caucao,
     valorCaucao,
     metodoCaucao,
-    descontoPercentagem,
-    descontoMotivo,
     toast,
     onClose,
   ]);
@@ -171,7 +164,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     </>
   ) : undefined;
 
-  const sugeridoResumo = calcularSugeridoFesta(reserva, Number(descontoPercentagem) || 0);
+  const sugeridoResumo = calcularSugeridoFesta(reserva, descontoReserva);
   const partesSugeridas: string[] = [];
   if (sugeridoResumo && sugeridoResumo.custoExtras > 0) partesSugeridas.push(`+${fmtEuro.format(sugeridoResumo.custoExtras)} extras`);
   if (sugeridoResumo && sugeridoResumo.custoMeias > 0) partesSugeridas.push(`+${fmtEuro.format(sugeridoResumo.custoMeias)} meias`);
@@ -195,28 +188,30 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       <span className="text-text-muted">{partesSugeridas.join(" · ")} (sugerido)</span>
     ) : undefined;
 
+  // Caução paga é imutável (CAUCAO_BLOQUEADA no backend): a tab "Caução" só
+  // existe enquanto não está paga - a caução paga vive no ledger como linha
+  // fixa "Caução" (e na tabela/detail da festa). Descontos: tab "Acertos".
+  const caucaoPaga = reserva.caucao === "PAGA";
   // Caução em primeiro: os pais pagam a caução à partida e o restante no dia
-  const tabs: PagamentoTabConfig[] = [
-    {
+  const tabs: PagamentoTabConfig[] = [];
+  if (!caucaoPaga) {
+    tabs.push({
       id: "caucao",
-      label: "Caução & Desconto",
+      label: "Caução",
       icon: Shield,
       content: (
-        <PagamentoCaucaoDescontoTab
+        <PagamentoCaucaoTab
           caucao={caucao}
           setCaucao={setCaucao}
           valorCaucao={valorCaucao}
           setValorCaucao={setValorCaucao}
           metodoCaucao={metodoCaucao}
           setMetodoCaucao={setMetodoCaucao}
-          descontoPercentagem={descontoPercentagem}
-          setDescontoPercentagem={setDescontoPercentagem}
-          descontoMotivo={descontoMotivo}
-          setDescontoMotivo={setDescontoMotivo}
-          bloqueada={reserva.caucao === "PAGA"}
         />
       ),
-    },
+    });
+  }
+  tabs.push(
     {
       id: "pagamento",
       label: "Pagamento",
@@ -253,7 +248,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
 
           <PagamentoSugeridoBox
             reserva={reserva}
-            descontoPercentagem={Number(descontoPercentagem) || 0}
+            descontoPercentagem={descontoReserva}
             onUsarSugerido={(v) => setValorTotal(v.toFixed(2))}
           />
         </div>
@@ -271,8 +266,8 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           onTotalRedefinido={handleTotalRedefinido}
         />
       ),
-    },
-  ];
+    }
+  );
 
   return (
     <PagamentoModalShell
