@@ -16,22 +16,38 @@
 import { readFileSync, existsSync } from "node:fs";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import jpeg from "jpeg-js";
 
-// Carrega o .env da app (dev) sem dependências externas; no cPanel usam-se as
-// variáveis de ambiente definidas no painel.
+// Carrega o .env da app — procura em vários locais prováveis (cPanel):
+//   ENV_PATH (env) · <app>/apps/web/.env · <app>/.env · ./ .env
+// Onde <app> = pasta acima de scripts/ (~/app.baselandia.pt).
 const DRY_RUN = process.env.DRY_RUN === "1";
+const __dirname = dirname(fileURLToPath(import.meta.url));
 (() => {
-  const envPath = process.env.ENV_PATH || path.join(process.cwd(), ".env");
-  if (!existsSync(envPath)) return;
-  for (const linha of readFileSync(envPath, "utf8").split("\n")) {
-    const m = linha.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && process.env[m[1]] === undefined) {
-      process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  const appRoot = path.resolve(__dirname, "..");
+  const candidatos = [
+    process.env.ENV_PATH,
+    path.join(appRoot, "apps", "web", ".env"),
+    path.join(appRoot, ".env"),
+    path.join(process.cwd(), ".env"),
+  ].filter(Boolean);
+
+  for (const envPath of candidatos) {
+    if (!existsSync(envPath)) continue;
+    for (const linha of readFileSync(envPath, "utf8").split("\n")) {
+      const m = linha.match(/^\s*(?:export\s+)?([\w.-]+)\s*=\s*(.*)\s*$/);
+      if (m && process.env[m[1]] === undefined) {
+        process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+      }
     }
+    console.log(`ENV carregado de: ${envPath}`);
+    return;
   }
+  console.warn(`⚠️  Nenhum .env encontrado (procurei em: ${candidatos.join(", ")})`);
 })();
 
 // ── Config (env; no dev lê o .env acima) ────────────────────────────────
@@ -45,7 +61,11 @@ const fromName = process.env.EMAIL_FROM_NAME || "Baselandia - Festas";
 const PARA = process.env.TESTE_EMAIL_PARA || process.env.EMAIL_FROM_ADDRESS || smtpUser;
 
 if (!DRY_RUN && (!smtpHost || !smtpUser || !smtpPass)) {
-  console.error("[x] SMTP não configurado (SMTP_HOST/SMTP_USER/SMTP_PASS).");
+  console.error("[x] SMTP não configurado — faltam SMTP_HOST/SMTP_USER/SMTP_PASS.");
+  console.error("    O .env carregado não tem essas variáveis (ou não foi encontrado).");
+  console.error("    Para ver que variáveis existem (só os NOMES, sem valores):");
+  console.error('      grep -oE "^[A-Z_]+" ~/app.baselandia.pt/apps/web/.env | sort');
+  console.error("    E/ou define-as inline: SMTP_HOST=... SMTP_USER=... SMTP_PASS=... TESTE_EMAIL_PARA=... node scripts/envio-teste-convites.mjs");
   process.exit(1);
 }
 if (!DRY_RUN && !PARA) {
