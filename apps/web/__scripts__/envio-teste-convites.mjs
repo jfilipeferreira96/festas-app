@@ -36,18 +36,22 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
     path.join(process.cwd(), ".env"),
   ].filter(Boolean);
 
+  const carregados = [];
   for (const envPath of candidatos) {
     if (!existsSync(envPath)) continue;
+    carregados.push(envPath);
     for (const linha of readFileSync(envPath, "utf8").split("\n")) {
       const m = linha.match(/^\s*(?:export\s+)?([\w.-]+)\s*=\s*(.*)\s*$/);
       if (m && process.env[m[1]] === undefined) {
         process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
       }
     }
-    console.log(`ENV carregado de: ${envPath}`);
-    return;
   }
-  console.warn(`⚠️  Nenhum .env encontrado (procurei em: ${candidatos.join(", ")})`);
+  if (carregados.length > 0) {
+    console.log(`ENV carregado de: ${carregados.join(" + ")}`);
+  } else {
+    console.warn(`⚠️  Nenhum .env encontrado (procurei em: ${candidatos.join(", ")})`);
+  }
 })();
 
 // ── Config (env; no dev lê o .env acima) ────────────────────────────────
