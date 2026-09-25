@@ -100,7 +100,9 @@ export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefin
     adicionarCliente: true,
     encarregadosAdicionais: [],
     duracaoMinutos: entrada?.duracaoMinutos ?? 60,
-    custoTotal: entrada?.custoTotal,
+    // Total acordado (final ?? calculado) - mesma fonte da modal de pagamento
+    // e da derivação de `pago` no backend.
+    custoTotal: entrada?.custoTotalFinal ?? entrada?.custoTotal,
     pagamentos: entrada?.pagamentos?.map((p) => ({
       id: p.id,
       valor: Number(p.valor),
