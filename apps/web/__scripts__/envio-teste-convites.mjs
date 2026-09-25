@@ -14,11 +14,11 @@
  */
 
 import { readFileSync, existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import nodemailer from "nodemailer";
-import { Resvg } from "@resvg/resvg-js";
-import sharp from "sharp";
+import { initWasm, Resvg } from "@resvg/resvg-wasm";
+import jpeg from "jpeg-js";
 
 // Carrega o .env da app (dev) sem dependências externas; no cPanel usam-se as
 // variáveis de ambiente definidas no painel.
@@ -118,18 +118,26 @@ function construirSvg(nomes, dataFesta, horarioInicio, duracaoMinutos, template)
 </svg>`;
 }
 
+let wasmPronto = false;
+
 async function gerarConviteJPEG(nomes, { dataFesta, horarioInicio, duracaoMinutos }) {
   const pasta = path.join(process.cwd(), "assets", "convite");
   const [template, font] = await Promise.all([
     readFile(path.join(pasta, "convite.jpeg")),
     readFile(path.join(pasta, "fonts", FONTE.ttf)),
   ]);
+  if (!wasmPronto) {
+    await initWasm(await readFile(path.join(pasta, "resvg.wasm")));
+    wasmPronto = true;
+  }
   const svg = construirSvg(nomes, dataFesta, horarioInicio, duracaoMinutos, template);
-  const resvg = new Resvg(svg, {
+  const imagem = new Resvg(svg, {
     fitTo: { mode: "original" },
-    font: { fontFiles: [path.join(pasta, "fonts", FONTE.ttf)], loadSystemFonts: false, defaultFontFamily: FONTE.fontFamily },
-  });
-  return sharp(resvg.render().asPng()).jpeg({ quality: 85, mozjpeg: true }).toBuffer();
+    // A build WASM não lê ficheiros do disco: a fonte passa em buffer.
+    font: { fontBuffers: [font], loadSystemFonts: false, defaultFontFamily: FONTE.fontFamily },
+  }).render();
+  // pixels RGBA → JPEG puro em JS (sem binários nativos)
+  return Buffer.from(jpeg.encode({ data: imagem.pixels, width: imagem.width, height: imagem.height }, 85).data);
 }
 
 // ── Email (espelha src/lib/email.ts) ────────────────────────────────────
@@ -155,8 +163,14 @@ function emailShell(titulo, conteudoHtml) {
 
 async function enviarEmail({ to, subject, html, attachments }) {
   if (DRY_RUN) {
+    // Guarda os anexos para inspeção visual sem enviar.
+    const destino = process.env.CONVITE_AMOSTRAS_DESTINO || "/tmp/kilo/convite-amostras";
+    await mkdir(destino, { recursive: true });
+    for (const a of attachments) {
+      await writeFile(path.join(destino, a.filename), a.content);
+    }
     const anexos = attachments.map((a) => `${a.filename} (${Math.round(a.content.length / 1024)} KB)`).join(", ");
-    console.log(`  [DRY_RUN] não enviado → ${to} · anexos: ${anexos}`);
+    console.log(`  [DRY_RUN] não enviado → ${to} · anexos: ${anexos} (em ${destino})`);
     return "dry-run";
   }
   const transporter = nodemailer.createTransport({ host: smtpHost, port: smtpPort, secure: smtpSecure, auth: { user: smtpUser, pass: smtpPass } });

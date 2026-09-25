@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { Resvg } from "@resvg/resvg-js";
-import sharp from "sharp";
+import { initWasm, Resvg } from "@resvg/resvg-wasm";
+import jpeg from "jpeg-js";
 import {
   CONVITE_DIAS_LIMITE,
   CONVITE_TELEFONE,
@@ -11,8 +11,8 @@ import type { ModoConvite } from "@saas/shared-types";
 
 /**
  * Geração do convite preenchido (assets/convite/convite.jpeg): sobrepõe os
- * dados da festa via SVG e renderiza com resvg-js (fonte local, sem depender
- * do fontconfig do SO) + sharp para codificar o JPEG final.
+ * dados da festa via SVG e renderiza com @resvg/resvg-wasm + jpeg-js - 100%
+ * JS/WASM, sem binários nativos (compatível com qualquer cPanel/CloudLinux).
  * Sem Prisma/logger de propósito - módulo puro e reutilizável (testes/scripts).
  */
 
@@ -119,15 +119,21 @@ function texto(
 type AssetsConvite = { template: Buffer; font: Buffer };
 
 let cacheAssets: AssetsConvite | null = null;
+let wasmInit: Promise<void> | null = null;
 
 async function carregarAssets(): Promise<AssetsConvite> {
   if (cacheAssets) return cacheAssets;
 
   const pasta = path.join(process.cwd(), "assets", "convite");
-  const [template, font] = await Promise.all([
+  const [template, font, wasm] = await Promise.all([
     readFile(path.join(pasta, "convite.jpeg")),
     readFile(path.join(pasta, "fonts", FONTE.ttf)),
+    readFile(path.join(pasta, "resvg.wasm")),
   ]);
+  // initWasm é idempotente-guardado: só corre uma vez por processo.
+  wasmInit ??= initWasm(wasm);
+  await wasmInit;
+
   cacheAssets = { template, font };
   return cacheAssets;
 }
@@ -158,23 +164,25 @@ export function construirSvgConvite(dados: DadosConvite, template: Buffer): stri
 
 /** Gera o convite preenchido como JPEG (pronto para anexo de email). */
 export async function gerarConviteJPEG(dados: DadosConvite): Promise<Buffer> {
-  const { template } = await carregarAssets();
+  const { template, font } = await carregarAssets();
 
   const svg = construirSvgConvite(dados, template);
-  const resvg = new Resvg(svg, {
+  const imagem = new Resvg(svg, {
     fitTo: { mode: "original" },
     font: {
-      fontFiles: [
-        path.join(process.cwd(), "assets", "convite", "fonts", FONTE.ttf),
-      ],
+      // A build WASM não lê ficheiros do disco: a fonte passa em buffer.
+      fontBuffers: [font],
       loadSystemFonts: false,
       defaultFontFamily: FONTE.fontFamily,
     },
-  });
+  }).render();
 
-  return sharp(resvg.render().asPng())
-    .jpeg({ quality: 85, mozjpeg: true })
-    .toBuffer();
+  // pixels = RGBA (4 bytes/px) - o formato nativo do jpeg-js
+  const resultado = jpeg.encode(
+    { data: imagem.pixels, width: imagem.width, height: imagem.height },
+    85
+  );
+  return Buffer.from(resultado.data);
 }
 
 /** Nome de ficheiro seguro a partir do nome da criança (ex.: "Ana Beatriz" → "ana-beatriz"). */

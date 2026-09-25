@@ -67,6 +67,9 @@ kill_app() {
   say "A terminar processos da app (next-server / Passenger)..."
   pkill -u "$USER" -f "next-server"      2>/dev/null
   pkill -u "$USER" -f "PassengerNodeApp" 2>/dev/null
+  # órfãos de testes/scripts (ex.: envio-teste-convites crashado a meio)
+  pkill -9 -u "$USER" -f "envio-teste-convites" 2>/dev/null
+  pkill -9 -u "$USER" -x node                   2>/dev/null
   sleep 3
   # sobras que ignoraram o TERM → KILL
   if pgrep -u "$USER" -f "next-server" >/dev/null 2>&1; then
