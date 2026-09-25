@@ -1,7 +1,9 @@
 import prisma from "@festas/db";
+import { reservaService } from "@/services/reserva.service";
 
 export const dashboardService = {
   async getKPIs() {
+    await reservaService.autoIniciarVencidas().catch(() => undefined);
     const hoje = new Date();
     const hojeStart = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
     const hojeEnd = new Date(hojeStart);

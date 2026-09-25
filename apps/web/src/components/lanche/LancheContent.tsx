@@ -8,7 +8,7 @@ import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import InputField from "@/components/form/input/InputField";
 import TextArea from "@/components/form/input/TextArea";
-import DatePicker from "@/components/form/date-picker";
+import type { LancheDoDia, LancheFesta, LancheEntradaLivre } from "@saas/shared-types";
 import { Select } from "@/components/ui/select";
 import { Tooltip } from "@/components/ui/tooltip/Tooltip";
 import DataTable, { type Column } from "@/components/ui/table/DataTable";
@@ -25,11 +25,16 @@ import {
   useAtualizarEstadoLanche,
   useAtualizarEstadoLancheEntrada,
 } from "@/hooks/use-lanche";
-import type { LancheDoDia, LancheFesta, LancheEntradaLivre } from "@saas/shared-types";
 import { BOLO_LABELS_SHORT } from "@/lib/constants/bolo";
 
 function todayISO(): string {
   return new Date().toISOString().split("T")[0];
+}
+
+function amanhaISO(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
 }
 
 function formatDataLabel(data: string): string {
@@ -96,14 +101,6 @@ export default function LancheContent() {
     },
     [lancheAtrasado]
   );
-
-  // Stable handler for DatePicker - avoids flatpickr re-init on every render.
-  const handleDataChange = useCallback((selectedDates: Date[]) => {
-    if (selectedDates.length > 0) {
-      const d = selectedDates[0];
-      setDataSel(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
-    }
-  }, []);
 
   const { data: lanches, isLoading } = useLanchesDoDia(dataSel);
   const { data: alergias } = useAlergias(dataSel);
@@ -293,20 +290,6 @@ export default function LancheContent() {
         </span>
       ),
     },
-    // Obs. Cacifos - escondida para a função LANCHE (só vê obs. de lanche)
-    ...(!isFuncaoLanche
-      ? [
-          {
-            key: "notasCacifos",
-            label: "Obs. Cacifos",
-            render: (_v: string | null, f: LancheFestaRow) => (
-              <span className="text-xs text-text-secondary block whitespace-normal max-w-[280px]">
-                {f.notasCacifos || f.observacoesCacifo || "-"}
-              </span>
-            ),
-          },
-        ]
-      : []),
     {
       key: "estadoLanche",
       label: "Estado",
@@ -438,12 +421,22 @@ export default function LancheContent() {
       <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs no-print">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
-            <DatePicker
-              id="lanche-date-picker"
-              defaultDate={dataSel}
-              onChange={handleDataChange}
-              className="w-44"
-            />
+            <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-1">
+              {[todayISO(), amanhaISO()].map((iso) => (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => setDataSel(iso)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 shrink-0 ${
+                    dataSel === iso
+                      ? "bg-white text-brand-600 shadow-theme-sm"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-white/60"
+                  }`}
+                >
+                  {iso === todayISO() ? "Hoje" : "Amanhã"}
+                </button>
+              ))}
+            </div>
             <div className="flex items-center gap-1 rounded-xl bg-gray-50 p-1">
               {FILTRO_OPTIONS.map((opt) => (
                 <button

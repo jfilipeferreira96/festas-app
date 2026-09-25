@@ -13,6 +13,8 @@ export interface Cacifo {
   reservaId?: string;
   reserva?: {
     id: string;
+    data: string;
+    estado: string;
     cliente: { id: string; nome: string } | null;
     salaLanche?: { id: string; nome: string } | null;
     notasCacifos?: string | null;

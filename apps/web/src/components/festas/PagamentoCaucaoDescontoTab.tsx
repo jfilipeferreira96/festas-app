@@ -23,6 +23,8 @@ interface PagamentoCaucaoDescontoTabProps {
   setDescontoPercentagem: (v: string) => void;
   descontoMotivo: string;
   setDescontoMotivo: (v: string) => void;
+  /** Caução paga é imutável. */
+  bloqueada?: boolean;
 }
 
 export default React.memo(function PagamentoCaucaoDescontoTab({
@@ -36,6 +38,7 @@ export default React.memo(function PagamentoCaucaoDescontoTab({
   setDescontoPercentagem,
   descontoMotivo,
   setDescontoMotivo,
+  bloqueada = false,
 }: PagamentoCaucaoDescontoTabProps) {
   return (
     <div className="space-y-4">
@@ -43,6 +46,11 @@ export default React.memo(function PagamentoCaucaoDescontoTab({
         <label className="text-xs font-semibold text-text-primary flex items-center gap-1.5 mb-2">
           <Shield size={14} className="text-text-muted" /> Caução
         </label>
+        {bloqueada ? (
+          <p className="text-xs text-text-muted bg-gray-50 border border-border rounded-lg px-3 py-2">
+            A caução já foi paga e está bloqueada - não pode ser alterada.
+          </p>
+        ) : (
         <div className="grid grid-cols-3 gap-3">
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">Estado</label>
@@ -64,6 +72,7 @@ export default React.memo(function PagamentoCaucaoDescontoTab({
             <Select options={METODO_PAGAMENTO_OPTIONS} value={metodoCaucao} onChange={setMetodoCaucao} />
           </div>
         </div>
+        )}
       </div>
 
       <div className="border-t border-border pt-3">

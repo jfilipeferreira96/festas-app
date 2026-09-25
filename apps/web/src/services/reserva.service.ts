@@ -2,6 +2,7 @@ import prisma from "@festas/db";
 import { Prisma } from "@prisma/client";
 import type { CriarPagamentoDTO, MetodoPagamento, TipoBolo, EstadoReserva } from "@saas/shared-types";
 import logger from "@/lib/logger";
+import { toLocalISODate } from "@/utils/date";
 import { enfileirarEmailConfirmacaoReserva } from "@/services/email.service";
 import { configuracaoPrecoService } from "@/services/configuracaoPreco.service";
 import { excecaoCalendarioService } from "@/services/excecaoCalendario.service";
@@ -169,6 +170,17 @@ function estadoAposCaucao(
   return estadoActual as EstadoReserva;
 }
 
+function dataHoraMarcada(reserva: { data: Date | string; horario: string }): Date {
+  const iso =
+    typeof reserva.data === "string" ? reserva.data.slice(0, 10) : reserva.data.toISOString().slice(0, 10);
+  return new Date(`${iso}T${reserva.horario}:00`);
+}
+
+
+function normalizarDataCalendario(data: Date): Date {
+  return new Date(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()));
+}
+
 const BOLO_SEM_QUANTIDADE: readonly string[] = ["PAIS_TRAZEM", "A_DECIDIR"];
 
 function quantidadeDeExtra(quantidades: Record<string, number> | undefined, extraId: string) {
@@ -181,11 +193,14 @@ function normalizarBoloQuantidade(bolo: TipoBolo | undefined, quantidade: number
   return quantidade && quantidade > 0 ? Math.round(quantidade) : 1;
 }
 
-/** Converte "YYYY-MM-DD" (ou ISO) em Date; erro do cliente se inválida. */
+/** Converte "YYYY-MM-DD" (ou ISO) em Date; erro do cliente se inválida.
+ *  Devolve meia-noite UTC do dia de calendário (colunas @db.Date). */
 function parseDataObrigatoria(valor: string | undefined | null, codigo: string): Date {
-  const d = new Date(valor ?? "");
-  if (!valor || Number.isNaN(d.getTime())) throw new Error(codigo);
-  return d;
+  if (!valor) throw new Error(codigo);
+  const base = valor.length === 10 ? `${valor}T00:00:00.000Z` : valor;
+  const d = new Date(base);
+  if (Number.isNaN(d.getTime())) throw new Error(codigo);
+  return normalizarDataCalendario(d);
 }
 
 async function findOrCreateCliente(input: AniversarianteInput): Promise<string> {
@@ -318,7 +333,9 @@ async function findConflitos(params: {
   salaLancheId?: string | null;
   excludeId?: string;
 }): Promise<ConflitoInfo[]> {
-  const reservaDate = typeof params.data === "string" ? new Date(params.data) : params.data;
+  const reservaDate = normalizarDataCalendario(
+    typeof params.data === "string" ? new Date(params.data) : params.data
+  );
   const nextDay = new Date(reservaDate);
   nextDay.setDate(nextDay.getDate() + 1);
 
@@ -371,7 +388,9 @@ async function verificarSlotOcupado(params: {
   salaLancheId?: string | null;
   excludeId?: string;
 }): Promise<void> {
-  const reservaDate = typeof params.data === "string" ? new Date(params.data) : params.data;
+  const reservaDate = normalizarDataCalendario(
+    typeof params.data === "string" ? new Date(params.data) : params.data
+  );
   const nextDay = new Date(reservaDate);
   nextDay.setDate(nextDay.getDate() + 1);
 
@@ -449,19 +468,35 @@ async function mergeExtrasObrigatorios(
 
 export const reservaService = {
   async list(filters?: { estado?: string; data?: string; dataInicio?: string; dataFim?: string; pesquisa?: string; page?: number; pageSize?: number }) {
+    try {
+      if (filters?.data && filters.data === toLocalISODate(new Date())) {
+        await this.autoIniciarVencidas();
+      }
+    } catch {
+      // ignorar - o tick do servidor cobre o próximo ciclo
+    }
     const where: Record<string, unknown> = {};
     if (filters?.estado) where.estado = filters.estado;
     if (filters?.data) {
-      const date = new Date(filters.data);
+    
+      const date = filters.data.length === 10
+        ? new Date(`${filters.data}T00:00:00.000Z`)
+        : normalizarDataCalendario(new Date(filters.data));
       const nextDay = new Date(date);
-      nextDay.setDate(nextDay.getDate() + 1);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
       where.data = { gte: date, lt: nextDay };
     } else if (filters?.dataInicio || filters?.dataFim) {
       const range: Record<string, Date> = {};
-      if (filters?.dataInicio) range.gte = new Date(filters.dataInicio);
+      if (filters?.dataInicio) {
+        range.gte = filters.dataInicio.length === 10
+          ? new Date(`${filters.dataInicio}T00:00:00.000Z`)
+          : normalizarDataCalendario(new Date(filters.dataInicio));
+      }
       if (filters?.dataFim) {
-        const end = new Date(filters.dataFim);
-        end.setDate(end.getDate() + 1);
+        const end = filters.dataFim.length === 10
+          ? new Date(`${filters.dataFim}T00:00:00.000Z`)
+          : normalizarDataCalendario(new Date(filters.dataFim));
+        end.setUTCDate(end.getUTCDate() + 1);
         range.lt = end;
       }
       where.data = range;
@@ -759,7 +794,24 @@ export const reservaService = {
 
   async update(id: string, data: UpdateReservaData) {
     const reserva = await this.getById(id);
-    if (reserva.estado === "EM_CURSO") throw new Error("CANNOT_MODIFY_IN_PROGRESS");
+
+    if (reserva.caucao === "PAGA") {
+      const alteraCaucao =
+        (data.caucao !== undefined && data.caucao !== "PAGA") ||
+        (data.valorCaucao !== undefined && Number(data.valorCaucao) !== Number(reserva.valorCaucao ?? 0)) ||
+        (data.metodoCaucao !== undefined && data.metodoCaucao !== (reserva.metodoCaucao ?? undefined));
+      if (alteraCaucao) throw new Error("CAUCAO_BLOQUEADA");
+    }
+
+    if (reserva.estado === "EM_CURSO") {
+      const chaves = Object.keys(data).filter(
+        (k) => (data as Record<string, unknown>)[k] !== undefined
+      );
+      const permitidas = ["numCriancas", "numCriancasPresentes", "caucao"];
+      if (!chaves.every((k) => permitidas.includes(k))) {
+        throw new Error("CANNOT_MODIFY_IN_PROGRESS");
+      }
+    }
 
     // Process new aniversariantes if provided
     const aniversarianteIds: string[] = [];
@@ -843,7 +895,7 @@ export const reservaService = {
     await prisma.reserva.update({
       where: { id },
       data: {
-        data: data.data ? new Date(data.data) : undefined,
+        data: data.data ? parseDataObrigatoria(data.data, "DATA_REQUIRED") : undefined,
         horario: data.horario,
         horaLanche: data.horaLanche,
         salaLancheId: data.salaLancheId,
@@ -960,6 +1012,10 @@ export const reservaService = {
       await syncMenuFromExtra(id, data.menuId);
     }
 
+    if (data.caucao === "PAGA" && reserva.caucao !== "PAGA") {
+      await this.promoverPorCaucao(id);
+    }
+
     return this.getById(id);
   },
 
@@ -995,6 +1051,14 @@ export const reservaService = {
   }) {
     const reserva = await this.getById(id);
     if (!reserva) throw new Error("NOT_FOUND");
+
+    if (reserva.caucao === "PAGA") {
+      const alteraCaucao =
+        (data.caucao !== undefined && data.caucao !== "PAGA") ||
+        (data.valorCaucao !== undefined && Number(data.valorCaucao) !== Number(reserva.valorCaucao ?? 0)) ||
+        (data.metodoCaucao !== undefined && data.metodoCaucao !== (reserva.metodoCaucao ?? undefined));
+      if (alteraCaucao) throw new Error("CAUCAO_BLOQUEADA");
+    }
 
     // ── Resolver o ledger: undefined = sem alterações de pagamento ──
     const lista = data.pagamentos !== undefined ? normalizarPagamentos(data.pagamentos) ?? [] : undefined;
@@ -1050,6 +1114,12 @@ export const reservaService = {
       await sincronizarPagamentosReserva(tx, id, lista);
     });
 
+    // Pagar a caução por aqui também materializa a preparação (e auto-inicia
+    // se a hora marcada já passou).
+    if (data.caucao === "PAGA" && reserva.caucao !== "PAGA") {
+      await this.promoverPorCaucao(id);
+    }
+
     return this.getById(id);
   },
 
@@ -1074,10 +1144,30 @@ export const reservaService = {
       include: { etapas: true },
     });
     if (!reserva) throw new Error("NOT_FOUND");
-    if (reserva.estado !== "CONFIRMADO") throw new Error("RESERVA_NOT_CONFIRMED");
     if (reserva.inicioEm) throw new Error("ALREADY_IN_PROGRESS");
+    if (reserva.estado !== "CONFIRMADO") throw new Error("RESERVA_NOT_CONFIRMED");
 
-    const inicioEm = new Date();
+    if (reserva.caucao !== "PAGA") {
+      await prisma.reserva.update({ where: { id }, data: { caucao: "PAGA" } });
+      reserva.caucao = "PAGA";
+    }
+    await this.registarCaucaoNoLedgerInterna(reserva);
+    await this.materializarEtapasInterna(id);
+    await this.materializarCacifosInterna(reserva);
+
+    return this.transitarParaEmCursoInterna(id, new Date());
+  },
+
+  async transitarParaEmCursoInterna(reservaId: string, inicioEm: Date) {
+    const reserva = await prisma.reserva.findUnique({
+      where: { id: reservaId },
+      include: { etapas: true },
+    });
+    if (!reserva) throw new Error("NOT_FOUND");
+    if (reserva.inicioEm || reserva.estado !== "CONFIRMADO") {
+      return this.getById(reservaId);
+    }
+
     const fimPrevisto = new Date(inicioEm.getTime() + reserva.duracaoMinutos * 60000);
 
     const etapasData: { create?: { etapaId: string; concluida: boolean }[] } = {};
@@ -1092,31 +1182,114 @@ export const reservaService = {
       }));
     }
 
-    const atualizada = await prisma.reserva.update({
-      where: { id },
+    await prisma.reserva.update({
+      where: { id: reservaId },
       data: {
         estado: "EM_CURSO",
         inicioEm,
         fimPrevisto,
         etapas: etapasData,
       },
-      include: {
-        cliente: true,
-        aniversariantes: { include: { aniversariante: true } },
-        monitores: { include: { monitor: true } },
-        cacifos: true,
-        etapas: { include: { etapa: true }, orderBy: { etapa: { ordem: "asc" } } },
-        pagamentos: { orderBy: { createdAt: "asc" } },
-      },
     });
 
-    const alvoCacifos =
-      atualizada.numCriancasConfirmadas || atualizada.numCriancas || atualizada.previsaoCriancas || 0;
-    if (alvoCacifos > 0 && atualizada.cacifos.length < alvoCacifos) {
-      await cacifoService.preReservarCacifos(id, alvoCacifos - atualizada.cacifos.length);
-    }
+    await this.materializarCacifosInterna(reserva);
 
+    return this.getById(reservaId);
+  },
+
+  async materializarEtapasInterna(reservaId: string) {
+    const existentes = await prisma.reservaEtapa.count({ where: { reservaId } });
+    if (existentes > 0) return;
+    const activeEtapas = await prisma.etapaFesta.findMany({
+      where: { activo: true },
+      select: { id: true },
+    });
+    if (activeEtapas.length === 0) return;
+    await prisma.reservaEtapa.createMany({
+      data: activeEtapas.map((etapa: { id: string }) => ({
+        reservaId,
+        etapaId: etapa.id,
+        concluida: false,
+      })),
+    });
+  },
+
+  async materializarCacifosInterna(reserva: {
+    id: string;
+    numCriancasConfirmadas: number | null;
+    numCriancas: number | null;
+    previsaoCriancas: number | null;
+  }) {
+    const alvo =
+      reserva.numCriancasConfirmadas || reserva.numCriancas || reserva.previsaoCriancas || 0;
+    if (alvo <= 0) return;
+    const atuais = await prisma.cacifo.count({ where: { reservaId: reserva.id } });
+    if (atuais >= alvo) return;
+    await cacifoService.preReservarCacifos(reserva.id, alvo - atuais);
+  },
+
+  async registarCaucaoNoLedgerInterna(reserva: {
+    id: string;
+    valorCaucao: unknown;
+    metodoCaucao: string | null;
+  }) {
+    const valorCaucao = Number(reserva.valorCaucao) || 0;
+    if (valorCaucao <= 0) return;
+    const existentes = await prisma.pagamento.count({
+      where: { reservaId: reserva.id, nota: "Caução" },
+    });
+    if (existentes > 0) return;
+    await prisma.pagamento.create({
+      data: {
+        reservaId: reserva.id,
+        valor: valorCaucao,
+        metodo: (reserva.metodoCaucao as MetodoPagamento | null) ?? "DINHEIRO",
+        nota: "Caução",
+      },
+    });
+    await rederivarPagoReserva(prisma, reserva.id);
+  },
+
+  async promoverPorCaucao(id: string) {
+    const reserva = await prisma.reserva.findUnique({
+      where: { id },
+      include: { etapas: true },
+    });
+    if (!reserva) throw new Error("NOT_FOUND");
+    if (reserva.caucao !== "PAGA") return this.getById(id);
+
+    await this.registarCaucaoNoLedgerInterna(reserva);
+    await this.materializarEtapasInterna(id);
+    await this.materializarCacifosInterna(reserva);
+
+    if (reserva.estado === "CONFIRMADO" && !reserva.inicioEm) {
+      const hora = dataHoraMarcada(reserva);
+      if (hora <= new Date()) {
+        await this.transitarParaEmCursoInterna(id, hora);
+      }
+    }
     return this.getById(id);
+  },
+
+  async autoIniciarVencidas(): Promise<number> {
+    const agora = new Date();
+    const candidatas = await prisma.reserva.findMany({
+      where: { estado: "CONFIRMADO", caucao: "PAGA", inicioEm: null },
+      select: { id: true, data: true, horario: true },
+    });
+    let transicoes = 0;
+    for (const candidata of candidatas) {
+      try {
+        const hora = dataHoraMarcada(candidata);
+        if (hora <= agora) {
+          const resultado = await this.transitarParaEmCursoInterna(candidata.id, hora);
+          if (resultado.estado === "EM_CURSO") transicoes++;
+        }
+      } catch (error) {
+        logger.error(`autoIniciarVencidas: falhou a festa ${candidata.id}`, error);
+      }
+    }
+    return transicoes;
   },
 
   async finalizar(id: string, options?: { custoExcessoManual?: number; numCriancasPresentes?: number | null }) {
@@ -1358,3 +1531,20 @@ export const reservaService = {
     });
   },
 };
+
+// Tick do auto-inicio (ver autoIniciarVencidas); backstop lazy nos reads.
+const globalTick = globalThis as unknown as { __festasAutoInicioTick?: NodeJS.Timeout };
+if (!globalTick.__festasAutoInicioTick && process.env.NEXT_RUNTIME === "nodejs" && !process.env.VITEST) {
+  globalTick.__festasAutoInicioTick = setInterval(
+    () => {
+      void reservaService
+        .autoIniciarVencidas()
+        .then((n) => {
+          if (n > 0) logger.info(`auto-inicio: ${n} festa(s) entraram em curso na hora marcada`);
+        })
+        .catch((error) => logger.error("auto-inicio: varrimento falhou", error));
+    },
+    60_000
+  );
+  globalTick.__festasAutoInicioTick.unref?.();
+}

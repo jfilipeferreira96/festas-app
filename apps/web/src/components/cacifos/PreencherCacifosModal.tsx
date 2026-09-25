@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { formatDate } from "@/utils/date";
 import { imprimirListaConvidados } from "@/utils/print-lista";
 import { cacifosApi, type Cacifo } from "@/lib/api/cacifos";
+import TotalCriancasInput from "./TotalCriancasInput";
 import SeletorCriancas from "./SeletorCriancas";
 
 // ── Props ──────────────────────────────────────────────────────────
@@ -199,6 +200,17 @@ export default React.memo(function PreencherCacifosModal({
           <div className="space-y-5">
             {/* Header */}
             <ModalHeader reserva={reserva} />
+
+            {/* Total de Crianças (numCriancas) - o campo que cobra, mantido
+                pela equipa de cacifos; alerta compara com os cacifos
+                atribuídos, sem bloquear */}
+            {["CONFIRMADO", "EM_CURSO"].includes(reserva.estado) && (
+              <TotalCriancasInput
+                reservaId={reservaId}
+                numCriancas={reserva.numCriancas}
+                cacifosCount={cacifosList.length}
+              />
+            )}
 
             {/* Nota: cacifos reservam-se no dia da festa */}
             {isFutura(reserva) && (

@@ -113,7 +113,7 @@ function DetailContent({
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <FestaColorDot color={reserva.cor} />
           <div>
             <h2 className="text-lg font-semibold text-text-primary">
@@ -127,9 +127,16 @@ function DetailContent({
             </p>
           </div>
         </div>
-        <StatusBadge status={estado as StatusType}>
-          {ESTADO_LABELS[estado] ?? estado}
-        </StatusBadge>
+        <div className="flex items-center gap-2">
+          {estado === "CONFIRMADO" && reserva.caucao === "PAGA" && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-brand-50 text-brand-700">
+              ✓ Preparada
+            </span>
+          )}
+          <StatusBadge status={estado as StatusType}>
+            {ESTADO_LABELS[estado] ?? estado}
+          </StatusBadge>
+        </div>
       </div>
 
       {/* Status Stepper */}
@@ -220,7 +227,8 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
         </div>
         {/* Nº de crianças que apareceram: editável na receção (em curso/concluída) */}
         {(reserva.estado === "EM_CURSO" || reserva.estado === "CONCLUIDA") && (
-          <div className="mt-3 pt-3 border-t border-border">
+          <div className="mt-3 pt-3 border-t border-border space-y-3">
+            <TotalCriancasField reserva={reserva} />
             <CriancasPresentesField reserva={reserva} />
           </div>
         )}
@@ -371,29 +379,11 @@ function GeralTab({ reserva, hidePrices = false, onEditPagamento }: { reserva: R
           {reserva.valorCaucao != null && (
             <DetailRow icon={<Shield size={13} />} label="Valor" value={new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(reserva.valorCaucao)} />
           )}
-          {/* Falta liquidar = Caução paga (a devolver ao cliente no final) */}
-          {(() => {
-            const total = Number(reserva.valorTotal) || 0;
-            const liquidado = reserva.pago;
-            const caucaoPaga = (reserva.caucao === "PAGA" || reserva.caucao === "PAGA_NO_DIA")
-              ? Number(reserva.valorCaucao) || 0
-              : 0;
-            if (total <= 0 || caucaoPaga <= 0 || !liquidado) return null;
-            const emFalta = caucaoPaga;
-            const fmt = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
-            return (
-              <div className="pt-2 mt-1 border-t border-border bg-accent-orange-50 -mx-3 px-3 py-2 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-bold text-accent-orange-700">Falta liquidar</span>
-                  <span className="text-base font-bold text-accent-orange-700">{fmt.format(emFalta)}</span>
-                </div>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-xs text-text-muted">Já pago (caução)</span>
-                  <span className="text-xs text-success-600">−{fmt.format(caucaoPaga)}</span>
-                </div>
-              </div>
-            );
-          })()}
+          {reserva.caucao === "PAGA" && (
+            <p className="text-xs text-text-muted pt-1">
+              Caução paga e registada nos pagamentos - bloqueada (não pode ser alterada).
+            </p>
+          )}
         </div>
       </Section>
       )}
@@ -672,11 +662,59 @@ function DetailRow({ icon, label, value }: { icon?: React.ReactNode; label: stri
   );
 }
 
+// ── Total de Crianças (receção) ───────────────────────────────────
+/** Total de crianças da festa, editável inline na receção. */
+function TotalCriancasField({ reserva }: { reserva: Reserva }) {
+  const toast = useToast();
+  const updateReserva = useUpdateReserva();
+  const valorGuardado = reserva.numCriancas != null ? String(reserva.numCriancas) : "";
+  const [valor, setValor] = useState(valorGuardado);
+
+  useEffect(() => {
+    setValor(valorGuardado);
+  }, [valorGuardado]);
+
+  const sujo = valor !== valorGuardado;
+
+  const guardar = async () => {
+    const n = Math.max(0, Math.round(Number(valor) || 0));
+    try {
+      await updateReserva.mutateAsync({ id: reserva.id, data: { numCriancas: n } });
+      toast.success("Total de crianças atualizado.");
+    } catch (err) {
+      toast.handleApiError(err, "Não foi possível guardar o total de crianças.");
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-text-muted shrink-0">Total de crianças:</span>
+      <input
+        type="number"
+        min={0}
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        placeholder="0"
+        className="w-20 h-8 px-2 rounded-lg border border-border bg-transparent text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-500"
+      />
+      {sujo && (
+        <button
+          type="button"
+          onClick={guardar}
+          disabled={updateReserva.isPending}
+          className="px-2.5 py-1 rounded-lg bg-brand-500 text-white text-xs font-medium hover:bg-brand-600 disabled:opacity-50 transition-colors"
+        >
+          {updateReserva.isPending ? "A guardar..." : "Guardar"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Crianças Presentes (receção) ──────────────────────────────────
 /** Nº total de crianças que efetivamente apareceram na festa. Editável
  *  inline na receção/conclusão; guardado com o update normal da reserva. */
-function CriancasPresentesField({ reserva }: { reserva: Reserva }) {
-  const toast = useToast();
+function CriancasPresentesField({ reserva }: { reserva: Reserva }) {  const toast = useToast();
   const updateReserva = useUpdateReserva();
   const valorGuardado = reserva.numCriancasPresentes != null ? String(reserva.numCriancasPresentes) : "";
   const [valor, setValor] = useState(valorGuardado);

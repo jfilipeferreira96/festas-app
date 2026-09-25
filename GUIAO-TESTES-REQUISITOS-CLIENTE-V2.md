@@ -103,7 +103,7 @@
 | Papel | Home | Vê | Mudou para ele |
 |---|---|---|---|
 | **ADMINISTRADOR** | /dashboard | Tudo | Todas as fases: bugs de pagamento corrigidos, nova página A Decorrer, Cauções, Bolos, email automático, talão, fila de emails, TV, formulários simplificados |
-| **RECECAO** | /reservas | Festas (escrita), Clientes, Cacifos | Nova Festa simplificado (sem adultos/cor), talão, coluna Saída, cauções na tabela, receção completa com monitores + crianças presentes, páginas novas (A Decorrer/Cauções/Bolos acessíveis via reservas leitura/escrita) |
+| **RECECAO** | /reservas | Festas (escrita), Clientes | Nova Festa simplificado (sem adultos/cor), talão, coluna Saída, cauções na tabela, receção completa com monitores + crianças presentes, páginas novas (A Decorrer/Cauções/Bolos acessíveis via reservas leitura/escrita) |
 | **CACIFOS** | /cacifos | Cacifos (escrita) + festas/entradas em modo leitura sem preços | Coluna **Saída** nas entradas (útil); coluna Caução **oculta** (igual às de preço); caução nunca aparece; resto inalterado |
 | **LANCHE** | /lanche | Lanche (escrita) + menus (leitura) | **Nada de direto** - a sua página não mudou; indireto: festas chegam mais limpas (sem adultos, extras normalizados) |
 | **MONITOR** | /monitores | Monitores (leitura - Gantt + notas) | **Nada de direto** |

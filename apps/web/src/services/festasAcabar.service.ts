@@ -1,5 +1,6 @@
 import { differenceInYears } from "date-fns";
 import prisma from "@festas/db";
+import { reservaService } from "@/services/reserva.service";
 
 const round2 = (v: number) => Math.round(v * 100) / 100;
 
@@ -14,6 +15,7 @@ export const festasAcabarService = {
    */
   async getFestasTV() {
     const agora = new Date();
+    await reservaService.autoIniciarVencidas().catch(() => undefined);
     // Pedido do cliente (19/09/2026): o monitor mostra festas/entradas quando
     // faltam 10 min para o fim e mantém-nas até serem concluídas (sem limite
     // inferior - festas atrasadas continuam visíveis).

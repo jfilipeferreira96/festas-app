@@ -49,6 +49,9 @@
     "notAvailableOverlap": "Sala ocupada neste horário",
     "aniversarianteNomeRequired": "É obrigatório indicar pelo menos um aniversariante"
   },
+  "caucao": {
+    "bloqueada": "A caução já foi paga e não pode ser alterada."
+  },
   "excecaoCalendario": {
     "notFound": "Exceção de calendário não encontrada",
     "alreadyExists": "Já existe uma exceção para esta data",

@@ -183,6 +183,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           setDescontoPercentagem={setDescontoPercentagem}
           descontoMotivo={descontoMotivo}
           setDescontoMotivo={setDescontoMotivo}
+          bloqueada={reserva.caucao === "PAGA"}
         />
       ),
     },

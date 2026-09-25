@@ -439,6 +439,11 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               dataFesta={watchedData}
               onOpenSearchCliente={() => setShowClienteSearch(true)}
             />
+            {reserva && (reserva.estado === "EM_CURSO" || reserva.estado === "CONCLUIDA") && (
+              <p className="text-xs text-text-muted -mt-4">
+                Crianças presentes: {reserva.numCriancasPresentes ?? "—"}
+              </p>
+            )}
             <SectionHeader titulo="Configuração da Festa" />
             <AgendamentoSection
               slotOptions={slotOptions}

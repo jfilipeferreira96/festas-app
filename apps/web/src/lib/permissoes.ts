@@ -77,7 +77,7 @@ export const FUNCOES: FuncaoUtilizador[] = [
 // CACIFOS: cacifos (escrita) + reservas (leitura - ponto de vista festas/crianças).
 // MONITOR: monitores (leitura - vê Gantt + notas diárias).
 // FESTAS_ACABAR: festas_acabar (escrita - tabela de festas a acabar).
-// RECECAO: reservas (escrita), clientes (escrita), cacifos (leitura) - faz check-in e cria reservas.
+// RECECAO: reservas (escrita), clientes (leitura) - faz check-in e cria reservas.
 // STAFF: reservas (leitura), cacifos (escrita), festas_acabar (leitura) - apoio geral no parque.
 export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAcesso>>> = {
   ADMINISTRADOR: {
@@ -108,7 +108,6 @@ export const PERMISSOES: Record<FuncaoUtilizador, Partial<Record<Modulo, NivelAc
   RECECAO: {
     reservas: "escrita",
     clientes: "leitura",
-    cacifos: "leitura",
   },
   STAFF: {
     reservas: "leitura",

@@ -129,12 +129,13 @@ describe("Use cases — Festas (custos)", () => {
     });
     expect(parcial.pago).toBe(false);
 
-    const liquidada = await reservaService.atualizarPagamento(festa.id, {
+    await reservaService.atualizarPagamento(festa.id, {
       pagamentos: [
         { valor: 100, metodo: "MBWAY" },
         { valor: 225, metodo: "DINHEIRO" },
       ],
     });
+    const liquidada = await reservaService.getById(festa.id);
     expect(liquidada.pago).toBe(true);
     expect(liquidada.pagamentos).toHaveLength(2);
 

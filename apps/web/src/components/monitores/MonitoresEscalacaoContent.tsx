@@ -5,7 +5,6 @@ import { UserCog, Plus, Pencil, Trash2, MapPin, Clock, Tv, Minimize2 } from "luc
 import { PageHeader, Button } from "@/components/ui";
 import { Modal } from "@/components/ui/modal";
 import ConfirmActionModal from "@/components/ui/modals/ConfirmActionModal";
-import DatePicker from "@/components/form/date-picker";
 import { useAlocacoesByDate, useDeleteAlocacao } from "@/hooks/use-alocacoes-monitor";
 import { useLocais } from "@/hooks/use-locais";
 import { useMinhasPermissoes } from "@/hooks/use-permissoes";
@@ -19,7 +18,7 @@ import type { AlocacaoMonitor } from "@/lib/api/alocacaoMonitor";
 import { formatDate, toLocalISODate } from "@/utils/date";
 
 export default function MonitoresEscalacaoContent() {
-  const [selectedDate, setSelectedDate] = useState(() => toLocalISODate(new Date()));
+  const [selectedDate] = useState(() => toLocalISODate(new Date()));
   const [formOpen, setFormOpen] = useState(false);
   const [editingAlocacao, setEditingAlocacao] = useState<AlocacaoMonitor | null>(null);
   const [selectedAlocacao, setSelectedAlocacao] = useState<AlocacaoMonitor | null>(null);
@@ -36,12 +35,6 @@ export default function MonitoresEscalacaoContent() {
   const { isTVMode, toggleTVMode } = useTVMode();
 
   const formattedDate = formatDate(selectedDate);
-
-  // Estável (useCallback) - evita re-inicialização do flatpickr a cada render.
-  const handleDateChange = useCallback(([date]: Date[]) => {
-    if (!date) return;
-    setSelectedDate(toLocalISODate(date));
-  }, []);
 
   const handleAdd = useCallback(() => {
     setEditingAlocacao(null);
@@ -113,13 +106,6 @@ export default function MonitoresEscalacaoContent() {
       <div className="p-4 rounded-xl bg-white border border-border shadow-theme-xs">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
-            <DatePicker
-              id="monitores-date-picker"
-              defaultDate={selectedDate}
-              onChange={handleDateChange}
-              className="w-44"
-            />
-
             {/* Legenda por local */}
             {legendLocais.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">

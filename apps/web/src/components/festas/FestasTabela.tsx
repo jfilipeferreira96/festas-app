@@ -644,9 +644,16 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
               const efectivo =
                 r.estado === "RESERVA" && r.caucao === "PAGA" ? "CONFIRMADO" : r.estado;
               return (
-                <StatusBadge status={efectivo as StatusType}>
-                  {ESTADO_LABELS[efectivo] ?? efectivo}
-                </StatusBadge>
+                <div className="flex flex-col items-start gap-1">
+                  <StatusBadge status={efectivo as StatusType}>
+                    {ESTADO_LABELS[efectivo] ?? efectivo}
+                  </StatusBadge>
+                  {efectivo === "CONFIRMADO" && r.caucao === "PAGA" && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-50 text-brand-700 border border-brand-200">
+                      ✓ Preparada
+                    </span>
+                  )}
+                </div>
               );
             },
           },
@@ -746,17 +753,6 @@ export default function FestasTabela({ mode = "full" }: { mode?: "full" | "cacif
                   className="p-1.5 rounded-lg hover:bg-green-50 text-text-muted hover:text-accent-green-400 transition-colors"
                 >
                   <SquareCheck size={15} />
-                </button>
-              </Tooltip>
-            )}
-            {/* Quick action: Preencher cacifos (CONFIRMADO / EM_CURSO) */}
-            {(r.estado === "CONFIRMADO" || r.estado === "EM_CURSO") && (
-              <Tooltip content="Preencher cacifos" position="top" theme="dark">
-                <button
-                  onClick={() => setPreencherCacifosReservaId(r.id)}
-                  className="p-1.5 rounded-lg hover:bg-blue-50 text-text-muted hover:text-brand-500 transition-colors"
-                >
-                  <ClipboardList size={15} />
                 </button>
               </Tooltip>
             )}

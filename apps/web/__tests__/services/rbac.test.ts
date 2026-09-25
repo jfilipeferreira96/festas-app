@@ -169,13 +169,10 @@ describe("RBAC - Matriz hardcoded", () => {
       expect(canRead("RECECAO", "clientes")).toBe(true);
     });
 
-    it("deve ter leitura no módulo cacifos", () => {
-      expect(PERMISSOES.RECECAO.cacifos).toBe("leitura");
-    });
-
-    it("NÃO deve ter escrita em cacifos (só leitura)", () => {
-      expect(hasAccess("RECECAO", "cacifos", "escrita")).toBe(false);
-      expect(canRead("RECECAO", "cacifos")).toBe(true);
+    it("NÃO deve ter acesso ao módulo cacifos (página retirada da receção, 24/09/2026)", () => {
+      expect(PERMISSOES.RECECAO.cacifos).toBeUndefined();
+      expect(hasAccess("RECECAO", "cacifos", "leitura")).toBe(false);
+      expect(canRead("RECECAO", "cacifos")).toBe(false);
     });
 
     it("NÃO deve ter acesso a lanche", () => {
