@@ -180,6 +180,24 @@ describe("EntradaLivreForm", () => {
     await waitFor(() => expect(valorLinhaTotal()).toBe("6,00 €"));
   });
 
+  it("extra POR_PESSOA permite baixar o nº de pessoas (2 → 1: 5,00 € → 2,50 €)", async () => {
+    const user = userEvent.setup();
+    await montarForm();
+
+    await user.click(cartao(/Adulto/));
+    await user.click(screen.getByText("Mostrar").closest("button")!);
+    await user.click(screen.getByText(extraPinturas.nome).closest("button")!);
+
+    // Por defeito conta as 2 pessoas (1 criança + 1 adulto)
+    await waitFor(() => expect(screen.getByText(/Extras: 5,00/)).toBeInTheDocument());
+
+    // Baixar para 1 pessoa: 2,50 €
+    await user.click(screen.getByRole("button", { name: "Diminuir quantidade" }));
+    await waitFor(() => expect(screen.getByText(/Extras: 2,50/)).toBeInTheDocument());
+    // 6 tempo + 6 adulto + 2,50 extra = 14,50 €
+    await waitFor(() => expect(valorLinhaTotal()).toBe("14,50 €"));
+  });
+
   it("total = entrada + lanche + adulto + extras (6 + 3 + 6 + 5 = 20,00 €)", async () => {
     const user = userEvent.setup();
     await montarForm();

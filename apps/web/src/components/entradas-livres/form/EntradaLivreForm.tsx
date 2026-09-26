@@ -101,9 +101,10 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     const criancasComLanche = temLanche ? criancasWatched.filter((c) => c.querLanche).length : 0;
     const custoLanche = +(precoLanche * criancasComLanche).toFixed(2);
     const custoExtras = +calcularCustoExtras(
-      extrasIdsWatched.map((id) => ({ extraId: id, quantidade: extrasQuantidadesWatched[id] ?? 1 })),
+      extrasIdsWatched.map((id) => ({ extraId: id, quantidade: extrasQuantidadesWatched[id] ?? totalPessoas })),
       Array.isArray(extrasData) ? extrasData : [],
-      totalPessoas
+      totalPessoas,
+      { porPessoaQuantidade: true }
     ).toFixed(2);
     const precoMeias = Number(configPreco?.precoMeias ?? 1.5);
     const custoMeias = +((meiasQuantidadeWatched ?? 0) * precoMeias).toFixed(2);

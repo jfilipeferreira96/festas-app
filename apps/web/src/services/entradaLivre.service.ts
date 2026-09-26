@@ -141,6 +141,27 @@ function quantidadeDeExtra(quantidades: Record<string, number> | undefined, extr
   return Math.max(1, Math.round(q ?? 1));
 }
 
+async function normalizarExtrasEntrada(
+  ids: string[],
+  quantidades: Record<string, number> | undefined,
+  numPessoas: number
+): Promise<{ extraId: string; quantidade: number }[]> {
+  if (ids.length === 0) return [];
+  const extrasData = await prisma.extra.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, baseCobranca: true },
+  });
+  const porId = new Map(extrasData.map((e) => [e.id, e]));
+  return ids.map((id) => {
+    const explicita = quantidades?.[id];
+    const porPessoa = porId.get(id)?.baseCobranca === "POR_PESSOA";
+    // Sem quantidade explícita: POR_PESSOA assume todas as pessoas (compat),
+    // POR_UNIDADE assume 1. O form envia sempre a quantidade escolhida.
+    const quantidade = explicita ?? (porPessoa ? Math.max(1, numPessoas) : 1);
+    return { extraId: id, quantidade };
+  });
+}
+
 async function calcularCustoExtras(
   itens: { extraId: string; quantidade: number }[],
   numPessoas: number
@@ -154,7 +175,12 @@ async function calcularCustoExtras(
   return itens.reduce((acc, item) => {
     const ex = porId.get(item.extraId);
     if (!ex) return acc;
-    const qtd = ex.baseCobranca === "POR_PESSOA" ? numPessoas : item.quantidade;
+    // POR_PESSOA nas entradas: a quantidade é quantas pessoas o quiseram
+    // (1..numPessoas) - vem do stepper do form; clamp defensivo.
+    const qtd =
+      ex.baseCobranca === "POR_PESSOA"
+        ? Math.min(Math.max(item.quantidade, 1), Math.max(numPessoas, 1))
+        : item.quantidade;
     return acc + Number(ex.precoUnitario) * qtd;
   }, 0);
 }
@@ -332,10 +358,7 @@ export const entradaLivreService = {
     const criancasComLanche = contarCriancasComLanche(criancas, data.temLanche);
     const custoLanche = precoLanche * criancasComLanche;
 
-    const extrasItens = (extrasIds ?? []).map((extraId) => ({
-      extraId,
-      quantidade: quantidadeDeExtra(data.extrasQuantidades, extraId),
-    }));
+    const extrasItens = await normalizarExtrasEntrada(extrasIds ?? [], data.extrasQuantidades, totalPessoas);
     const custoExtras = await calcularCustoExtras(extrasItens, totalPessoas);
 
     const custoMeias =
@@ -690,12 +713,12 @@ export const entradaLivreService = {
       novoFimPrevisto = new Date(inicioEm.getTime() + duracaoMinutos * 60 * 1000);
     }
 
+    const numPessoasAtualizar =
+      (criancas ?? (entrada.criancas as unknown as CriancaInput[])).length +
+      (data.numAdultos ?? entrada.numAdultos);
     const extrasNovos =
       extrasIds !== undefined
-        ? extrasIds.map((extraId) => ({
-            extraId,
-            quantidade: quantidadeDeExtra(extrasQuantidades, extraId),
-          }))
+        ? await normalizarExtrasEntrada(extrasIds, extrasQuantidades, numPessoasAtualizar)
         : entrada.extras.map((e) => ({ extraId: e.extraId, quantidade: e.quantidade }));
     const mapExtrasAtuais = new Map(entrada.extras.map((e) => [e.extraId, e.quantidade]));
     const extrasMudaram =

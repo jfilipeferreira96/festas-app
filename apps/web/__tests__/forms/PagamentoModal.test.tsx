@@ -131,16 +131,10 @@ describe("PagamentoModal (festas)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("usar o total sugerido actualiza o total acordado (e a falta)", async () => {
-    const user = userEvent.setup();
+  it("não tem caixa de total sugerido (removida a pedido do cliente)", async () => {
     await montarModal();
 
-    // Sugerido = 15 € × 10 crianças = 150 € (fixture com precoCriancaAplicado 15)
-    await user.click(screen.getByText("Usar sugerido"));
-
-    // Total e falta passam a 150 € (total e ledger ficam em sincronia)
-    expect(screen.getByText(/Falta liquidar 150,00\s€/)).toBeInTheDocument();
-    expect(screen.getByText(/0,00\s€ de 150,00\s€/)).toBeInTheDocument();
-    expect(textoResumo()).toContain("A pagar 150,00 €");
+    expect(screen.queryByText("Usar sugerido")).not.toBeInTheDocument();
+    expect(screen.queryByText("Total sugerido")).not.toBeInTheDocument();
   });
 });

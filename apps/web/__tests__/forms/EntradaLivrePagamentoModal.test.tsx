@@ -60,24 +60,14 @@ describe("EntradaLivrePagamentoModal", () => {
     expect(screen.getByText(/Valor acordado da entrada/)).toBeInTheDocument();
   });
 
-  it("estado inicial: total 20 €, recebido 10 €, falta 10 €; sugerido inclui +5 € de excesso", async () => {
+  it("estado inicial: total 20 €, recebido 10 €, falta 10 € (sem caixa de sugerido)", async () => {
     await montarModal();
 
     expect(screen.getByText("Por pagar")).toBeInTheDocument();
     expect(screen.getByText(/Falta liquidar 10,00\s€/)).toBeInTheDocument();
     expect(screen.getByText(/10,00\s€ de 20,00\s€/)).toBeInTheDocument();
-    // Sugerido = custo 20 € + excesso 5 €
-    expect(screen.getByText(/Excesso de tempo/)).toBeInTheDocument();
-    expect(screen.getByText(/Sugerido/)).toBeInTheDocument();
-  });
-
-  it("'Usar sugerido' (25 €) actualiza a falta", async () => {
-    const user = userEvent.setup();
-    await montarModal();
-
-    await user.click(screen.getByText("Usar sugerido"));
-    expect(screen.getByText(/Falta liquidar 15,00\s€/)).toBeInTheDocument();
-    expect(screen.getByText(/10,00\s€ de 25,00\s€/)).toBeInTheDocument();
+    expect(screen.queryByText("Usar sugerido")).not.toBeInTheDocument();
+    expect(screen.queryByText("Total sugerido")).not.toBeInTheDocument();
   });
 
   it("pagamento que liquida muda o badge para 'Pago'", async () => {
@@ -99,7 +89,6 @@ describe("EntradaLivrePagamentoModal", () => {
     const user = userEvent.setup();
     await montarModal();
 
-    await user.click(screen.getByText("Usar sugerido"));
     await escolherOpcaoSelect(user, screen.getByText("Método *"), "Multibanco");
     await user.click(screen.getByTitle("Adicionar pagamento"));
     await user.click(within(document.body).getByRole("button", { name: "Guardar Pagamento" }));
@@ -107,10 +96,10 @@ describe("EntradaLivrePagamentoModal", () => {
     await waitFor(() => expect(vi.mocked(entradaLivreApi.atualizarPagamento)).toHaveBeenCalledTimes(1));
     const chamada = vi.mocked(entradaLivreApi.atualizarPagamento).mock.calls[0]!;
     expect(chamada[0]).toBe(entradaPagamentoFixture.id);
-    expect(chamada[1]!.custoTotalFinal).toBe(25);
+    expect(chamada[1]!.custoTotalFinal).toBe(20);
     expect(chamada[1]!.pagamentos).toEqual([
       { valor: 10, metodo: "MBWAY", nota: undefined },
-      { valor: 15, metodo: "MULTIBANCO", nota: undefined },
+      { valor: 10, metodo: "MULTIBANCO", nota: undefined },
     ]);
 
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Pagamento atualizado com sucesso."));

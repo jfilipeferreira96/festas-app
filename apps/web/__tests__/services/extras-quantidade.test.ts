@@ -180,7 +180,9 @@ describe("Extras - quantidade e cobrança por pessoa", () => {
 
       const qtds = new Map(comExtras.extras.map((e) => [e.extraId, e.quantidade]));
       expect(qtds.get(TEST_IDS.EXTRA_1)).toBe(2);
-      expect(qtds.get(TEST_IDS.EXTRA_2)).toBe(1);
+      // POR_PESSOA sem quantidade explícita: persiste todas as pessoas (3),
+      // coerente com o que é faturado (30 € × 3)
+      expect(qtds.get(TEST_IDS.EXTRA_2)).toBe(3);
     });
 
     it("custoTotal manual prevalece sobre o calculado", async () => {

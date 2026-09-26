@@ -29,14 +29,22 @@ export default function ExtrasEntradaSection({ numPessoas }: ExtrasEntradaSectio
   const totalExtras = useMemo(
     () =>
       calcularCustoExtras(
-        extrasIds.map((id) => ({ extraId: id, quantidade: extrasQuantidades[id] ?? 1 })),
+        extrasIds.map((id) => ({ extraId: id, quantidade: extrasQuantidades[id] ?? numPessoas })),
         extraItems,
-        numPessoas
+        numPessoas,
+        { porPessoaQuantidade: true }
       ),
     [extrasIds, extrasQuantidades, extraItems, numPessoas]
   );
 
   const toggleExtra = (id: string) => {
+    const selecionado = !extrasIds.includes(id);
+    if (selecionado) {
+      const extra = extraItems.find((e) => e.id === id);
+      const qtdPadrao =
+        extra?.baseCobranca === "POR_PESSOA" ? Math.max(1, numPessoas) : extrasQuantidades[id] ?? 1;
+      setValue("extrasQuantidades", { ...extrasQuantidades, [id]: qtdPadrao }, { shouldDirty: true });
+    }
     setValue(
       "extrasIds",
       extrasIds.includes(id) ? extrasIds.filter((x) => x !== id) : [...extrasIds, id],
@@ -99,8 +107,9 @@ export default function ExtrasEntradaSection({ numPessoas }: ExtrasEntradaSectio
                   {isSelected && (
                     <ExtrasQuantidadeStepper
                       extra={item}
-                      quantidade={extrasQuantidades[item.id] ?? 1}
+                      quantidade={extrasQuantidades[item.id] ?? numPessoas}
                       numPessoas={numPessoas}
+                      porPessoaEditavel
                       onChange={(qtd) => setQuantidade(item.id, qtd)}
                     />
                   )}
