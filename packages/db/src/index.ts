@@ -6,7 +6,7 @@ import { createPrismaClient } from "./mariadb-adapter";
  * Resolve qual DATABASE_URL usar conforme DB_TARGET (apenas em dev).
  *
  * Em produção (NODE_ENV === "production"), DB_TARGET é ignorado.
- * A app usa o DATABASE_URL do .env.production.
+ * A app usa o DATABASE_URL diretamente.
  *
  * Targets disponíveis:
  *   local-prod   → DATABASE_URL_LOCAL_PROD  (default)
@@ -49,7 +49,7 @@ function parseDbUrl(url: string): { host: string; port: string; schema: string }
 function resolveDatabaseUrl(): { url: string; info: DbInfo } {
   const isProd = process.env.NODE_ENV === "production";
 
-  // Em produção, usar DATABASE_URL diretamente (.env.production)
+  // Em produção, usar DATABASE_URL diretamente (apps/web/.env)
   if (isProd) {
     const url = process.env.DATABASE_URL || "";
     const parsed = parseDbUrl(url);

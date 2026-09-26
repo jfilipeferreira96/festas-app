@@ -12,7 +12,8 @@
  *   node scripts/remote-db.mjs seed:prod prod   # minimal seed (admin+RBAC+cacifos) on remote prod
  *   node scripts/remote-db.mjs seed:dev test    # full demo dataset on remote test
  *
- * Reads the remote connection string from apps/web/.env.production (DATABASE_URL),
+ * Reads the remote connection string from apps/web/.env (DATABASE_URL_REMOTE_PROD
+ * with fallback to DATABASE_URL),
  * then rewrites the host from "localhost" to the public host for remote access.
  * Override the public host with REMOTE_DB_HOST (default: 185.32.188.42).
  *
@@ -24,21 +25,22 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ENV_PROD = resolve(__dirname, "..", "apps", "web", ".env.production");
-config({ path: ENV_PROD });
+const ENV_APP = resolve(__dirname, "..", "apps", "web", ".env");
+config({ path: ENV_APP });
 
 const PUBLIC_HOST = process.env.REMOTE_DB_HOST || "185.32.188.42";
-const base = process.env.DATABASE_URL;
+// Prefere a URL remota explícita (credenciais cPanel); fallback: DATABASE_URL (local)
+const base = process.env.DATABASE_URL_REMOTE_PROD || process.env.DATABASE_URL;
 
 if (!base) {
-  console.error("❌ DATABASE_URL não encontrado em apps/web/.env.production");
+  console.error("❌ DATABASE_URL não encontrado em apps/web/.env");
   process.exit(1);
 }
 
 /**
  * Build a remote connection URL for a given database name.
  *
- * The .env.production may use "localhost" or "127.0.0.1" as host (for in-server
+ * The .env may use "localhost" or "127.0.0.1" as host (for in-server
  * access). We rewrite ANY host:port to the public host so we can connect remotely.
  * Matches: @localhost:3306 | @127.0.0.1:3306 | @185.32.188.42:3306
  * The host segment excludes ":" and "/" so the password (which may contain dots)

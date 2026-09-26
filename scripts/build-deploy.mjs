@@ -86,7 +86,7 @@ const TEST_PORT = 3999;
 const STANDALONE = join(ROOT, "apps", "web", ".next", "standalone");
 const STATIC_DIR = join(ROOT, "apps", "web", ".next", "static");
 const PUBLIC_DIR = join(ROOT, "apps", "web", "public");
-const ENV_PROD = join(ROOT, "apps", "web", ".env.production");
+const ENV_PROD = join(ROOT, "apps", "web", ".env");
 const DEPLOY = join(ROOT, "deploy");
 const DEPLOY_ZIP = join(ROOT, "deploy.zip");
 const DEPLOY_TARGZ = join(ROOT, "deploy.tar.gz");
@@ -514,7 +514,7 @@ mkdirSync(uploads, { recursive: true });
 writeFileSync(join(webPublic, "uploads", ".gitkeep"), "");
 ok("uploads/ criado (gravável).");
 
-// 2e. .env de PRODUÇÃO (sobrescreve o .env local que veio traçado)
+// 2e. .env da app (fonte única: apps/web/.env — garante connection_limit)
 const envDest = join(DEPLOY, "apps", "web", ".env");
 if (existsSync(ENV_PROD)) {
   let envProd = readFileSync(ENV_PROD, "utf8");
@@ -524,7 +524,7 @@ if (existsSync(ENV_PROD)) {
   writeFileSync(envDest, envProd);
   ok(".env de produção copiado para deploy/apps/web/.env (connection_limit=5 garantido se ausente)");
 } else {
-  err("apps/web/.env.production não existe. Cria-o com as credenciais de produção.");
+  err("apps/web/.env não existe. Cria-o com as credenciais da app.");
 }
 
 // 2f. app.js - entry point do Phusion Passenger -----------------------------
@@ -942,9 +942,11 @@ rmSync(DIFF_SQL, { force: true });
 rmSync(FULL_SQL, { force: true });
 
 function remoteProdUrlFromEnv() {
-  const envProdPath = join(ROOT, "apps", "web", ".env.production");
-  if (!existsSync(envProdPath)) return null;
-  const m = readFileSync(envProdPath, "utf8").match(/^DATABASE_URL=(.+)$/m);
+  const envAppPath = join(ROOT, "apps", "web", ".env");
+  if (!existsSync(envAppPath)) return null;
+  const envApp = readFileSync(envAppPath, "utf8");
+  // Prefere a URL remota explícita (credenciais cPanel); fallback: DATABASE_URL (local)
+  const m = envApp.match(/^DATABASE_URL_REMOTE_PROD=(.+)$/m) || envApp.match(/^DATABASE_URL=(.+)$/m);
   if (!m) return null;
   const publicHost = process.env.REMOTE_DB_HOST || "185.32.188.42";
   return m[1]
@@ -976,7 +978,7 @@ if (DO_SCHEMA) {
 
   const remoteUrl = remoteProdUrlFromEnv();
   if (!remoteUrl) {
-    console.warn("⚠️  apps/web/.env.production sem DATABASE_URL - bundle SEM schema-diff.sql.");
+    console.warn("⚠️  apps/web/.env sem DATABASE_URL - bundle SEM schema-diff.sql.");
   } else {
     log("A gerar diff de schema (BD remota de produção ↔ schema.prisma)...");
     const tmpFrom = join(DEPLOY, ".from-datasource.prisma");

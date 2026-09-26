@@ -11,14 +11,15 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ENV_PROD = resolve(__dirname, "..", "apps", "web", ".env.production");
-config({ path: ENV_PROD });
+const ENV_APP = resolve(__dirname, "..", "apps", "web", ".env");
+config({ path: ENV_APP });
 
 const PUBLIC_HOST = process.env.REMOTE_DB_HOST || "185.32.188.42";
-const base = process.env.DATABASE_URL;
+// Prefere a URL remota explícita (credenciais cPanel); fallback: DATABASE_URL (local)
+const base = process.env.DATABASE_URL_REMOTE_PROD || process.env.DATABASE_URL;
 
 if (!base) {
-  console.error("❌ DATABASE_URL não encontrado em apps/web/.env.production");
+  console.error("❌ DATABASE_URL não encontrado em apps/web/.env");
   process.exit(1);
 }
 
