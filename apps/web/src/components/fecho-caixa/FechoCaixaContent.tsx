@@ -62,14 +62,18 @@ export default function FechoCaixaContent({ embedded = false }: FechoCaixaConten
         <PageHeader title="Fecho de Caixa" subtitle={`Quanto se recebeu - ${dataFmt}`} />
       )}
 
-      {/* Controlos */}
-      <div className={`${embedded ? "" : "mt-4"} flex flex-wrap items-end gap-3`}>
-        <div className="w-56">
-          <DatePicker id="fecho-caixa-data" label="Dia" defaultDate={data} onChange={handleDateChange} />
+      {/* Controlos - cartão consistente com os filtros da tab "Geral" e restantes páginas */}
+      <div
+        className={`${embedded ? "" : "mt-4"} p-4 rounded-[14px] bg-surface border border-border shadow-card no-print`}
+      >
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-56">
+            <DatePicker id="fecho-caixa-data" label="Dia" defaultDate={data} onChange={handleDateChange} />
+          </div>
+          <Button type="button" onClick={handlePrint} disabled={!fecho} className="shrink-0">
+            <Printer size={16} className="mr-1.5" /> Imprimir
+          </Button>
         </div>
-        <Button type="button" onClick={handlePrint} disabled={!fecho} className="shrink-0">
-          <Printer size={16} className="mr-1.5" /> Imprimir
-        </Button>
       </div>
 
       {isLoading || !fecho ? (

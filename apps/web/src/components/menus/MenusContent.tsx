@@ -49,6 +49,16 @@ export default function MenusContent() {
     return { grouped, ungrouped, all: items };
   }, [extras]);
 
+  // Subcategorias distintas (MENU + EXTRA) para sugerir no formulário
+  const subcategoriasExistentes = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of extras ?? []) {
+      const sub = e.subcategoria?.trim();
+      if (sub) set.add(sub);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-PT"));
+  }, [extras]);
+
   const formatCurrency = useCallback(
     (value: number) =>
       new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(value),
@@ -251,9 +261,18 @@ export default function MenusContent() {
                     type="text"
                     value={formSubcategoria}
                     onChange={(e) => setFormSubcategoria(e.target.value)}
-                    placeholder="Ex: Diversão, Premium"
+                    list="menus-subcategoria-suggestions"
+                    placeholder="Escolher ou escrever nova..."
                     className="w-full h-10 px-3 text-sm rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
+                  <datalist id="menus-subcategoria-suggestions">
+                    {subcategoriasExistentes.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+                  <p className="mt-1 text-[11px] text-text-muted">
+                    Seleciona uma existente ou escreve para criar uma nova.
+                  </p>
                 </div>
                 <div className="flex items-center gap-3 pt-5">
                   <Switch checked={formRequerTexto} onChange={setFormRequerTexto} />

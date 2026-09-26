@@ -86,44 +86,46 @@ export default function BolosContent() {
     <div>
       <PageHeader title="Bolos" subtitle="Bolos da casa a encomendar, por semana" />
 
-      {/* Navegação de semana + imprimir */}
-      <div className="flex items-center gap-3 mt-4 mb-6 flex-wrap">
-        <div className="flex items-center gap-1">
-          <Button variant="outline" onClick={() => moverSemana(-1)} className="!px-2.5">
-            <ChevronLeft size={16} />
+      {/* Navegação de semana + imprimir (cartão consistente com "Ir para o dia" das Festas) */}
+      <div className="mt-4 mb-6 p-4 rounded-[14px] bg-surface border border-border shadow-card no-print">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1">
+            <Button variant="outline" onClick={() => moverSemana(-1)} className="!px-2.5">
+              <ChevronLeft size={16} />
+            </Button>
+            <Button variant="outline" onClick={() => moverSemana(1)} className="!px-2.5">
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+          <span className="text-sm font-semibold text-text-primary whitespace-nowrap">
+            Semana de {format(inicio, "dd/MM")} a {format(addDays(inicio, 6), "dd/MM")}
+          </span>
+          <Button variant="outline" onClick={() => setDataRef(toISODate(new Date()))}>
+            Hoje
           </Button>
-          <Button variant="outline" onClick={() => moverSemana(1)} className="!px-2.5">
-            <ChevronRight size={16} />
+          <div className="w-52">
+            <DatePicker
+              key={dataRef}
+              id="bolos-data"
+              placeholder="Ir para data"
+              defaultDate={dataRef}
+              onChange={([date]) => {
+                if (date) setDataRef(toISODate(date));
+              }}
+            />
+          </div>
+          <Button
+            onClick={() => imprimirBolos(festasDaSemana)}
+            disabled={totalBolos === 0}
+            className="flex items-center gap-2 ml-auto"
+          >
+            <Printer size={16} />
+            Imprimir semana
           </Button>
+          <span className="text-sm text-text-muted">
+            {totalBolos} {totalBolos === 1 ? "bolo a encomendar" : "bolos a encomendar"}
+          </span>
         </div>
-        <span className="text-sm font-semibold text-text-primary whitespace-nowrap">
-          Semana de {format(inicio, "dd/MM")} a {format(addDays(inicio, 6), "dd/MM")}
-        </span>
-        <Button variant="outline" onClick={() => setDataRef(toISODate(new Date()))}>
-          Hoje
-        </Button>
-        <div className="w-52">
-          <DatePicker
-            key={dataRef}
-            id="bolos-data"
-            placeholder="Ir para data"
-            defaultDate={dataRef}
-            onChange={([date]) => {
-              if (date) setDataRef(toISODate(date));
-            }}
-          />
-        </div>
-        <Button
-          onClick={() => imprimirBolos(festasDaSemana)}
-          disabled={totalBolos === 0}
-          className="flex items-center gap-2"
-        >
-          <Printer size={16} />
-          Imprimir semana
-        </Button>
-        <span className="text-sm text-text-muted">
-          {totalBolos} {totalBolos === 1 ? "bolo a encomendar" : "bolos a encomendar"}
-        </span>
       </div>
 
       {isLoading ? (
