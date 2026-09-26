@@ -52,15 +52,28 @@ export default function PagamentoSection({
     const caucaoValor =
       reserva.valorCaucao && Number(reserva.valorCaucao) > 0 ? ` (${formatEuro(Number(reserva.valorCaucao))})` : "";
     const caucaoMetodo = reserva.metodoCaucao ? ` · ${metodoPagamentoLabel(reserva.metodoCaucao)}` : "";
-    const pagamentos = reserva.pagamentos ?? [];
+    const ledgerEfetivo = comCaucaoNoLedger(
+      (reserva.pagamentos ?? []).map((p) => ({
+        id: p.id,
+        valor: Number(p.valor),
+        metodo: p.metodo as PagamentoLedgerItem["metodo"],
+        nota: p.nota ?? null,
+        createdAt: p.createdAt,
+      })),
+      {
+        estado: reserva.caucao,
+        valor: reserva.valorCaucao != null ? Number(reserva.valorCaucao) : 0,
+        metodo: reserva.metodoCaucao,
+      },
+      caucaoNoLedgerEm
+    );
     const metodos =
-      pagamentos.length > 0
-        ? pagamentos.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
+      ledgerEfetivo.length > 0
+        ? ledgerEfetivo.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
         : "-";
-    // Mesma matemática da modal de pagamento: `pago` derivado da soma do
-    // ledger (que inclui a linha "Caução") contra o total acordado.
+    // `pago` derivado da soma do ledger efetivo contra o total acordado.
     const totalAcordado = Number(reserva.valorTotal ?? 0);
-    const falta = faltaPagar(totalAcordado, pagamentos);
+    const falta = faltaPagar(totalAcordado, ledgerEfetivo);
     const liquidado = falta <= EPS && totalAcordado > 0;
 
     return (
@@ -83,7 +96,7 @@ export default function PagamentoSection({
                         tone: liquidado ? "verde" : "laranja",
                       },
                       { label: "Total a pagar", value: formatEuro(totalAcordado) },
-                      { label: "Valor pago", value: formatEuro(totalPago(pagamentos)) },
+                      { label: "Valor pago", value: formatEuro(totalPago(ledgerEfetivo)) },
                       ...(falta > 0
                         ? [{ label: "Falta", value: formatEuro(falta), tone: "laranja" as const }]
                         : []),
@@ -93,11 +106,12 @@ export default function PagamentoSection({
 
                   {estimativa &&
                     estimativa.estimativa > 0 &&
-                    Math.abs(estimativa.estimativa - Number(reserva.valorTotal ?? 0)) > 0.01 && (
+                    Math.abs(estimativa.estimativa + extrasTotal - Number(reserva.valorTotal ?? 0)) > 0.01 && (
                       <p className="text-[11px] text-accent-orange-600 mt-2">
-                        Preço do tarifário para a composição atual: ≈{formatEuro(estimativa.estimativa)} (
-                        {estimativa.criancasFaturadas} crianças × {formatEuro(estimativa.precoCrianca)}) - difere do
-                        total acordado. Ajuste na tab "Acertos" para ficar com registo de auditoria.
+                        Preço calculado (tarifário + extras) para a composição atual: ≈
+                        {formatEuro(estimativa.estimativa + extrasTotal)} ({estimativa.criancasFaturadas} crianças ×{" "}
+                        {formatEuro(estimativa.precoCrianca)} + {formatEuro(extrasTotal)} de extras) - difere do total
+                        acordado. Ajuste na tab "Acertos" para ficar com registo de auditoria.
                       </p>
                     )}
                 </>
@@ -145,8 +159,7 @@ export default function PagamentoSection({
   const totalFinal = +(totalDevido + liquidoAjustes).toFixed(2);
   const criancasFaturadas = estimativa?.criancasFaturadas ?? 0;
   const numAdultos = watch("numAdultos") ?? 0;
-  const custoAdultos =
-    estimativa && criancasFaturadas >= 0 ? estimativa.estimativa - estimativa.precoCrianca * criancasFaturadas : 0;
+  const custoAdultos = estimativa?.custoAdultos ?? 0;
 
   return (
     <div className="space-y-3">

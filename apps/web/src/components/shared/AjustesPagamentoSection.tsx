@@ -117,26 +117,31 @@ function AjustesPagamentoSection({
     }
     const modo = redefModo as "TOTAL" | "POR_CRIANCA";
     let criado: AjustePagamento;
-    if (modo === "TOTAL") {
-      const total = parseFloat(redefValor);
-      if (!total || total <= 0) {
-        toast.error("Indique o novo total (maior que zero).");
-        return;
+    try {
+      if (modo === "TOTAL") {
+        const total = parseFloat(redefValor);
+        if (!total || total <= 0) {
+          toast.error("Indique o novo total (maior que zero).");
+          return;
+        }
+        criado = await redefinirPreco.mutateAsync(
+          { modo: "TOTAL", valor: total, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
+          { onSuccess: () => toast.success("Preço redefinido.") }
+        );
+      } else {
+        const porCabeca = parseFloat(redefPorCabeca);
+        if (!porCabeca || porCabeca <= 0) {
+          toast.error("Indique o preço por criança (maior que zero).");
+          return;
+        }
+        criado = await redefinirPreco.mutateAsync(
+          { modo: "POR_CRIANCA", precoPorCabeca: porCabeca, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
+          { onSuccess: () => toast.success("Preço redefinido.") }
+        );
       }
-      criado = await redefinirPreco.mutateAsync(
-        { modo: "TOTAL", valor: total, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
-        { onSuccess: () => toast.success("Preço redefinido.") }
-      );
-    } else {
-      const porCabeca = parseFloat(redefPorCabeca);
-      if (!porCabeca || porCabeca <= 0) {
-        toast.error("Indique o preço por criança (maior que zero).");
-        return;
-      }
-      criado = await redefinirPreco.mutateAsync(
-        { modo: "POR_CRIANCA", precoPorCabeca: porCabeca, motivo: redefMotivo.trim(), reservaId, entradaLivreId },
-        { onSuccess: () => toast.success("Preço redefinido.") }
-      );
+    } catch (err) {
+      toast.handleApiError(err, "Erro ao redefinir o preço.");
+      return;
     }
     // O ajuste REDEFINICAO devolve o novo total absoluto - sincronizar o pai
     onTotalRedefinido?.(Number(criado.valor));

@@ -14,7 +14,7 @@ function formValido(overrides?: Partial<EntradaLivreFormData>): EntradaLivreForm
     criancas: [{ nome: "  João  ", dataNascimento: "2020-01-01", querLanche: true }],
     encarregadoNome: "Pedro Costa",
     encarregadoTelefone: "913456789",
-    encarregadoEmail: "",
+    encarregadoEmail: "pedro@teste.pt",
     encarregadoCodigoPostal: "",
     adicionarCliente: true,
     encarregadosAdicionais: [],
@@ -61,7 +61,7 @@ describe("buildEntradaPayload", () => {
     expect(payload.criancas[0]!.idade).toBeGreaterThanOrEqual(6);
     expect(payload.encarregadoNome).toBe("Pedro Costa");
     expect(payload.encarregadoTelefone).toBe("913456789");
-    expect(payload.encarregadoEmail).toBeUndefined();
+    expect(payload.encarregadoEmail).toBe("pedro@teste.pt");
     expect(payload.duracaoMinutos).toBe(60);
     expect(payload.custoTotal).toBe(6);
     expect(payload.cacifoId).toBeNull();

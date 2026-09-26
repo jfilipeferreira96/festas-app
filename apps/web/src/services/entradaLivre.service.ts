@@ -314,6 +314,9 @@ export const entradaLivreService = {
 
     // Tarifário global: preço por escalão (1h/2h + hora adicional) - aplica-se a todos os dias.
     const configPreco = await configuracaoPrecoService.getConfig();
+   if (camposEntrada.meiasPrecoUnit === undefined) {
+      camposEntrada.meiasPrecoUnit = Number(configPreco.precoMeias);
+   }
     // custoHora mantém-se para registo histórico (linelegado); usa o escalão aplicável.
     const custoHora = Number(configPreco.precoEntrada1h ?? 6);
 
@@ -780,19 +783,31 @@ export const entradaLivreService = {
       }
     }
 
+    if (
+      data.meiasQuantidade !== undefined &&
+      data.meiasQuantidade > 0 &&
+      data.meiasPrecoUnit === undefined &&
+      entrada.meiasPrecoUnit == null
+    ) {
+      const cfg = await configuracaoPrecoService.getConfig();
+      camposEntrada.meiasPrecoUnit = Number(cfg.precoMeias);
+    }
+
     const updateData: Record<string, unknown> = { ...camposEntrada };
     if (criancas !== undefined) updateData.criancas = criancas as unknown as Prisma.InputJsonValue;
     if (duracaoMinutos !== undefined) updateData.duracaoMinutos = duracaoMinutos;
     if (cacifoId !== undefined) updateData.cacifoId = cacifoId || null;
-    if (novoCustoTotal !== undefined) updateData.custoTotal = novoCustoTotal;
+    if (novoCustoTotal !== undefined) {
+      if (custoTotalInput === undefined && entrada.custoTotalFinal != null) {
+        novoCustoTotal += Number(entrada.custoExcesso ?? 0);
+      }
+      updateData.custoTotal = novoCustoTotal;
+      if (entrada.custoTotalFinal != null) updateData.custoTotalFinal = novoCustoTotal;
+    }
     if (novoFimPrevisto !== undefined) updateData.fimPrevisto = novoFimPrevisto;
-    // O estado `pago` é derivado do ledger (soma >= total devido) e tem de
-    // acompanhar qualquer alteração do custo (ex: prorrogação pedida no balcão).
-    // Um `pago` explícito no payload prevalece sobre a derivação.
-    if (novoCustoTotal !== undefined && data.pago === undefined) {
+  if (novoCustoTotal !== undefined && data.pago === undefined) {
       const totalPago = entrada.pagamentos.reduce((s, p) => s + Number(p.valor), 0);
-      const totalDevido = Number(entrada.custoTotalFinal ?? novoCustoTotal);
-      updateData.pago = totalDevido > 0 ? totalPago >= totalDevido - 0.004 : false;
+      updateData.pago = novoCustoTotal > 0 ? totalPago >= novoCustoTotal - 0.004 : false;
     }
 
     const updated = await prisma.entradaLivre.update({

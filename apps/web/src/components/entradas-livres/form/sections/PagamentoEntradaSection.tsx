@@ -98,6 +98,14 @@ export default function PagamentoEntradaSection({
                       value: liquidado ? "Pago" : "Por pagar",
                       tone: liquidado ? "verde" : "laranja",
                     },
+                    ...(Number(entrada.custoExcesso ?? 0) > 0
+                      ? [
+                          {
+                            label: "Excesso de tempo",
+                            value: formatEuro(Number(entrada.custoExcesso)),
+                          },
+                        ]
+                      : []),
                     { label: "Valor total", value: formatEuro(totalBase) },
                     { label: "Valor pago", value: formatEuro(recebido) },
                     ...(falta > 0

@@ -30,7 +30,7 @@ function somaValores(linha: LinhaRelatorio): number {
   );
 }
 
-type PagamentoFixture = { valor: number; metodo: string };
+type PagamentoFixture = { valor: number; metodo: string; nota?: string | null };
 
 function reservaFixture(overrides: {
   numCriancas: number;
@@ -124,6 +124,56 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
       expect(festas.total.valorNumerario).toBe(60);
       expect(festas.total.valorMbway).toBe(40);
       expect(somaValores(festas.total)).toBe(100);
+    });
+
+    it("NÃO soma as linhas sintéticas (Caução/Excesso) - vivem na secção Outros", () => {
+      // Regressão C1/C2: com a linha "Caução" no ledger (o backend cria SEMPRE
+      // quando PAGA) e a linha "Excesso de tempo" (criada pelo finalizar),
+      // a secção Festas não as pode somar - a secção Outros também as conta.
+      const pagamentosReais = [{ valor: 100, metodo: "DINHEIRO" as const }];
+      const festas = relatorioService.calcularFestas([
+        reservaFixture({
+          numCriancas: 10,
+          pagamentos: [
+            { valor: 40, metodo: "DINHEIRO", nota: "Caução" },
+            ...pagamentosReais,
+            { valor: 5, metodo: "DINHEIRO", nota: "Excesso de tempo" },
+          ],
+          menu: { nome: "Menu X" },
+          caucao: "PAGA",
+          valorCaucao: 40,
+          custoExcesso: 5,
+          pagoExcesso: true,
+        }),
+      ]);
+
+      // Festas: só o pagamento real (100) - caução e excesso ficam para Outros
+      expect(somaValores(festas.total)).toBe(100);
+      expect(festas.total.valorNumerario).toBe(100);
+
+      // Outros: caução (40) + excesso (5) contados UMA vez
+      const outros = relatorioService.calcularOutros(
+        [
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [
+              { valor: 40, metodo: "DINHEIRO", nota: "Caução" },
+              ...pagamentosReais,
+              { valor: 5, metodo: "DINHEIRO", nota: "Excesso de tempo" },
+            ],
+            caucao: "PAGA",
+            valorCaucao: 40,
+            custoExcesso: 5,
+            pagoExcesso: true,
+          }),
+        ],
+        [],
+      );
+      expect(somaValores(outros.total)).toBe(45);
+
+      // Total geral implícito = festas + outros = 145 (o mesmo dinheiro
+      // nunca contado duas vezes)
+      expect(somaValores(festas.total) + somaValores(outros.total)).toBe(145);
     });
 
     it("agrupa por nome do menu", () => {
@@ -287,7 +337,7 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
           reservaFixture({
             numCriancas: 10,
             pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
-            caucao: "PAGA_NO_DIA",
+            caucao: "PAGA",
             valorCaucao: 50,
           }),
         ],
@@ -298,6 +348,25 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
       const lOutros = outros.linhas.find((l) => l.descricao === "Cauções outros valores");
       expect(l40!.valorNumerario).toBe(40);
       expect(lOutros!.valorNumerario).toBe(50);
+    });
+
+    it("NÃO contabiliza PAGA_NO_DIA (sem linha no ledger até iniciar a festa)", () => {
+      const outros = relatorioService.calcularOutros(
+        [
+          reservaFixture({
+            numCriancas: 10,
+            pagamentos: [{ valor: 1, metodo: "DINHEIRO" }],
+            caucao: "PAGA_NO_DIA",
+            valorCaucao: 40,
+          }),
+        ],
+        [],
+      );
+
+      // PAGA_NO_DIA ainda não materializou pagamento - contar aqui seria
+      // receita fantasma (e a modal continuaria a mostrar a falta).
+      expect(outros.linhas.find((l) => l.descricao === "Cauções 40€")).toBeUndefined();
+      expect(somaValores(outros.total)).toBe(0);
     });
 
     it("caução usa metodoCaucao explícito; sem ele, cai no 1º pagamento do ledger", () => {
@@ -313,7 +382,7 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
           reservaFixture({
             numCriancas: 10,
             pagamentos: [{ valor: 1, metodo: "MULTIBANCO" }],
-            caucao: "PAGA_NO_DIA",
+            caucao: "PAGA",
             valorCaucao: 50,
             // sem metodoCaucao → fallback: 1º pagamento (MULTIBANCO)
           }),
@@ -329,7 +398,31 @@ describe("Relatório - Cálculos puros (sem BD)", () => {
       expect(lOutros!.valorMultibanco).toBe(50);
     });
 
-    it("total da secção soma só cauções e excesso (brindes ficam informativos)", () => {
+   it("meias usam o fallback da config quando o unitário não foi persistido", () => {
+    // Regressão H5: entradas antigas sem meiasPrecoUnit guardado - a linha
+    // informativa não pode ficar a 0,00€.
+    const outros = relatorioService.calcularOutros(
+      [],
+      [
+        entradaFixture({
+          duracaoMinutos: 60,
+          custoTotal: 10,
+          custoTotalFinal: 10,
+          pagamentos: [{ valor: 10, metodo: "DINHEIRO" }],
+          meiasQuantidade: 4,
+          meiasPrecoUnit: null,
+        }),
+      ],
+      1.5, // precoMeiasFallback
+    );
+
+    const linhaMeias = outros.linhasInformativas?.find((l) => l.descricao === "Meias");
+    expect(linhaMeias).toBeDefined();
+    expect(linhaMeias!.quantidade).toBe(4);
+    expect(linhaMeias!.valorNumerario).toBe(6); // 4 × 1.5
+  });
+
+   it("total da secção soma só cauções e excesso (brindes ficam informativos)", () => {
       const outros = relatorioService.calcularOutros(
         [
           reservaFixture({

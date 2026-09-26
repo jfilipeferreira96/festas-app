@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { ArrowUpDown, Calculator, CreditCard, Printer, Wallet } from "lucide-react";
 import { Button } from "@/components/ui";
 import { imprimirTalaoEntrada } from "@/utils/print-talao";
-import { useAtualizarPagamentoEntradaLivre } from "@/hooks/use-entrada-livre";
+import { useAtualizarPagamentoEntradaLivre, useEntradaLivre } from "@/hooks/use-entrada-livre";
 import { useToast } from "@/hooks/use-toast";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import PagamentoModalShell, { type PagamentoTabConfig } from "@/components/shared/pagamento/PagamentoModalShell";
@@ -20,7 +20,7 @@ interface EntradaLivrePagamentoModalProps {
   onClose: () => void;
 }
 
-/** Sugerido = custo calculado do tarifário + excesso registado na conclusão. */
+/** Sugerido = total acordado (final) ou, em falta, tarifário + excesso. */
 function EntradaSugeridoBox({
   entrada,
   onUsarSugerido,
@@ -29,7 +29,9 @@ function EntradaSugeridoBox({
   onUsarSugerido: (valor: number) => void;
 }) {
   const excesso = entrada.custoExcesso ?? 0;
-  const sugerido = Number(entrada.custoTotal ?? 0) + excesso;
+  const temFinal = entrada.custoTotalFinal != null && Number(entrada.custoTotalFinal) > 0;
+  const base = temFinal ? Number(entrada.custoTotalFinal) : Number(entrada.custoTotal ?? 0);
+  const sugerido = temFinal ? base : base + excesso;
   if (sugerido <= 0) return null;
 
   return (
@@ -47,10 +49,10 @@ function EntradaSugeridoBox({
         </button>
       </div>
       <div className="flex justify-between text-[11px] text-text-secondary">
-        <span>Tempo + lanche + meias + extras</span>
-        <span className="tabular-nums">{fmtEuro.format(Number(entrada.custoTotal ?? 0))}</span>
+        <span>{temFinal ? "Total acordado (tarifário + extras)" : "Tempo + lanche + meias + extras"}</span>
+        <span className="tabular-nums">{fmtEuro.format(base)}</span>
       </div>
-      {excesso > 0 && (
+      {excesso > 0 && !temFinal && (
         <div className="flex justify-between text-[11px] text-accent-orange-700">
           <span>Excesso de tempo</span>
           <span className="tabular-nums">+{fmtEuro.format(excesso)}</span>
@@ -67,6 +69,12 @@ function EntradaSugeridoBox({
 export default function EntradaLivrePagamentoModal({ entrada, onClose }: EntradaLivrePagamentoModalProps) {
   const toast = useToast();
   const atualizarPagamento = useAtualizarPagamentoEntradaLivre();
+
+  // Dados frescos: o save é replace-all - adotar a versão do servidor enquanto
+  // o estado local está intocado evita apagar pagamentos de outro terminal.
+  const { data: entradaFresca } = useEntradaLivre(entrada.id);
+  const editouRef = useRef(false);
+  const dados = entradaFresca ?? entrada;
 
   // Total a pagar (só-leitura) - o valor acordado (final ?? calculado); muda
   // via "Usar sugerido" ou tab "Acertos", nunca por input livre.
@@ -87,6 +95,26 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
     }))
   );
 
+  useEffect(() => {
+    if (!entradaFresca || editouRef.current) return;
+    setPagamentos(
+      (entradaFresca.pagamentos ?? []).map((p) => ({
+        id: p.id,
+        valor: Number(p.valor),
+        metodo: p.metodo as PagamentoLedgerItem["metodo"],
+        nota: p.nota ?? null,
+        createdAt: p.createdAt,
+      }))
+    );
+    const acordado = Number(entradaFresca.custoTotalFinal ?? entradaFresca.custoTotal ?? 0) || 0;
+    if (acordado > 0) {
+      setValorTotal(String(acordado));
+    } else {
+      const sugerido = Number(entradaFresca.custoTotal ?? 0) + (entradaFresca.custoExcesso ?? 0);
+      setValorTotal(sugerido > 0 ? String(sugerido) : "");
+    }
+  }, [entradaFresca]);
+
   const totalDevido = Number(valorTotal) || 0;
   const falta = faltaPagar(totalDevido, pagamentos);
   const liquidado = falta <= EPS && totalDevido > 0;
@@ -94,13 +122,15 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
   // Acertos (tab "Acertos") aplicam write-through ao total devido no backend -
   // sincronizar o estado local para a falta subir/descer em tempo real.
   const handleAjusteAplicado = useCallback((delta: number) => {
+    editouRef.current = true;
     setValorTotal((prev) => Math.max(0, (Number(prev) || 0) + delta).toFixed(2));
   }, []);
   const handleTotalRedefinido = useCallback((novoTotal: number) => {
+    editouRef.current = true;
     setValorTotal(novoTotal.toFixed(2));
   }, []);
 
-  const criancaNomes = entrada.criancas?.map((c) => c.nome).join(", ") || entrada.encarregadoNome || "-";
+  const criancaNomes = dados.criancas?.map((c) => c.nome).join(", ") || dados.encarregadoNome || "-";
 
   const handleSave = useCallback(async () => {
     try {
@@ -128,9 +158,9 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
       ? pagamentos.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
       : undefined;
 
-  const avisos = entrada.observacoesLesoes ? (
+  const avisos = dados.observacoesLesoes ? (
     <p className="text-xs text-text-secondary whitespace-pre-wrap">
-      <span className="font-medium">Lesões / Alergias:</span> {entrada.observacoesLesoes}
+      <span className="font-medium">Lesões / Alergias:</span> {dados.observacoesLesoes}
     </p>
   ) : undefined;
 
@@ -173,16 +203,26 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
           <PagamentosLedgerSection
             totalDevido={totalDevido}
             pagamentos={pagamentos}
-            onAdd={(p) =>
+            onAdd={(p) => {
+              editouRef.current = true;
               setPagamentos((prev) => [
                 ...prev,
                 { ...p, id: `pg-${Date.now()}-${prev.length}`, createdAt: new Date().toISOString() },
-              ])
-            }
-            onRemove={(id) => setPagamentos((prev) => prev.filter((p) => p.id !== id))}
+              ]);
+            }}
+            onRemove={(id) => {
+              editouRef.current = true;
+              setPagamentos((prev) => prev.filter((p) => p.id !== id));
+            }}
           />
 
-          <EntradaSugeridoBox entrada={entrada} onUsarSugerido={(v) => setValorTotal(v.toFixed(2))} />
+          <EntradaSugeridoBox
+            entrada={dados}
+            onUsarSugerido={(v) => {
+              editouRef.current = true;
+              setValorTotal(v.toFixed(2));
+            }}
+          />
         </div>
       ),
     },
@@ -193,7 +233,7 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
       content: (
         <AjustesPagamentoSection
           entradaLivreId={entrada.id}
-          numCriancas={Array.isArray(entrada.criancas) ? entrada.criancas.length : 0}
+          numCriancas={Array.isArray(dados.criancas) ? dados.criancas.length : 0}
           onAjusteAplicado={handleAjusteAplicado}
           onTotalRedefinido={handleTotalRedefinido}
         />
@@ -204,21 +244,21 @@ export default function EntradaLivrePagamentoModal({ entrada, onClose }: Entrada
   const handleImprimirTalao = useCallback(() => {
     imprimirTalaoEntrada({
       id: entrada.id,
-      inicioEm: entrada.inicioEm,
-      fimPrevisto: entrada.fimPrevisto,
-      duracaoMinutos: entrada.duracaoMinutos,
-      criancas: entrada.criancas,
-      encarregadoNome: entrada.encarregadoNome,
-      extras: entrada.extras,
-      meiasQuantidade: entrada.meiasQuantidade,
-      temLanche: entrada.temLanche,
-      custoTotal: entrada.custoTotal,
+      inicioEm: dados.inicioEm,
+      fimPrevisto: dados.fimPrevisto,
+      duracaoMinutos: dados.duracaoMinutos,
+      criancas: dados.criancas,
+      encarregadoNome: dados.encarregadoNome,
+      extras: dados.extras,
+      meiasQuantidade: dados.meiasQuantidade,
+      temLanche: dados.temLanche,
+      custoTotal: dados.custoTotal,
       // Total em memória: o talão reflecte o que está no ecrã (mesma lógica do save)
       custoTotalFinal: valorTotal === "" ? null : Number(valorTotal),
       // Ledger em memória: o utilizador imprime o talão com o que acabou de registar
       pagamentos: pagamentos.map((p) => ({ valor: p.valor, metodo: p.metodo, nota: p.nota })),
     });
-  }, [entrada, pagamentos, valorTotal]);
+  }, [entrada.id, dados, pagamentos, valorTotal]);
 
   const heroDireita =
     totalDevido > 0 ? (

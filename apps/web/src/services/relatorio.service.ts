@@ -103,8 +103,7 @@ interface ReservaRelatorio {
   estado: string;
   pago: boolean;
   valorTotal?: unknown;
-  // Ledger de pagamentos (fonte única do recebido)
-  pagamentos: Array<{ valor: unknown; metodo: string }>;
+  pagamentos: Array<{ valor: unknown; metodo: string; nota?: string | null }>;
   // Caução
   caucao: string;
   valorCaucao: unknown;
@@ -124,7 +123,7 @@ interface EntradaRelatorio {
   custoTotal: unknown;
   custoTotalFinal: unknown;
   // Ledger de pagamentos (fonte única do recebido)
-  pagamentos: Array<{ valor: unknown; metodo: string }>;
+  pagamentos: Array<{ valor: unknown; metodo: string; nota?: string | null }>;
   pago: boolean;
   criancas: unknown;
   meiasQuantidade: number | null;
@@ -136,8 +135,13 @@ interface AjusteRelatorio {
   tipo: string;
   valor: unknown;
   metodoPagamento: string | null;
-  reserva: { pagamentos: Array<{ metodo: string }> } | null;
-  entradaLivre: { pagamentos: Array<{ metodo: string }> } | null;
+  reserva: { pagamentos: Array<{ metodo: string; nota?: string | null }> } | null;
+  entradaLivre: { pagamentos: Array<{ metodo: string; nota?: string | null }> } | null;
+}
+
+/** Linhas sintéticas do ledger - reportadas na secção "Outros", não nas Festas. */
+function ehLinhaSintetica(nota: string | null | undefined): boolean {
+  return nota === "Caução" || nota === "Excesso de tempo";
 }
 
 // ── Service ────────────────────────────────────────────────────
@@ -149,6 +153,8 @@ export const relatorioService = {
    * Só mostra linhas com dados reais - sem linhas hardcoded.
    *
    * Inclui festas: CONCLUIDA, EM_CURSO e CONFIRMADAS que estejam pagas.
+  * Entradas livres: CONCLUIDA e ATIVA (uma entrada paga hoje mas ainda
+  * a decorrer tem de aparecer no relatório do dia).
    */
   async getRelatorioFinanceiro(dataInicio: Date, dataFim: Date): Promise<RelatorioFinanceiro> {
     // O campo Reserva.data é armazenado como meia-noite UTC.
@@ -166,36 +172,39 @@ export const relatorioService = {
             { estado: "CONFIRMADO", pago: true },
           ],
         },
-        include: {
-          menu: true,
-          extras: { include: { extra: true } },
-          pagamentos: { select: { valor: true, metodo: true } },
+       include: {
+        menu: true,
+        extras: { include: { extra: true } },
+        pagamentos: { select: { valor: true, metodo: true, nota: true }, orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.entradaLivre.findMany({
+      where: {
+        inicioEm: { gte: dataInicio, lt: dataFimEnd },
+        estado: { in: ["CONCLUIDA", "ATIVA"] },
+      },
+      include: {
+        extras: { include: { extra: true } },
+        pagamentos: { select: { valor: true, metodo: true, nota: true }, orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.ajustePagamento.findMany({
+      where: {
+        createdAt: { gte: dataInicio, lt: dataFimEnd },
+      },
+      include: {
+        reserva: {
+          select: { pagamentos: { select: { metodo: true, nota: true }, orderBy: { createdAt: "asc" }, take: 1 } },
         },
-      }),
-      prisma.entradaLivre.findMany({
-        where: {
-          inicioEm: { gte: dataInicio, lt: dataFimEnd },
-          estado: "CONCLUIDA",
+        entradaLivre: {
+          select: { pagamentos: { select: { metodo: true, nota: true }, orderBy: { createdAt: "asc" }, take: 1 } },
         },
-        include: {
-          extras: { include: { extra: true } },
-          pagamentos: { select: { valor: true, metodo: true } },
-        },
-      }),
-      prisma.ajustePagamento.findMany({
-        where: {
-          createdAt: { gte: dataInicio, lt: dataFimEnd },
-        },
-        include: {
-          reserva: {
-            select: { pagamentos: { select: { metodo: true }, orderBy: { createdAt: "asc" }, take: 1 } },
-          },
-          entradaLivre: {
-            select: { pagamentos: { select: { metodo: true }, orderBy: { createdAt: "asc" }, take: 1 } },
-          },
-        },
-      }),
-    ]);
+      },
+    }),
+   ]);
+
+   const configPreco = await prisma.configuracaoPreco.findFirst();
+   const precoMeiasFallback = configPreco?.precoMeias != null ? Number(configPreco.precoMeias) : 0;
 
     const festas = this.calcularFestas(reservas as unknown as ReservaRelatorio[]);
     const entradasLivresSecao = this.calcularEntradasLivres(
@@ -204,6 +213,7 @@ export const relatorioService = {
     const outros = this.calcularOutros(
       reservas as unknown as ReservaRelatorio[],
       entradas as unknown as EntradaRelatorio[],
+      precoMeiasFallback,
     );
     const ajustesSecao = this.calcularAjustes(ajustes as unknown as AjusteRelatorio[]);
 
@@ -243,8 +253,10 @@ export const relatorioService = {
       linha.quantidade += 1;
       linha.totalCriancas += r.numCriancas;
 
-      // Fonte única: ledger de pagamentos (N métodos)
-      for (const p of r.pagamentos) somarPorMetodo(linha, p.metodo, toNum(p.valor));
+     for (const p of r.pagamentos) {
+       if (ehLinhaSintetica(p.nota)) continue;
+       somarPorMetodo(linha, p.metodo, toNum(p.valor));
+     }
     }
 
     const linhas = Array.from(grupos.values()).sort((a, b) => b.quantidade - a.quantidade);
@@ -282,8 +294,7 @@ export const relatorioService = {
       // Fonte única: ledger de pagamentos (N métodos)
       for (const p of e.pagamentos) somarPorMetodo(linha, p.metodo, toNum(p.valor));
 
-      // Lanches/extras (informativo - já incluídos no custoTotalFinal)
-      const metodoLanches = e.pagamentos[0]?.metodo ?? null;
+      const metodoLanches = e.pagamentos.find((p) => !ehLinhaSintetica(p.nota))?.metodo ?? null;
       for (const ex of e.extras) {
         const extraValor = toNum(ex.extra.precoUnitario) * ex.quantidade;
         lLanches.quantidade += ex.quantidade;
@@ -307,7 +318,7 @@ export const relatorioService = {
    * Meias e Brindes são informativas - já incluídas no custo total.
    * Método de atribuição: 1º pagamento do ledger da entidade.
    */
-  calcularOutros(reservas: ReservaRelatorio[], entradas: EntradaRelatorio[]): SecaoRelatorio {
+  calcularOutros(reservas: ReservaRelatorio[], entradas: EntradaRelatorio[], precoMeiasFallback = 0): SecaoRelatorio {
     // Método do 1º pagamento do ledger (null se não houver pagamentos)
     const metodoPrincipal = (entidade: { pagamentos: Array<{ metodo: string }> }): string | null =>
       entidade.pagamentos[0]?.metodo ?? null;
@@ -320,8 +331,8 @@ export const relatorioService = {
     for (const r of reservas) {
       const metodo = metodoPrincipal(r);
 
-      // ── Cauções ── (método explícito da caução tem prioridade; fallback: 1º pagamento)
-      if (r.caucao !== "NAO_PAGA" && r.valorCaucao) {
+      // ── Cauções ── só PAGA tem linha no ledger (PAGA_NO_DIA é convertida ao iniciar)
+      if (r.caucao === "PAGA" && r.valorCaucao) {
         const valorCaucao = toNum(r.valorCaucao);
         const metodoCaucao = r.metodoCaucao ?? metodo;
         if (valorCaucao === 40) {
@@ -343,7 +354,7 @@ export const relatorioService = {
       // ── Meias (festa) - informativa ──
       const qtdMeias = r.meiasQuantidade ?? 0;
       if (qtdMeias > 0) {
-        const valorMeias = qtdMeias * toNum(r.meiasPrecoUnit);
+        const valorMeias = qtdMeias * (toNum(r.meiasPrecoUnit) || precoMeiasFallback);
         lMeias.quantidade += qtdMeias;
         somarPorMetodo(lMeias, metodo, valorMeias);
       }
@@ -364,7 +375,7 @@ export const relatorioService = {
       const metodoEntrada = metodoPrincipal(e);
       const qtdMeias = e.meiasQuantidade ?? 0;
       if (qtdMeias > 0) {
-        const valorMeias = qtdMeias * toNum(e.meiasPrecoUnit);
+        const valorMeias = qtdMeias * (toNum(e.meiasPrecoUnit) || precoMeiasFallback);
         lMeias.quantidade += qtdMeias;
         somarPorMetodo(lMeias, metodoEntrada, valorMeias);
       }
@@ -398,11 +409,10 @@ export const relatorioService = {
     const lRedefinicoes = criarLinhaVazia("Redefinições de preço");
 
     for (const a of ajustes) {
-      // Método do acerto; se vazio, usa o método principal (1º pagamento) da entidade alvo
       const metodo =
         a.metodoPagamento ??
-        a.reserva?.pagamentos?.[0]?.metodo ??
-        a.entradaLivre?.pagamentos?.[0]?.metodo;
+        a.reserva?.pagamentos?.find((p) => !ehLinhaSintetica(p.nota))?.metodo ??
+        a.entradaLivre?.pagamentos?.find((p) => !ehLinhaSintetica(p.nota))?.metodo;
       const valor = Math.abs(toNum(a.valor));
 
       switch (a.tipo) {

@@ -35,7 +35,7 @@ export const entradaLivreFormSchema = z.object({
   criancas: z.array(criancaSchema).min(1, "Indique pelo menos uma criança"),
   encarregadoNome: z.string().min(1, "Nome do encarregado é obrigatório"),
   encarregadoTelefone: z.string().min(9, "Contacto inválido"),
-  encarregadoEmail: z.string().email("Email inválido").optional().or(z.literal("")),
+  encarregadoEmail: z.string().min(1, "Email é obrigatório").email("Email inválido"),
   encarregadoCodigoPostal: z.string(),
   adicionarCliente: z.boolean(),
   encarregadosAdicionais: z.array(encarregadoAdicionalSchema),
@@ -128,7 +128,7 @@ export function buildEntradaLivreDefaults(entrada: EntradaLivre | null | undefin
 
 export function buildEntradaPayload(
   data: EntradaLivreFormData,
-  opts: { isEdit: boolean }
+  opts: { isEdit: boolean; idadesOriginais?: number[] }
 ): CriarEntradaLivreDTO {
   const hoje = toISODate(new Date());
   // Encarregados adicionais: mesma lógica do form de Festas - vão para as
@@ -141,12 +141,21 @@ export function buildEntradaPayload(
     })
     .join("\n");
   return {
-    criancas: data.criancas.map((c) => ({
-      nome: c.nome.trim(),
-      // Idade calculada a partir da data de nascimento (API continua a receber só a idade)
-      idade: c.dataNascimento ? calcIdade(c.dataNascimento, hoje) : undefined,
-      querLanche: c.querLanche,
-    })),
+    criancas: data.criancas.map((c, i) => {
+      const idadeCalc = c.dataNascimento ? calcIdade(c.dataNascimento, hoje) : undefined;
+      const idadeOrig = opts.idadesOriginais?.[i];
+      const idade =
+        idadeCalc !== undefined &&
+        idadeOrig != null &&
+        dataNascimentoDeIdade(idadeOrig) === c.dataNascimento
+          ? idadeOrig
+          : idadeCalc;
+      return {
+        nome: c.nome.trim(),
+        idade,
+        querLanche: c.querLanche,
+      };
+    }),
     encarregadoNome: data.encarregadoNome,
     encarregadoTelefone: data.encarregadoTelefone,
     encarregadoEmail: data.encarregadoEmail || undefined,

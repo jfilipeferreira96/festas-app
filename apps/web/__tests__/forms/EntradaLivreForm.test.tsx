@@ -204,6 +204,7 @@ describe("EntradaLivreForm", () => {
     await user.type(screen.getByPlaceholderText("Nome da criança 1"), "João");
     await user.type(screen.getByPlaceholderText("Nome do responsável"), "Pedro Costa");
     await user.type(screen.getByPlaceholderText("Telefone"), "913456789");
+    await user.type(screen.getByPlaceholderText("Email"), "pedro@teste.pt");
 
     await user.click(cartao(/Lanche/));
     await user.click(cartao(/Adulto/));

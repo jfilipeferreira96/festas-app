@@ -276,6 +276,7 @@ describe("calcularEstimativaFesta", () => {
       precoCrianca: 0,
       criancasFaturadas: 0,
       minimoAplicavel: 0,
+      custoAdultos: 0,
     });
     expect(calcularEstimativaFesta(config, undefined, 10, 1).estimativa).toBe(0);
   });

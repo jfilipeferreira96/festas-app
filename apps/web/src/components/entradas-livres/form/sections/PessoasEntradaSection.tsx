@@ -166,7 +166,7 @@ export default function PessoasEntradaSection({
               type="email"
               autoComplete="nope"
               {...register("encarregadoEmail")}
-              placeholder="Email (opcional)"
+              placeholder="Email"
               error={!!errors.encarregadoEmail}
               hint={errors.encarregadoEmail?.message}
             />

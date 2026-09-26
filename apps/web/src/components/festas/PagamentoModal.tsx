@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { ArrowUpDown, CreditCard, Shield, Wallet } from "lucide-react";
-import { useUpdatePagamento } from "@/hooks/use-reservas";
+import { useUpdatePagamento, useReserva } from "@/hooks/use-reservas";
 import { useToast } from "@/hooks/use-toast";
 import AjustesPagamentoSection from "@/components/shared/AjustesPagamentoSection";
 import PagamentoModalShell, { type PagamentoTabConfig } from "@/components/shared/pagamento/PagamentoModalShell";
@@ -29,6 +29,12 @@ interface PagamentoModalProps {
 export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps) {
   const toast = useToast();
   const updatePagamento = useUpdatePagamento();
+
+  // Dados frescos: o save é replace-all - adotar a versão do servidor enquanto
+  // o estado local está intocado evita apagar pagamentos de outro terminal.
+  const { data: reservaFresca } = useReserva(reserva.id);
+  const editouRef = useRef(false);
+  const dados = reservaFresca ?? reserva;
 
   // Total a pagar (só-leitura) - o valor acordado; muda via "Usar sugerido"
   // ou tab "Acertos" (com auditoria), nunca por input livre. Descontos
@@ -60,6 +66,31 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   const [valorCaucao, setValorCaucao] = useState<string>(reserva.valorCaucao ? String(reserva.valorCaucao) : "");
   const [metodoCaucao, setMetodoCaucao] = useState<string>(reserva.metodoCaucao ?? "NONE");
 
+  useEffect(() => {
+    if (!reservaFresca || editouRef.current) return;
+    setPagamentos(
+      (reservaFresca.pagamentos ?? []).map((p) => ({
+        id: p.id,
+        valor: Number(p.valor),
+        metodo: p.metodo,
+        nota: p.nota ?? null,
+        createdAt: p.createdAt,
+        fixa: p.nota === "Caução",
+      }))
+    );
+    const acordado = Number(reservaFresca.valorTotal ?? 0) || 0;
+    if (acordado > 0) {
+      setValorTotal(String(acordado));
+    } else {
+      const desconto = Number(reservaFresca.descontoPercentagem) || 0;
+      const sugerido = calcularSugeridoFesta(reservaFresca, desconto)?.sugerido ?? 0;
+      setValorTotal(sugerido > 0 ? String(sugerido) : "");
+    }
+    setCaucao(reservaFresca.caucao ?? "NAO_PAGA");
+    setValorCaucao(reservaFresca.valorCaucao ? String(reservaFresca.valorCaucao) : "");
+    setMetodoCaucao(reservaFresca.metodoCaucao ?? "NONE");
+  }, [reservaFresca]);
+
   // Caução paga = linha fixa no ledger (já foi recebida e desconta a falta).
   // Sintetizada quando não existe linha "Caução" - desconta logo ao marcar
   // como paga na tab e é persistida no guardar (o backend não duplica).
@@ -81,9 +112,11 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   // Acertos (tab "Acertos") aplicam write-through ao total devido no backend -
   // sincronizar o estado local para a falta subir/descer em tempo real.
   const handleAjusteAplicado = useCallback((delta: number) => {
+    editouRef.current = true;
     setValorTotal((prev) => Math.max(0, (Number(prev) || 0) + delta).toFixed(2));
   }, []);
   const handleTotalRedefinido = useCallback((novoTotal: number) => {
+    editouRef.current = true;
     setValorTotal(novoTotal.toFixed(2));
   }, []);
 
@@ -122,14 +155,14 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
     onClose,
   ]);
 
-  const anvNome = reserva.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || reserva.cliente?.nome || "-";
+  const anvNome = dados.aniversariantes?.map((a) => a.aniversariante.nome).join(", ") || dados.cliente?.nome || "-";
   const metodoLabel =
     ledgerEfetivo.length > 0
       ? ledgerEfetivo.map((p) => metodoPagamentoLabel(p.metodo)).join(" + ")
       : undefined;
 
-  const cacifoNotas = (reserva.cacifos ?? []).filter((c) => c.notas?.trim());
-  const temAvisos = Boolean(reserva.notasCacifos || reserva.observacoesLesoes || cacifoNotas.length > 0);
+  const cacifoNotas = (dados.cacifos ?? []).filter((c) => c.notas?.trim());
+  const temAvisos = Boolean(dados.notasCacifos || dados.observacoesLesoes || cacifoNotas.length > 0);
 
   const heroDireita =
     totalDevido > 0 ? (
@@ -146,9 +179,9 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
 
   const avisos = temAvisos ? (
     <>
-      {reserva.notasCacifos && (
+      {dados.notasCacifos && (
         <p className="text-xs text-text-secondary whitespace-pre-wrap">
-          <span className="font-medium">Notas cacifos:</span> {reserva.notasCacifos}
+          <span className="font-medium">Notas cacifos:</span> {dados.notasCacifos}
         </p>
       )}
       {cacifoNotas.map((c) => (
@@ -156,15 +189,16 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           <span className="font-medium">Cacifo {c.numero}:</span> {c.notas}
         </p>
       ))}
-      {reserva.observacoesLesoes && (
+      {dados.observacoesLesoes && (
         <p className="text-xs text-text-secondary whitespace-pre-wrap">
-          <span className="font-medium">Lesões / Alergias:</span> {reserva.observacoesLesoes}
+          <span className="font-medium">Lesões / Alergias:</span> {dados.observacoesLesoes}
         </p>
       )}
     </>
   ) : undefined;
 
-  const sugeridoResumo = calcularSugeridoFesta(reserva, descontoReserva);
+  const descontoDados = Number(dados.descontoPercentagem) || 0;
+  const sugeridoResumo = calcularSugeridoFesta(dados, descontoDados);
   const partesSugeridas: string[] = [];
   if (sugeridoResumo && sugeridoResumo.custoExtras > 0) partesSugeridas.push(`+${fmtEuro.format(sugeridoResumo.custoExtras)} extras`);
   if (sugeridoResumo && sugeridoResumo.custoMeias > 0) partesSugeridas.push(`+${fmtEuro.format(sugeridoResumo.custoMeias)} meias`);
@@ -191,7 +225,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
   // Caução paga é imutável (CAUCAO_BLOQUEADA no backend): a tab "Caução" só
   // existe enquanto não está paga - a caução paga vive no ledger como linha
   // fixa "Caução" (e na tabela/detail da festa). Descontos: tab "Acertos".
-  const caucaoPaga = reserva.caucao === "PAGA";
+  const caucaoPaga = dados.caucao === "PAGA";
   // Caução em primeiro: os pais pagam a caução à partida e o restante no dia
   const tabs: PagamentoTabConfig[] = [];
   if (!caucaoPaga) {
@@ -202,11 +236,20 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       content: (
         <PagamentoCaucaoTab
           caucao={caucao}
-          setCaucao={setCaucao}
+          setCaucao={(v) => {
+            editouRef.current = true;
+            setCaucao(v);
+          }}
           valorCaucao={valorCaucao}
-          setValorCaucao={setValorCaucao}
+          setValorCaucao={(v) => {
+            editouRef.current = true;
+            setValorCaucao(v);
+          }}
           metodoCaucao={metodoCaucao}
-          setMetodoCaucao={setMetodoCaucao}
+          setMetodoCaucao={(v) => {
+            editouRef.current = true;
+            setMetodoCaucao(v);
+          }}
         />
       ),
     });
@@ -237,19 +280,26 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
           <PagamentosLedgerSection
             totalDevido={totalDevido}
             pagamentos={ledgerEfetivo}
-            onAdd={(p) =>
+            onAdd={(p) => {
+              editouRef.current = true;
               setPagamentos((prev) => [
                 ...prev,
                 { ...p, id: `pg-${Date.now()}-${prev.length}`, createdAt: new Date().toISOString() },
-              ])
-            }
-            onRemove={(id) => setPagamentos((prev) => prev.filter((p) => p.id !== id))}
+              ]);
+            }}
+            onRemove={(id) => {
+              editouRef.current = true;
+              setPagamentos((prev) => prev.filter((p) => p.id !== id));
+            }}
           />
 
           <PagamentoSugeridoBox
-            reserva={reserva}
-            descontoPercentagem={descontoReserva}
-            onUsarSugerido={(v) => setValorTotal(v.toFixed(2))}
+            reserva={dados}
+            descontoPercentagem={descontoDados}
+            onUsarSugerido={(v) => {
+              editouRef.current = true;
+              setValorTotal(v.toFixed(2));
+            }}
           />
         </div>
       ),
@@ -261,7 +311,7 @@ export default function PagamentoModal({ reserva, onClose }: PagamentoModalProps
       content: (
         <AjustesPagamentoSection
           reservaId={reserva.id}
-          numCriancas={reserva.numCriancasConfirmadas ?? reserva.numCriancas}
+          numCriancas={dados.numCriancasConfirmadas ?? dados.numCriancas}
           onAjusteAplicado={handleAjusteAplicado}
           onTotalRedefinido={handleTotalRedefinido}
         />

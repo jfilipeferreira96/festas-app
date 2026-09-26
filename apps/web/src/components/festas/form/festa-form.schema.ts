@@ -308,6 +308,7 @@ export interface EstimativaFestaInfo {
   precoCrianca: number;
   criancasFaturadas: number;
   minimoAplicavel: number;
+  custoAdultos: number;
 }
 
 interface EstimativaConfig {
@@ -333,7 +334,7 @@ export function calcularEstimativaFesta(
   precoCriancaOverride?: number
 ): EstimativaFestaInfo {
   if (!config || !dataFesta) {
-    return { estimativa: 0, precoCrianca: 0, criancasFaturadas: 0, minimoAplicavel: 0 };
+    return { estimativa: 0, precoCrianca: 0, criancasFaturadas: 0, minimoAplicavel: 0, custoAdultos: 0 };
   }
   const precoTarifario = isFimDeSemana(dataFesta)
     ? Number(config.precoCriancaFimSemana)
@@ -357,5 +358,6 @@ export function calcularEstimativaFesta(
     precoCrianca,
     criancasFaturadas,
     minimoAplicavel,
+    custoAdultos: +custoAdultos.toFixed(2),
   };
 }

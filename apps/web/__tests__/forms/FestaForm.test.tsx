@@ -303,14 +303,11 @@ describe("FestaForm", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  // ── Espelho do use case UC-F1 (use-cases-festa.test.ts) ────────────────
-  // 20 planeadas → 15 confirmadas → total redefinido para 225 €: o form em
-  // edição avisa que o tarifário da composição atual difere do acordado.
-  // NOTA (comportamento atual): a estimativa do aviso usa as PREVISTAS (20),
-  // não as confirmadas (15) — se o produto quiser confirmadas, é alteração
-  // de código futura (calcularEstimativaFesta).
+  // Espelho do use case UC-F1: com a base unificada (confirmadas ?? previsão,
+  // mínimo aplicado), 15 confirmadas × 15 € = 225 € = valor acordado → sem aviso.
+  // Com acordo divergente (200 €) o aviso dispara com o calculado (225 €).
   describe("edição: 20 planeadas → 15 confirmadas", () => {
-    it("mostra o aviso 'difere do total acordado' com o tarifário atual (≈300 € vs 225 €)", async () => {
+    it("acordo = tarifário das confirmadas → sem aviso", async () => {
       vi.mocked(slotsHorarioApi.list).mockImplementation(async (dia?: string) =>
         fx.slotsParaData(dia ?? fx.DATA_SEMANA)
       );
@@ -338,8 +335,40 @@ describe("FestaForm", () => {
 
       renderWithQuery(<FestaForm reserva={reservaEspelho} onClose={onClose} />);
 
+      await waitFor(() => expect(screen.getByText(/Pagamentos/)).toBeInTheDocument());
+      expect(screen.queryByText(/difere do total acordado/)).not.toBeInTheDocument();
+    });
+
+    it("acordo divergente → avisa com o tarifário atual (≈225 € vs 200 €)", async () => {
+      vi.mocked(slotsHorarioApi.list).mockImplementation(async (dia?: string) =>
+        fx.slotsParaData(dia ?? fx.DATA_SEMANA)
+      );
+      vi.mocked(slotsHorarioApi.getDia).mockResolvedValue(fx.slotsDiaFixture(fx.DATA_SEMANA));
+      vi.mocked(extrasApi.list).mockResolvedValue(fx.extrasFixture);
+      vi.mocked(precosApi.getConfig).mockResolvedValue(fx.configPrecoFixture);
+      vi.mocked(salasLancheApi.list).mockResolvedValue(fx.salasLancheFixture);
+      vi.mocked(reservasApi.checkDisponibilidade).mockResolvedValue({ disponivel: true, conflitos: [] });
+
+      const reservaEspelho = {
+        ...fx.reservaEdicaoFixture,
+        id: "reserva-espelho-2015",
+        data: `${fx.DATA_SEMANA}T00:00:00.000Z`,
+        horario: "11:00",
+        numCriancas: 20,
+        previsaoCriancas: 20,
+        numCriancasConfirmadas: 15,
+        precoCriancaAplicado: 15,
+        minimoCriancas: 10,
+        valorTotal: 200,
+        extras: [],
+        pagamentos: [fx.pagamentoFixture("pg-espelho", 200, "MBWAY")],
+      } as unknown as typeof fx.reservaEdicaoFixture;
+      vi.mocked(reservasApi.getById).mockResolvedValue(reservaEspelho);
+
+      renderWithQuery(<FestaForm reserva={reservaEspelho} onClose={onClose} />);
+
       expect(await screen.findByText(/difere do total acordado/)).toBeInTheDocument();
-      expect(screen.getByText(/300,00\s€ \(20 crianças × 15,00/)).toBeInTheDocument();
+      expect(screen.getByText(/225,00\s€ \(15 crianças × 15,00/)).toBeInTheDocument();
     });
   });
 });

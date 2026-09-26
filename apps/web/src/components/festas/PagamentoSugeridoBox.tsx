@@ -21,7 +21,8 @@ export function calcularSugeridoFesta(
   const precoCrianca = Number(reserva.precoCriancaAplicado ?? 0);
   if (!precoCrianca) return null;
 
-  const numCriancas = reserva.numCriancasConfirmadas ?? reserva.numCriancas ?? 0;
+  const numCriancas =
+    reserva.numCriancasConfirmadas ?? reserva.numCriancas ?? reserva.previsaoCriancas ?? 0;
   const minimo = reserva.minimoCriancas ?? 0;
   const criancasEfetivas = Math.max(numCriancas, minimo);
 

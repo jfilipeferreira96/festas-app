@@ -135,16 +135,7 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     () => [{ value: "NONE", label: "Sem menu" }, ...menuExtras.map((m) => ({ value: m.id, label: m.nome }))],
     [menuExtras]
   );
-  // Total de crianças (confirmadas ?? previstas ?? 1) - base de cobrança dos extras.
   const numCriancasConfirmadasWatched = watch("numCriancasConfirmadas");
-  const numPessoasExtras = useMemo(() => {
-    const base = Number.isFinite(numCriancasConfirmadasWatched)
-      ? (numCriancasConfirmadasWatched as number)
-      : Number.isFinite(previsaoCriancas)
-        ? (previsaoCriancas as number)
-        : 1;
-    return Math.max(base, 1);
-  }, [numCriancasConfirmadasWatched, previsaoCriancas]);
 
   const { data: slotsHorario } = useSlotsHorario(watchedData || undefined);
   const { data: slotsDia } = useSlotsDia(watchedData);
@@ -295,18 +286,32 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
     [menuExtras, watchedMenuId]
   );
 
+  const criancasBaseFaturacao = Number.isFinite(numCriancasConfirmadasWatched)
+    ? (numCriancasConfirmadasWatched as number)
+    : previsaoCriancas;
+
   const estimativaFesta = useMemo(
     () =>
       calcularEstimativaFesta(
         configPreco,
         watchedData,
-        previsaoCriancas,
+        criancasBaseFaturacao,
         aniversariantes.filter((a) => a.nome.trim()).length,
         watchedNumAdultos,
         menuSelecionado ? Number(menuSelecionado.precoUnitario) : undefined
       ),
-    [configPreco, watchedData, previsaoCriancas, aniversariantes, watchedNumAdultos, menuSelecionado]
+    [configPreco, watchedData, criancasBaseFaturacao, aniversariantes, watchedNumAdultos, menuSelecionado]
   );
+
+  const numPessoasExtras = useMemo(() => {
+    if (estimativaFesta.criancasFaturadas > 0) return estimativaFesta.criancasFaturadas;
+    const base = Number.isFinite(numCriancasConfirmadasWatched)
+      ? (numCriancasConfirmadasWatched as number)
+      : Number.isFinite(previsaoCriancas)
+        ? (previsaoCriancas as number)
+        : 1;
+    return Math.max(base, 1);
+  }, [estimativaFesta, numCriancasConfirmadasWatched, previsaoCriancas]);
 
   // Total CALCULADO (sem input livre): tarifário (crianças faturadas × preço
   // + adultos) + extras seleccionados (bolos, suplementos, diversão).
@@ -439,11 +444,11 @@ export default function FestaForm({ reserva, onClose, initialValues }: FestaForm
               dataFesta={watchedData}
               onOpenSearchCliente={() => setShowClienteSearch(true)}
             />
-            {reserva && (reserva.estado === "EM_CURSO" || reserva.estado === "CONCLUIDA") && (
-              <p className="text-xs text-text-muted -mt-4">
-                Crianças presentes: {reserva.numCriancasPresentes ?? "—"}
-              </p>
-            )}
+           {reservaAtual && (reservaAtual.estado === "EM_CURSO" || reservaAtual.estado === "CONCLUIDA") && (
+             <p className="text-xs text-text-muted -mt-4">
+               Crianças presentes: {reservaAtual.numCriancasPresentes ?? "—"}
+             </p>
+           )}
             <SectionHeader titulo="Configuração da Festa" />
             <AgendamentoSection
               slotOptions={slotOptions}

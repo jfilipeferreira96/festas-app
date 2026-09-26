@@ -126,8 +126,7 @@ export const dashboardService = {
         },
         select: {
           valorTotal: true,
-          // Ledger de pagamentos (fonte única do recebido)
-          pagamentos: { select: { valor: true, metodo: true } },
+          pagamentos: { select: { valor: true, metodo: true, nota: true } },
           // Excesso de tempo (se já pago)
           custoExcesso: true,
           pagoExcesso: true,
@@ -157,10 +156,14 @@ export const dashboardService = {
     };
 
     for (const r of reservasHoje) {
-      // Fonte única: ledger de pagamentos (N métodos)
-      for (const p of r.pagamentos) somar(p.metodo, Number(p.valor));
-      // Excesso de tempo (só se foi pago) - método do 1º pagamento
-      if (r.pagoExcesso) somar(r.pagamentos[0]?.metodo, r.custoExcesso);
+      for (const p of r.pagamentos) {
+        if (p.nota === "Excesso de tempo") continue;
+        somar(p.metodo, Number(p.valor));
+      }
+      if (r.pagoExcesso) {
+        const primeiroMetodo = r.pagamentos.find((p) => p.nota !== "Excesso de tempo")?.metodo;
+        somar(primeiroMetodo, r.custoExcesso);
+      }
     }
     for (const e of entradasHoje) {
       // Fonte única: ledger de pagamentos

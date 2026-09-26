@@ -1408,6 +1408,11 @@ export const reservaService = {
           excessoMinutos,
           custoExcesso,
           custoTotalFinal,
+          // A linha de pagamento do excesso é criada acima - o flag sinaliza
+          // ao relatório (secção "Outros") que o excesso foi pago. Sem isto a
+          // linha "Excesso de Tempo" nunca aparecia (custo contabilizado na
+          // secção Festas via ledger, sem quebra própria).
+          ...(custoExcesso > 0 && { pagoExcesso: true }), // linha já criada acima
           ...(options?.numCriancasPresentes !== undefined && {
             numCriancasPresentes: options.numCriancasPresentes,
           }),

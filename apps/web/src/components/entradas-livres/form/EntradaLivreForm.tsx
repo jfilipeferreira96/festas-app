@@ -99,14 +99,14 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
     const custoTempo = +(custoTempoPorPessoa * totalCriancas + precoAdulto * numAdultos).toFixed(2);
     const precoLanche = Number(configPreco?.precoLancheEntrada ?? 3);
     const criancasComLanche = temLanche ? criancasWatched.filter((c) => c.querLanche).length : 0;
-    const custoLanche = precoLanche * criancasComLanche;
-    const custoExtras = calcularCustoExtras(
+    const custoLanche = +(precoLanche * criancasComLanche).toFixed(2);
+    const custoExtras = +calcularCustoExtras(
       extrasIdsWatched.map((id) => ({ extraId: id, quantidade: extrasQuantidadesWatched[id] ?? 1 })),
       Array.isArray(extrasData) ? extrasData : [],
       totalPessoas
-    );
+    ).toFixed(2);
     const precoMeias = Number(configPreco?.precoMeias ?? 1.5);
-    const custoMeias = (meiasQuantidadeWatched ?? 0) * precoMeias;
+    const custoMeias = +((meiasQuantidadeWatched ?? 0) * precoMeias).toFixed(2);
     return {
       totalPessoas,
       criancasComLanche,
@@ -114,7 +114,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
       custoLanche,
       custoExtras,
       custoMeias,
-      total: custoTempo + custoLanche + custoExtras + custoMeias,
+      total: +(custoTempo + custoLanche + custoExtras + custoMeias).toFixed(2),
     };
   }, [
     custoTempoPorPessoa,
@@ -130,25 +130,28 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const custoCalculado = custoComponentes.total;
 
-  // Total pré-preenchido com o cálculo (igual ao form de Festas): qualquer
-  // alteração nos componentes (crianças, lanche, meias, extras, duração)
-  // atualiza o total. Sem input livre, logo sem gate por campo escrito à mão.
-  // Em edição, o total guardado é o valor acordado e mantém-se enquanto a
-  // composição não mudar; ao mudar (ex: +1 hora pedida no balcão), segue o
-  // recálculo do tarifário.
+  const numCriancasOriginal = entrada?.criancas?.length ?? 0;
+  const criancasComLancheOriginal = entrada?.criancas
+    ? entrada.criancas.filter((c) => c.querLanche !== false).length
+    : 0;
+  const criancasFaturacaoMudou =
+    criancasWatched.length !== numCriancasOriginal ||
+    (temLanche && criancasWatched.filter((c) => c.querLanche).length !== criancasComLancheOriginal);
   const composicaoMudou = Boolean(
     dirtyFields.duracaoMinutos ||
       dirtyFields.temLanche ||
       dirtyFields.numAdultos ||
       dirtyFields.meiasQuantidade ||
-      dirtyFields.criancas ||
+      criancasFaturacaoMudou ||
       dirtyFields.extrasIds ||
       dirtyFields.extrasQuantidades
   );
+  const excessoEntrada = entrada?.custoExcesso ? Number(entrada.custoExcesso) : 0;
   useEffect(() => {
     if (entrada && !composicaoMudou) return; // edição sem alterações: manter acordado
-    if (custoCalculado > 0) setValue("custoTotal", Number(custoCalculado.toFixed(2)));
-  }, [custoCalculado, setValue, entrada, composicaoMudou]);
+    const devido = +(custoCalculado + excessoEntrada).toFixed(2);
+    if (devido > 0) setValue("custoTotal", devido);
+  }, [custoCalculado, setValue, entrada, composicaoMudou, excessoEntrada]);
 
   const cacifoAtual = entrada?.cacifo;
   const cacifoOptions = useMemo(() => {
@@ -169,13 +172,8 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
   const [showClienteSearch, setShowClienteSearch] = useState(false);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
 
-  // O modal de pagamento usa dados frescos da BD: a prop `entrada` pode estar
-  // stale (ex.: custo prorrogado no próprio form) e mostraria falta/liquidado
-  // errados - o utilizador deixava de pagar a diferença por ver "Liquidado".
-  const { data: entradaFresca } = useEntradaLivre(
-    showPagamentoModal && entrada ? entrada.id : ""
-  );
-  const entradaParaPagamento = entradaFresca ?? entrada;
+  const { data: entradaFresca } = useEntradaLivre(entrada?.id ?? "");
+  const entradaAtual = entradaFresca ?? entrada;
 
   const handleClienteSelected = useCallback(
     (cliente: Cliente, filhos: ClienteFilho[]) => {
@@ -199,7 +197,12 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
 
   const onSubmit = useCallback(
     async (data: EntradaLivreFormData) => {
-      const payload = buildEntradaPayload(data, { isEdit });
+      const payload = buildEntradaPayload(data, {
+        isEdit,
+        idadesOriginais: entrada?.criancas
+          ?.map((c) => c.idade)
+          .filter((i): i is number => i != null),
+      });
       try {
         if (isEdit && entrada) {
           await atualizar.mutateAsync({ id: entrada.id, data: payload });
@@ -254,7 +257,7 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
             <SectionHeader titulo="Observações" />
             <ObservacoesSection />
             <PagamentoEntradaSection
-              entrada={entrada}
+              entrada={entradaAtual}
               custoComponentes={custoComponentes}
               custoCalculado={custoCalculado}
               precoMeias={Number(configPreco?.precoMeias ?? 1.5)}
@@ -278,9 +281,9 @@ export default function EntradaLivreForm({ entrada, onClose }: EntradaLivreFormP
         onSelect={handleClienteSelected}
       />
 
-      {showPagamentoModal && entradaParaPagamento && (
+      {showPagamentoModal && entradaAtual && (
         <EntradaLivrePagamentoModal
-          entrada={entradaParaPagamento}
+          entrada={entradaAtual}
           onClose={() => setShowPagamentoModal(false)}
         />
       )}
